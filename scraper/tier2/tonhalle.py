@@ -38,6 +38,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from config import SCRAPER_VORSCHAU_TAGE
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -285,6 +286,7 @@ def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
         # --- Alle relevanten Datum-Strings sammeln ---
         datum_el = section_el.select_one("p.date")
         datums_texte: list[str] = []
+        ist_range = False  # Ob die Datumsangabe ein Zeitraum (von...bis) ist
 
         if datum_el:
             # Einzeltermin: <span class="unique">
@@ -295,8 +297,10 @@ def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
                     datums_texte.append(tag_span.get_text(strip=True))
 
             # Zeitraum: <span class="range"> – beide Endpunkte als separate Events
+            # Markierung als Konzertreihe/wiederkehrendes Event
             bereich_span = datum_el.select_one("span.range")
             if bereich_span:
+                ist_range = True
                 for day_span in bereich_span.select("span.day"):
                     tag_text = day_span.get_text(strip=True)
                     if tag_text:
@@ -312,6 +316,11 @@ def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
         if not datums_texte:
             logger.debug("Kein Datum für Event '%s' gefunden", titel)
             return []
+
+        # Bei Range-Events: letztes Datum als datum_bis ermitteln
+        datum_bis = None
+        if ist_range and len(datums_texte) >= 2:
+            datum_bis = _datum_parsen(datums_texte[-1])
 
         # --- Uhrzeit (aus erstem Einzel-Termin-Element) ---
         uhrzeit = None
@@ -376,6 +385,8 @@ def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
                 "quelle_url": quelle_url,
                 "bild_url": bild_url,
                 "instagram_caption": None,
+                "datum_bis": datum_bis,
+                "ist_wiederkehrend": ist_range,
                 "status": "neu",
             })
 
@@ -559,6 +570,8 @@ def _event_aus_next_data_eintrag(eintrag: dict, heute: date) -> Optional[dict]:
             "quelle_url": quelle_url,
             "bild_url": bild_url,
             "instagram_caption": None,
+            "datum_bis": None,
+            "ist_wiederkehrend": False,
             "status": "neu",
         }
 
@@ -728,6 +741,10 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
     else:
+        # 14-Tage-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
+        heute = date.today()
+        enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+        events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info(
             "Scraper %s fertig: %d Events gefunden",
             QUELLE_NAME,

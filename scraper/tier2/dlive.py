@@ -34,10 +34,12 @@ Erstellt: 2026-02-24
 """
 import logging
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
+
+from config import SCRAPER_VORSCHAU_TAGE
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +262,8 @@ def _event_aus_api_dict(api_event: dict, heute: date) -> Optional[dict]:
             "quelle_url": quelle_url,
             "bild_url": bild_url,
             "instagram_caption": None,
+            "datum_bis": None,
+            "ist_wiederkehrend": False,
             "status": "neu",
         }
 
@@ -314,6 +318,10 @@ def scrape() -> list[dict]:
     if not events:
         logger.warning("Scraper %s: 0 gültige Events nach Filterung", QUELLE_NAME)
     else:
+        # 14-Tage-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
+        heute = date.today()
+        enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+        events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info(
             "Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events)
         )

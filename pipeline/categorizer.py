@@ -48,16 +48,21 @@ def _claude_client_erstellen() -> anthropic.Anthropic:
 def _event_kategorisieren_und_beschreiben(
     client: anthropic.Anthropic,
     event: dict
-) -> tuple[str, str] | tuple[None, None]:
+) -> tuple[str, str, bool] | tuple[None, None, None]:
     """
-    Nutzt Claude Haiku um Kategorie und Beschreibung für ein Event zu generieren.
+    Nutzt Claude Haiku um Kategorie, Beschreibung und Wiederkehrend-Status zu bestimmen.
+
+    Signal 2 für ist_wiederkehrend: Claude Haiku erkennt anhand von Titel,
+    Beschreibung und Kontext ob ein Event wiederkehrend oder eine Dauerveranstaltung ist.
+    Signal 1 (datum_bis vorhanden) wird in kategorisieren() NACH diesem Aufruf
+    als Überschreibung angewendet.
 
     Args:
         client: Anthropic API Client
         event: Event-Dict mit Pflichtfeldern
 
     Returns:
-        Tuple (kategorie, beschreibung) oder (None, None) bei Fehler
+        Tuple (kategorie, beschreibung, ist_wiederkehrend) oder (None, None, None) bei Fehler
     """
     titel = event.get("titel", "")
     ort = event.get("ort", "")
@@ -77,15 +82,17 @@ Event-Daten:
 Aufgabe:
 1. Bestimme die beste Kategorie aus dieser Liste: kultur, musik, food, sport, outdoor, community, nightlife, family, dating, sonstiges
 2. Schreibe eine kurze, einladende Beschreibung auf Deutsch (max. 300 Zeichen)
+3. Ist das ein wiederkehrendes oder langfristiges Event? (z.B. Ausstellung, Dauerveranstaltung, Konzertreihe, wöchentlicher Markt → ja | Einzelkonzert, einmaliges Event → nein)
 
-Antworte NUR in diesem Format (zwei Zeilen):
+Antworte NUR in diesem Format (drei Zeilen):
 KATEGORIE: [eine Kategorie aus der Liste]
-BESCHREIBUNG: [kurze Beschreibung auf Deutsch, max. 300 Zeichen]"""
+BESCHREIBUNG: [kurze Beschreibung auf Deutsch, max. 300 Zeichen]
+WIEDERKEHREND: ja/nein"""
 
     try:
         antwort = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=200,
+            max_tokens=250,
             messages=[
                 {"role": "user", "content": prompt}
             ]
@@ -96,6 +103,7 @@ BESCHREIBUNG: [kurze Beschreibung auf Deutsch, max. 300 Zeichen]"""
 
         kategorie = None
         beschreibung = None
+        ist_wiederkehrend = False
 
         for zeile in zeilen:
             if zeile.startswith("KATEGORIE:"):
@@ -113,30 +121,33 @@ BESCHREIBUNG: [kurze Beschreibung auf Deutsch, max. 300 Zeichen]"""
                 # Auf max. 300 Zeichen kürzen
                 if len(beschreibung) > 300:
                     beschreibung = beschreibung[:297] + "..."
+            elif zeile.startswith("WIEDERKEHREND:"):
+                wiederkehrend_text = zeile.replace("WIEDERKEHREND:", "").strip().lower()
+                ist_wiederkehrend = wiederkehrend_text in ("ja", "yes", "true", "1")
 
         if not kategorie:
             kategorie = aktuelle_kategorie
         if not beschreibung:
             logger.warning("Keine Beschreibung von KI erhalten für Event: %s", titel)
-            return None, None
+            return None, None, None
 
-        return kategorie, beschreibung
+        return kategorie, beschreibung, ist_wiederkehrend
 
     except anthropic.RateLimitError:
         logger.error(
             "Claude API Rate Limit erreicht bei Event '%s' – warte 30 Sekunden", titel
         )
         time.sleep(30)
-        return None, None
+        return None, None, None
     except anthropic.APIStatusError as e:
         logger.error(
             "Claude API Fehler (Status %s) bei Event '%s': %s",
             e.status_code, titel, str(e)
         )
-        return None, None
+        return None, None, None
     except Exception as e:
         logger.error("Unerwarteter Fehler bei KI-Kategorisierung von '%s': %s", titel, str(e))
-        return None, None
+        return None, None, None
 
 
 def kategorisieren(limit: int = 10) -> int:
@@ -165,11 +176,11 @@ def kategorisieren(limit: int = 10) -> int:
         logger.error("Claude Client konnte nicht erstellt werden: %s", str(e))
         return 0
 
-    # Events mit status='neu' laden
+    # Events mit status='neu' laden (inkl. datum_bis für Signal-1-Erkennung)
     try:
         ergebnis = (
             db.table("events")
-            .select("id, titel, ort, datum, preis, kategorie")
+            .select("id, titel, ort, datum, datum_bis, preis, kategorie")
             .eq("status", "neu")
             .is_("beschreibung", "null")
             .limit(limit)
@@ -198,7 +209,7 @@ def kategorisieren(limit: int = 10) -> int:
         if verarbeitet > 0:
             time.sleep(API_WARTEZEIT_SEKUNDEN)
 
-        kategorie, beschreibung = _event_kategorisieren_und_beschreiben(client, event)
+        kategorie, beschreibung, ist_wiederkehrend_ki = _event_kategorisieren_und_beschreiben(client, event)
 
         if beschreibung is None:
             # Fehler bei diesem Event – Status auf 'fehler' setzen und weitermachen
@@ -211,9 +222,22 @@ def kategorisieren(limit: int = 10) -> int:
                 )
             continue
 
+        # Signal 1: Wenn datum_bis vorhanden → immer wiederkehrend (überschreibt KI)
+        # Signal 2: KI-Erkennung als Fallback wenn kein datum_bis
+        if event.get("datum_bis"):
+            ist_wiederkehrend = True
+            logger.info("Event '%s': wiederkehrend via datum_bis (%s)", titel, event.get("datum_bis"))
+        else:
+            ist_wiederkehrend = ist_wiederkehrend_ki
+            if ist_wiederkehrend:
+                logger.info("Event '%s': wiederkehrend via KI-Erkennung", titel)
+
         # Supabase aktualisieren
         try:
-            aktualisierung = {"beschreibung": beschreibung}
+            aktualisierung = {
+                "beschreibung": beschreibung,
+                "ist_wiederkehrend": ist_wiederkehrend,
+            }
 
             # Kategorie nur aktualisieren wenn KI eine bessere vorschlägt
             if kategorie and kategorie != event.get("kategorie"):
@@ -225,7 +249,10 @@ def kategorisieren(limit: int = 10) -> int:
 
             db.table("events").update(aktualisierung).eq("id", event_id).execute()
             verarbeitet += 1
-            logger.info("Event kategorisiert: '%s' | Kategorie: %s", titel, kategorie)
+            logger.info(
+                "Event kategorisiert: '%s' | Kategorie: %s | Wiederkehrend: %s",
+                titel, kategorie, ist_wiederkehrend
+            )
 
         except Exception as e:
             logger.error(

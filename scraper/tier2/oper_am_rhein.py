@@ -11,12 +11,13 @@ Erstellt: 2026-02-24
 import logging
 import re
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from config import SCRAPER_VORSCHAU_TAGE
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -367,6 +368,8 @@ def _event_aus_performance(performance_el, heute: date) -> Optional[dict]:
             "quelle_url": quelle_url,
             "bild_url": bild_url,
             "instagram_caption": None,
+            "datum_bis": None,
+            "ist_wiederkehrend": False,
             "status": "neu",
         }
 
@@ -531,6 +534,9 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
     else:
+        # 14-Tage-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
+        enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+        events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info(
             "Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events)
         )

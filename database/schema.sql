@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS events (
     quelle_url      TEXT NOT NULL,
     bild_url        TEXT,
     instagram_caption TEXT CHECK (char_length(instagram_caption) <= 2200),
+    datum_bis       DATE,                          -- Enddatum für laufende/wiederkehrende Events
+    ist_wiederkehrend BOOLEAN NOT NULL DEFAULT FALSE, -- Ausstellung, Konzertreihe, o.ä.
     status          TEXT NOT NULL DEFAULT 'neu' CHECK (status IN (
                         'neu', 'aufbereitet', 'gepostet', 'fehler'
                     )),
@@ -35,6 +37,11 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 -- Index für häufige Abfragen
-CREATE INDEX IF NOT EXISTS idx_events_datum     ON events (datum);
-CREATE INDEX IF NOT EXISTS idx_events_status    ON events (status);
-CREATE INDEX IF NOT EXISTS idx_events_kategorie ON events (kategorie);
+CREATE INDEX IF NOT EXISTS idx_events_datum           ON events (datum);
+CREATE INDEX IF NOT EXISTS idx_events_status          ON events (status);
+CREATE INDEX IF NOT EXISTS idx_events_kategorie       ON events (kategorie);
+CREATE INDEX IF NOT EXISTS idx_events_wiederkehrend   ON events (ist_wiederkehrend);
+
+-- Migration: Neue Spalten zu bestehender Tabelle hinzufügen (falls Tabelle existiert)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS datum_bis DATE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS ist_wiederkehrend BOOLEAN NOT NULL DEFAULT FALSE;
