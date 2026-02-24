@@ -9,7 +9,14 @@ from datetime import date
 
 from config import LOG_LEVEL, LOG_DIR, SCHEDULER_UHRZEIT
 from database.client import events_speichern
-from scraper.tier1 import rausgegangen
+from scraper.tier1 import (
+    rausgegangen,
+    ticketmaster,
+    eventbrite,
+    kulturportal,
+    visitduesseldorf,
+    meinestadt,
+)
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -43,6 +50,26 @@ async def pipeline_ausfuehren():
     events_rausgegangen = rausgegangen.scrape()
     logger.info("Rausgegangen: %d Events", len(events_rausgegangen))
     alle_events.extend(events_rausgegangen)
+
+    events_ticketmaster = ticketmaster.scrape()
+    logger.info("Ticketmaster: %d Events", len(events_ticketmaster))
+    alle_events.extend(events_ticketmaster)
+
+    events_eventbrite = eventbrite.scrape()
+    logger.info("Eventbrite: %d Events", len(events_eventbrite))
+    alle_events.extend(events_eventbrite)
+
+    events_kulturportal = kulturportal.scrape()
+    logger.info("Kulturportal Düsseldorf: %d Events", len(events_kulturportal))
+    alle_events.extend(events_kulturportal)
+
+    events_visitduesseldorf = visitduesseldorf.scrape()
+    logger.info("VisitDüsseldorf: %d Events", len(events_visitduesseldorf))
+    alle_events.extend(events_visitduesseldorf)
+
+    events_meinestadt = meinestadt.scrape()
+    logger.info("meinestadt.de: %d Events", len(events_meinestadt))
+    alle_events.extend(events_meinestadt)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
