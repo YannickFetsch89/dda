@@ -66,7 +66,11 @@ async def pipeline_ausfuehren():
     anzahl_captions = caption_generator.captions_generieren(limit=10)
     logger.info("Captions generiert: %d Events aufbereitet", anzahl_captions)
 
-    # TODO: Schritt 5 – Instagram-Posting (Sprint 3)
+    # Schritt 5: Instagram-Posting
+    logger.info("--- Schritt 5: Instagram-Posting ---")
+    from pipeline import publisher
+    anzahl_gepostet = publisher.posten(limit=5)
+    logger.info("Instagram: %d Events gepostet", anzahl_gepostet)
 
     logger.info("=== Pipeline abgeschlossen ===")
 
