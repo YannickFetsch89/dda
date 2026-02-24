@@ -189,123 +189,129 @@ def _ort_aus_text(texte: list[str]) -> Optional[str]:
     return None
 
 
-def _event_aus_container(element, heute: date) -> Optional[dict]:
+KATEGORIE_MAP = {
+    "ausstellung": "kultur",
+    "theater": "kultur",
+    "oper": "kultur",
+    "konzert": "musik",
+    "musik": "musik",
+    "festival": "musik",
+    "party": "nightlife",
+    "club": "nightlife",
+    "sport": "sport",
+    "lesung": "kultur",
+    "film": "kultur",
+    "kino": "kultur",
+    "führung": "kultur",
+    "stadtführung": "kultur",
+    "workshop": "community",
+    "messe": "community",
+    "markt": "food",
+    "food": "food",
+    "family": "family",
+    "kinder": "family",
+    "outdoor": "outdoor",
+}
+
+
+def _kategorie_aus_text(text: str) -> str:
+    """Ermittelt eine DDA-Kategorie aus einem Kategorie-Text der Seite."""
+    if not text:
+        return "sonstiges"
+    text_lower = text.lower()
+    for schluessel, kategorie in KATEGORIE_MAP.items():
+        if schluessel in text_lower:
+            return kategorie
+    return "sonstiges"
+
+
+def _event_aus_teaser(teaser_el, heute: date) -> Optional[dict]:
     """
-    Extrahiert ein Event-Dict aus einem BeautifulSoup-Container-Element.
+    Extrahiert ein Event-Dict aus einem .tb-teaser <a>-Element des Kulturportals.
+
+    Die Seite verwendet das Toubiz-CMS mit folgendem DOM-Aufbau:
+      <a class="tb-teaser" href="/veranstaltungskalender/...">
+        <div itemprop="startDate" content="YYYY-MM-DD">...</div>
+        <h3 class="tb-teaser__title">Titel</h3>
+        <span class="tb-teaser__topline-category">Kategorie</span>
+        <span class="tb-teaser__location">Stadt</span>
+        <span class="tb-teaser__location">Venue</span>
+        <img data-src="...">
 
     Args:
-        element: BeautifulSoup-Element (article, div, li)
-        heute:   Heutiges Datum für Filterung vergangener Events
+        teaser_el: BeautifulSoup <a class="tb-teaser"> Element
+        heute:     Heutiges Datum für Filterung vergangener Events
 
     Returns:
         Event-Dict oder None wenn Pflichtfelder fehlen / Event vergangen
     """
     try:
+        # --- URL ---
+        href = teaser_el.get("href", "")
+        quelle_url = urljoin(BASE_URL, href) if href else LISTE_URL
+
         # --- Titel ---
-        titel_el = (
-            element.find("h1") or
-            element.find("h2") or
-            element.find("h3") or
-            element.find("h4")
-        )
+        titel_el = teaser_el.select_one(".tb-teaser__title")
         if not titel_el:
             return None
         titel = titel_el.get_text(strip=True)
         if not titel:
             return None
 
-        # --- URL ---
-        anker = element.find("a", href=True)
-        if anker:
-            quelle_url = urljoin(BASE_URL, anker["href"])
-        else:
-            # Wenn der Container selbst ein Anker ist
-            quelle_url = urljoin(BASE_URL, element.get("href", "")) or LISTE_URL
-
-        # --- Alle Texte aus dem Container sammeln ---
-        alle_texte = []
-        for el in element.find_all(["span", "div", "p", "time", "li", "strong"]):
-            t = el.get_text(separator=" ", strip=True)
-            if t and len(t) > 1:
-                alle_texte.append(t)
-
-        # Volltext des Containers als Fallback
-        volltext = element.get_text(separator=" ", strip=True)
-
-        # --- Datum suchen ---
+        # --- Datum: itemprop="startDate" content="YYYY-MM-DD" ---
+        datum_el = teaser_el.select_one("[itemprop='startDate']")
         datum = None
-        datum_text_roh = None
-
-        # Zuerst <time datetime="..."> auslesen
-        time_el = element.find("time")
-        if time_el:
-            dt_attr = time_el.get("datetime", "")
-            datum = _datum_parsen(dt_attr) if dt_attr else None
+        if datum_el:
+            datum = _datum_parsen(datum_el.get("content", ""))
             if not datum:
-                datum = _datum_parsen(time_el.get_text(strip=True))
-            datum_text_roh = time_el.get_text(strip=True)
-
-        # Falls kein <time> oder kein Ergebnis: alle Texte durchsuchen
-        if not datum:
-            for text in alle_texte:
-                kandidat = _datum_parsen(text)
-                if kandidat:
-                    datum = kandidat
-                    datum_text_roh = text
-                    break
-
-        # Letzter Versuch: Volltext des gesamten Containers
-        if not datum:
-            datum = _datum_parsen(volltext)
-            datum_text_roh = volltext if datum else None
+                datum = _datum_parsen(datum_el.get_text(strip=True))
 
         if not datum:
             logger.debug("Kein Datum gefunden für Event: %s", titel)
             return None
 
-        # Vergangene Events überspringen
         if date.fromisoformat(datum) < heute:
             return None
 
-        # --- Uhrzeit ---
+        # --- Uhrzeit: aus .tb-teaser-date__time oder allgemeinem Text ---
         uhrzeit = None
-        if datum_text_roh:
-            uhrzeit = _uhrzeit_parsen(datum_text_roh)
-        if not uhrzeit:
-            uhrzeit = _uhrzeit_parsen(volltext)
+        zeit_el = teaser_el.select_one(".tb-teaser-date__time, .tb-teaser__time")
+        if zeit_el:
+            uhrzeit = _uhrzeit_parsen(zeit_el.get_text(strip=True))
 
-        # --- Ort ---
-        ort = _ort_aus_text(alle_texte)
-        if not ort:
-            # Fallback: Düsseldorf
+        # --- Ort: zwei <span class="tb-teaser__location"> ---
+        ort_els = teaser_el.select(".tb-teaser__location")
+        if len(ort_els) >= 2:
+            # Erstes = Stadt, zweites = Venue-Name
+            ort = ort_els[1].get_text(strip=True)
+        elif len(ort_els) == 1:
+            ort = ort_els[0].get_text(strip=True)
+        else:
             ort = "Düsseldorf"
 
-        # --- Beschreibung ---
-        beschreibung = None
-        for el in element.find_all(["p"]):
-            text = el.get_text(strip=True)
-            if text and len(text) > 20 and text != titel:
-                beschreibung = text[:300]
-                break
+        if not ort:
+            ort = "Düsseldorf"
 
-        # --- Preis ---
-        preis = None
-        preis_schluesselbegriffe = ["kostenlos", "frei", "eintritt frei", "€", "eur"]
-        for text in alle_texte:
-            if any(p in text.lower() for p in preis_schluesselbegriffe):
-                preis = text.strip()[:100]
-                break
+        # --- Kategorie ---
+        kat_el = teaser_el.select_one(".tb-teaser__topline-category")
+        kategorie = _kategorie_aus_text(kat_el.get_text(strip=True) if kat_el else "")
+
+        # --- Beschreibung: Topline-Kategorie als Kurztext ---
+        beschreibung = None
+        topline_el = teaser_el.select_one(".tb-teaser__topline")
+        if topline_el:
+            beschreibung = topline_el.get_text(strip=True)[:300] or None
 
         # --- Bild ---
-        bild_el = element.find("img")
         bild_url = None
+        bild_el = teaser_el.select_one("img")
         if bild_el:
             bild_url = (
-                bild_el.get("src") or
                 bild_el.get("data-src") or
+                bild_el.get("src") or
                 bild_el.get("data-lazy-src")
             )
-            if bild_url:
+            if bild_url and not bild_url.startswith("http"):
                 bild_url = urljoin(BASE_URL, bild_url)
 
         return {
@@ -314,9 +320,9 @@ def _event_aus_container(element, heute: date) -> Optional[dict]:
             "uhrzeit": uhrzeit,
             "ort": ort,
             "adresse": None,
-            "kategorie": "sonstiges",
+            "kategorie": kategorie,
             "beschreibung": beschreibung,
-            "preis": preis,
+            "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,
             "bild_url": bild_url,
@@ -325,7 +331,7 @@ def _event_aus_container(element, heute: date) -> Optional[dict]:
         }
 
     except Exception as fehler:
-        logger.error("Fehler beim Parsen eines Event-Containers: %s", str(fehler))
+        logger.error("Fehler beim Parsen eines Teaser-Elements: %s", str(fehler))
         return None
 
 
@@ -362,34 +368,32 @@ def scrape() -> list[dict]:
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Robuste Selektor-Strategie: mehrere Container-Typen ausprobieren
-        container = (
-            soup.find_all("article") or
-            soup.find_all(
-                "div",
-                class_=lambda c: c and "event" in c.lower()
-            ) or
-            soup.find_all(
-                "li",
-                class_=lambda c: c and "event" in c.lower()
-            )
-        )
+        # Primärsuche: einzelne Teaser-Elemente (.tb-teaser Links)
+        teaser_els = soup.select("a.tb-teaser")
 
-        if not container:
+        # Fallback: figure.o-grid__item > a
+        if not teaser_els:
+            teaser_els = [
+                fig.find("a", href=True)
+                for fig in soup.select("figure.o-grid__item")
+                if fig.find("a", href=True)
+            ]
+
+        if not teaser_els:
             logger.warning(
-                "Keine Event-Container gefunden auf %s – "
+                "Keine Event-Teaser gefunden auf %s – "
                 "Seitenstruktur hat sich möglicherweise geändert.",
                 LISTE_URL,
             )
             return []
 
-        logger.info("%d potenzielle Event-Container gefunden", len(container))
+        logger.info("%d potenzielle Event-Teaser gefunden", len(teaser_els))
 
         # Duplikate innerhalb eines Scraper-Laufs verhindern
         gesehene_urls: set[str] = set()
 
-        for element in container:
-            event = _event_aus_container(element, heute)
+        for teaser_el in teaser_els:
+            event = _event_aus_teaser(teaser_el, heute)
             if event is None:
                 continue
 

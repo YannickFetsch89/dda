@@ -3,17 +3,22 @@ eventbrite.py – DiesDasDüsseldorf
 Scraper für die Eventbrite API v3: Events in Düsseldorf
 Erstellt: 2026-02-24
 """
+import json
 import logging
 import os
+import re
 import time
 from datetime import date, datetime
 from typing import Optional
 
 import httpx
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-API_URL = "https://www.eventbriteapi.com/v3/events/search/"
+# Hinweis: Die Eventbrite API v3 /events/search/ wurde abgeschaltet (2024).
+# Stattdessen wird die öffentliche Website mit JSON-LD Markup gescrapt.
+WEBSITE_URL = "https://www.eventbrite.de/d/germany--d%C3%BCsseldorf/events/"
 QUELLE_NAME = "Eventbrite"
 
 # Mapping Eventbrite category_id → DiesDasDüsseldorf-Kategorien
@@ -101,72 +106,82 @@ def _preis_ermitteln(event: dict) -> Optional[str]:
     return None
 
 
-def _event_mappen(event: dict, heute: date) -> Optional[dict]:
+def _event_aus_jsonld(item: dict, heute: date) -> Optional[dict]:
     """
-    Mappt ein rohes Eventbrite API-Event-Objekt auf das
-    DiesDasDüsseldorf Standard Event-Dict.
+    Mappt ein JSON-LD ListItem-Event auf das DiesDasDüsseldorf Standard Event-Dict.
+
+    Die Eventbrite-Website liefert Events als JSON-LD itemListElement mit
+    startDate, description, url und image.
 
     Args:
-        event: Rohes Event-Objekt aus der Eventbrite API-Antwort
+        item: JSON-LD ListItem-Dict (enthält "item"-Unterebene mit Event-Daten)
         heute: Heutiges Datum für Filterung vergangener Events
 
     Returns:
         Event-Dict im DiesDasDüsseldorf-Format oder None bei Fehler
-        bzw. wenn das Event in der Vergangenheit liegt
     """
     try:
-        # Titel
-        name_obj = event.get("name") or {}
-        titel = name_obj.get("text", "").strip()
+        event = item.get("item", item)
+
+        # --- URL ---
+        quelle_url = event.get("url", "").strip()
+        if not quelle_url:
+            return None
+
+        # --- Titel: aus URL ableiten wenn kein name-Feld ---
+        titel = event.get("name", "").strip()
         if not titel:
-            logger.warning("Event ohne Titel übersprungen (ID: %s)", event.get("id"))
+            # Aus URL-Slug extrahieren: /e/titel-tickets-123 → "Titel"
+            slug = quelle_url.rstrip("/").split("/")[-1]
+            slug = re.sub(r"-tickets-\d+$", "", slug)
+            titel = slug.replace("-", " ").title()
+        if not titel:
             return None
 
-        # Datum und Uhrzeit aus "start.local" (Format: "2026-02-24T18:00:00")
-        start_obj = event.get("start") or {}
-        start_lokal = start_obj.get("local", "")
-        if not start_lokal:
-            logger.warning("Event ohne Startdatum übersprungen: %s", titel)
+        # --- Datum ---
+        start_date = event.get("startDate", "")
+        if not start_date:
             return None
-
         try:
-            start_dt = datetime.fromisoformat(start_lokal)
-            datum = start_dt.date().isoformat()
-            uhrzeit = start_dt.strftime("%H:%M")
-        except ValueError as e:
-            logger.warning(
-                "Datum konnte nicht geparst werden für '%s': %s", titel, e
-            )
+            if "T" in start_date:
+                start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                datum = start_dt.date().isoformat()
+                uhrzeit = start_dt.strftime("%H:%M")
+            else:
+                datum = start_date[:10]
+                uhrzeit = None
+        except (ValueError, TypeError):
             return None
 
-        # Vergangene Events überspringen
         if date.fromisoformat(datum) < heute:
             return None
 
-        # Venue / Ort
-        venue = event.get("venue") or {}
-        ort = venue.get("name", "").strip() or "Düsseldorf"
+        # --- Ort ---
+        location = event.get("location", {})
+        ort = location.get("name", "").strip() or "Düsseldorf"
+        adresse = location.get("address", {}).get("streetAddress", "").strip() or None
 
-        # Adresse
-        adresse_obj = venue.get("address") or {}
-        adresse = adresse_obj.get("localized_address_display", "").strip() or None
+        # --- Kategorie aus Titel ableiten ---
+        titel_lower = titel.lower()
+        kategorie = "sonstiges"
+        for schluessel, kat in {
+            "konzert": "musik", "musik": "musik", "festival": "musik",
+            "ausstellung": "kultur", "theater": "kultur", "oper": "kultur",
+            "party": "nightlife", "club": "nightlife",
+            "sport": "sport", "fitness": "sport",
+            "workshop": "community", "meetup": "community",
+            "food": "food", "markt": "food",
+            "kinder": "family", "family": "family",
+        }.items():
+            if schluessel in titel_lower:
+                kategorie = kat
+                break
 
-        # Kategorie
-        category_id = event.get("category_id")
-        kategorie = _kategorie_mappen(category_id)
+        # --- Bild ---
+        bild_url = event.get("image", None)
 
-        # Bild
-        logo_obj = event.get("logo") or {}
-        bild_url = logo_obj.get("url") or None
-
-        # Preis
-        preis = _preis_ermitteln(event)
-
-        # Quell-URL
-        quelle_url = event.get("url", "").strip()
-        if not quelle_url:
-            logger.warning("Event ohne URL übersprungen: %s", titel)
-            return None
+        # --- Beschreibung ---
+        beschreibung = event.get("description", "").strip()[:300] or None
 
         return {
             "titel": titel,
@@ -175,8 +190,8 @@ def _event_mappen(event: dict, heute: date) -> Optional[dict]:
             "ort": ort,
             "adresse": adresse,
             "kategorie": kategorie,
-            "beschreibung": None,
-            "preis": preis,
+            "beschreibung": beschreibung,
+            "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,
             "bild_url": bild_url,
@@ -185,164 +200,114 @@ def _event_mappen(event: dict, heute: date) -> Optional[dict]:
         }
 
     except Exception as e:
-        logger.error(
-            "Fehler beim Mappen eines Eventbrite-Events: %s", str(e)
-        )
+        logger.error("Fehler beim Mappen eines Eventbrite-Events: %s", str(e))
         return None
-
-
-def _api_request_mit_backoff(
-    client: httpx.Client, params: dict, max_versuche: int = 3
-) -> Optional[httpx.Response]:
-    """
-    Führt einen API-Request mit exponentiellem Backoff bei HTTP 429 durch.
-
-    Args:
-        client: Aktiver httpx-Client mit gesetzten Headern
-        params: Query-Parameter für den API-Call
-        max_versuche: Maximale Anzahl Versuche bei Rate-Limiting (Standard: 3)
-
-    Returns:
-        httpx.Response bei Erfolg, None bei dauerhaftem Fehler
-    """
-    wartezeit = 2  # Startwartezeit in Sekunden
-
-    for versuch in range(1, max_versuche + 1):
-        try:
-            response = client.get(API_URL, params=params)
-
-            if response.status_code == 429:
-                if versuch < max_versuche:
-                    logger.warning(
-                        "Rate Limit erreicht (HTTP 429). "
-                        "Warte %ds vor Versuch %d/%d ...",
-                        wartezeit, versuch + 1, max_versuche
-                    )
-                    time.sleep(wartezeit)
-                    wartezeit *= 2  # Exponentielles Backoff
-                    continue
-                else:
-                    logger.error(
-                        "Rate Limit nach %d Versuchen nicht überwunden. "
-                        "Abbruch.",
-                        max_versuche
-                    )
-                    return None
-
-            response.raise_for_status()
-            return response
-
-        except httpx.TimeoutException:
-            logger.error(
-                "Timeout beim Eventbrite API-Call (Versuch %d/%d)",
-                versuch, max_versuche
-            )
-            if versuch < max_versuche:
-                time.sleep(wartezeit)
-                wartezeit *= 2
-            else:
-                return None
-
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                "HTTP Fehler %s bei Eventbrite API: %s",
-                e.response.status_code, str(e)
-            )
-            return None
-
-    return None
 
 
 def scrape() -> list[dict]:
     """
-    Ruft Events von der Eventbrite API v3 für Düsseldorf ab und
-    gibt sie als Liste von DiesDasDüsseldorf Event-Dicts zurück.
+    Scrapt Events von der Eventbrite-Website für Düsseldorf via JSON-LD Markup.
 
-    Benötigt die Umgebungsvariable EVENTBRITE_TOKEN. Ist diese nicht
-    gesetzt oder leer, wird sofort eine leere Liste zurückgegeben.
+    Hinweis: Die Eventbrite API v3 /events/search/ wurde 2024 abgeschaltet.
+    Stattdessen wird die öffentliche Eventbrite-Website gescrapt, die Events
+    als strukturierte JSON-LD Daten (schema.org) ausliefert.
+
+    Bei Bot-Schutz (AWS WAF / 405) wird die Liste leer zurückgegeben.
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
     events: list[dict] = []
     heute = date.today()
-
-    # Token prüfen – Graceful Skip wenn nicht gesetzt
-    token = os.getenv("EVENTBRITE_TOKEN", "").strip()
-    if not token:
-        logger.info(
-            "EVENTBRITE_TOKEN nicht gesetzt – Eventbrite Scraper wird übersprungen."
-        )
-        return []
-
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    params = {
-        "location.address": "Düsseldorf,Germany",
-        "location.within": "15km",
-        "expand": "venue,ticket_availability",
-        "sort_by": "date",
-        "page_size": 50,
-    }
-
     headers = {
-        "Authorization": f"Bearer {token}",
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/120.0.0.0 Safari/537.36"
         ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "de-DE,de;q=0.9",
     }
 
     try:
-        time.sleep(2)  # Rate Limiting
+        time.sleep(2)
 
         with httpx.Client(headers=headers, timeout=30, follow_redirects=True) as client:
-            response = _api_request_mit_backoff(client, params)
-
-            if response is None:
-                logger.error(
-                    "Eventbrite API nicht erreichbar. Scraper abgebrochen."
-                )
-                return []
-
             try:
-                daten = response.json()
-            except Exception as e:
-                logger.error(
-                    "Eventbrite API-Antwort konnte nicht als JSON gelesen werden: %s",
-                    str(e)
-                )
+                response = client.get(WEBSITE_URL)
+            except httpx.TimeoutException:
+                logger.error("Timeout beim Abrufen der Eventbrite-Website")
                 return []
 
-            roh_events = daten.get("events", [])
-            logger.info("%d rohe Events von Eventbrite API empfangen", len(roh_events))
+        if response.status_code in (405, 403):
+            logger.warning(
+                "Eventbrite-Website blockiert (HTTP %s) – "
+                "Bot-Schutz aktiv. Kein Ergebnis.",
+                response.status_code,
+            )
+            return []
 
-            # Duplikate innerhalb eines Scraper-Laufs verhindern
-            gesehene_urls: set[str] = set()
+        if response.status_code != 200:
+            logger.error(
+                "HTTP %s beim Abrufen der Eventbrite-Website",
+                response.status_code,
+            )
+            return []
 
-            for roh_event in roh_events:
-                url = roh_event.get("url", "")
-                if url in gesehene_urls:
-                    continue
-                gesehene_urls.add(url)
+        soup = BeautifulSoup(response.text, "html.parser")
 
-                event = _event_mappen(roh_event, heute)
-                if event:
-                    events.append(event)
+        # JSON-LD Markup parsen
+        jsonld_scripts = soup.find_all("script", type="application/ld+json")
+        if not jsonld_scripts:
+            logger.warning(
+                "Kein JSON-LD Markup auf Eventbrite-Seite gefunden – "
+                "Seitenstruktur möglicherweise geändert."
+            )
+            return []
+
+        roh_events: list[dict] = []
+        for script in jsonld_scripts:
+            try:
+                daten = json.loads(script.string or "")
+                items = daten.get("itemListElement", [])
+                roh_events.extend(items)
+            except (json.JSONDecodeError, AttributeError):
+                continue
+
+        logger.info("%d rohe Events aus Eventbrite JSON-LD extrahiert", len(roh_events))
+
+        gesehene_urls: set[str] = set()
+        for item in roh_events:
+            event = _event_aus_jsonld(item, heute)
+            if event is None:
+                continue
+            url = event["quelle_url"]
+            if url in gesehene_urls:
+                continue
+            gesehene_urls.add(url)
+            events.append(event)
 
     except Exception as e:
         logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(e))
         return []
 
-    logger.info(
-        "Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events)
-    )
+    if not events:
+        logger.warning(
+            "Scraper %s: 0 Events gefunden. "
+            "Eventbrite-Website möglicherweise durch Bot-Schutz blockiert.",
+            QUELLE_NAME,
+        )
+
+    logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))
     return events
 
 
 if __name__ == "__main__":
     # Direkter Testlauf
+    from dotenv import load_dotenv
+    load_dotenv()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"

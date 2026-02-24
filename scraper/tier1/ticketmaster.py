@@ -339,6 +339,8 @@ def scrape() -> list[dict]:
 
 if __name__ == "__main__":
     # Direkter Testlauf
+    from dotenv import load_dotenv
+    load_dotenv()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
