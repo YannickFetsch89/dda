@@ -3,11 +3,29 @@ tonhalle.py – DiesDasDüsseldorf
 Scraper für die Tonhalle Düsseldorf: Konzerte und Veranstaltungen.
 
 Primärquelle: Webshop der Tonhalle (webshop.tonhalle.de/list/events)
-  → Server-seitig gerendertes HTML mit vollständigen Event-Daten.
-  → CSS-Struktur: .main_content > .content_element > .content > .group
+  → Server-seitig gerendertes HTML via SecuTix-Buchungssystem.
+  → DOM-Struktur:
+      <section class="product product_EVENT" id="prod_NNNN">
+        <a class="title" href="/selection/event/date?productId=NNNN">Titel</a>
+        <p class="date">
+          <span class="unique">              ← Einzeltermin
+            <span class="day">Do 1. März 2026</span>
+            <span class="time">19:30</span>
+          </span>
+          |
+          <span class="range">              ← Zeitraum (von...bis)
+            <span class="from"><span class="day">...</span></span>
+            <span class="to"><span class="day">...</span></span>
+          </span>
+        </p>
+        <p class="location"><span class="space">Saalname</span></p>
+        <span class="inline_name_addon">Untertitel</span>
+        <img class="product_image" data-original="...">
+      </section>
 
 Fallbackquelle: Hauptseite (tonhalle.de/das-programm)
-  → Next.js-App mit __NEXT_DATA__ JSON im Script-Tag.
+  → Next.js-App; greift auf __NEXT_DATA__ JSON zurück und durchsucht
+    das initiale pageProps-Objekt nach Event-artigen Einträgen.
 
 Erstellt: 2026-02-24
 """
@@ -16,7 +34,7 @@ import logging
 import re
 from datetime import date, timedelta
 from typing import Optional
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -28,7 +46,6 @@ logger = logging.getLogger(__name__)
 
 WEBSHOP_URL = "https://webshop.tonhalle.de/list/events"
 HAUPTSEITE_URL = "https://www.tonhalle.de/das-programm"
-KALENDER_URL = "https://www.tonhalle.de/veranstaltungen/kalender"
 WEBSHOP_BASE = "https://webshop.tonhalle.de"
 HAUPTSEITE_BASE = "https://www.tonhalle.de"
 
@@ -37,15 +54,13 @@ ORT_STANDARD = "Tonhalle Düsseldorf"
 ADRESSE_STANDARD = "Ehrenhof 1, 40479 Düsseldorf"
 KATEGORIE_STANDARD = "musik"
 
-# Monatsnamen auf Deutsch und Englisch (Webshop kann beide liefern)
+# Monatsnamen Deutsch und Englisch (Webshop kann beides liefern)
 MONAT_MAP: dict[str, int] = {
-    # Deutsch
     "januar": 1, "februar": 2, "märz": 3, "april": 4,
     "mai": 5, "juni": 6, "juli": 7, "august": 8,
     "september": 9, "oktober": 10, "november": 11, "dezember": 12,
-    # Englisch (Webshop liefert manchmal englische Monatsnamen)
-    "january": 1, "february": 2, "march": 3,
-    "june": 6, "july": 7, "october": 10,
+    "january": 1, "february": 2, "march": 3, "june": 6,
+    "july": 7, "october": 10,
 }
 
 MONAT_KURZ_MAP: dict[str, int] = {
@@ -66,7 +81,7 @@ def _datum_parsen(text: str) -> Optional[str]:
         - "24.02.2026"               → "2026-02-24"   (deutsches Format)
         - "24. Februar 2026"         → "2026-02-24"   (ausgeschrieben)
         - "Sonntag 8. März 2026"     → "2026-03-08"   (Webshop-Format)
-        - "Sunday 8 March 2026"      → "2026-03-08"   (englisches Webshop-Format)
+        - "Sunday 8 March 2026"      → "2026-03-08"   (englisches Format)
         - "24. Feb" / "24. Feb."     → nächstes passendes Datum
 
     Args:
@@ -101,8 +116,8 @@ def _datum_parsen(text: str) -> Optional[str]:
                 int(treffer.group(1)),
             ).isoformat()
 
-        # Format: "Sonntag 8. März 2026" oder "Sunday 8 March 2026"
-        # oder "24. März 2026" oder "24. february 2026"
+        # Format: "Sonntag 8. März 2026" / "Sunday 8 March 2026" / "24. März 2026"
+        # Erkennt: optional Wochentag + Tag + Punkt(optional) + Monatsname + Jahr
         treffer = re.search(
             r"(\d{1,2})\.?\s+([a-zäöüß]+)\s+(\d{4})",
             bereinigt_klein,
@@ -196,57 +211,68 @@ def _ort_aus_saalname(saalname: str) -> str:
     if not saalname:
         return ORT_STANDARD
 
+    saalname_bereinigt = saalname.strip()
+    saalname_klein = saalname_bereinigt.lower()
+
+    # Bereits vollständig mit "Tonhalle"
+    if "tonhalle" in saalname_klein:
+        return saalname_bereinigt
+
     bekannte_saele = [
         "mendelssohn", "rotunde", "saal", "foyer", "terrasse",
+        "trautvetter", "brückner",
     ]
-    saalname_klein = saalname.lower()
-
     for saal in bekannte_saele:
         if saal in saalname_klein:
-            # Saalname bereinigen und mit Venue kombinieren
-            bereinigt = saalname.strip()
-            # Bereits vollständig, wenn "Tonhalle" drin steht
-            if "tonhalle" in saalname_klein:
-                return bereinigt
-            return f"Tonhalle Düsseldorf – {bereinigt}"
+            return f"Tonhalle Düsseldorf – {saalname_bereinigt}"
 
     return ORT_STANDARD
 
 
 # --- Primärstrategie: Webshop (webshop.tonhalle.de) -----------------------
 
-def _event_aus_webshop_gruppe(gruppe_el, heute: date) -> Optional[dict]:
+def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
     """
-    Extrahiert ein Event-Dict aus einer Gruppe (.group) des Webshops.
+    Extrahiert ein oder mehrere Event-Dicts aus einem Webshop-Produktelement.
 
-    Der Webshop (SecuTix) rendert Events in diesem DOM-Muster:
-        <div class="group">
-          <h4><a href="/selection/event/date?productId=NNNN">Titel</a></h4>
-          <div>Untertitel / Beschreibung</div>
-          <div>Datum-Uhrzeit-String (z.B. "Sonntag 8. März 2026 16:30")</div>
-          <div>Saalname (z.B. "Tonhalle Mendelssohn-Saal")</div>
-          <a href="/selection/event/date?productId=NNNN">Auswählen</a>
-        </div>
+    Die SecuTix-Oberfläche rendert jedes Event als
+    <section class="product product_EVENT" id="prod_NNNN"> mit diesen Feldern:
+
+      Titel:       <a class="title" href="/selection/event/date?productId=NNNN">
+      Datum:       <p class="date">
+                     <span class="unique">   → Einzeltermin
+                       <span class="day">Wochentag TT. Monat YYYY</span>
+                       <span class="time">HH:MM</span>
+                     </span>
+                     ODER
+                     <span class="range">   → Zeitraum
+                       <span class="from"><span class="day">...</span></span>
+                       <span class="to"><span class="day">...</span></span>
+                     </span>
+      Ort:         <p class="location"><span class="space">Saalname</span>
+      Beschreibung:<span class="inline_name_addon">Untertitel</span>
+      Bild:        <img class="product_image" data-original="URL">
+
+    Bei Zeitraum-Events (range) wird für jeden .day-Eintrag ein separates
+    Event erzeugt, sofern er nicht in der Vergangenheit liegt.
 
     Args:
-        gruppe_el: BeautifulSoup-Element mit class="group"
-        heute:     Heutiges Datum für Filterung vergangener Events
+        section_el: BeautifulSoup <section class="product_EVENT"> Element
+        heute:      Heutiges Datum für Filterung vergangener Events
 
     Returns:
-        Event-Dict oder None wenn Pflichtfelder fehlen / Event vergangen
+        Liste von Event-Dicts (leer wenn Pflichtfelder fehlen oder alles vergangen)
     """
     try:
-        # --- Titel und URL aus dem h4-Link ---
-        titel_link = gruppe_el.select_one("h4 a[href]")
+        # --- Titel und URL ---
+        titel_link = section_el.select_one("a.title[href]")
         if not titel_link:
-            # Fallback: erster Link in der Gruppe
-            titel_link = gruppe_el.select_one("a[href]")
-        if not titel_link:
-            return None
+            # Kein klickbarer Titel → Produkt nicht buchbar / kein Event
+            return []
 
         titel = titel_link.get_text(strip=True)
         if not titel:
-            return None
+            return []
 
         href = titel_link.get("href", "")
         if href.startswith("/"):
@@ -256,95 +282,118 @@ def _event_aus_webshop_gruppe(gruppe_el, heute: date) -> Optional[dict]:
         else:
             quelle_url = WEBSHOP_URL
 
-        # --- Alle Textinhalte der Kind-Divs sammeln ---
-        kind_divs = gruppe_el.find_all("div", recursive=False)
-        texte = [d.get_text(strip=True) for d in kind_divs if d.get_text(strip=True)]
+        # --- Alle relevanten Datum-Strings sammeln ---
+        datum_el = section_el.select_one("p.date")
+        datums_texte: list[str] = []
 
-        # --- Datum und Uhrzeit ---
-        # Der Datum-String enthält Monatsnamen und Jahreszahl, z.B.:
-        # "Sonntag 8. März 2026 16:30" oder "Sunday 8 March 2026 20:00"
-        datum = None
-        uhrzeit = None
+        if datum_el:
+            # Einzeltermin: <span class="unique">
+            einzel_span = datum_el.select_one("span.unique")
+            if einzel_span:
+                tag_span = einzel_span.select_one("span.day")
+                if tag_span:
+                    datums_texte.append(tag_span.get_text(strip=True))
 
-        for text in texte:
-            # Datum suchen: Muss Jahreszahl enthalten oder deutsches Format
-            hat_jahreszahl = bool(re.search(r"\b20\d{2}\b", text))
-            hat_punkt_datum = bool(re.search(r"\d{1,2}\.\d{2}\.", text))
-            monat_in_text = any(
-                m in text.lower()
-                for m in list(MONAT_MAP.keys()) + list(MONAT_KURZ_MAP.keys())
-            )
+            # Zeitraum: <span class="range"> – beide Endpunkte als separate Events
+            bereich_span = datum_el.select_one("span.range")
+            if bereich_span:
+                for day_span in bereich_span.select("span.day"):
+                    tag_text = day_span.get_text(strip=True)
+                    if tag_text:
+                        datums_texte.append(tag_text)
 
-            if hat_jahreszahl or hat_punkt_datum or monat_in_text:
-                kandidat = _datum_parsen(text)
-                if kandidat and not datum:
-                    datum = kandidat
-                    # Uhrzeit aus demselben String extrahieren
-                    uhrzeit = _uhrzeit_parsen(text)
-                    break
+            # Fallback: alle .day-Spans direkt
+            if not datums_texte:
+                for day_span in datum_el.select("span.day"):
+                    tag_text = day_span.get_text(strip=True)
+                    if tag_text:
+                        datums_texte.append(tag_text)
 
-        if not datum:
+        if not datums_texte:
             logger.debug("Kein Datum für Event '%s' gefunden", titel)
-            return None
+            return []
 
-        # Vergangene Events überspringen
-        if date.fromisoformat(datum) < heute:
-            return None
+        # --- Uhrzeit (aus erstem Einzel-Termin-Element) ---
+        uhrzeit = None
+        if datum_el:
+            zeit_span = datum_el.select_one("span.time")
+            if zeit_span:
+                uhrzeit = _uhrzeit_parsen(zeit_span.get_text(strip=True))
 
-        # --- Saalname / Ort ---
+        # --- Ort / Saalname ---
         ort = ORT_STANDARD
-        for text in texte:
-            text_klein = text.lower()
-            if any(
-                kw in text_klein
-                for kw in ["saal", "tonhalle", "rotunde", "foyer"]
-            ):
-                ort = _ort_aus_saalname(text)
-                break
+        ort_el = section_el.select_one("p.location span.space, .location_container span.space")
+        if ort_el:
+            ort = _ort_aus_saalname(ort_el.get_text(strip=True))
 
-        # --- Beschreibung: zweiter Textinhalt (Untertitel), falls vorhanden ---
+        # --- Beschreibung aus .inline_name_addon ---
         beschreibung = None
-        nicht_datum_nicht_ort = [
-            t for t in texte
-            if t != titel
-            and not re.search(r"\b20\d{2}\b", t)
-            and not any(
-                kw in t.lower()
-                for kw in ["saal", "tonhalle", "rotunde", "auswählen"]
-            )
-        ]
-        if nicht_datum_nicht_ort:
-            beschreibung = nicht_datum_nicht_ort[0][:300] or None
+        addon_el = section_el.select_one("span.inline_name_addon")
+        if addon_el:
+            addon_text = addon_el.get_text(strip=True)
+            # Punkte und bedeutungslose Platzhalter ignorieren
+            if addon_text and addon_text not in [".", "–", "-", ""]:
+                beschreibung = addon_text[:300]
 
-        return {
-            "titel": titel,
-            "datum": datum,
-            "uhrzeit": uhrzeit,
-            "ort": ort,
-            "adresse": ADRESSE_STANDARD,
-            "kategorie": KATEGORIE_STANDARD,
-            "beschreibung": beschreibung,
-            "preis": None,
-            "quelle_name": QUELLE_NAME,
-            "quelle_url": quelle_url,
-            "bild_url": None,
-            "instagram_caption": None,
-            "status": "neu",
-        }
+        # --- Bild: data-original (lazy loading) oder src ---
+        bild_url = None
+        bild_el = section_el.select_one("img.product_image, img.lazy")
+        if bild_el:
+            bild_url = (
+                bild_el.get("data-original")
+                or bild_el.get("data-src")
+                or bild_el.get("src")
+            )
+            if bild_url and not bild_url.startswith("http"):
+                bild_url = urljoin(WEBSHOP_BASE, bild_url)
+
+        # --- Für jeden Datums-Eintrag ein Event erstellen ---
+        events: list[dict] = []
+        for datum_text in datums_texte:
+            datum = _datum_parsen(datum_text)
+            if not datum:
+                logger.debug(
+                    "Datumsstring '%s' konnte nicht geparst werden "
+                    "(Event: '%s')",
+                    datum_text, titel,
+                )
+                continue
+
+            # Vergangene Events überspringen
+            if date.fromisoformat(datum) < heute:
+                continue
+
+            events.append({
+                "titel": titel,
+                "datum": datum,
+                "uhrzeit": uhrzeit,
+                "ort": ort,
+                "adresse": ADRESSE_STANDARD,
+                "kategorie": KATEGORIE_STANDARD,
+                "beschreibung": beschreibung,
+                "preis": None,
+                "quelle_name": QUELLE_NAME,
+                "quelle_url": quelle_url,
+                "bild_url": bild_url,
+                "instagram_caption": None,
+                "status": "neu",
+            })
+
+        return events
 
     except Exception as fehler:
         logger.error(
-            "Fehler beim Parsen einer Webshop-Gruppe: %s", str(fehler)
+            "Fehler beim Parsen einer Produkt-Section: %s", str(fehler)
         )
-        return None
+        return []
 
 
 def _scrape_webshop(heute: date) -> list[dict]:
     """
     Scrapt Events vom Tonhalle-Webshop (primäre Strategie).
 
-    Der Webshop unter webshop.tonhalle.de/list/events ist server-seitig
-    gerendert (SecuTix-System) und enthält strukturierte Event-Einträge.
+    Der Webshop (webshop.tonhalle.de/list/events) ist server-seitig
+    gerendert via SecuTix und enthält alle buchbaren Events der Tonhalle.
 
     Args:
         heute: Heutiges Datum für Filterung vergangener Events
@@ -361,59 +410,55 @@ def _scrape_webshop(heute: date) -> list[dict]:
 
         soup = BeautifulSoup(html, "html.parser")
 
-        # Primärsuche: .group-Elemente innerhalb von .content_element
-        gruppen = soup.select(".main_content .group")
+        # Primärsuche: <section class="product product_EVENT">
+        produkt_sections = soup.select("section.product_EVENT")
 
-        # Fallback 1: alle .group-Elemente auf der Seite
-        if not gruppen:
-            gruppen = soup.select(".group")
+        # Fallback 1: sections mit data-product-type="EVENT"
+        if not produkt_sections:
+            produkt_sections = soup.select("section[data-product-type='EVENT']")
 
-        # Fallback 2: div-Elemente die einen h4 mit Link enthalten
-        if not gruppen:
-            gruppen = [
-                el.parent
-                for el in soup.select("h4 a[href*='productId']")
-                if el.parent
+        # Fallback 2: alle sections mit id="prod_..."
+        if not produkt_sections:
+            produkt_sections = [
+                s for s in soup.select("section[id^='prod_']")
             ]
 
-        if not gruppen:
+        if not produkt_sections:
             logger.warning(
-                "Webshop: Keine Event-Gruppen gefunden – "
-                "Seitenstruktur möglicherweise geändert."
+                "Webshop: Keine Event-Sections gefunden auf %s – "
+                "Seitenstruktur möglicherweise geändert.",
+                WEBSHOP_URL,
             )
             return []
 
         logger.info(
-            "Webshop: %d potenzielle Event-Gruppen gefunden", len(gruppen)
+            "Webshop: %d Produkt-Sections gefunden", len(produkt_sections)
         )
 
         events: list[dict] = []
-        gesehene_urls: set[str] = set()
+        # Deduplizierung anhand Titel+Datum-Kombination
+        gesehene_schluessel: set[str] = set()
 
-        for gruppe in gruppen:
-            event = _event_aus_webshop_gruppe(gruppe, heute)
-            if event is None:
-                continue
+        for section in produkt_sections:
+            event_liste = _event_aus_produkt_section(section, heute)
+            for event in event_liste:
+                schluessel = f"{event['titel']}_{event['datum']}"
+                if schluessel in gesehene_schluessel:
+                    continue
+                gesehene_schluessel.add(schluessel)
+                events.append(event)
 
-            url = event["quelle_url"]
-            if url in gesehene_urls:
-                continue
-            gesehene_urls.add(url)
-            events.append(event)
-
-        logger.info("Webshop-Scraping: %d Events gefunden", len(events))
+        logger.info("Webshop-Scraping abgeschlossen: %d Events gefunden", len(events))
         return events
 
     except Exception as fehler:
-        logger.error(
-            "Webshop-Scraping fehlgeschlagen: %s", str(fehler)
-        )
+        logger.error("Webshop-Scraping fehlgeschlagen: %s", str(fehler))
         return []
 
 
 # --- Fallbackstrategie: __NEXT_DATA__ der Hauptseite ----------------------
 
-def _event_aus_next_data(eintrag: dict, heute: date) -> Optional[dict]:
+def _event_aus_next_data_eintrag(eintrag: dict, heute: date) -> Optional[dict]:
     """
     Extrahiert ein Event-Dict aus einem Next.js pageProps-Eintrag.
 
@@ -428,7 +473,6 @@ def _event_aus_next_data(eintrag: dict, heute: date) -> Optional[dict]:
         Event-Dict oder None
     """
     try:
-        # Titel aus verschiedenen möglichen Schlüsseln
         titel = (
             eintrag.get("title")
             or eintrag.get("titel")
@@ -441,7 +485,6 @@ def _event_aus_next_data(eintrag: dict, heute: date) -> Optional[dict]:
         if not titel:
             return None
 
-        # Datum
         datum_roh = (
             eintrag.get("startDate")
             or eintrag.get("date")
@@ -456,7 +499,6 @@ def _event_aus_next_data(eintrag: dict, heute: date) -> Optional[dict]:
         if date.fromisoformat(datum) < heute:
             return None
 
-        # Uhrzeit
         uhrzeit_roh = (
             eintrag.get("startTime")
             or eintrag.get("time")
@@ -465,31 +507,40 @@ def _event_aus_next_data(eintrag: dict, heute: date) -> Optional[dict]:
         )
         uhrzeit = _uhrzeit_parsen(str(uhrzeit_roh)) if uhrzeit_roh else None
 
-        # URL
         slug = eintrag.get("slug") or eintrag.get("uuid") or eintrag.get("id")
-        if slug:
-            quelle_url = f"{HAUPTSEITE_BASE}/veranstaltungen/{slug}"
-        else:
-            quelle_url = HAUPTSEITE_URL
+        quelle_url = (
+            f"{HAUPTSEITE_BASE}/veranstaltungen/{slug}"
+            if slug
+            else HAUPTSEITE_URL
+        )
 
-        # Ort
-        ort_roh = eintrag.get("location") or eintrag.get("ort") or eintrag.get("venue")
-        if ort_roh and isinstance(ort_roh, dict):
+        ort_roh = (
+            eintrag.get("location")
+            or eintrag.get("ort")
+            or eintrag.get("venue")
+        )
+        if isinstance(ort_roh, dict):
             ort_roh = ort_roh.get("name") or ort_roh.get("title") or ""
         ort = _ort_aus_saalname(str(ort_roh)) if ort_roh else ORT_STANDARD
 
-        # Beschreibung
         beschreibung_roh = (
             eintrag.get("description")
             or eintrag.get("beschreibung")
             or eintrag.get("teaser")
             or eintrag.get("subtitle")
         )
-        beschreibung = str(beschreibung_roh).strip()[:300] if beschreibung_roh else None
+        beschreibung = (
+            str(beschreibung_roh).strip()[:300]
+            if beschreibung_roh
+            else None
+        )
 
-        # Bild
         bild_url = None
-        bild_roh = eintrag.get("image") or eintrag.get("bild") or eintrag.get("thumbnail")
+        bild_roh = (
+            eintrag.get("image")
+            or eintrag.get("bild")
+            or eintrag.get("thumbnail")
+        )
         if isinstance(bild_roh, dict):
             bild_url = bild_roh.get("url") or bild_roh.get("src")
         elif isinstance(bild_roh, str) and bild_roh.startswith("http"):
@@ -518,14 +569,13 @@ def _event_aus_next_data(eintrag: dict, heute: date) -> Optional[dict]:
         return None
 
 
-def _next_data_durchsuchen(data: dict | list, pfad: str = "") -> list[dict]:
+def _next_data_durchsuchen(data: dict | list) -> list[dict]:
     """
     Durchsucht ein Next.js __NEXT_DATA__ JSON-Objekt rekursiv nach
-    Event-artigen Einträgen (Listen von Dicts mit Titel und Datum).
+    Event-artigen Einträgen (Dicts mit Titel und Datum).
 
     Args:
         data: JSON-Datenstruktur (Dict oder Liste)
-        pfad: Aktueller JSON-Pfad für Logging
 
     Returns:
         Liste von Event-Dict-Kandidaten
@@ -533,10 +583,12 @@ def _next_data_durchsuchen(data: dict | list, pfad: str = "") -> list[dict]:
     kandidaten: list[dict] = []
 
     if isinstance(data, list):
-        for i, eintrag in enumerate(data):
+        for eintrag in data:
             if isinstance(eintrag, dict):
-                # Prüfen ob es ein Event-artiger Eintrag ist
-                hat_titel = any(k in eintrag for k in ["title", "titel", "name", "headline"])
+                hat_titel = any(
+                    k in eintrag
+                    for k in ["title", "titel", "name", "headline"]
+                )
                 hat_datum = any(
                     k in eintrag
                     for k in ["startDate", "date", "datum", "startDateTime", "start"]
@@ -544,28 +596,23 @@ def _next_data_durchsuchen(data: dict | list, pfad: str = "") -> list[dict]:
                 if hat_titel and hat_datum:
                     kandidaten.append(eintrag)
                 else:
-                    # Rekursiv in verschachtelten Strukturen suchen
-                    kandidaten.extend(
-                        _next_data_durchsuchen(eintrag, f"{pfad}[{i}]")
-                    )
+                    kandidaten.extend(_next_data_durchsuchen(eintrag))
     elif isinstance(data, dict):
-        for schluessel, wert in data.items():
+        for wert in data.values():
             if isinstance(wert, (dict, list)):
-                kandidaten.extend(
-                    _next_data_durchsuchen(wert, f"{pfad}.{schluessel}")
-                )
+                kandidaten.extend(_next_data_durchsuchen(wert))
 
     return kandidaten
 
 
-def _scrape_hauptseite(heute: date) -> list[dict]:
+def _scrape_hauptseite_fallback(heute: date) -> list[dict]:
     """
     Fallbackstrategie: Scrapt Events von der Tonhalle-Hauptseite.
 
     Versucht __NEXT_DATA__ JSON aus dem Script-Tag zu extrahieren und
     Event-Einträge darin zu finden. Die Hauptseite ist eine Next.js-App
-    (tonhalle.de) die Event-Daten clientseitig lädt – dieser Fallback
-    greift nur wenn die Daten im initialen pageProps-Objekt vorhanden sind.
+    die Event-Daten clientseitig lädt – dieser Fallback greift nur wenn
+    die Daten im initialen pageProps-Objekt vorhanden sind.
 
     Args:
         heute: Heutiges Datum für Filterung vergangener Events
@@ -592,19 +639,18 @@ def _scrape_hauptseite(heute: date) -> list[dict]:
                 )
                 if kandidaten:
                     logger.info(
-                        "Fallback: %d Event-Kandidaten in __NEXT_DATA__ "
-                        "gefunden",
+                        "Fallback: %d Event-Kandidaten in __NEXT_DATA__ gefunden",
                         len(kandidaten),
                     )
                     events: list[dict] = []
-                    gesehene_urls: set[str] = set()
+                    gesehene_schluessel: set[str] = set()
                     for eintrag in kandidaten:
-                        event = _event_aus_next_data(eintrag, heute)
+                        event = _event_aus_next_data_eintrag(eintrag, heute)
                         if event is None:
                             continue
-                        url = event["quelle_url"]
-                        if url not in gesehene_urls:
-                            gesehene_urls.add(url)
+                        schluessel = f"{event['titel']}_{event['datum']}"
+                        if schluessel not in gesehene_schluessel:
+                            gesehene_schluessel.add(schluessel)
                             events.append(event)
                     logger.info(
                         "Fallback Hauptseite: %d Events gefunden", len(events)
@@ -615,15 +661,6 @@ def _scrape_hauptseite(heute: date) -> list[dict]:
                     "Fallback: __NEXT_DATA__ konnte nicht geparst werden: %s",
                     str(fehler),
                 )
-
-        # Letzter Versuch: strukturierte Datums-Texte im HTML suchen
-        logger.info(
-            "Fallback: Suche nach Datums-Texten im rohen HTML von %s",
-            HAUPTSEITE_URL,
-        )
-        events_aus_html = _scrape_html_fallback(soup, heute)
-        if events_aus_html:
-            return events_aus_html
 
         logger.warning(
             "Fallback Hauptseite: Keine Events gefunden – "
@@ -638,104 +675,6 @@ def _scrape_hauptseite(heute: date) -> list[dict]:
         return []
 
 
-def _scrape_html_fallback(soup: BeautifulSoup, heute: date) -> list[dict]:
-    """
-    Letzter Fallback: Sucht direkt nach Datum-Mustern im HTML.
-
-    Versucht Event-Einträge anhand von typischen DOM-Mustern zu finden:
-    - Artikel- oder Listenelemente mit Datumsangaben
-    - Elemente mit itemprop="startDate"
-    - Divs/Articles mit Datum-Klassen
-
-    Args:
-        soup:  BeautifulSoup-Objekt der bereits geladenen Seite
-        heute: Heutiges Datum
-
-    Returns:
-        Liste von Event-Dicts (kann leer sein)
-    """
-    events: list[dict] = []
-    gesehene_schluessel: set[str] = set()
-
-    # Strategie 1: itemprop="startDate"
-    datum_els = soup.select("[itemprop='startDate']")
-    for datum_el in datum_els:
-        try:
-            datum_text = (
-                datum_el.get("content", "")
-                or datum_el.get("datetime", "")
-                or datum_el.get_text(strip=True)
-            )
-            datum = _datum_parsen(datum_text)
-            if not datum or date.fromisoformat(datum) < heute:
-                continue
-
-            # Titel aus itemprop="name" suchen
-            container = datum_el.find_parent(
-                ["article", "li", "div", "section"]
-            )
-            if not container:
-                continue
-            titel_el = container.select_one("[itemprop='name'], h1, h2, h3, h4")
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel:
-                continue
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            # URL
-            link = container.find("a", href=True)
-            quelle_url = (
-                urljoin(HAUPTSEITE_BASE, link["href"])
-                if link
-                else HAUPTSEITE_URL
-            )
-
-            uhrzeit_el = container.select_one("[itemprop='startDate']")
-            uhrzeit = (
-                _uhrzeit_parsen(uhrzeit_el.get("content", ""))
-                if uhrzeit_el
-                else None
-            )
-
-            bild_el = container.select_one("img")
-            bild_url = None
-            if bild_el:
-                bild_url = (
-                    bild_el.get("data-src")
-                    or bild_el.get("src")
-                    or bild_el.get("data-lazy-src")
-                )
-                if bild_url and not bild_url.startswith("http"):
-                    bild_url = urljoin(HAUPTSEITE_BASE, bild_url)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": KATEGORIE_STANDARD,
-                "beschreibung": None,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "instagram_caption": None,
-                "status": "neu",
-            })
-        except Exception as fehler:
-            logger.debug("HTML-Fallback Parsing-Fehler: %s", str(fehler))
-            continue
-
-    return events
-
-
 # --- Hauptfunktion --------------------------------------------------------
 
 def scrape() -> list[dict]:
@@ -743,17 +682,19 @@ def scrape() -> list[dict]:
     Scrapt Events von der Tonhalle Düsseldorf.
 
     Strategie:
-    1. Primär: Webshop (webshop.tonhalle.de/list/events) – server-seitig
-       gerendertes HTML mit vollständiger Event-Liste.
-    2. Fallback: Hauptseite (tonhalle.de/das-programm) – Next.js-App mit
-       __NEXT_DATA__ JSON und HTML-Fallback.
+    1. Primär: Webshop (webshop.tonhalle.de/list/events)
+       → Server-seitig gerendertes SecuTix-HTML mit vollständiger Event-Liste.
+       → Alle aktuellen und kommenden buchbaren Events.
+    2. Fallback: Hauptseite (tonhalle.de/das-programm)
+       → Next.js-App; greift auf __NEXT_DATA__ JSON zurück.
+       → Nur wirksam wenn Event-Daten im initialen Payload vorhanden sind.
 
-    Filtert vergangene Events heraus und verhindert Duplikate.
+    Events werden gefiltert: vergangene Events werden übersprungen.
+    Duplikate (gleicher Titel + Datum) werden innerhalb eines Laufs entfernt.
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
-    events: list[dict] = []
     heute = date.today()
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
@@ -761,7 +702,9 @@ def scrape() -> list[dict]:
     try:
         events = _scrape_webshop(heute)
     except Exception as fehler:
-        logger.error("Webshop-Strategie unerwartet fehlgeschlagen: %s", str(fehler))
+        logger.error(
+            "Webshop-Strategie unerwartet fehlgeschlagen: %s", str(fehler)
+        )
         events = []
 
     # --- Fallback: Hauptseite ---
@@ -771,7 +714,7 @@ def scrape() -> list[dict]:
             "starte Fallback auf Hauptseite."
         )
         try:
-            events = _scrape_hauptseite(heute)
+            events = _scrape_hauptseite_fallback(heute)
         except Exception as fehler:
             logger.error(
                 "Hauptseiten-Fallback unerwartet fehlgeschlagen: %s", str(fehler)
@@ -781,8 +724,7 @@ def scrape() -> list[dict]:
     # --- Abschluss-Log ---
     if not events:
         logger.warning(
-            "Scraper %s: 0 Events gefunden – "
-            "alle Strategien ohne Ergebnis.",
+            "Scraper %s: 0 Events gefunden – alle Strategien ohne Ergebnis.",
             QUELLE_NAME,
         )
     else:
