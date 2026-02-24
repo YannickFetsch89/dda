@@ -8,6 +8,8 @@ import sys
 from datetime import date
 
 from config import LOG_LEVEL, LOG_DIR, SCHEDULER_UHRZEIT
+from database.client import events_speichern
+from scraper.tier1 import rausgegangen
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -34,11 +36,27 @@ async def pipeline_ausfuehren():
     heute = date.today()
     logger.info("Datum: %s", heute.isoformat())
 
-    # TODO: Scraper importieren und aufrufen (wird in Sprint 1 implementiert)
-    # TODO: Deduplication aufrufen
-    # TODO: Kategorisierung aufrufen
-    # TODO: Caption-Generierung aufrufen
-    # TODO: Instagram-Posting aufrufen
+    # Schritt 1: Scraper ausführen
+    logger.info("--- Schritt 1: Scraper ---")
+    alle_events = []
+
+    events_rausgegangen = rausgegangen.scrape()
+    logger.info("Rausgegangen: %d Events", len(events_rausgegangen))
+    alle_events.extend(events_rausgegangen)
+
+    logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
+
+    # Schritt 2: In Supabase speichern
+    logger.info("--- Schritt 2: Datenbank ---")
+    stats = events_speichern(alle_events)
+    logger.info(
+        "Ergebnis – Neu gespeichert: %d | Duplikate: %d | Fehler: %d",
+        stats["gespeichert"], stats["duplikate"], stats["fehler"]
+    )
+
+    # TODO: Schritt 3 – Kategorisierung (Sprint 2)
+    # TODO: Schritt 4 – Caption-Generierung (Sprint 2)
+    # TODO: Schritt 5 – Instagram-Posting (Sprint 3)
 
     logger.info("=== Pipeline abgeschlossen ===")
 

@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 _supabase_client: Client | None = None
 
+# Felder die beim Upsert ignoriert werden (server-seitig gesetzt)
+_IGNORE_FELDER = {"id", "erstellt_am", "gepostet_am"}
+
 
 def get_supabase_client() -> Client:
     """
@@ -42,3 +45,53 @@ def get_supabase_client() -> Client:
         raise
 
     return _supabase_client
+
+
+def events_speichern(events: list[dict]) -> dict:
+    """
+    Speichert eine Liste von Events in Supabase.
+    Duplikate (gleicher Titel + Datum + Ort) werden übersprungen (upsert).
+
+    Args:
+        events: Liste von Event-Dicts im DiesDasDüsseldorf-Format
+
+    Returns:
+        Dict mit Statistiken: {"gespeichert": int, "duplikate": int, "fehler": int}
+    """
+    if not events:
+        logger.info("Keine Events zum Speichern übergeben.")
+        return {"gespeichert": 0, "duplikate": 0, "fehler": 0}
+
+    db = get_supabase_client()
+    gespeichert = 0
+    duplikate = 0
+    fehler = 0
+
+    for event in events:
+        # Server-seitige Felder entfernen (werden von Supabase gesetzt)
+        datensatz = {k: v for k, v in event.items() if k not in _IGNORE_FELDER}
+
+        try:
+            result = (
+                db.table("events")
+                .upsert(datensatz, on_conflict="titel,datum,ort", ignore_duplicates=True)
+                .execute()
+            )
+            # Wenn upsert nichts zurückgibt, war es ein Duplikat
+            if result.data:
+                gespeichert += 1
+            else:
+                duplikate += 1
+
+        except Exception as e:
+            fehler += 1
+            logger.error(
+                "Fehler beim Speichern von '%s' (%s): %s",
+                event.get("titel", "?"), event.get("datum", "?"), str(e)
+            )
+
+    logger.info(
+        "Speicherung abgeschlossen – Neu: %d | Duplikate: %d | Fehler: %d",
+        gespeichert, duplikate, fehler
+    )
+    return {"gespeichert": gespeichert, "duplikate": duplikate, "fehler": fehler}
