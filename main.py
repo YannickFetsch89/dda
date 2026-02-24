@@ -54,8 +54,18 @@ async def pipeline_ausfuehren():
         stats["gespeichert"], stats["duplikate"], stats["fehler"]
     )
 
-    # TODO: Schritt 3 – Kategorisierung (Sprint 2)
-    # TODO: Schritt 4 – Caption-Generierung (Sprint 2)
+    # Schritt 3: Kategorisierung
+    logger.info("--- Schritt 3: Kategorisierung ---")
+    from pipeline import categorizer
+    anzahl_kategorisiert = categorizer.kategorisieren(limit=10)
+    logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
+
+    # Schritt 4: Caption-Generierung
+    logger.info("--- Schritt 4: Caption-Generierung ---")
+    from pipeline import caption_generator
+    anzahl_captions = caption_generator.captions_generieren(limit=10)
+    logger.info("Captions generiert: %d Events aufbereitet", anzahl_captions)
+
     # TODO: Schritt 5 – Instagram-Posting (Sprint 3)
 
     logger.info("=== Pipeline abgeschlossen ===")
