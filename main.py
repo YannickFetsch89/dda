@@ -17,6 +17,13 @@ from scraper.tier1 import (
     visitduesseldorf,
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
 )
+from scraper.tier2 import (
+    tonhalle,
+    zakk,
+    oper_am_rhein,
+    schauspielhaus,
+    dlive,
+)
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -68,6 +75,29 @@ async def pipeline_ausfuehren():
     alle_events.extend(events_visitduesseldorf)
 
     # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
+
+    # Tier 2: Venue-eigene Scraper
+    logger.info("--- Schritt 1b: Tier-2-Scraper ---")
+
+    events_tonhalle = tonhalle.scrape()
+    logger.info("Tonhalle Düsseldorf: %d Events", len(events_tonhalle))
+    alle_events.extend(events_tonhalle)
+
+    events_zakk = zakk.scrape()
+    logger.info("zakk: %d Events", len(events_zakk))
+    alle_events.extend(events_zakk)
+
+    events_oper = oper_am_rhein.scrape()
+    logger.info("Deutsche Oper am Rhein: %d Events", len(events_oper))
+    alle_events.extend(events_oper)
+
+    events_schauspielhaus = schauspielhaus.scrape()
+    logger.info("Düsseldorfer Schauspielhaus: %d Events", len(events_schauspielhaus))
+    alle_events.extend(events_schauspielhaus)
+
+    events_dlive = dlive.scrape()
+    logger.info("d-live: %d Events", len(events_dlive))
+    alle_events.extend(events_dlive)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
