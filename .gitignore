@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Logs
+logs/*.log
+
+# Playwright
+playwright/.auth/
+
+# macOS
+.DS_Store
