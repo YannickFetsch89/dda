@@ -57,13 +57,13 @@ async def pipeline_ausfuehren():
     # Schritt 3: Kategorisierung
     logger.info("--- Schritt 3: Kategorisierung ---")
     from pipeline import categorizer
-    anzahl_kategorisiert = categorizer.kategorisieren(limit=10)
+    anzahl_kategorisiert = categorizer.kategorisieren(limit=100)
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
 
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")
     from pipeline import caption_generator
-    anzahl_captions = caption_generator.captions_generieren(limit=10)
+    anzahl_captions = caption_generator.captions_generieren(limit=50)
     logger.info("Captions generiert: %d Events aufbereitet", anzahl_captions)
 
     # Schritt 5: Instagram-Posting
