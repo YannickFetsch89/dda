@@ -4,26 +4,18 @@ Scraper für Rausgegangen.de: Events in Düsseldorf
 Erstellt: 2026-02-24
 """
 import logging
-import time
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-import httpx
 from bs4 import BeautifulSoup
+
+from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://rausgegangen.de"
 LISTE_URL = "https://rausgegangen.de/duesseldorf/"
 QUELLE_NAME = "Rausgegangen"
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
-}
 
 # Mapping Rausgegangen-Kategorien → DiesDasDüsseldorf-Kategorien
 KATEGORIE_MAPPING = {
@@ -294,23 +286,11 @@ def scrape(ziel_datum: Optional[date] = None) -> list[dict]:
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     try:
-        time.sleep(2)  # Rate Limiting
+        html = seite_abrufen(LISTE_URL, logger)
+        if html is None:
+            return []
 
-        with httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True) as client:
-            try:
-                response = client.get(LISTE_URL)
-                response.raise_for_status()
-            except httpx.TimeoutException:
-                logger.error("Timeout beim Abrufen von %s", LISTE_URL)
-                return []
-            except httpx.HTTPStatusError as e:
-                logger.error(
-                    "HTTP Fehler %s beim Abrufen von %s",
-                    e.response.status_code, LISTE_URL
-                )
-                return []
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         karten = soup.find_all("a", class_="event-tile")
         logger.info("%d Event-Karten gefunden", len(karten))
 

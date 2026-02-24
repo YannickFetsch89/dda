@@ -15,7 +15,7 @@ from scraper.tier1 import (
     eventbrite,
     kulturportal,
     visitduesseldorf,
-    meinestadt,
+    # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
 )
 
 # Logging konfigurieren
@@ -67,9 +67,7 @@ async def pipeline_ausfuehren():
     logger.info("VisitDüsseldorf: %d Events", len(events_visitduesseldorf))
     alle_events.extend(events_visitduesseldorf)
 
-    events_meinestadt = meinestadt.scrape()
-    logger.info("meinestadt.de: %d Events", len(events_meinestadt))
-    alle_events.extend(events_meinestadt)
+    # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 

@@ -5,29 +5,19 @@ Erstellt: 2026-02-24
 """
 import logging
 import re
-import time
 from datetime import date, timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
-import httpx
 from bs4 import BeautifulSoup
+
+from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://veranstaltungen.meinestadt.de"
 LISTE_URL = "https://veranstaltungen.meinestadt.de/duesseldorf"
 QUELLE_NAME = "meinestadt.de"
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/121.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-}
 
 # Vollständige Monatsnamen auf Deutsch
 MONAT_MAP = {
@@ -404,24 +394,11 @@ def scrape() -> list[dict]:
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     try:
-        time.sleep(2)  # Rate Limiting
+        html = seite_abrufen(LISTE_URL, logger)
+        if html is None:
+            return []
 
-        with httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True) as client:
-            try:
-                response = client.get(LISTE_URL)
-                response.raise_for_status()
-            except httpx.TimeoutException:
-                logger.error("Timeout beim Abrufen von %s", LISTE_URL)
-                return []
-            except httpx.HTTPStatusError as e:
-                logger.error(
-                    "HTTP Fehler %s beim Abrufen von %s",
-                    e.response.status_code,
-                    LISTE_URL,
-                )
-                return []
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         container_liste = _container_finden(soup)
 
         if not container_liste:

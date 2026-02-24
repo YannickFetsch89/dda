@@ -5,14 +5,13 @@ Erstellt: 2026-02-24
 """
 import json
 import logging
-import os
 import re
-import time
 from datetime import date, datetime
 from typing import Optional
 
-import httpx
 from bs4 import BeautifulSoup
+
+from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
@@ -221,42 +220,12 @@ def scrape() -> list[dict]:
     heute = date.today()
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "de-DE,de;q=0.9",
-    }
-
     try:
-        time.sleep(2)
-
-        with httpx.Client(headers=headers, timeout=30, follow_redirects=True) as client:
-            try:
-                response = client.get(WEBSITE_URL)
-            except httpx.TimeoutException:
-                logger.error("Timeout beim Abrufen der Eventbrite-Website")
-                return []
-
-        if response.status_code in (405, 403):
-            logger.warning(
-                "Eventbrite-Website blockiert (HTTP %s) – "
-                "Bot-Schutz aktiv. Kein Ergebnis.",
-                response.status_code,
-            )
+        html = seite_abrufen(WEBSITE_URL, logger)
+        if html is None:
             return []
 
-        if response.status_code != 200:
-            logger.error(
-                "HTTP %s beim Abrufen der Eventbrite-Website",
-                response.status_code,
-            )
-            return []
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
 
         # JSON-LD Markup parsen
         jsonld_scripts = soup.find_all("script", type="application/ld+json")
