@@ -75,12 +75,21 @@ Du pflegst mental (und auf Nachfrage schriftlich) den aktuellen Stand:
 3. Ticketmaster API (`scraper/tier1/ticketmaster.py`)
 4. Kulturportal Düsseldorf Scraper (`scraper/tier1/kulturportal.py`)
 
-**Sprint 4 – Publishing (Woche 2-3)**
-1. Instagram Graph API Anbindung (`pipeline/publisher.py`)
-2. Scheduler einrichten (`main.py`)
-3. Monitoring & Telegram-Benachrichtigungen
-4. QA: Vollständiger End-to-End Test
-5. Deployment auf Railway
+**Sprint 4 – Visuelle Pipeline (Woche 2-3)**
+1. Brand Identity einrichten (`visual/brand.py`)
+2. Canva-Templates exportieren → in `assets/templates/` ablegen (manueller Schritt)
+3. Bild-Renderer mit Brand-Overlay (`visual/image_renderer.py`)
+4. DALL-E 3 Fallback-Generator (`visual/image_generator.py`)
+5. Reel-Renderer via ffmpeg (`visual/reel_renderer.py`)
+6. QA: Visuellen Output für mehrere Kategorien prüfen
+
+**Sprint 5 – Publishing (Woche 3)**
+1. Instagram Graph API – Feed-Post Publishing (`pipeline/publisher.py`)
+2. Instagram Graph API – Reel Publishing (in `publisher.py` integriert)
+3. Scheduler einrichten (`main.py`)
+4. Monitoring & Telegram-Benachrichtigungen
+5. QA: Vollständiger End-to-End Test
+6. Deployment auf Railway
 
 ---
 

@@ -112,6 +112,27 @@ def qa_scraper_check(events: list) -> None:
 - Kein HTML oder sonstige Artefakte im Text
 - Sprache ist Deutsch (kein Englisch)
 
+### Tests für Bildverarbeitung (visual/)
+- `image_renderer.py`: Output-Bild hat korrekte Dimensionen (1080x1080 für Feed, 1080x1920 für Reel)
+- `image_renderer.py`: DDA-Logo ist im Ausgabebild sichtbar (Pixel-Vergleich im Logo-Bereich)
+- `image_renderer.py`: Gibt PIL.Image zurück, kein Exception
+- `image_generator.py`: DALL-E 3 gibt valide URL zurück
+- `image_generator.py`: Generiertes Bild kann heruntergeladen werden
+- `image_generator.py`: Fallback-Verhalten wenn OpenAI API nicht erreichbar
+- `reel_renderer.py`: Output ist valides MP4 (mit ffmpeg.probe prüfen)
+- `reel_renderer.py`: Video hat mind. 3 Sekunden Länge
+- `brand.py`: Alle Pflichtfelder vorhanden (farbe_primär, farbe_sekundär, logo_pfad, font)
+- `brand.py`: Logo-Datei existiert unter dem angegebenen Pfad
+
+### Tests für Publisher (pipeline/publisher.py)
+- Graph API Token ist gültig (Test-Call vor echtem Post)
+- Feed-Post: Media Container wird erstellt (Schritt 1 liefert creation_id)
+- Feed-Post: Media Container wird erfolgreich veröffentlicht (Schritt 2)
+- Reel: Video-Upload Status wird korrekt gepollt (nicht veröffentlichen bevor FINISHED)
+- Reel: Fehlerstatus (EXPIRED, ERROR) wird erkannt und als `fehler` in DB gespeichert
+- Bei API-Fehler: Status in Supabase wird auf `fehler` gesetzt, nicht auf `gepostet`
+- Standort-Tag wird nur gesetzt wenn `instagram_location_id` nicht null
+
 ### Tests für Deduplication
 - Identisches Event zweimal eingeben → nur einmal in DB
 - Leicht abweichender Titel (Tippfehler) → wird als Duplikat erkannt

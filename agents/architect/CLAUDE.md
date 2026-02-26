@@ -98,6 +98,36 @@ Fuzzy Matching (fuzz ratio > 85) als zweite Prüfung einplanen.
 #düsseldorf #diesdasdüsseldorf #[kategorie] [weitere Hashtags]
 ```
 
+### Visuelle Pipeline – Architektur-Entscheidungen
+
+**Bildquellen (Priorität):**
+1. Bild vom Veranstalter vorhanden (`bild_url` nicht null) → herunterladen und verwenden
+2. Kein Bild vorhanden → DALL-E 3 generiert ein stimmungsvolles Lifestyle-Bild passend zur Kategorie
+
+**Brand-Overlay (Pillow):**
+- Immer auf jedes Bild anwenden – egal ob Original oder generiert
+- Overlay-Elemente: DDA-Logo (oben rechts), Kategorie-Badge (oben links), Farbstreifen unten
+- Alle Brand-Werte kommen aus `visual/brand.py` – niemals hardcoden
+
+**Canva-Templates:**
+- Canva Pro wird nur für einmalige manuelle Template-Gestaltung verwendet
+- Templates werden als PNG exportiert und in `assets/templates/` abgelegt
+- Python befüllt diese Templates dynamisch (Pillow paste/composite)
+- Template-Änderungen = manueller Prozess → nicht automatisieren
+
+**Post-Typen:**
+- `feed`: 1080x1080px Bild, direkt via Instagram Graph API
+- `reel`: 1080x1920px, MP4 via ffmpeg aus Standbild (Phase 1), direkt via Instagram Graph API
+
+**Verlinkungen (Instagram Graph API):**
+- `@Mentions` in Caption einfügen wenn Venue-Account bekannt
+- Standort-Tag: `instagram_location_id` (Facebook Location ID) im API-Call mitgeben
+- Kein klickbarer Link in Caption möglich → "Link in Bio" Strategie
+
+**Kein Drittanbieter (kein Make.com, kein Buffer):**
+- Alle API-Calls gehen direkt von Python → Instagram Graph API
+- Vereinfacht Debugging und gibt volle Kontrolle
+
 ## Was du NICHT tust
 - Keinen produktiven Python-Code schreiben
 - Keine Dateien erstellen oder ändern
