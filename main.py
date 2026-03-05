@@ -16,6 +16,7 @@ from scraper.tier1 import (
     kulturportal,
     visitduesseldorf,
     eventfinder,
+    meetup,
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
 )
 from scraper.tier2 import (
@@ -84,6 +85,10 @@ async def pipeline_ausfuehren():
     events_eventfinder = eventfinder.scrape()
     logger.info("eventfinder.de: %d Events", len(events_eventfinder))
     alle_events.extend(events_eventfinder)
+
+    events_meetup = meetup.scrape()
+    logger.info("Meetup.com: %d Events", len(events_meetup))
+    alle_events.extend(events_meetup)
 
     # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
 
