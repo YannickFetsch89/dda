@@ -212,21 +212,15 @@ def _event_aus_teaser(teaser_el, heute: date) -> Optional[dict]:
         return None
 
 
-def scrape() -> list[dict]:
+def _playwright_scrape() -> list[dict]:
     """
-    Scrapt Events von VisitDüsseldorf mittels Playwright (JavaScript-Rendering).
-
-    Die Seite ist eine Angular-SPA und liefert Events erst nach dem JS-Rendering.
-    Playwright wartet bis die Event-Liste sichtbar ist.
-
-    Returns:
-        Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
+    Führt den Playwright-Scrape synchron aus – muss in einem separaten Thread
+    aufgerufen werden, da sync_playwright() nicht innerhalb eines asyncio-Loops läuft.
     """
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
     events: list[dict] = []
     heute = date.today()
-    logger.info("Starte Scraper: %s (Playwright)", QUELLE_NAME)
 
     try:
         time.sleep(2)  # Rate Limiting
@@ -315,6 +309,28 @@ def scrape() -> list[dict]:
     # 14-Tage-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
+
+    return events
+
+
+def scrape() -> list[dict]:
+    """
+    Scrapt Events von VisitDüsseldorf mittels Playwright (JavaScript-Rendering).
+
+    Die Seite ist eine Angular-SPA und liefert Events erst nach dem JS-Rendering.
+    Playwright wird in einem Thread-Pool ausgeführt, damit sync_playwright()
+    nicht mit dem asyncio-Event-Loop kollidiert.
+
+    Returns:
+        Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
+    """
+    import concurrent.futures
+
+    logger.info("Starte Scraper: %s (Playwright)", QUELLE_NAME)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_playwright_scrape)
+        events = future.result()
 
     logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))
     return events
