@@ -4,14 +4,14 @@ Scraper für Kulturportal Düsseldorf: Events und Veranstaltungen
 Erstellt: 2026-02-24
 """
 import logging
-import re
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
 from config import SCRAPER_VORSCHAU_TAGE
+from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -20,19 +20,6 @@ BASE_URL = "https://kulturportal-duesseldorf.de"
 LISTE_URL = "https://kulturportal-duesseldorf.de/veranstaltungen/"
 QUELLE_NAME = "Kulturportal Düsseldorf"
 
-MONAT_MAP = {
-    "januar": 1, "februar": 2, "märz": 3, "april": 4,
-    "mai": 5, "juni": 6, "juli": 7, "august": 8,
-    "september": 9, "oktober": 10, "november": 11, "dezember": 12,
-}
-
-# Abkürzungen für den Monatsnamen (z.B. "Jan." → 1)
-MONAT_KURZ_MAP = {
-    "jan": 1, "feb": 2, "mär": 3, "apr": 4,
-    "mai": 5, "jun": 6, "jul": 7, "aug": 8,
-    "sep": 9, "okt": 10, "nov": 11, "dez": 12,
-}
-
 # Bekannte Düsseldorfer Venues für Ort-Erkennung
 BEKANNTE_VENUES = [
     "tonhalle", "schauspielhaus", "oper am rhein", "kunstpalast",
@@ -40,121 +27,6 @@ BEKANNTE_VENUES = [
     "filmmuseum", "zakk", "stahlwerk", "rudas", "d.live",
     "mitsubishi electric halle", "ffT düsseldorf", "stadtbücherei",
 ]
-
-
-def _datum_parsen(text: str) -> Optional[str]:
-    """
-    Wandelt verschiedene Datumsformate in ISO 8601 um.
-
-    Unterstützte Formate:
-        - "24.02.2026"         → "2026-02-24"
-        - "24. Februar 2026"   → "2026-02-24"
-        - "2026-02-24"         → "2026-02-24"
-        - "Di, 24.02."         → nächstes passendes Jahr wird ermittelt
-
-    Args:
-        text: Roher Datumstext von der Webseite
-
-    Returns:
-        Datum als ISO-String (YYYY-MM-DD) oder None bei Fehler
-    """
-    if not text:
-        return None
-
-    heute = date.today()
-    bereinigt = text.strip().lower()
-
-    try:
-        # Format: "2026-02-24" (ISO bereits vorhanden)
-        treffer = re.search(r"(\d{4})-(\d{2})-(\d{2})", bereinigt)
-        if treffer:
-            return date(
-                int(treffer.group(1)),
-                int(treffer.group(2)),
-                int(treffer.group(3)),
-            ).isoformat()
-
-        # Format: "24.02.2026"
-        treffer = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})", bereinigt)
-        if treffer:
-            return date(
-                int(treffer.group(3)),
-                int(treffer.group(2)),
-                int(treffer.group(1)),
-            ).isoformat()
-
-        # Format: "24. Februar 2026" oder "24. februar 2026"
-        treffer = re.search(
-            r"(\d{1,2})\.\s*([a-zäöü]+)\s+(\d{4})", bereinigt
-        )
-        if treffer:
-            tag = int(treffer.group(1))
-            monat_name = treffer.group(2).lower()
-            jahr = int(treffer.group(3))
-            monat = MONAT_MAP.get(monat_name)
-            if monat:
-                return date(jahr, monat, tag).isoformat()
-
-        # Format: "Di, 24.02." – Jahr fehlt, nächstes passendes ermitteln
-        treffer = re.search(r"(\d{1,2})\.(\d{2})\.", bereinigt)
-        if treffer:
-            tag = int(treffer.group(1))
-            monat = int(treffer.group(2))
-            jahr = heute.year
-            try:
-                kandidat = date(jahr, monat, tag)
-            except ValueError:
-                return None
-            # Falls Datum bereits vergangen, nächstes Jahr versuchen
-            if kandidat < heute - timedelta(days=1):
-                kandidat = date(jahr + 1, monat, tag)
-            return kandidat.isoformat()
-
-        # Format: "24. Feb" oder "24. Feb." (ohne Jahr)
-        treffer = re.search(r"(\d{1,2})\.\s*([a-zäöü]{3})", bereinigt)
-        if treffer:
-            tag = int(treffer.group(1))
-            monat_kurz = treffer.group(2)[:3].lower()
-            monat = MONAT_KURZ_MAP.get(monat_kurz)
-            if monat:
-                jahr = heute.year
-                try:
-                    kandidat = date(jahr, monat, tag)
-                except ValueError:
-                    return None
-                if kandidat < heute - timedelta(days=1):
-                    kandidat = date(jahr + 1, monat, tag)
-                return kandidat.isoformat()
-
-    except (ValueError, AttributeError) as fehler:
-        logger.warning(
-            "Datum konnte nicht geparst werden: '%s' – %s", text, fehler
-        )
-        return None
-
-    return None
-
-
-def _uhrzeit_parsen(text: str) -> Optional[str]:
-    """
-    Extrahiert eine Uhrzeit (HH:MM) aus einem beliebigen Text.
-
-    Args:
-        text: Roher Text mit möglicher Zeitangabe
-
-    Returns:
-        Uhrzeit als HH:MM String oder None
-    """
-    if not text:
-        return None
-
-    treffer = re.search(r"\b(\d{1,2})[:\.](\d{2})\s*(?:Uhr)?", text, re.IGNORECASE)
-    if treffer:
-        stunde = int(treffer.group(1))
-        minute = int(treffer.group(2))
-        if 0 <= stunde <= 23 and 0 <= minute <= 59:
-            return f"{stunde:02d}:{minute:02d}"
-    return None
 
 
 def _ort_aus_text(texte: list[str]) -> Optional[str]:

@@ -5,7 +5,6 @@ Nutzt Playwright, da die Seite JavaScript-gerendert ist (Angular SPA).
 Erstellt: 2026-02-24
 """
 import logging
-import re
 import time
 from datetime import date, timedelta
 from typing import Optional
@@ -15,23 +14,13 @@ from config import SCRAPER_VORSCHAU_TAGE
 
 from bs4 import BeautifulSoup
 
+from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.visitduesseldorf.de"
 LISTE_URL = "https://www.visitduesseldorf.de/erleben/veranstaltungen"
 QUELLE_NAME = "VisitDüsseldorf"
-
-MONAT_MAP = {
-    "januar": 1, "februar": 2, "märz": 3, "april": 4,
-    "mai": 5, "juni": 6, "juli": 7, "august": 8,
-    "september": 9, "oktober": 10, "november": 11, "dezember": 12,
-}
-
-MONAT_KURZ_MAP = {
-    "jan": 1, "feb": 2, "mär": 3, "apr": 4,
-    "mai": 5, "jun": 6, "jul": 7, "aug": 8,
-    "sep": 9, "okt": 10, "nov": 11, "dez": 12,
-}
 
 KATEGORIE_MAP = {
     "ausstellung": "kultur",
@@ -56,56 +45,6 @@ KATEGORIE_MAP = {
     "kinder": "family",
     "outdoor": "outdoor",
 }
-
-
-def _datum_parsen(text: str) -> Optional[str]:
-    """Wandelt verschiedene Datumsformate in ISO 8601 um."""
-    if not text:
-        return None
-    heute = date.today()
-    bereinigt = text.strip().lower()
-    try:
-        treffer = re.search(r"(\d{4})-(\d{2})-(\d{2})", bereinigt)
-        if treffer:
-            return date(int(treffer.group(1)), int(treffer.group(2)), int(treffer.group(3))).isoformat()
-
-        treffer = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})", bereinigt)
-        if treffer:
-            return date(int(treffer.group(3)), int(treffer.group(2)), int(treffer.group(1))).isoformat()
-
-        treffer = re.search(r"(\d{1,2})\.\s*([a-zäöü]+)\s+(\d{4})", bereinigt)
-        if treffer:
-            tag, monat_name, jahr = int(treffer.group(1)), treffer.group(2).lower(), int(treffer.group(3))
-            monat = MONAT_MAP.get(monat_name)
-            if monat:
-                return date(jahr, monat, tag).isoformat()
-
-        treffer = re.search(r"(\d{1,2})\.(\d{2})\.", bereinigt)
-        if treffer:
-            tag, monat = int(treffer.group(1)), int(treffer.group(2))
-            try:
-                kandidat = date(heute.year, monat, tag)
-            except ValueError:
-                return None
-            if kandidat < heute - timedelta(days=1):
-                kandidat = date(heute.year + 1, monat, tag)
-            return kandidat.isoformat()
-
-    except (ValueError, AttributeError) as fehler:
-        logger.warning("Datum konnte nicht geparst werden: '%s' – %s", text, fehler)
-    return None
-
-
-def _uhrzeit_parsen(text: str) -> Optional[str]:
-    """Extrahiert eine Uhrzeit (HH:MM) aus einem beliebigen Text."""
-    if not text:
-        return None
-    treffer = re.search(r"\b(\d{1,2})[:\.](\d{2})\s*(?:Uhr)?", text, re.IGNORECASE)
-    if treffer:
-        stunde, minute = int(treffer.group(1)), int(treffer.group(2))
-        if 0 <= stunde <= 23 and 0 <= minute <= 59:
-            return f"{stunde:02d}:{minute:02d}"
-    return None
 
 
 def _kategorie_aus_text(text: str) -> str:
