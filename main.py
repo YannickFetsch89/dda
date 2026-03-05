@@ -158,12 +158,17 @@ async def pipeline_ausfuehren():
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
-    # Schritt 2: In Supabase speichern
+    # Schritt 1c: In-Memory-Deduplizierung mit Merge-Logik
+    logger.info("--- Schritt 1c: In-Memory-Deduplizierung ---")
+    from pipeline.deduplication import deduplizieren
+    alle_events = deduplizieren(alle_events)
+
+    # Schritt 2: In Supabase speichern (mit DB-seitiger Anreicherung)
     logger.info("--- Schritt 2: Datenbank ---")
     stats = events_speichern(alle_events)
     logger.info(
-        "Ergebnis – Neu gespeichert: %d | Duplikate: %d | Fehler: %d",
-        stats["gespeichert"], stats["duplikate"], stats["fehler"]
+        "Ergebnis – Neu gespeichert: %d | Duplikate: %d | Angereichert: %d | Fehler: %d",
+        stats["gespeichert"], stats["duplikate"], stats.get("angereichert", 0), stats["fehler"]
     )
 
     # Schritt 3: Kategorisierung
