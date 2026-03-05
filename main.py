@@ -12,12 +12,12 @@ from database.client import events_speichern
 from scraper.tier1 import (
     rausgegangen,
     ticketmaster,
-    eventbrite,
     kulturportal,
     visitduesseldorf,
-    eventfinder,
     meetup,
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
+    # eventbrite deaktiviert – API v3 abgeschaltet, Website durch Bot-Schutz blockiert
+    # eventfinder deaktiviert – keine zuverlässige Datenquelle
 )
 from scraper.tier2 import (
     tonhalle,
@@ -70,10 +70,6 @@ async def pipeline_ausfuehren():
     logger.info("Ticketmaster: %d Events", len(events_ticketmaster))
     alle_events.extend(events_ticketmaster)
 
-    events_eventbrite = eventbrite.scrape()
-    logger.info("Eventbrite: %d Events", len(events_eventbrite))
-    alle_events.extend(events_eventbrite)
-
     events_kulturportal = kulturportal.scrape()
     logger.info("Kulturportal Düsseldorf: %d Events", len(events_kulturportal))
     alle_events.extend(events_kulturportal)
@@ -81,10 +77,6 @@ async def pipeline_ausfuehren():
     events_visitduesseldorf = visitduesseldorf.scrape()
     logger.info("VisitDüsseldorf: %d Events", len(events_visitduesseldorf))
     alle_events.extend(events_visitduesseldorf)
-
-    events_eventfinder = eventfinder.scrape()
-    logger.info("eventfinder.de: %d Events", len(events_eventfinder))
-    alle_events.extend(events_eventfinder)
 
     events_meetup = meetup.scrape()
     logger.info("Meetup.com: %d Events", len(events_meetup))

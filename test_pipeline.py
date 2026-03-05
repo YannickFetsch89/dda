@@ -12,9 +12,9 @@ from database.client import events_speichern
 from scraper.tier1 import (
     rausgegangen,
     ticketmaster,
-    eventbrite,
     kulturportal,
     visitduesseldorf,
+    meetup,
 )
 from scraper.tier2 import (
     tonhalle,
@@ -45,9 +45,9 @@ def test_pipeline_ausfuehren():
     scraper_liste = [
         ("Rausgegangen",              rausgegangen.scrape),
         ("Ticketmaster",              ticketmaster.scrape),
-        ("Eventbrite",                eventbrite.scrape),
         ("Kulturportal Düsseldorf",   kulturportal.scrape),
         ("VisitDüsseldorf",           visitduesseldorf.scrape),
+        ("Meetup.com",                meetup.scrape),
         ("Tonhalle Düsseldorf",       tonhalle.scrape),
         ("zakk",                      zakk.scrape),
         ("Deutsche Oper am Rhein",    oper_am_rhein.scrape),
