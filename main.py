@@ -15,6 +15,7 @@ from scraper.tier1 import (
     eventbrite,
     kulturportal,
     visitduesseldorf,
+    eventfinder,
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
 )
 from scraper.tier2 import (
@@ -23,6 +24,12 @@ from scraper.tier2 import (
     oper_am_rhein,
     schauspielhaus,
     dlive,
+    kunstpalast,
+    kunstsammlung,
+    nrw_forum,
+    fft_duesseldorf,
+    stahlwerk,
+    rudas_studios,
 )
 
 # Logging konfigurieren
@@ -74,6 +81,10 @@ async def pipeline_ausfuehren():
     logger.info("VisitDüsseldorf: %d Events", len(events_visitduesseldorf))
     alle_events.extend(events_visitduesseldorf)
 
+    events_eventfinder = eventfinder.scrape()
+    logger.info("eventfinder.de: %d Events", len(events_eventfinder))
+    alle_events.extend(events_eventfinder)
+
     # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
 
     # Tier 2: Venue-eigene Scraper
@@ -98,6 +109,30 @@ async def pipeline_ausfuehren():
     events_dlive = dlive.scrape()
     logger.info("d-live: %d Events", len(events_dlive))
     alle_events.extend(events_dlive)
+
+    events_kunstpalast = kunstpalast.scrape()
+    logger.info("Kunstpalast Düsseldorf: %d Events", len(events_kunstpalast))
+    alle_events.extend(events_kunstpalast)
+
+    events_kunstsammlung = kunstsammlung.scrape()
+    logger.info("Kunstsammlung NRW (K20/K21): %d Events", len(events_kunstsammlung))
+    alle_events.extend(events_kunstsammlung)
+
+    events_nrw_forum = nrw_forum.scrape()
+    logger.info("NRW-Forum Düsseldorf: %d Events", len(events_nrw_forum))
+    alle_events.extend(events_nrw_forum)
+
+    events_fft = fft_duesseldorf.scrape()
+    logger.info("FFT Düsseldorf: %d Events", len(events_fft))
+    alle_events.extend(events_fft)
+
+    events_stahlwerk = stahlwerk.scrape()
+    logger.info("Stahlwerk Düsseldorf: %d Events", len(events_stahlwerk))
+    alle_events.extend(events_stahlwerk)
+
+    events_rudas = rudas_studios.scrape()
+    logger.info("Rudas Studios Düsseldorf: %d Events", len(events_rudas))
+    alle_events.extend(events_rudas)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
