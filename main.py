@@ -15,6 +15,7 @@ from scraper.tier1 import (
     kulturportal,
     visitduesseldorf,
     meetup,
+    resident_advisor,
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
     # eventbrite deaktiviert – API v3 abgeschaltet, Website durch Bot-Schutz blockiert
     # eventfinder deaktiviert – keine zuverlässige Datenquelle
@@ -31,6 +32,10 @@ from scraper.tier2 import (
     fft_duesseldorf,
     stahlwerk,
     rudas_studios,
+    mitsubishi_halle,
+    kulturschlachthof_r25,
+    salon_des_amateurs,
+    pitcher,
 )
 
 # Logging konfigurieren
@@ -82,6 +87,10 @@ async def pipeline_ausfuehren():
     logger.info("Meetup.com: %d Events", len(events_meetup))
     alle_events.extend(events_meetup)
 
+    events_ra = resident_advisor.scrape()
+    logger.info("Resident Advisor: %d Events", len(events_ra))
+    alle_events.extend(events_ra)
+
     # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
 
     # Tier 2: Venue-eigene Scraper
@@ -130,6 +139,22 @@ async def pipeline_ausfuehren():
     events_rudas = rudas_studios.scrape()
     logger.info("Rudas Studios Düsseldorf: %d Events", len(events_rudas))
     alle_events.extend(events_rudas)
+
+    events_meh = mitsubishi_halle.scrape()
+    logger.info("Mitsubishi Electric HALLE: %d Events", len(events_meh))
+    alle_events.extend(events_meh)
+
+    events_r25 = kulturschlachthof_r25.scrape()
+    logger.info("Kulturschlachthof R25: %d Events", len(events_r25))
+    alle_events.extend(events_r25)
+
+    events_salon = salon_des_amateurs.scrape()
+    logger.info("Salon des Amateurs: %d Events", len(events_salon))
+    alle_events.extend(events_salon)
+
+    events_pitcher = pitcher.scrape()
+    logger.info("Pitcher Rock HQ: %d Events", len(events_pitcher))
+    alle_events.extend(events_pitcher)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
