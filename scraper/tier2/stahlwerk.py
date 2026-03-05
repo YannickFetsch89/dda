@@ -23,6 +23,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from config import SCRAPER_VORSCHAU_TAGE
+from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -33,17 +34,6 @@ QUELLE_NAME = "Stahlwerk Düsseldorf"
 ORT_STANDARD = "Stahlwerk Düsseldorf"
 ADRESSE_STANDARD = "Ronsdorfer Str. 134, 40233 Düsseldorf"
 
-MONAT_MAP: dict[str, int] = {
-    "januar": 1, "februar": 2, "märz": 3, "april": 4,
-    "mai": 5, "juni": 6, "juli": 7, "august": 8,
-    "september": 9, "oktober": 10, "november": 11, "dezember": 12,
-}
-MONAT_KURZ_MAP: dict[str, int] = {
-    "jan": 1, "feb": 2, "mär": 3, "mar": 3, "apr": 4,
-    "mai": 5, "may": 5, "jun": 6, "jul": 7, "aug": 8,
-    "sep": 9, "okt": 10, "oct": 10, "nov": 11, "dez": 12, "dec": 12,
-}
-
 KATEGORIE_MAPPING = {
     "party": "nightlife", "club": "nightlife", "dj": "nightlife",
     "electronic": "nightlife", "techno": "nightlife", "house": "nightlife",
@@ -51,77 +41,6 @@ KATEGORIE_MAPPING = {
     "live": "musik", "band": "musik", "hip hop": "musik", "rap": "musik",
     "comedy": "kultur", "show": "kultur",
 }
-
-
-def _datum_parsen(text: str) -> Optional[str]:
-    """
-    Wandelt verschiedene Datumsformate in ISO 8601 (YYYY-MM-DD) um.
-
-    Args:
-        text: Roher Datumstext
-
-    Returns:
-        ISO-Datum oder None
-    """
-    if not text:
-        return None
-
-    heute = date.today()
-    bereinigt = text.strip()
-    bereinigt_klein = bereinigt.lower()
-
-    try:
-        treffer = re.search(r"(\d{4})-(\d{2})-(\d{2})", bereinigt)
-        if treffer:
-            return date(int(treffer.group(1)), int(treffer.group(2)), int(treffer.group(3))).isoformat()
-
-        treffer = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})", bereinigt)
-        if treffer:
-            return date(int(treffer.group(3)), int(treffer.group(2)), int(treffer.group(1))).isoformat()
-
-        treffer = re.search(r"(\d{1,2})\.?\s+([a-zäöüß]+)\s+(\d{4})", bereinigt_klein)
-        if treffer:
-            tag = int(treffer.group(1))
-            monat = MONAT_MAP.get(treffer.group(2).lower())
-            jahr = int(treffer.group(3))
-            if monat:
-                return date(jahr, monat, tag).isoformat()
-
-        treffer = re.search(r"(\d{1,2})\.\s*([a-zäöü]{3})", bereinigt_klein)
-        if treffer:
-            tag = int(treffer.group(1))
-            monat = MONAT_KURZ_MAP.get(treffer.group(2)[:3])
-            if monat:
-                kandidat = date(heute.year, monat, tag)
-                if kandidat < heute - timedelta(days=1):
-                    kandidat = date(heute.year + 1, monat, tag)
-                return kandidat.isoformat()
-
-    except (ValueError, AttributeError) as fehler:
-        logger.warning("Datum konnte nicht geparst werden: '%s' – %s", text, fehler)
-        return None
-
-    return None
-
-
-def _uhrzeit_parsen(text: str) -> Optional[str]:
-    """
-    Extrahiert Uhrzeit im Format HH:MM aus Text.
-
-    Args:
-        text: Roher Text
-
-    Returns:
-        Uhrzeit als HH:MM oder None
-    """
-    if not text:
-        return None
-    treffer = re.search(r"\b(\d{1,2})[:\.](\d{2})\s*(?:Uhr)?", text, re.IGNORECASE)
-    if treffer:
-        stunde, minute = int(treffer.group(1)), int(treffer.group(2))
-        if 0 <= stunde <= 23 and 0 <= minute <= 59:
-            return f"{stunde:02d}:{minute:02d}"
-    return None
 
 
 def _kategorie_erkennen(text: str) -> str:
