@@ -599,7 +599,7 @@ def _scrape_html(heute: date) -> list[dict]:
             if '"dateTime"' in script_text or '"startDate"' in script_text:
                 try:
                     # JSON-Block aus Script extrahieren
-                    match = re.search(r"\{.*"dateTime".*\}", script_text, re.DOTALL)
+                    match = re.search(r'\{.*"dateTime".*\}', script_text, re.DOTALL)
                     if match:
                         daten = json.loads(match.group())
                         if isinstance(daten, dict) and daten.get("dateTime"):
