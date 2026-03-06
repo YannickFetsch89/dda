@@ -27,9 +27,12 @@ _ANREICHERBARE_FELDER: list[str] = [
     "beschreibung",
     "preis",
     "bild_url",
-    "instagram_location_id",
     "kategorie",
 ]
+
+# Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
+# Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
+_NICHT_IN_DB: set[str] = {"instagram_location_id"}
 
 # Erkennung von Rausgegangen-Bildern (imageflow.rausgegangen.de / s3/.../rausgegangen)
 _RAUSGEGANGEN_MUSTER = re.compile(r"rausgegangen", re.IGNORECASE)
@@ -131,8 +134,8 @@ def events_speichern(events: list[dict]) -> dict:
     fehler = 0
 
     for event in events:
-        # Server-seitige Felder entfernen
-        datensatz = {k: v for k, v in event.items() if k not in _IGNORE_FELDER}
+        # Server-seitige Felder und noch nicht existierende DB-Spalten entfernen
+        datensatz = {k: v for k, v in event.items() if k not in _IGNORE_FELDER and k not in _NICHT_IN_DB}
 
         titel = event.get("titel", "?")
         datum = event.get("datum", "?")

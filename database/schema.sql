@@ -45,3 +45,4 @@ CREATE INDEX IF NOT EXISTS idx_events_wiederkehrend   ON events (ist_wiederkehre
 -- Migration: Neue Spalten zu bestehender Tabelle hinzufügen (falls Tabelle existiert)
 ALTER TABLE events ADD COLUMN IF NOT EXISTS datum_bis DATE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ist_wiederkehrend BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS instagram_location_id TEXT;
