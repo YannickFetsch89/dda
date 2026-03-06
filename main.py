@@ -36,6 +36,9 @@ from scraper.tier2 import (
     kulturschlachthof_r25,
     salon_des_amateurs,
     pitcher,
+    kunsthalle,
+    filmmuseum,
+    stadtbuechereien,
 )
 
 # Logging konfigurieren
@@ -155,6 +158,18 @@ async def pipeline_ausfuehren():
     events_pitcher = pitcher.scrape()
     logger.info("Pitcher Rock HQ: %d Events", len(events_pitcher))
     alle_events.extend(events_pitcher)
+
+    events_kunsthalle = kunsthalle.scrape()
+    logger.info("Kunsthalle Düsseldorf: %d Events", len(events_kunsthalle))
+    alle_events.extend(events_kunsthalle)
+
+    events_filmmuseum = filmmuseum.scrape()
+    logger.info("Filmmuseum Düsseldorf: %d Events", len(events_filmmuseum))
+    alle_events.extend(events_filmmuseum)
+
+    events_stadtbuechereien = stadtbuechereien.scrape()
+    logger.info("Stadtbüchereien Düsseldorf: %d Events", len(events_stadtbuechereien))
+    alle_events.extend(events_stadtbuechereien)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
