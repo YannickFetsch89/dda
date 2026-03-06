@@ -40,6 +40,14 @@ from scraper.tier2 import (
     filmmuseum,
     stadtbuechereien,
 )
+from scraper.tier3 import (
+    parkrun,
+    sport_im_park,
+    fortuna,
+    deg,
+    messe,
+    japan_center,
+)
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -171,10 +179,37 @@ async def pipeline_ausfuehren():
     logger.info("Stadtbüchereien Düsseldorf: %d Events", len(events_stadtbuechereien))
     alle_events.extend(events_stadtbuechereien)
 
+    # Tier 3: Nischen- und Spezialquellen
+    logger.info("--- Schritt 1c: Tier-3-Scraper ---")
+
+    events_parkrun = parkrun.scrape()
+    logger.info("Parkrun Volksgarten Düsseldorf: %d Events", len(events_parkrun))
+    alle_events.extend(events_parkrun)
+
+    events_sport_im_park = await sport_im_park.scrape()
+    logger.info("Sport im Park Düsseldorf: %d Events", len(events_sport_im_park))
+    alle_events.extend(events_sport_im_park)
+
+    events_fortuna = await fortuna.scrape()
+    logger.info("Fortuna Düsseldorf: %d Events", len(events_fortuna))
+    alle_events.extend(events_fortuna)
+
+    events_deg = await deg.scrape()
+    logger.info("DEG Eishockey Düsseldorf: %d Events", len(events_deg))
+    alle_events.extend(events_deg)
+
+    events_messe = await messe.scrape()
+    logger.info("Messe Düsseldorf: %d Events", len(events_messe))
+    alle_events.extend(events_messe)
+
+    events_japan_center = await japan_center.scrape()
+    logger.info("Japan Center Düsseldorf: %d Events", len(events_japan_center))
+    alle_events.extend(events_japan_center)
+
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
-    # Schritt 1c: In-Memory-Deduplizierung mit Merge-Logik
-    logger.info("--- Schritt 1c: In-Memory-Deduplizierung ---")
+    # Schritt 1d: In-Memory-Deduplizierung mit Merge-Logik
+    logger.info("--- Schritt 1d: In-Memory-Deduplizierung ---")
     from pipeline.deduplication import deduplizieren
     alle_events = deduplizieren(alle_events)
 
