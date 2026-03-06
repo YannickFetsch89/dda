@@ -47,6 +47,11 @@ from scraper.tier3 import (
     deg,
     messe,
     japan_center,
+    classic_remise,
+    stadtstrand,
+    spontacts,
+    ihk,
+    startupdorf,
 )
 
 # Logging konfigurieren
@@ -205,6 +210,26 @@ async def pipeline_ausfuehren():
     events_japan_center = await japan_center.scrape()
     logger.info("Japan Center Düsseldorf: %d Events", len(events_japan_center))
     alle_events.extend(events_japan_center)
+
+    events_classic_remise = await classic_remise.scrape()
+    logger.info("Classic Remise Düsseldorf: %d Events", len(events_classic_remise))
+    alle_events.extend(events_classic_remise)
+
+    events_stadtstrand = await stadtstrand.scrape()
+    logger.info("Stadtstrand Düsseldorf: %d Events", len(events_stadtstrand))
+    alle_events.extend(events_stadtstrand)
+
+    events_spontacts = await spontacts.scrape()
+    logger.info("Spontacts Düsseldorf: %d Events", len(events_spontacts))
+    alle_events.extend(events_spontacts)
+
+    events_ihk = await ihk.scrape()
+    logger.info("IHK Düsseldorf: %d Events", len(events_ihk))
+    alle_events.extend(events_ihk)
+
+    events_startupdorf = await startupdorf.scrape()
+    logger.info("StartupDorf Meetup: %d Events", len(events_startupdorf))
+    alle_events.extend(events_startupdorf)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 
