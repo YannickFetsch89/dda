@@ -81,6 +81,8 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Kulturportal Düsseldorf | kulturportal-duesseldorf.de | Playwright Scraper |
 | meinestadt.de | veranstaltungen.meinestadt.de/duesseldorf | Playwright Scraper |
 | eventfinder.de | eventfinder.de/veranstaltungen-duesseldorf | Playwright Scraper |
+| PRINZ.de Düsseldorf | prinz.de/duesseldorf/events | HTML Scraper (täglich) |
+| AllEvents.in | allevents.in/dusseldorf | HTML Scraper (täglich) |
 
 #### APIs (kostenlos, strukturiert)
 | Name | API-Docs | Auth |
@@ -89,6 +91,8 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Eventbrite | eventbrite.com/platform/api | OAuth Token |
 | Meetup.com | meetup.com/api | API Key |
 | Resident Advisor (RA) | ra.co/api (inoffiziell) | Scraping-Fallback |
+| Songkick | songkick.com/developer (Metro Area ID: 28470) | API Key (SONGKICK_API_KEY) |
+| Bandsintown | bandsintown.com/c/dusseldorf-germany | HTML Scraper (kein Key nötig) |
 
 ---
 
@@ -104,12 +108,14 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Kulturschlachthof R25 | kulturschlachthof.de |
 | Salon des Amateurs | salonamateurs.de |
 | Pitcher Rock HQ | pitcher.de |
+| Jazz-Schmiede Düsseldorf | jazz-schmiede.de/veranstaltungen |
 
 #### Große Venues / Arenen
 | Venue | URL |
 |---|---|
 | d.live (Merkur Arena + PSD BANK DOME) | d-live.de/events |
 | Mitsubishi Electric HALLE | mitsubishi-electric-halle.de |
+| Capitol Theater Düsseldorf | capitol-theater.de/programm-tickets |
 
 #### Kultur & Theater
 | Institution | URL |
@@ -123,6 +129,13 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Kunsthalle Düsseldorf | kunsthalle-duesseldorf.de |
 | Filmmuseum / Black Box Kino | duesseldorf.de/filmmuseum |
 | Stadtbüchereien Düsseldorf | duesseldorf.de/stadtbuechereien/veranstaltungen |
+| Tanzhaus NRW | tanzhaus-nrw.de/calendar |
+| Kom(m)ödchen | kommoedchen.de/spielplan |
+
+#### Community & Business
+| Institution | URL |
+|---|---|
+| STARTPLATZ Düsseldorf | startplatz.de/events |
 
 ---
 
@@ -141,6 +154,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Spontacts Düsseldorf | Freizeitaktivitäten | spontacts.de |
 | IHK Düsseldorf | Business-Events | duesseldorf.ihk.de/veranstaltungen |
 | StartupDorf (Meetup) | Startup-Community | meetup.com/startupdorf |
+| Street Food Thursday | Food-Event, monatlich (Stahlwerk, 2. Do. im Monat) | Statisch + Scraping-Fallback |
 
 ---
 

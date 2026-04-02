@@ -16,6 +16,10 @@ from scraper.tier1 import (
     visitduesseldorf,
     meetup,
     resident_advisor,
+    prinz,
+    songkick,
+    allevents,
+    bandsintown,
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
     # eventbrite deaktiviert – API v3 abgeschaltet, Website durch Bot-Schutz blockiert
     # eventfinder deaktiviert – keine zuverlässige Datenquelle
@@ -39,6 +43,11 @@ from scraper.tier2 import (
     kunsthalle,
     filmmuseum,
     stadtbuechereien,
+    tanzhaus_nrw,
+    jazz_schmiede,
+    capitol_theater,
+    kommoedchen,
+    startplatz,
 )
 from scraper.tier3 import (
     parkrun,
@@ -52,6 +61,7 @@ from scraper.tier3 import (
     spontacts,
     ihk,
     startupdorf,
+    street_food_thursday,
 )
 
 # Logging konfigurieren
@@ -106,6 +116,22 @@ async def pipeline_ausfuehren():
     events_ra = resident_advisor.scrape()
     logger.info("Resident Advisor: %d Events", len(events_ra))
     alle_events.extend(events_ra)
+
+    events_prinz = prinz.scrape()
+    logger.info("PRINZ.de Düsseldorf: %d Events", len(events_prinz))
+    alle_events.extend(events_prinz)
+
+    events_songkick = songkick.scrape()
+    logger.info("Songkick: %d Events", len(events_songkick))
+    alle_events.extend(events_songkick)
+
+    events_allevents = allevents.scrape()
+    logger.info("AllEvents.in Düsseldorf: %d Events", len(events_allevents))
+    alle_events.extend(events_allevents)
+
+    events_bandsintown = bandsintown.scrape()
+    logger.info("Bandsintown: %d Events", len(events_bandsintown))
+    alle_events.extend(events_bandsintown)
 
     # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
 
@@ -184,6 +210,26 @@ async def pipeline_ausfuehren():
     logger.info("Stadtbüchereien Düsseldorf: %d Events", len(events_stadtbuechereien))
     alle_events.extend(events_stadtbuechereien)
 
+    events_tanzhaus = tanzhaus_nrw.scrape()
+    logger.info("Tanzhaus NRW: %d Events", len(events_tanzhaus))
+    alle_events.extend(events_tanzhaus)
+
+    events_jazz = jazz_schmiede.scrape()
+    logger.info("Jazz-Schmiede Düsseldorf: %d Events", len(events_jazz))
+    alle_events.extend(events_jazz)
+
+    events_capitol = capitol_theater.scrape()
+    logger.info("Capitol Theater Düsseldorf: %d Events", len(events_capitol))
+    alle_events.extend(events_capitol)
+
+    events_komm = kommoedchen.scrape()
+    logger.info("Kom(m)ödchen Düsseldorf: %d Events", len(events_komm))
+    alle_events.extend(events_komm)
+
+    events_startplatz = startplatz.scrape()
+    logger.info("STARTPLATZ Düsseldorf: %d Events", len(events_startplatz))
+    alle_events.extend(events_startplatz)
+
     # Tier 3: Nischen- und Spezialquellen
     logger.info("--- Schritt 1c: Tier-3-Scraper ---")
 
@@ -230,6 +276,10 @@ async def pipeline_ausfuehren():
     events_startupdorf = await startupdorf.scrape()
     logger.info("StartupDorf Meetup: %d Events", len(events_startupdorf))
     alle_events.extend(events_startupdorf)
+
+    events_sft = street_food_thursday.scrape()
+    logger.info("Street Food Thursday: %d Events", len(events_sft))
+    alle_events.extend(events_sft)
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
 

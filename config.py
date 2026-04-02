@@ -44,6 +44,7 @@ SCRAPER_CONFIG = {
 # --- API-Konfiguration ---
 TICKETMASTER_API_KEY = os.getenv("TICKETMASTER_API_KEY")
 MEETUP_API_KEY = os.getenv("MEETUP_API_KEY")
+SONGKICK_API_KEY = os.getenv("SONGKICK_API_KEY")
 
 # --- Instagram Caption ---
 INSTAGRAM_CONFIG = {
