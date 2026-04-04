@@ -46,3 +46,13 @@ CREATE INDEX IF NOT EXISTS idx_events_wiederkehrend   ON events (ist_wiederkehre
 ALTER TABLE events ADD COLUMN IF NOT EXISTS datum_bis DATE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ist_wiederkehrend BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS instagram_location_id TEXT;
+
+-- Dashboard: Admin-Steuerung (opt-out + Featured-Tiers)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS abgelehnt BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS tipp_des_tages BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS highlight_der_woche BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS top_event_des_monats BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Indizes für Dashboard-Abfragen
+CREATE INDEX IF NOT EXISTS idx_events_abgelehnt  ON events (abgelehnt);
+CREATE INDEX IF NOT EXISTS idx_events_featured   ON events (tipp_des_tages, highlight_der_woche, top_event_des_monats);

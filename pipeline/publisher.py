@@ -275,13 +275,18 @@ def posten(limit: int = 5) -> int:
         logger.error("Datenbankverbindung fehlgeschlagen: %s", str(e))
         return 0
 
-    # Aufbereitete Events laden
+    # Aufbereitete Events laden – abgelehnte Events werden ausgeschlossen.
+    # Reihenfolge: top_event_des_monats → highlight_der_woche → tipp_des_tages → älteste zuerst
     try:
         ergebnis = (
             db.table("events")
             .select("*")
             .eq("status", "aufbereitet")
-            .order("erstellt_am", desc=False)
+            .eq("abgelehnt", False)
+            .order("top_event_des_monats", desc=True)
+            .order("highlight_der_woche", desc=True)
+            .order("tipp_des_tages", desc=True)
+            .order("datum", desc=False)
             .limit(limit)
             .execute()
         )
