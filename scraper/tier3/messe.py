@@ -149,53 +149,40 @@ def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
 
 def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     """
-    Fallback: Text-basiertes Parsing der Veranstaltungsliste.
+    HTML-Parsing der Messe-Veranstaltungsliste.
 
-    Messe-Struktur (Stand 2026-10):
-    Aufeinanderfolgende Zeilen im Seitentext:
-      "EVENTNAME"
-      "DD.MM.YYYY - DD.MM.YYYY"
-      "Düsseldorf"
-
-    Args:
-        html: HTML-Quelltext der Seite
-        heute: Aktuelles Datum
-        enddatum: Maximales Datum für Events
-
-    Returns:
-        Liste von Event-Dicts
+    Struktur (Stand 2026-10): div.dim-list-item_head mit Kind-Divs
+    .title (span.overflow--ellipsis), .date, .city
     """
     from bs4 import BeautifulSoup
 
     events = []
     gesehene_schluessel: set[str] = set()
     soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text("\n", strip=True)
-    zeilen = [z.strip() for z in text.split("\n") if z.strip()]
 
     datum_bereich = re.compile(
         r"(\d{1,2})\.(\d{1,2})\.(\d{4})\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{4})"
     )
-    skip_zeilen = {
-        "titel", "datum", "ort", "details", "filter:", "international",
-        "düsseldorf", "aktuelle und zukünftige veranstaltungen",
-        "zeige vergangene veranstaltungen", "datum", "land / ort",
-        "partner- und gastveranstaltungen",
-    }
 
-    i = 0
-    while i < len(zeilen) - 1:
-        zeile = zeilen[i]
-        naechste = zeilen[i + 1]
+    koepfe = soup.find_all("div", class_="dim-list-item_head")
+    logger.debug("Messe HTML: %d dim-list-item_head Einträge", len(koepfe))
 
-        treffer = datum_bereich.match(naechste)
-        if not treffer:
-            i += 1
+    for kopf in koepfe:
+        titel_div = kopf.select_one("div.title")
+        datum_div = kopf.select_one("div.date")
+        stadt_div = kopf.select_one("div.city")
+
+        if not titel_div or not datum_div:
             continue
 
-        titel = zeile
-        if titel.lower() in skip_zeilen or len(titel) < 2:
-            i += 1
+        span = titel_div.find("span", class_="overflow--ellipsis")
+        titel = (span.get_text(strip=True) if span else titel_div.get_text(strip=True))
+        if not titel or len(titel) < 2:
+            continue
+
+        datum_text = datum_div.get_text(strip=True)
+        treffer = datum_bereich.search(datum_text)
+        if not treffer:
             continue
 
         try:
@@ -206,40 +193,44 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
                 int(treffer.group(6)), int(treffer.group(5)), int(treffer.group(4))
             )
         except ValueError:
-            i += 2
             continue
 
         if ende_datum < heute or start_datum > enddatum:
-            i += 2
             continue
 
-        titel_clean = titel.rstrip(" *")
+        stadt = stadt_div.get_text(strip=True) if stadt_div else "Düsseldorf"
+        if "düsseldorf" not in stadt.lower():
+            continue
 
-        schluessel = f"{titel_clean}_{start_datum.isoformat()}"
+        bild_el = titel_div.find("img")
+        bild_url = None
+        if bild_el:
+            bild_src = bild_el.get("src")
+            if bild_src:
+                bild_url = bild_src if bild_src.startswith("http") else urljoin(BASE_URL, bild_src)
+
+        schluessel = f"{titel}_{start_datum.isoformat()}"
         if schluessel in gesehene_schluessel:
-            i += 2
             continue
         gesehene_schluessel.add(schluessel)
 
         events.append({
-            "titel": titel_clean,
+            "titel": titel,
             "datum": start_datum.isoformat(),
             "uhrzeit": None,
             "ort": ORT_STANDARD,
             "adresse": ADRESSE_STANDARD,
             "kategorie": KATEGORIE,
-            "beschreibung": f"{titel_clean}, {naechste}, Messe Düsseldorf"[:300],
+            "beschreibung": f"{titel}, {datum_text}, Messe Düsseldorf"[:300],
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": LISTE_URL,
-            "bild_url": None,
+            "bild_url": bild_url,
             "bild_generiert": False,
             "post_typ": "feed",
             "instagram_caption": None,
             "status": "neu",
         })
-
-        i += 2
 
     return events
 
