@@ -28,6 +28,7 @@ _ANREICHERBARE_FELDER: list[str] = [
     "preis",
     "bild_url",
     "kategorie",
+    "stadtteil",
 ]
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert

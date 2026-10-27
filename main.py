@@ -288,6 +288,11 @@ async def pipeline_ausfuehren():
     from pipeline.deduplication import deduplizieren
     alle_events = deduplizieren(alle_events)
 
+    # Schritt 1e: Stadtteil-Zuordnung
+    logger.info("--- Schritt 1e: Stadtteil-Zuordnung ---")
+    from pipeline.stadtteil_mapper import stadtteil_batch_zuordnen
+    alle_events = stadtteil_batch_zuordnen(alle_events)
+
     # Schritt 2: In Supabase speichern (mit DB-seitiger Anreicherung)
     logger.info("--- Schritt 2: Datenbank ---")
     stats = events_speichern(alle_events)

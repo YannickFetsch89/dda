@@ -56,3 +56,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS top_event_des_monats BOOLEAN NOT NUL
 -- Indizes für Dashboard-Abfragen
 CREATE INDEX IF NOT EXISTS idx_events_abgelehnt  ON events (abgelehnt);
 CREATE INDEX IF NOT EXISTS idx_events_featured   ON events (tipp_des_tages, highlight_der_woche, top_event_des_monats);
+
+-- Stadtteil-Zuordnung (automatisch über Venue-Name, PLZ oder Straße)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS stadtteil TEXT;
+CREATE INDEX IF NOT EXISTS idx_events_stadtteil ON events (stadtteil);

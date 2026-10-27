@@ -76,7 +76,7 @@ def events_laden(
                 "id, titel, datum, uhrzeit, ort, kategorie, beschreibung, "
                 "preis, quelle_name, quelle_url, bild_url, instagram_caption, "
                 "status, abgelehnt, tipp_des_tages, highlight_der_woche, "
-                "top_event_des_monats, erstellt_am"
+                "top_event_des_monats, stadtteil, erstellt_am"
             )
             .gte("datum", von.isoformat())
             .lte("datum", bis.isoformat())
@@ -99,7 +99,7 @@ def events_laden(
                     "id, titel, datum, uhrzeit, ort, kategorie, beschreibung, "
                     "preis, quelle_name, quelle_url, bild_url, instagram_caption, "
                     "status, abgelehnt, tipp_des_tages, highlight_der_woche, "
-                    "top_event_des_monats, erstellt_am"
+                    "top_event_des_monats, stadtteil, erstellt_am"
                 )
                 .or_("tipp_des_tages.eq.true,highlight_der_woche.eq.true,top_event_des_monats.eq.true")
                 .order("datum", desc=False)
@@ -172,6 +172,7 @@ def event_karte(event: dict, key_prefix: str):
     bild_url = event.get("bild_url") or ""
     quelle = event.get("quelle_name", "")
     preis = event.get("preis") or ""
+    stadtteil = event.get("stadtteil") or ""
     abgelehnt = event.get("abgelehnt", False)
     status = event.get("status", "")
 
@@ -202,8 +203,13 @@ def event_karte(event: dict, key_prefix: str):
 
         with col_info:
             st.markdown(f"### {emoji} {titel}")
-            st.caption(f"📅 {zeitangabe}  ·  📍 {ort}  ·  🏷️ {kategorie.capitalize()}  ·  📰 {quelle}" +
-                       (f"  ·  💶 {preis}" if preis else ""))
+            meta_parts = f"📅 {zeitangabe}  ·  📍 {ort}"
+            if stadtteil:
+                meta_parts += f" ({stadtteil})"
+            meta_parts += f"  ·  🏷️ {kategorie.capitalize()}  ·  📰 {quelle}"
+            if preis:
+                meta_parts += f"  ·  💶 {preis}"
+            st.caption(meta_parts)
             if badge:
                 st.markdown(f"**{badge}**")
             if abgelehnt:
@@ -313,6 +319,20 @@ def sidebar_rendern():
 
         st.divider()
 
+        # Stadtteil-Filter
+        st.subheader("Stadtteil")
+        stadtteile = [
+            "Alle", "Altstadt", "Bilk", "Benrath", "Derendorf", "Düsseltal",
+            "Eller", "Flingern", "Friedrichstadt", "Garath", "Gerresheim",
+            "Golzheim", "Hafen", "Hassels", "Heerdt", "Holthausen",
+            "Kaiserswerth", "Lierenfeld", "Lörick", "Mörsenbroich",
+            "Oberbilk", "Oberkassel", "Pempelfort", "Rath", "Stadtmitte",
+            "Stockum", "Unterbilk", "Vennhausen", "Wersten",
+        ]
+        stadtteil_filter = st.selectbox("Stadtteil filtern", stadtteile, key="filter_stadtteil")
+
+        st.divider()
+
         # Pipeline-Steuerung
         st.subheader("Pipeline")
         if st.button("🔄 Jetzt neu scrapen", use_container_width=True, type="primary"):
@@ -337,7 +357,7 @@ def sidebar_rendern():
                 except Exception as e:
                     st.error(f"Fehler: {e}")
 
-        return von, bis, kategorie_filter
+        return von, bis, kategorie_filter, stadtteil_filter
 
 
 # ── Hauptansicht ──────────────────────────────────────────────────────────────
@@ -348,10 +368,17 @@ def events_filtern_nach_kategorie(events: list[dict], kategorie: str) -> list[di
     return [e for e in events if e.get("kategorie") == kategorie]
 
 
-def tab_tagesplaner(von: date, bis: date, kategorie_filter: str):
+def events_filtern_nach_stadtteil(events: list[dict], stadtteil: str) -> list[dict]:
+    if stadtteil == "Alle":
+        return events
+    return [e for e in events if e.get("stadtteil") == stadtteil]
+
+
+def tab_tagesplaner(von: date, bis: date, kategorie_filter: str, stadtteil_filter: str = "Alle"):
     """Zeigt Events tageweise gruppiert im Vorschauzeitraum."""
     events = events_laden(von, bis)
     events = events_filtern_nach_kategorie(events, kategorie_filter)
+    events = events_filtern_nach_stadtteil(events, stadtteil_filter)
 
     if not events:
         st.info("Keine Events im gewählten Zeitraum gefunden.")
@@ -390,7 +417,7 @@ def tab_tagesplaner(von: date, bis: date, kategorie_filter: str):
                 event_karte(event, key_prefix="tagesplaner")
 
 
-def tab_event_liste(von: date, bis: date, kategorie_filter: str):
+def tab_event_liste(von: date, bis: date, kategorie_filter: str, stadtteil_filter: str = "Alle"):
     """Zeigt alle Events als scrollbare Liste mit Filteroptionen."""
     status_filter = st.radio(
         "Status",
@@ -403,6 +430,7 @@ def tab_event_liste(von: date, bis: date, kategorie_filter: str):
     nur_featured = status_filter == "Nur Featured"
     events = events_laden(von, bis, nur_abgelehnte=nur_abgelehnte, nur_featured=nur_featured)
     events = events_filtern_nach_kategorie(events, kategorie_filter)
+    events = events_filtern_nach_stadtteil(events, stadtteil_filter)
 
     st.caption(f"{len(events)} Events gefunden")
 
@@ -441,7 +469,7 @@ def tab_featured(von: date, bis: date):
 # ── Hauptprogramm ─────────────────────────────────────────────────────────────
 
 def main():
-    von, bis, kategorie_filter = sidebar_rendern()
+    von, bis, kategorie_filter, stadtteil_filter = sidebar_rendern()
 
     st.title("🎭 DiesDasDüsseldorf – Event-Planer")
 
@@ -452,10 +480,10 @@ def main():
     ])
 
     with tab1:
-        tab_tagesplaner(von, bis, kategorie_filter)
+        tab_tagesplaner(von, bis, kategorie_filter, stadtteil_filter)
 
     with tab2:
-        tab_event_liste(von, bis, kategorie_filter)
+        tab_event_liste(von, bis, kategorie_filter, stadtteil_filter)
 
     with tab3:
         tab_featured(von, bis)
