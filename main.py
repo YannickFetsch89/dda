@@ -166,7 +166,7 @@ async def pipeline_ausfuehren():
     logger.info("Kunstsammlung NRW (K20/K21): %d Events", len(events_kunstsammlung))
     alle_events.extend(events_kunstsammlung)
 
-    events_nrw_forum = nrw_forum.scrape()
+    events_nrw_forum = await asyncio.to_thread(nrw_forum.scrape)
     logger.info("NRW-Forum Düsseldorf: %d Events", len(events_nrw_forum))
     alle_events.extend(events_nrw_forum)
 
