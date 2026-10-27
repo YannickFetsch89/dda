@@ -1,15 +1,46 @@
 """
 stadtteil_mapper.py – DiesDasDüsseldorf
 Ordnet Events automatisch einem Düsseldorfer Stadtteil zu.
-Priorität: 1) Venue-Name → 2) PLZ → 3) Straßenname → 4) None
+Priorität: 0) Quelle (Scraper-Herkunft) → 1) Venue-Name → 2) PLZ → 3) Straßenname → 4) None
 """
 import logging
 import re
 
 logger = logging.getLogger(__name__)
 
+# Priorität 0: Scraper-Quelle → Stadtteil (Tier-2-Scraper = Venue bekannt)
+QUELLE_STADTTEIL: dict[str, str] = {
+    "FFT Düsseldorf": "Pempelfort",
+    "Deutsche Oper am Rhein": "Pempelfort",
+    "Tonhalle Düsseldorf": "Pempelfort",
+    "Düsseldorfer Schauspielhaus": "Pempelfort",
+    "Kunstpalast": "Pempelfort",
+    "NRW-Forum Düsseldorf": "Pempelfort",
+    "zakk": "Flingern",
+    "Capitol Theater Düsseldorf": "Flingern",
+    "Tanzhaus NRW": "Flingern",
+    "Jazz-Schmiede Düsseldorf": "Bilk",
+    "Salon des Amateurs": "Altstadt",
+    "Kunstsammlung NRW": "Altstadt",
+    "Kunsthalle Düsseldorf": "Altstadt",
+    "Filmmuseum Düsseldorf": "Altstadt",
+    "Kom(m)ödchen": "Altstadt",
+    "Stadtbüchereien Düsseldorf": "Friedrichstadt",
+    "Stahlwerk Düsseldorf": "Lierenfeld",
+    "Rudas Studios": "Lierenfeld",
+    "Kulturschlachthof R25": "Lierenfeld",
+    "d-live": "Stockum",
+    "d.live": "Stockum",
+    "Mitsubishi Electric HALLE": "Stockum",
+    "STARTPLATZ Düsseldorf": "Hafen",
+    "Messe Düsseldorf": "Stockum",
+    "Fortuna Düsseldorf": "Stockum",
+    "DEG Eishockey": "Stockum",
+}
+
 # Priorität 1: Bekannte Venues → Stadtteil
 VENUE_STADTTEIL: dict[str, str] = {
+    # --- Pempelfort ---
     "Tonhalle Düsseldorf": "Pempelfort",
     "Tonhalle": "Pempelfort",
     "Deutsche Oper am Rhein": "Pempelfort",
@@ -17,21 +48,35 @@ VENUE_STADTTEIL: dict[str, str] = {
     "Düsseldorfer Schauspielhaus": "Pempelfort",
     "Schauspielhaus": "Pempelfort",
     "D'haus": "Pempelfort",
+    "Junges Schauspiel": "Pempelfort",
+    "Central — D'haus": "Pempelfort",
     "Kunstpalast": "Pempelfort",
     "NRW-Forum": "Pempelfort",
     "FFT Düsseldorf": "Pempelfort",
     "Forum Freies Theater": "Pempelfort",
+    "FFT": "Pempelfort",
     "Nachtresidenz": "Pempelfort",
+    "Goethe-Museum": "Pempelfort",
+    "Theatermuseum": "Pempelfort",
+    "TMD Theatermuseum": "Pempelfort",
+    "Hofgartenhaus": "Pempelfort",
+    "Bühne I": "Pempelfort",
+    "Bühne II": "Pempelfort",
+    # --- Flingern ---
     "zakk": "Flingern",
     "Capitol Theater": "Flingern",
     "Tanzhaus NRW": "Flingern",
     "Pitcher": "Flingern",
     "Weltkunstzimmer": "Flingern",
     "Atelier am Eck": "Flingern",
+    "Bar Lola": "Flingern",
+    "Cube Sports": "Flingern",
+    # --- Lierenfeld ---
     "Stahlwerk": "Lierenfeld",
     "Rudas Studios": "Lierenfeld",
     "Kulturschlachthof R25": "Lierenfeld",
     "Kulturschlachthof": "Lierenfeld",
+    # --- Altstadt ---
     "Salon des Amateurs": "Altstadt",
     "Kunstsammlung NRW": "Altstadt",
     "K20": "Altstadt",
@@ -54,6 +99,12 @@ VENUE_STADTTEIL: dict[str, str] = {
     "Füchschen": "Altstadt",
     "Stadtstrand": "Altstadt",
     "Stone": "Altstadt",
+    "The Old Irish Pub": "Altstadt",
+    "Comedy Club Düsseldorf": "Altstadt",
+    "Comedy Club": "Altstadt",
+    "Altstadt Düsseldorf": "Altstadt",
+    "Altstadtherbst": "Altstadt",
+    # --- Friedrichstadt ---
     "K21": "Friedrichstadt",
     "Stadtbücherei": "Friedrichstadt",
     "Zentralbibliothek": "Friedrichstadt",
@@ -61,10 +112,22 @@ VENUE_STADTTEIL: dict[str, str] = {
     "IHK": "Friedrichstadt",
     "Tube Club": "Friedrichstadt",
     "Sub": "Friedrichstadt",
+    "Bürgerhaus Salzmannbau": "Friedrichstadt",
+    "Salzmannbau": "Friedrichstadt",
+    # --- Bilk ---
     "Jazz-Schmiede": "Bilk",
     "Palais Wittgenstein": "Bilk",
+    "Malkasten": "Bilk",
+    # --- Hafen / Unterbilk ---
     "STARTPLATZ": "Hafen",
     "Startplatz": "Hafen",
+    "RheinRiff": "Hafen",
+    "Rheinriff": "Hafen",
+    "Schleuse Zwei": "Hafen",
+    "Schleuse2": "Hafen",
+    "KIT": "Unterbilk",
+    "KIT – Kunst im Tunnel": "Unterbilk",
+    # --- Stockum ---
     "Mitsubishi Electric HALLE": "Stockum",
     "Mitsubishi Electric Halle": "Stockum",
     "PSD BANK DOME": "Stockum",
@@ -72,10 +135,20 @@ VENUE_STADTTEIL: dict[str, str] = {
     "ISS DOME": "Stockum",
     "ESPRIT arena": "Stockum",
     "Messe Düsseldorf": "Stockum",
+    # --- Heerdt ---
+    "Areal Böhler": "Heerdt",
+    "Böhler-Areal": "Heerdt",
+    "Böhler": "Heerdt",
+    # --- Benrath ---
+    "Schloss Benrath": "Benrath",
+    "Museum für Gartenkunst": "Benrath",
+    "Naturkundemuseum": "Benrath",
+    # --- Sonstige ---
     "Classic Remise": "Mörsenbroich",
     "Volksgarten": "Oberbilk",
-    "KIT": "Unterbilk",
-    "KIT – Kunst im Tunnel": "Unterbilk",
+    "Ghorban": "Pempelfort",
+    "The Craft Studio": "Friedrichstadt",
+    "Oberschlesisches Landesmuseum": "Ratingen",
 }
 
 # Sortiert nach Länge (längster Key zuerst) für präziseres Matching
@@ -157,13 +230,15 @@ STRASSEN_STADTTEIL: dict[str, str] = {
 }
 
 
-def stadtteil_ermitteln(ort: str, adresse: str | None = None) -> str | None:
+def stadtteil_ermitteln(ort: str, adresse: str | None = None, quelle_name: str | None = None) -> str | None:
     """
     Ermittelt den Düsseldorfer Stadtteil für ein Event.
 
     Args:
         ort: Venue-Name (z.B. "Tonhalle Düsseldorf")
         adresse: Straßenadresse mit PLZ (z.B. "Ehrenhof 1, 40479 Düsseldorf")
+        quelle_name: Scraper-Quelle (z.B. "FFT Düsseldorf") – bei Tier-2-Scrapern
+                     entspricht die Quelle direkt dem Venue
 
     Returns:
         Stadtteil-Name oder None wenn nicht zuordenbar
@@ -178,7 +253,11 @@ def stadtteil_ermitteln(ort: str, adresse: str | None = None) -> str | None:
         if venue_key.lower() in ort_lower:
             return VENUE_STADTTEIL[venue_key]
 
-    # Priorität 2: PLZ aus Adresse
+    # Priorität 2: Quelle = Venue (Tier-2-Scraper)
+    if quelle_name and quelle_name in QUELLE_STADTTEIL:
+        return QUELLE_STADTTEIL[quelle_name]
+
+    # Priorität 3: PLZ aus Adresse
     if adresse:
         plz_match = _PLZ_REGEX.search(adresse)
         if plz_match:
@@ -186,7 +265,7 @@ def stadtteil_ermitteln(ort: str, adresse: str | None = None) -> str | None:
             if plz in PLZ_STADTTEIL:
                 return PLZ_STADTTEIL[plz]
 
-    # Priorität 3: Straßennamen in Adresse oder Ort
+    # Priorität 4: Straßennamen in Adresse oder Ort
     texte = [ort]
     if adresse:
         texte.append(adresse)
@@ -211,6 +290,7 @@ def stadtteil_batch_zuordnen(events: list[dict]) -> list[dict]:
         stadtteil = stadtteil_ermitteln(
             event.get("ort", ""),
             event.get("adresse"),
+            event.get("quelle_name"),
         )
         if stadtteil:
             event["stadtteil"] = stadtteil

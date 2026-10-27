@@ -36,7 +36,7 @@ def backfill():
     while True:
         result = (
             db.table("events")
-            .select("id, ort, adresse")
+            .select("id, ort, adresse, quelle_name")
             .is_("stadtteil", "null")
             .range(offset, offset + batch_size - 1)
             .execute()
@@ -52,6 +52,7 @@ def backfill():
             stadtteil = stadtteil_ermitteln(
                 event.get("ort", ""),
                 event.get("adresse"),
+                event.get("quelle_name"),
             )
             if stadtteil:
                 db.table("events").update({"stadtteil": stadtteil}).eq("id", event["id"]).execute()
