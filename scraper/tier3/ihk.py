@@ -6,15 +6,14 @@ Scrapt Business-Events, Seminare und Netzwerkveranstaltungen der
 IHK Düsseldorf (Industrie- und Handelskammer).
 
 Strategie:
-1. Primär: JSON-LD structured data (schema.org/Event)
-2. Fallback: HTML-Parsing der Veranstaltungsliste
+1. Playwright rendert die Veranstaltungssuche
+2. HTML-Parsing der .result .event-teaser Elemente
 
-URL: https://www.duesseldorf.ihk.de/veranstaltungen
+URL: https://www.ihk.de/duesseldorf/system/veranstaltungssuche/suche-tibros/6138840
 Adresse: Ernst-Schneider-Platz 1, 40212 Düsseldorf
 Erstellt: 2026-03-06
 """
 import asyncio
-import json
 import logging
 import re
 from datetime import date, timedelta
@@ -27,8 +26,8 @@ from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
 
-LISTE_URL = "https://www.duesseldorf.ihk.de/veranstaltungen"
-BASE_URL = "https://www.duesseldorf.ihk.de"
+LISTE_URL = "https://www.ihk.de/duesseldorf/system/veranstaltungssuche/suche-tibros/6138840"
+BASE_URL = "https://www.ihk.de"
 QUELLE_NAME = "IHK Düsseldorf"
 ORT_STANDARD = "IHK Düsseldorf"
 ADRESSE_STANDARD = "Ernst-Schneider-Platz 1, 40212 Düsseldorf"
@@ -44,12 +43,6 @@ USER_AGENT = (
 def _beschreibung_kuerzen(text: str) -> str:
     """
     Kürzt eine Beschreibung auf maximal 300 Zeichen.
-
-    Args:
-        text: Roher Beschreibungstext
-
-    Returns:
-        Beschreibung mit maximal 300 Zeichen
     """
     if not text:
         return ""
@@ -57,17 +50,11 @@ def _beschreibung_kuerzen(text: str) -> str:
     return bereinigt[:300]
 
 
-def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
+def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     """
-    Extrahiert Events aus JSON-LD structured data.
+    Parst IHK-Veranstaltungsergebnisse aus gerendertem HTML.
 
-    Args:
-        html: HTML-Quelltext der Seite
-        heute: Aktuelles Datum
-        enddatum: Maximales Datum für Events
-
-    Returns:
-        Liste von Event-Dicts
+    Struktur: .result > .event-teaser mit .ev-title, .date, .time, .location, .price
     """
     from bs4 import BeautifulSoup
 
@@ -75,75 +62,70 @@ def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
     gesehene_schluessel: set[str] = set()
     soup = BeautifulSoup(html, "html.parser")
 
-    for script in soup.find_all("script", type="application/ld+json"):
+    karten = soup.select(".result .event-teaser")
+    if not karten:
+        karten = soup.select(".event-teaser")
+    logger.info("IHK: %d Event-Teaser gefunden", len(karten))
+
+    for karte in karten:
         try:
-            daten = json.loads(script.string or "{}")
-        except (json.JSONDecodeError, AttributeError):
-            continue
-
-        eintraege = daten if isinstance(daten, list) else [daten]
-        for eintrag in eintraege:
-            if not isinstance(eintrag, dict):
+            titel_el = karte.select_one("p.ev-title")
+            if not titel_el:
                 continue
-            if eintrag.get("@type") not in ("Event", "BusinessEvent", "EducationEvent", "SocialEvent"):
+            titel = titel_el.get_text(strip=True)
+            if not titel or len(titel) < 3:
                 continue
 
-            titel = eintrag.get("name", "").strip()
-            if not titel:
+            datum_el = karte.select_one("div.date")
+            if not datum_el:
                 continue
-
-            datum_roh = eintrag.get("startDate") or eintrag.get("startDateTime")
-            datum = datum_parsen(str(datum_roh)) if datum_roh else None
+            datum_text = datum_el.get_text(strip=True)
+            datum = datum_parsen(datum_text)
             if not datum:
                 continue
+
             datum_obj = date.fromisoformat(datum)
             if datum_obj < heute or datum_obj > enddatum:
                 continue
 
-            uhrzeit = uhrzeit_parsen(str(datum_roh))
-            url_roh = eintrag.get("url")
-            quelle_url = urljoin(BASE_URL, str(url_roh)) if url_roh else LISTE_URL
+            zeit_el = karte.select_one("div.time")
+            uhrzeit = None
+            if zeit_el:
+                uhrzeit = uhrzeit_parsen(zeit_el.get_text(strip=True))
 
-            beschreibung_roh = eintrag.get("description")
-            beschreibung = _beschreibung_kuerzen(str(beschreibung_roh)) if beschreibung_roh else None
-
-            bild_roh = eintrag.get("image")
-            if isinstance(bild_roh, list) and bild_roh:
-                bild_roh = bild_roh[0]
-            if isinstance(bild_roh, dict):
-                bild_url = bild_roh.get("url") or bild_roh.get("contentUrl")
-            elif isinstance(bild_roh, str) and bild_roh.startswith("http"):
-                bild_url = bild_roh
-            else:
-                bild_url = None
-
-            # Ort aus structured data extrahieren, Fallback auf IHK-Adresse
-            ort_daten = eintrag.get("location")
             ort = ORT_STANDARD
             adresse = ADRESSE_STANDARD
-            if isinstance(ort_daten, dict):
-                ort_name = ort_daten.get("name")
-                if ort_name:
-                    ort = ort_name
-                adresse_obj = ort_daten.get("address")
-                if isinstance(adresse_obj, dict):
-                    strasse = adresse_obj.get("streetAddress", "")
-                    plz = adresse_obj.get("postalCode", "")
-                    stadt = adresse_obj.get("addressLocality", "")
-                    adresse_teile = [t for t in [strasse, plz, stadt] if t]
-                    adresse = ", ".join(adresse_teile) if adresse_teile else ADRESSE_STANDARD
-                elif isinstance(adresse_obj, str):
-                    adresse = adresse_obj
+            ort_el = karte.select_one("div.location")
+            if ort_el:
+                ort_text = ort_el.get_text(strip=True)
+                if ort_text:
+                    if "online" in ort_text.lower():
+                        ort = "Online (IHK Düsseldorf)"
+                        adresse = None
+                    elif ort_text:
+                        adresse = ort_text + " Düsseldorf" if "düsseldorf" not in ort_text.lower() else ort_text
 
-            # Preis aus Angeboten extrahieren
             preis = None
-            angebote = eintrag.get("offers", [])
-            if isinstance(angebote, dict):
-                angebote = [angebote]
-            if angebote:
-                preise = [str(a.get("price", "")) for a in angebote if a.get("price")]
-                if preise:
-                    preis = f"ab {preise[0]}€"
+            preis_el = karte.select_one("div.price")
+            if preis_el:
+                preis_text = preis_el.get_text(strip=True)
+                if preis_text:
+                    if preis_text.lower() in ("kostenfrei", "kostenlos", "0", "0,00"):
+                        preis = "kostenlos"
+                    else:
+                        preis_text = preis_text.replace(".", "").replace(",", ".")
+                        try:
+                            betrag = float(preis_text)
+                            preis = f"{betrag:.0f}€"
+                        except ValueError:
+                            preis = preis_text
+
+            link_el = karte.select_one("a.teaser--link")
+            quelle_url = LISTE_URL
+            if link_el:
+                href = link_el.get("href", "")
+                if href:
+                    quelle_url = urljoin(BASE_URL, href)
 
             schluessel = f"{titel}_{datum}"
             if schluessel in gesehene_schluessel:
@@ -157,109 +139,11 @@ def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
                 "ort": ort,
                 "adresse": adresse,
                 "kategorie": KATEGORIE,
-                "beschreibung": beschreibung,
+                "beschreibung": None,
                 "preis": preis,
                 "quelle_name": QUELLE_NAME,
                 "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "bild_generiert": False,
-                "post_typ": "feed",
-                "instagram_caption": None,
-                "instagram_location_id": None,
-                "status": "neu",
-            })
-
-    return events
-
-
-def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
-    """
-    Fallback: HTML-Parsing der Veranstaltungsliste.
-
-    Args:
-        html: HTML-Quelltext der Seite
-        heute: Aktuelles Datum
-        enddatum: Maximales Datum für Events
-
-    Returns:
-        Liste von Event-Dicts
-    """
-    from bs4 import BeautifulSoup
-
-    events = []
-    gesehene_schluessel: set[str] = set()
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Mehrere CSS-Selektoren als Fallback-Kette (IHK-typische Strukturen)
-    selektoren = [
-        ".event-teaser", ".event-item", ".event-card",
-        ".veranstaltung-teaser", ".veranstaltung-item",
-        "article.event", "div.event", "li.event",
-        "article[class*='event']", "div[class*='event']",
-        ".teaser", ".list-item", "article",
-    ]
-
-    karten = []
-    for selektor in selektoren:
-        karten = soup.select(selektor)
-        if len(karten) > 1:
-            logger.debug("HTML-Fallback: %d Karten mit Selektor '%s'", len(karten), selektor)
-            break
-
-    for karte in karten:
-        try:
-            titel_el = karte.find(["h2", "h3", "h4", "strong"])
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel or len(titel) < 3:
-                continue
-
-            datum_el = karte.find("time") or karte.find(class_=re.compile(r"date|datum|zeit", re.I))
-            if not datum_el:
-                continue
-            datum_text = datum_el.get("datetime") or datum_el.get_text(strip=True)
-            datum = datum_parsen(datum_text)
-            if not datum:
-                continue
-            datum_obj = date.fromisoformat(datum)
-            if datum_obj < heute or datum_obj > enddatum:
-                continue
-
-            uhrzeit = uhrzeit_parsen(datum_text)
-
-            link_el = karte.find("a", href=True)
-            quelle_url = urljoin(BASE_URL, link_el["href"]) if link_el else LISTE_URL
-
-            bild_el = karte.find("img")
-            bild_url = None
-            if bild_el:
-                bild_url = bild_el.get("data-src") or bild_el.get("src")
-                if bild_url and bild_url.startswith("/"):
-                    bild_url = urljoin(BASE_URL, bild_url)
-                if bild_url and not bild_url.startswith("http"):
-                    bild_url = None
-
-            beschreibung_el = karte.find("p")
-            beschreibung = _beschreibung_kuerzen(beschreibung_el.get_text(strip=True)) if beschreibung_el else None
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": KATEGORIE,
-                "beschreibung": beschreibung,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
+                "bild_url": None,
                 "bild_generiert": False,
                 "post_typ": "feed",
                 "instagram_caption": None,
@@ -268,7 +152,7 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
             })
 
         except Exception as fehler:
-            logger.error("Fehler beim Parsen einer Event-Karte: %s", str(fehler))
+            logger.error("Fehler beim Parsen einer IHK-Veranstaltung: %s", str(fehler))
             continue
 
     return events
@@ -277,13 +161,6 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
 async def scrape() -> list[dict]:
     """
     Scrapt Business-Events und Veranstaltungen der IHK Düsseldorf.
-
-    Strategie:
-    1. JSON-LD structured data
-    2. HTML-Fallback
-
-    Returns:
-        Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
     heute = date.today()
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
@@ -297,7 +174,7 @@ async def scrape() -> list[dict]:
             await page.set_extra_http_headers({"User-Agent": USER_AGENT})
             try:
                 await page.goto(LISTE_URL, wait_until="networkidle", timeout=30000)
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
                 html = await page.content()
             except Exception as fehler:
                 logger.error("Playwright Fehler beim Laden von %s: %s", LISTE_URL, str(fehler))
@@ -307,17 +184,10 @@ async def scrape() -> list[dict]:
         logger.error("Scraper %s: Playwright konnte nicht gestartet werden: %s", QUELLE_NAME, str(fehler))
 
     if not html:
-        logger.warning("Scraper %s: Kein HTML geladen – leere Liste wird zurückgegeben", QUELLE_NAME)
+        logger.warning("Scraper %s: Kein HTML geladen", QUELLE_NAME)
         return []
 
-    events = _events_aus_json_ld(html, heute, enddatum)
-    logger.info("JSON-LD: %d Events gefunden", len(events))
-
-    if not events:
-        logger.warning("JSON-LD leer – versuche HTML-Fallback")
-        events = _events_aus_html(html, heute, enddatum)
-        logger.info("HTML-Fallback: %d Events gefunden", len(events))
-
+    events = _events_aus_html(html, heute, enddatum)
     logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
     return events
 

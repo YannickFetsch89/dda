@@ -11,7 +11,7 @@ Da keine offizielle Event-API existiert, werden die Termine semi-statisch
 aus bekannten Mustern berechnet und ggf. durch Website-Scraping ergänzt.
 
 Quellen:
-  - Stahlwerk-Website: https://stahlwerk-duesseldorf.de
+  - Stahlwerk-Website: https://stahlwerk.de
   - Event-Seite: https://food-festivals.com (Aggregator)
 
 Erstellt: 2026-04-02
@@ -32,7 +32,7 @@ QUELLE_NAME = "Street Food Thursday Düsseldorf"
 ORT_STANDARD = "Stahlwerk Düsseldorf"
 ADRESSE_STANDARD = "Ronsdorfer Str. 134, 40233 Düsseldorf"
 KATEGORIE_STANDARD = "food"
-QUELLE_URL = "https://stahlwerk-duesseldorf.de"
+QUELLE_URL = "https://stahlwerk.de"
 
 # Monate in denen das Event typischerweise stattfindet (März bis Oktober)
 EVENT_MONATE = [3, 4, 5, 6, 7, 8, 9, 10]
@@ -49,7 +49,7 @@ EVENT_UHRZEIT = "17:00"
 
 # Scraping-URLs als primäre Datenquelle
 SCRAPE_URLS = [
-    "https://stahlwerk-duesseldorf.de",
+    "https://stahlwerk.de",
 ]
 
 
