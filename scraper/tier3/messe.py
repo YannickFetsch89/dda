@@ -8,7 +8,7 @@ Strategie:
 1. Primär: JSON-LD structured data (schema.org/Event)
 2. Fallback: HTML-Parsing der Veranstaltungsliste
 
-URL: https://www.messe-duesseldorf.de/portfolio/veranstaltungen.html
+URL: https://www.messe-duesseldorf.de/de/messen_und_events/messen_national_und_international
 Adresse: Stockumer Kirchstraße 61, 40474 Düsseldorf
 Erstellt: 2026-03-06
 """
@@ -27,7 +27,7 @@ from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
 
-LISTE_URL = "https://www.messe-duesseldorf.de/portfolio/veranstaltungen.html"
+LISTE_URL = "https://www.messe-duesseldorf.de/de/messen_und_events/messen_national_und_international"
 BASE_URL = "https://www.messe-duesseldorf.de"
 QUELLE_NAME = "Messe Düsseldorf"
 ORT_STANDARD = "Messe Düsseldorf"
@@ -149,7 +149,13 @@ def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
 
 def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     """
-    Fallback: HTML-Parsing der Veranstaltungsliste.
+    Fallback: Text-basiertes Parsing der Veranstaltungsliste.
+
+    Messe-Struktur (Stand 2026-10):
+    Aufeinanderfolgende Zeilen im Seitentext:
+      "EVENTNAME"
+      "DD.MM.YYYY - DD.MM.YYYY"
+      "Düsseldorf"
 
     Args:
         html: HTML-Quelltext der Seite
@@ -164,84 +170,76 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     events = []
     gesehene_schluessel: set[str] = set()
     soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text("\n", strip=True)
+    zeilen = [z.strip() for z in text.split("\n") if z.strip()]
 
-    selektoren = [
-        "article.event", "div.event", "li.event",
-        ".event-card", ".messe-event", ".trade-show",
-        "article[class*='event']", "div[class*='event']",
-        ".veranstaltung", ".exhibition-item",
-    ]
+    datum_bereich = re.compile(
+        r"(\d{1,2})\.(\d{1,2})\.(\d{4})\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{4})"
+    )
+    skip_zeilen = {
+        "titel", "datum", "ort", "details", "filter:", "international",
+        "düsseldorf", "aktuelle und zukünftige veranstaltungen",
+        "zeige vergangene veranstaltungen", "datum", "land / ort",
+        "partner- und gastveranstaltungen",
+    }
 
-    karten = []
-    for selektor in selektoren:
-        karten = soup.select(selektor)
-        if len(karten) > 1:
-            logger.debug("HTML-Fallback: %d Karten mit Selektor '%s'", len(karten), selektor)
-            break
+    i = 0
+    while i < len(zeilen) - 1:
+        zeile = zeilen[i]
+        naechste = zeilen[i + 1]
 
-    for karte in karten:
-        try:
-            titel_el = karte.find(["h2", "h3", "h4", "strong"])
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel or len(titel) < 3:
-                continue
-
-            datum_el = karte.find("time") or karte.find(class_=re.compile(r"date|datum|zeit", re.I))
-            if not datum_el:
-                continue
-            datum_text = datum_el.get("datetime") or datum_el.get_text(strip=True)
-            datum = datum_parsen(datum_text)
-            if not datum:
-                continue
-            datum_obj = date.fromisoformat(datum)
-            if datum_obj < heute or datum_obj > enddatum:
-                continue
-
-            uhrzeit = uhrzeit_parsen(datum_text)
-
-            link_el = karte.find("a", href=True)
-            quelle_url = urljoin(BASE_URL, link_el["href"]) if link_el else LISTE_URL
-
-            bild_el = karte.find("img")
-            bild_url = None
-            if bild_el:
-                bild_url = bild_el.get("data-src") or bild_el.get("src")
-                if bild_url and bild_url.startswith("/"):
-                    bild_url = urljoin(BASE_URL, bild_url)
-                if bild_url and not bild_url.startswith("http"):
-                    bild_url = None
-
-            beschreibung_el = karte.find("p")
-            beschreibung = _beschreibung_kuerzen(beschreibung_el.get_text(strip=True)) if beschreibung_el else None
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": KATEGORIE,
-                "beschreibung": beschreibung,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "bild_generiert": False,
-                "post_typ": "feed",
-                "instagram_caption": None,
-                "status": "neu",
-            })
-
-        except Exception as fehler:
-            logger.error("Fehler beim Parsen einer Event-Karte: %s", str(fehler))
+        treffer = datum_bereich.match(naechste)
+        if not treffer:
+            i += 1
             continue
+
+        titel = zeile
+        if titel.lower() in skip_zeilen or len(titel) < 2:
+            i += 1
+            continue
+
+        try:
+            start_datum = date(
+                int(treffer.group(3)), int(treffer.group(2)), int(treffer.group(1))
+            )
+            ende_datum = date(
+                int(treffer.group(6)), int(treffer.group(5)), int(treffer.group(4))
+            )
+        except ValueError:
+            i += 2
+            continue
+
+        if ende_datum < heute or start_datum > enddatum:
+            i += 2
+            continue
+
+        titel_clean = titel.rstrip(" *")
+
+        schluessel = f"{titel_clean}_{start_datum.isoformat()}"
+        if schluessel in gesehene_schluessel:
+            i += 2
+            continue
+        gesehene_schluessel.add(schluessel)
+
+        events.append({
+            "titel": titel_clean,
+            "datum": start_datum.isoformat(),
+            "uhrzeit": None,
+            "ort": ORT_STANDARD,
+            "adresse": ADRESSE_STANDARD,
+            "kategorie": KATEGORIE,
+            "beschreibung": f"{titel_clean}, {naechste}, Messe Düsseldorf"[:300],
+            "preis": None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": LISTE_URL,
+            "bild_url": None,
+            "bild_generiert": False,
+            "post_typ": "feed",
+            "instagram_caption": None,
+            "status": "neu",
+        })
+
+        i += 2
 
     return events
 

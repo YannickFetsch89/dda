@@ -11,7 +11,7 @@ Strategie:
 2. Fallback: __NEXT_DATA__ JSON (Next.js App)
 3. Fallback: HTML-Parsing der Programm-Liste
 
-URL: https://www.kunstsammlung.de/de/programm
+URL: https://www.kunstsammlung.de/de/exhibitions/
 Erstellt: 2026-03-05
 """
 import json
@@ -29,7 +29,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.kunstsammlung.de"
-PROGRAMM_URL = "https://www.kunstsammlung.de/de/programm"
+PROGRAMM_URL = "https://www.kunstsammlung.de/de/exhibitions/"
 QUELLE_NAME = "Kunstsammlung NRW (K20/K21)"
 ORT_STANDARD = "Kunstsammlung NRW"
 KATEGORIE_STANDARD = "kultur"
@@ -77,7 +77,7 @@ def _datum_parsen(text: str) -> Optional[str]:
         if treffer:
             return date(int(treffer.group(1)), int(treffer.group(2)), int(treffer.group(3))).isoformat()
 
-        treffer = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})", bereinigt)
+        treffer = re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", bereinigt)
         if treffer:
             return date(int(treffer.group(3)), int(treffer.group(2)), int(treffer.group(1))).isoformat()
 
@@ -243,6 +243,82 @@ def _events_aus_json_ld(soup: BeautifulSoup, heute: date) -> list[dict]:
     return events
 
 
+def _events_aus_ausstellungsliste(soup: BeautifulSoup, heute: date) -> list[dict]:
+    """
+    Parst die Ausstellungsliste auf kunstsammlung.de/de/exhibitions/.
+
+    Struktur: <li data-date-from="..."> mit <p class="h1">Titel</p>,
+    <p class="date">ab DD.MM.YYYY</p> und <img> für Bild.
+    """
+    events = []
+    gesehene_schluessel: set[str] = set()
+
+    for li in soup.find_all("li", attrs={"data-date-from": True}):
+        titel_el = li.find("p", class_="h1")
+        if not titel_el:
+            continue
+        titel = titel_el.get_text(" ", strip=True)
+        if not titel:
+            continue
+
+        datum_el = li.find("p", class_="date")
+        if not datum_el:
+            continue
+        datum_text = datum_el.get_text(strip=True).replace("ab ", "")
+        datum = _datum_parsen(datum_text)
+        if not datum:
+            continue
+        # Ausstellungen sind laufend – Startdatum liegt oft in der Vergangenheit.
+        # Wir nehmen das Startdatum oder heute, je nachdem was später ist.
+        if date.fromisoformat(datum) < heute:
+            datum = heute.isoformat()
+
+        link_el = li.find("a", href=lambda h: h and "/de/exhibitions/" in h)
+        if link_el:
+            quelle_url = urljoin(BASE_URL, link_el["href"])
+        else:
+            quelle_url = PROGRAMM_URL
+
+        bild_url = None
+        img_el = li.find("img")
+        if img_el:
+            bild_url = img_el.get("src")
+            if bild_url and not bild_url.startswith("http"):
+                bild_url = urljoin(BASE_URL, bild_url)
+
+        ort = ORT_STANDARD
+        titel_klein = titel.lower()
+        for schluessel, ort_name in ORT_MAP.items():
+            if schluessel in titel_klein:
+                ort = ort_name
+                break
+
+        schluessel = f"{titel}_{datum}"
+        if schluessel in gesehene_schluessel:
+            continue
+        gesehene_schluessel.add(schluessel)
+
+        events.append({
+            "titel": titel,
+            "datum": datum,
+            "uhrzeit": None,
+            "ort": ort,
+            "adresse": None,
+            "kategorie": KATEGORIE_STANDARD,
+            "beschreibung": None,
+            "preis": None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": quelle_url,
+            "bild_url": bild_url,
+            "instagram_caption": None,
+            "datum_bis": None,
+            "ist_wiederkehrend": False,
+            "status": "neu",
+        })
+
+    return events
+
+
 def _kandidaten_rekursiv_suchen(data: dict | list) -> list[dict]:
     """
     Durchsucht Next.js __NEXT_DATA__ rekursiv nach Event-Einträgen.
@@ -384,7 +460,12 @@ def scrape() -> list[dict]:
         logger.info("JSON-LD: %d Events gefunden", len(events))
 
         if not events:
-            logger.warning("JSON-LD leer – versuche __NEXT_DATA__")
+            logger.warning("JSON-LD leer – versuche HTML-Parsing der Ausstellungsliste")
+            events = _events_aus_ausstellungsliste(soup, heute)
+            logger.info("Ausstellungsliste: %d Events gefunden", len(events))
+
+        if not events:
+            logger.warning("Ausstellungsliste leer – versuche __NEXT_DATA__")
             events = _events_aus_next_data(soup, heute)
             logger.info("Next.js: %d Events gefunden", len(events))
 

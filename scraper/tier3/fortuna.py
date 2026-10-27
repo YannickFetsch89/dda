@@ -8,7 +8,7 @@ Strategie:
 1. Primär: JSON-LD structured data (schema.org/SportsEvent)
 2. Fallback: HTML-Parsing der Spielplan-Tabelle
 
-URL: https://www.fortuna-duesseldorf.de/spielplan
+URL: https://www.f95.de/spielplan
 Adresse: Arena-Straße 1, 40474 Düsseldorf
 Erstellt: 2026-03-06
 """
@@ -27,8 +27,8 @@ from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
 
-LISTE_URL = "https://www.fortuna-duesseldorf.de/spielplan"
-BASE_URL = "https://www.fortuna-duesseldorf.de"
+LISTE_URL = "https://www.f95.de/spielplan"
+BASE_URL = "https://www.f95.de"
 QUELLE_NAME = "Fortuna Düsseldorf"
 ORT_STANDARD = "Merkur Spiel-Arena Düsseldorf"
 ADRESSE_STANDARD = "Arena-Straße 1, 40474 Düsseldorf"
@@ -199,7 +199,18 @@ def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
 
 def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     """
-    Fallback: HTML-Parsing des Spielplans.
+    Fallback: HTML-Parsing des f95.de Spielplans.
+
+    Struktur im Seitentext (Stand 2026-10):
+      "Fr., 30.10.26"
+      "- 19:00 Uhr"
+      "Fortuna Düsseldorf"   ← Heim
+      "30.10.26"              ← Datum-Wiederholung
+      "19:00 Uhr"
+      "SV Meppen"             ← Gast
+      "Tickets sichern"
+
+    Heimspiel = "Fortuna Düsseldorf" direkt nach der Datumszeile.
 
     Args:
         html: HTML-Quelltext der Seite
@@ -214,87 +225,108 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     events = []
     gesehene_schluessel: set[str] = set()
     soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text("\n", strip=True)
 
-    # Typische Selektoren für Spielplan-Seiten
-    selektoren = [
-        ".match", ".spiel", ".game", ".fixture",
-        "article[class*='match']", "div[class*='match']",
-        "li[class*='match']", "tr[class*='match']",
-        ".schedule-item", ".spielplan-item",
-    ]
+    zeilen = [z.strip() for z in text.split("\n") if z.strip()]
 
-    karten = []
-    for selektor in selektoren:
-        karten = soup.select(selektor)
-        if len(karten) > 1:
-            logger.debug("HTML-Fallback: %d Karten mit Selektor '%s'", len(karten), selektor)
-            break
+    datum_muster = re.compile(
+        r"^(?:Mo|Di|Mi|Do|Fr|Sa|So)\.,?\s*(\d{1,2})\.(\d{1,2})\.(\d{2,4})\*?$"
+    )
+    skip_words = {
+        "spielbericht", "tickets sichern",
+        "3. liga", "-", ":",
+    }
 
-    for karte in karten:
-        try:
-            # Heimspiel-Prüfung: Suche nach "Heim" oder "Home" im Karten-Text
-            karte_text = karte.get_text(separator=" ", strip=True).lower()
-            if "auswärts" in karte_text or "away" in karte_text:
-                continue
-
-            titel_el = karte.find(["h2", "h3", "h4", "strong", ".match-title", ".spiel-title"])
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel or len(titel) < 3:
-                continue
-
-            datum_el = karte.find("time") or karte.find(class_=re.compile(r"date|datum|zeit|uhrzeit", re.I))
-            if not datum_el:
-                continue
-            datum_text = datum_el.get("datetime") or datum_el.get_text(strip=True)
-            datum = datum_parsen(datum_text)
-            if not datum:
-                continue
-            datum_obj = date.fromisoformat(datum)
-            if datum_obj < heute or datum_obj > enddatum:
-                continue
-
-            uhrzeit = uhrzeit_parsen(datum_text)
-
-            link_el = karte.find("a", href=True)
-            quelle_url = urljoin(BASE_URL, link_el["href"]) if link_el else LISTE_URL
-
-            bild_el = karte.find("img")
-            bild_url = None
-            if bild_el:
-                bild_url = bild_el.get("data-src") or bild_el.get("src")
-                if bild_url and bild_url.startswith("/"):
-                    bild_url = urljoin(BASE_URL, bild_url)
-                if bild_url and not bild_url.startswith("http"):
-                    bild_url = None
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": KATEGORIE,
-                "beschreibung": None,
-                "preis": PREIS_FALLBACK,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "bild_generiert": False,
-                "post_typ": "feed",
-                "instagram_caption": None,
-                "status": "neu",
-            })
-
-        except Exception as fehler:
-            logger.error("Fehler beim Parsen einer Spielkarte: %s", str(fehler))
+    i = 0
+    while i < len(zeilen):
+        treffer = datum_muster.match(zeilen[i])
+        if not treffer:
+            i += 1
             continue
+
+        tag = int(treffer.group(1))
+        monat = int(treffer.group(2))
+        jahr_roh = int(treffer.group(3))
+        jahr = jahr_roh if jahr_roh > 100 else 2000 + jahr_roh
+
+        try:
+            datum_obj = date(jahr, monat, tag)
+        except ValueError:
+            i += 1
+            continue
+
+        if datum_obj < heute or datum_obj > enddatum:
+            i += 1
+            continue
+
+        uhrzeit = None
+        for k in range(i + 1, min(len(zeilen), i + 4)):
+            zeit_match = re.search(r"(\d{1,2}):(\d{2})\s*Uhr", zeilen[k])
+            if zeit_match:
+                uhrzeit = f"{int(zeit_match.group(1)):02d}:{zeit_match.group(2)}"
+                break
+
+        heim = None
+        gast = None
+        for j in range(i + 1, min(len(zeilen), i + 10)):
+            z = zeilen[j]
+            z_lower = z.lower().strip()
+            if z_lower in skip_words:
+                continue
+            if re.match(r"^\d+\.\s*spieltag$", z_lower):
+                break
+            if datum_muster.match(z):
+                break
+            if re.match(r"^\d{1,2}\.\d{1,2}\.\d{2,4}\*?$", z):
+                continue
+            if re.match(r"^\d{1,2}:\d{2}", z):
+                continue
+            if re.match(r"^\d+$", z):
+                continue
+            if "uhr" in z_lower:
+                continue
+
+            if not heim:
+                heim = z
+            elif not gast:
+                gast = z
+                break
+
+        if not heim or not gast:
+            i += 1
+            continue
+
+        if heim.lower() != "fortuna düsseldorf":
+            i += 1
+            continue
+
+        titel = f"Fortuna Düsseldorf vs. {gast}"
+
+        schluessel = f"{titel}_{datum_obj.isoformat()}"
+        if schluessel in gesehene_schluessel:
+            i += 1
+            continue
+        gesehene_schluessel.add(schluessel)
+
+        events.append({
+            "titel": titel,
+            "datum": datum_obj.isoformat(),
+            "uhrzeit": uhrzeit,
+            "ort": ORT_STANDARD,
+            "adresse": ADRESSE_STANDARD,
+            "kategorie": KATEGORIE,
+            "beschreibung": None,
+            "preis": PREIS_FALLBACK,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": LISTE_URL,
+            "bild_url": None,
+            "bild_generiert": False,
+            "post_typ": "feed",
+            "instagram_caption": None,
+            "status": "neu",
+        })
+
+        i += 1
 
     return events
 

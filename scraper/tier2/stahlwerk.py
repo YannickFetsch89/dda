@@ -9,7 +9,7 @@ Strategie:
 Das Stahlwerk ist eine der größten Veranstaltungshallen Düsseldorfs mit
 Fokus auf Rock, Metal, Electronic und Großveranstaltungen.
 
-URL: https://www.stahlwerk-duesseldorf.de
+URL: https://www.stahlwerk.de
 Adresse: Ronsdorfer Str. 134, 40233 Düsseldorf
 Erstellt: 2026-03-05
 """
@@ -28,8 +28,8 @@ from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.stahlwerk-duesseldorf.de"
-LISTE_URL = "https://www.stahlwerk-duesseldorf.de"
+BASE_URL = "https://www.stahlwerk.de"
+LISTE_URL = "https://www.stahlwerk.de"
 QUELLE_NAME = "Stahlwerk Düsseldorf"
 ORT_STANDARD = "Stahlwerk Düsseldorf"
 ADRESSE_STANDARD = "Ronsdorfer Str. 134, 40233 Düsseldorf"

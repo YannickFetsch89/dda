@@ -7,7 +7,7 @@ Strategie:
 2. Fallback: __NEXT_DATA__ JSON (Next.js App)
 3. Fallback: HTML-Parsing der Programm-Liste
 
-URL: https://www.fft-duesseldorf.de/programm
+URL: https://www.fft-duesseldorf.de/spielplan
 Adresse: Jahnstr. 3 / Kasernenstr. 6, 40215 Düsseldorf
 Erstellt: 2026-03-05
 """
@@ -26,7 +26,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.fft-duesseldorf.de"
-PROGRAMM_URL = "https://www.fft-duesseldorf.de/programm"
+PROGRAMM_URL = "https://www.fft-duesseldorf.de/spielplan"
 QUELLE_NAME = "FFT Düsseldorf"
 ORT_STANDARD = "FFT Düsseldorf"
 KATEGORIE_STANDARD = "kultur"
@@ -353,6 +353,123 @@ def _events_aus_next_data(soup: BeautifulSoup, heute: date) -> list[dict]:
     return events
 
 
+def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
+    """
+    HTML-Fallback: Parst die /spielplan Seite.
+
+    FFT-Struktur (Stand 2026-10):
+    Events sind durch '* * *' getrennt, jeder Block enthält:
+    - Datum wie "Do 01.10." und Uhrzeit wie "20:00"
+    - Link zu /spielplan/<slug> (Titel)
+    - Venue-Link (Google Maps)
+    - Optionale Kategorie (Performance, Konzert, etc.)
+
+    Args:
+        soup: Geparste HTML-Seite
+        heute: Heute-Datum für Filterung
+
+    Returns:
+        Liste von Event-Dicts
+    """
+    events = []
+    gesehene_schluessel: set[str] = set()
+
+    for link in soup.find_all("a", href=True):
+        href = link.get("href", "")
+        if "/spielplan/" not in href or href.rstrip("/") == "/spielplan":
+            continue
+        if "/reihen-festivals/" in href:
+            continue
+
+        titel = link.get_text(strip=True)
+        if not titel or len(titel) < 3:
+            continue
+
+        parent = link.parent
+        if not parent:
+            continue
+        block = parent
+        for _ in range(3):
+            if block.parent and block.parent.name not in ("body", "html", "[document]"):
+                block = block.parent
+            else:
+                break
+
+        block_text = block.get_text("\n", strip=True)
+
+        datum = None
+        uhrzeit = None
+        for zeile in block_text.split("\n"):
+            zeile_s = zeile.strip()
+            treffer = re.search(
+                r"(?:Mo|Di|Mi|Do|Fr|Sa|So)\s+(\d{1,2})\.(\d{1,2})\.",
+                zeile_s,
+            )
+            if treffer:
+                tag = int(treffer.group(1))
+                monat = int(treffer.group(2))
+                kandidat = date(heute.year, monat, tag)
+                if kandidat < heute - timedelta(days=30):
+                    kandidat = date(heute.year + 1, monat, tag)
+                datum = kandidat.isoformat()
+                continue
+
+            zeit_treffer = re.match(r"^(\d{1,2}):(\d{2})$", zeile_s)
+            if zeit_treffer and not uhrzeit:
+                stunde = int(zeit_treffer.group(1))
+                minute = int(zeit_treffer.group(2))
+                if 0 <= stunde <= 23 and 0 <= minute <= 59:
+                    uhrzeit = f"{stunde:02d}:{minute:02d}"
+
+        if not datum or date.fromisoformat(datum) < heute:
+            continue
+
+        ort = ORT_STANDARD
+        for venue_link in block.find_all("a", href=True):
+            vh = venue_link["href"]
+            if "g.page" in vh or "maps" in vh or "goo.gl" in vh:
+                venue_text = venue_link.get_text(strip=True)
+                if venue_text:
+                    ort = _ort_erkennen(venue_text)
+                break
+
+        quelle_url = urljoin(BASE_URL, href)
+
+        bild_el = block.find("img")
+        bild_url = None
+        if bild_el:
+            bild_url = bild_el.get("data-src") or bild_el.get("src")
+            if bild_url and bild_url.startswith("/"):
+                bild_url = urljoin(BASE_URL, bild_url)
+            if bild_url and not bild_url.startswith("http"):
+                bild_url = None
+
+        schluessel = f"{titel}_{datum}"
+        if schluessel in gesehene_schluessel:
+            continue
+        gesehene_schluessel.add(schluessel)
+
+        events.append({
+            "titel": titel,
+            "datum": datum,
+            "uhrzeit": uhrzeit,
+            "ort": ort,
+            "adresse": None,
+            "kategorie": KATEGORIE_STANDARD,
+            "beschreibung": None,
+            "preis": None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": quelle_url,
+            "bild_url": bild_url,
+            "instagram_caption": None,
+            "datum_bis": None,
+            "ist_wiederkehrend": False,
+            "status": "neu",
+        })
+
+    return events
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Veranstaltungen des FFT Düsseldorf.
@@ -360,6 +477,7 @@ def scrape() -> list[dict]:
     Strategie:
     1. JSON-LD structured data
     2. __NEXT_DATA__ (Next.js)
+    3. HTML-Fallback
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
@@ -382,6 +500,11 @@ def scrape() -> list[dict]:
             logger.warning("JSON-LD leer – versuche __NEXT_DATA__")
             events = _events_aus_next_data(soup, heute)
             logger.info("Next.js: %d Events gefunden", len(events))
+
+        if not events:
+            logger.warning("Next.js leer – versuche HTML-Fallback")
+            events = _events_aus_html(soup, heute)
+            logger.info("HTML-Fallback: %d Events gefunden", len(events))
 
         events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))

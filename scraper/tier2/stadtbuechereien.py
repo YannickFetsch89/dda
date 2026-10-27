@@ -6,7 +6,7 @@ Strategie:
 1. Primär: JSON-LD structured data (schema.org/Event)
 2. Fallback: HTML-Parsing der städtischen Website – .event-list, .veranstaltung, article-Tags
 
-URL: https://www.duesseldorf.de/stadtbuechereien/veranstaltungen.html
+URL: https://www.duesseldorf.de/stadtbuechereien/veranstaltungen
 Adresse: Konrad-Adenauer-Platz 1, 40210 Düsseldorf
 Erstellt: 2026-03-06
 """
@@ -25,7 +25,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.duesseldorf.de"
-LISTE_URL = "https://www.duesseldorf.de/stadtbuechereien/veranstaltungen.html"
+LISTE_URL = "https://www.duesseldorf.de/stadtbuechereien/veranstaltungen"
 QUELLE_NAME = "Stadtbüchereien Düsseldorf"
 ORT_STANDARD = "Stadtbüchereien Düsseldorf"
 ADRESSE_STANDARD = "Konrad-Adenauer-Platz 1, 40210 Düsseldorf"
@@ -235,8 +235,13 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
     """
     Fallback: HTML-Parsing der städtischen Website.
 
-    Sucht nach .event-list, .veranstaltung oder article-Tags
-    mit Veranstaltungs-Einträgen der Stadtbüchereien.
+    Stadtbüchereien-Struktur (Stand 2026-10):
+    Jedes Event ist ein Block mit:
+    - Optionaler Kategorie-Label ("Für Kids", "Digitales & Gaming")
+    - Datum als "DD.MM.YYYY"
+    - Link zu /newsdetail/<slug> mit Titel
+    - Optionale Uhrzeitangabe
+    - "Mehr"-Link
 
     Args:
         soup: Geparste HTML-Seite
@@ -248,69 +253,52 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
     events = []
     gesehene_schluessel: set[str] = set()
 
-    # Kandidaten-Selektoren für Event-Karten
-    kandidaten = (
-        soup.select(".event-list .event")
-        or soup.select(".event-list li")
-        or soup.select(".veranstaltung")
-        or soup.select(".program-item")
-        or soup.select("article")
-    )
-
-    if not kandidaten:
-        logger.warning("HTML-Fallback: Keine Veranstaltungs-Einträge gefunden")
-        return []
-
-    for karte in kandidaten:
-        # Titel extrahieren
-        titel_tag = (
-            karte.find(["h1", "h2", "h3", "h4"])
-            or karte.find(class_=re.compile(r"title|titel|name|headline", re.I))
-        )
-        if not titel_tag:
-            continue
-        titel = titel_tag.get_text(strip=True)
-        if not titel:
+    for link in soup.find_all("a", href=True):
+        href = link.get("href", "")
+        if "/newsdetail/" not in href:
             continue
 
-        # Datum extrahieren
-        datum_tag = (
-            karte.find(class_=re.compile(r"date|datum|zeit|time", re.I))
-            or karte.find("time")
-        )
-        datum_text = ""
-        if datum_tag:
-            datum_text = datum_tag.get("datetime", "") or datum_tag.get_text(strip=True)
+        titel_roh = link.get_text(strip=True)
+        if not titel_roh or titel_roh.lower() == "mehr" or len(titel_roh) < 5:
+            continue
 
-        # Falls kein explizites Datum-Tag: gesamten Karten-Text durchsuchen
-        if not datum_text:
-            datum_text = karte.get_text(" ", strip=True)
+        titel = re.sub(r"^\d{1,2}\.\d{1,2}\.\d{4}\s*[\-–|]\s*", "", titel_roh)
+        titel = re.sub(r"^\d{1,2}\.\d{1,2}\.\d{4}\s*", "", titel)
+        titel = titel.strip(" |–-")
+        if not titel or len(titel) < 3:
+            continue
 
-        datum = _datum_parsen(datum_text)
+        datum = None
+        datum_treffer = re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", titel_roh)
+        if datum_treffer:
+            datum = _datum_parsen(datum_treffer.group(0))
+
+        if not datum:
+            parent = link.parent
+            if parent:
+                parent_text = parent.get_text(" ", strip=True)
+                datum_treffer = re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", parent_text)
+                if datum_treffer:
+                    datum = _datum_parsen(datum_treffer.group(0))
+
         if not datum or date.fromisoformat(datum) < heute:
             continue
 
-        uhrzeit = _uhrzeit_parsen(datum_text)
+        parent = link.parent
+        block_text = parent.get_text(" ", strip=True) if parent else ""
+        uhrzeit = _uhrzeit_parsen(block_text)
 
-        # URL extrahieren
-        link_tag = karte.find("a", href=True)
-        if link_tag:
-            href = link_tag["href"]
-            quelle_url = urljoin(BASE_URL, href) if not href.startswith("http") else href
-        else:
-            quelle_url = LISTE_URL
+        quelle_url = urljoin(BASE_URL, href)
 
-        # Beschreibung extrahieren
-        beschreibung_tag = karte.find(class_=re.compile(r"desc|text|teaser|excerpt|inhalt", re.I))
-        beschreibung = beschreibung_tag.get_text(strip=True)[:300] if beschreibung_tag else None
-
-        # Bild extrahieren
-        bild_tag = karte.find("img")
         bild_url = None
-        if bild_tag:
-            bild_src = bild_tag.get("src") or bild_tag.get("data-src")
-            if bild_src:
-                bild_url = urljoin(BASE_URL, bild_src) if not bild_src.startswith("http") else bild_src
+        if parent:
+            bild_el = parent.find("img")
+            if bild_el:
+                bild_src = bild_el.get("src") or bild_el.get("data-src")
+                if bild_src:
+                    bild_url = urljoin(BASE_URL, bild_src) if not bild_src.startswith("http") else bild_src
+
+        kategorie = _kategorie_erkennen(titel)
 
         schluessel = f"{titel}_{datum}"
         if schluessel in gesehene_schluessel:
@@ -323,8 +311,8 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
             "uhrzeit": uhrzeit,
             "ort": ORT_STANDARD,
             "adresse": ADRESSE_STANDARD,
-            "kategorie": _kategorie_erkennen(titel),
-            "beschreibung": beschreibung,
+            "kategorie": kategorie,
+            "beschreibung": None,
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,

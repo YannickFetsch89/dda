@@ -1,6 +1,7 @@
 """
 kulturportal.py – DiesDasDüsseldorf
 Scraper für Kulturportal Düsseldorf: Events und Veranstaltungen
+Verwendet Playwright wegen JS-gerenderten Toubiz-CMS.
 Erstellt: 2026-02-24
 """
 import logging
@@ -9,10 +10,10 @@ from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 from config import SCRAPER_VORSCHAU_TAGE
 from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
-from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
@@ -123,13 +124,41 @@ def _event_aus_teaser(teaser_el, heute: date) -> Optional[dict]:
         if not titel:
             return None
 
-        # --- Datum: itemprop="startDate" content="YYYY-MM-DD" ---
+        # --- Datum: itemprop="startDate" oder aus Text wie "Dienstag | 27.10. | 2026" ---
         datum_el = teaser_el.select_one("[itemprop='startDate']")
         datum = None
         if datum_el:
             datum = _datum_parsen(datum_el.get("content", ""))
             if not datum:
                 datum = _datum_parsen(datum_el.get_text(strip=True))
+
+        if not datum:
+            import re as _re
+            teaser_text = teaser_el.get_text(" ", strip=True)
+            treffer = _re.search(r"(\d{1,2})\.(\d{1,2})\.\s*\|\s*(\d{4})", teaser_text)
+            if treffer:
+                tag, monat, jahr = int(treffer.group(1)), int(treffer.group(2)), int(treffer.group(3))
+                try:
+                    from datetime import date as _date_cls
+                    datum = _date_cls(jahr, monat, tag).isoformat()
+                except ValueError:
+                    pass
+            if not datum:
+                treffer = _re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", teaser_text)
+                if treffer:
+                    datum = _datum_parsen(treffer.group(0))
+            if not datum:
+                treffer = _re.search(r"(\d{1,2})\.(\d{1,2})\.", teaser_text)
+                if treffer:
+                    tag, monat = int(treffer.group(1)), int(treffer.group(2))
+                    try:
+                        from datetime import date as _date_cls2
+                        kandidat = _date_cls2(date.today().year, monat, tag)
+                        if kandidat < date.today() - timedelta(days=30):
+                            kandidat = _date_cls2(date.today().year + 1, monat, tag)
+                        datum = kandidat.isoformat()
+                    except ValueError:
+                        pass
 
         if not datum:
             logger.debug("Kein Datum gefunden für Event: %s", titel)
@@ -159,7 +188,17 @@ def _event_aus_teaser(teaser_el, heute: date) -> Optional[dict]:
 
         # --- Kategorie ---
         kat_el = teaser_el.select_one(".tb-teaser__topline-category")
-        kategorie = _kategorie_aus_text(kat_el.get_text(strip=True) if kat_el else "")
+        kategorie_text = ""
+        if kat_el:
+            kategorie_text = kat_el.get_text(strip=True)
+        if not kategorie_text:
+            import re as _re2
+            teaser_text_all = teaser_el.get_text(" | ", strip=True)
+            for kat_key in KATEGORIE_MAP:
+                if kat_key in teaser_text_all.lower():
+                    kategorie_text = kat_key
+                    break
+        kategorie = _kategorie_aus_text(kategorie_text)
 
         # --- Beschreibung: Topline-Kategorie als Kurztext ---
         beschreibung = None
@@ -208,66 +247,84 @@ def _event_aus_teaser(teaser_el, heute: date) -> Optional[dict]:
         return None
 
 
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
+)
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Events vom Kulturportal Düsseldorf.
 
-    Probiert mehrere DOM-Selektoren, da die genaue Seitenstruktur variieren kann.
-    Filtert vergangene Events heraus und verhindert Duplikate innerhalb eines Laufs.
+    Verwendet Playwright, da das Toubiz-CMS die Events per JavaScript rendert
+    und httpx nur eine leere Seite zurückgibt.
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
+    import time as _time
+
     events: list[dict] = []
     heute = date.today()
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
+    html = None
     try:
-        html = seite_abrufen(LISTE_URL, logger)
-        if html is None:
-            return []
-
-        soup = BeautifulSoup(html, "html.parser")
-
-        # Primärsuche: einzelne Teaser-Elemente (.tb-teaser Links)
-        teaser_els = soup.select("a.tb-teaser")
-
-        # Fallback: figure.o-grid__item > a
-        if not teaser_els:
-            teaser_els = [
-                fig.find("a", href=True)
-                for fig in soup.select("figure.o-grid__item")
-                if fig.find("a", href=True)
-            ]
-
-        if not teaser_els:
-            logger.warning(
-                "Keine Event-Teaser gefunden auf %s – "
-                "Seitenstruktur hat sich möglicherweise geändert.",
-                LISTE_URL,
-            )
-            return []
-
-        logger.info("%d potenzielle Event-Teaser gefunden", len(teaser_els))
-
-        # Duplikate innerhalb eines Scraper-Laufs verhindern
-        gesehene_urls: set[str] = set()
-
-        for teaser_el in teaser_els:
-            event = _event_aus_teaser(teaser_el, heute)
-            if event is None:
-                continue
-
-            url = event["quelle_url"]
-            if url in gesehene_urls:
-                continue
-            gesehene_urls.add(url)
-
-            events.append(event)
-
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.set_extra_http_headers({"User-Agent": USER_AGENT})
+            try:
+                page.goto(LISTE_URL, wait_until="networkidle", timeout=30000)
+                _time.sleep(3)
+                html = page.content()
+            except Exception as fehler:
+                logger.error("Playwright Fehler beim Laden von %s: %s", LISTE_URL, str(fehler))
+            finally:
+                browser.close()
     except Exception as fehler:
-        logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(fehler))
+        logger.error("Scraper %s: Playwright konnte nicht gestartet werden: %s", QUELLE_NAME, str(fehler))
+
+    if not html:
+        logger.warning("Scraper %s: Kein HTML geladen", QUELLE_NAME)
         return []
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    teaser_els = soup.select("a.tb-teaser")
+
+    if not teaser_els:
+        teaser_els = [
+            fig.find("a", href=True)
+            for fig in soup.select("figure.o-grid__item")
+            if fig.find("a", href=True)
+        ]
+
+    if not teaser_els:
+        logger.warning(
+            "Keine Event-Teaser gefunden auf %s – "
+            "Seitenstruktur hat sich möglicherweise geändert.",
+            LISTE_URL,
+        )
+        return []
+
+    logger.info("%d potenzielle Event-Teaser gefunden", len(teaser_els))
+
+    gesehene_urls: set[str] = set()
+
+    for teaser_el in teaser_els:
+        event = _event_aus_teaser(teaser_el, heute)
+        if event is None:
+            continue
+
+        url = event["quelle_url"]
+        if url in gesehene_urls:
+            continue
+        gesehene_urls.add(url)
+
+        events.append(event)
 
     if len(events) == 0:
         logger.warning(
@@ -276,7 +333,6 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
 
-    # 14-Tage-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 

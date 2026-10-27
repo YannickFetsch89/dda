@@ -30,7 +30,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 QUELLE_NAME = "Bandsintown"
-DISCOVER_URL = "https://www.bandsintown.com/c/dusseldorf-germany"
+DISCOVER_URL = "https://www.bandsintown.com/en/c/duesseldorf-germany"
 BASE_URL = "https://www.bandsintown.com"
 
 KATEGORIE_STANDARD = "musik"
@@ -164,6 +164,25 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
         return None
 
 
+def _seite_mit_playwright(url: str) -> Optional[str]:
+    """
+    Lädt eine Seite mit Playwright (headless Chromium) bei Bot-Schutz.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            seite = browser.new_page()
+            seite.goto(url, wait_until="domcontentloaded", timeout=30000)
+            seite.wait_for_timeout(3000)
+            html = seite.content()
+            browser.close()
+            return html
+    except Exception as fehler:
+        logger.warning("Playwright-Fallback fehlgeschlagen: %s", fehler)
+        return None
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Konzert-Events von der Bandsintown Discover-Seite für Düsseldorf.
@@ -180,6 +199,9 @@ def scrape() -> list[dict]:
 
     try:
         html = seite_abrufen(DISCOVER_URL, logger)
+        if html is None:
+            logger.warning("httpx fehlgeschlagen – versuche Playwright")
+            html = _seite_mit_playwright(DISCOVER_URL)
         if html is None:
             logger.warning("Bandsintown Discover-Seite nicht erreichbar.")
             return []

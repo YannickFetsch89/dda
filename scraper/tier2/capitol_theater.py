@@ -1,7 +1,7 @@
 """
 capitol_theater.py – DiesDasDüsseldorf
 Scraper für das Capitol Theater Düsseldorf.
-URL: https://www.capitol-theater.de/programm-tickets
+URL: https://www.capitol-theater.de/veranstaltungsuebersicht.html
 
 Das Capitol Theater ist das größte Theater Düsseldorfs (1.250+ Plätze) in
 einem ehemaligen Straßenbahndepot. Musicals, Shows, Comedy-Gastspiele.
@@ -22,7 +22,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.capitol-theater.de"
-PROGRAMM_URL = "https://www.capitol-theater.de/programm-tickets"
+PROGRAMM_URL = "https://www.capitol-theater.de/veranstaltungsuebersicht.html"
 QUELLE_NAME = "Capitol Theater Düsseldorf"
 ORT_STANDARD = "Capitol Theater Düsseldorf"
 ADRESSE_STANDARD = "Erkrather Str. 30, 40233 Düsseldorf"
@@ -146,6 +146,23 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
         return None
 
 
+def _datum_2stellig_parsen(text: str) -> Optional[str]:
+    """
+    Parst Capitol-Datumsformat DD.MM.YY in ISO 8601.
+    """
+    import re
+    treffer = re.search(r"(\d{1,2})\.(\d{2})\.(\d{2,4})", text)
+    if not treffer:
+        return None
+    tag, monat, jahr = int(treffer.group(1)), int(treffer.group(2)), int(treffer.group(3))
+    if jahr < 100:
+        jahr += 2000
+    try:
+        return date(jahr, monat, tag).isoformat()
+    except ValueError:
+        return None
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Events vom Capitol Theater Düsseldorf.
@@ -166,24 +183,65 @@ def scrape() -> list[dict]:
 
         soup = BeautifulSoup(html, "html.parser")
 
-        # Event-Elemente suchen
-        event_elemente = (
-            soup.find_all("article")
-            or soup.find_all(class_=lambda c: c and ("event" in " ".join(c).lower() or "show" in " ".join(c).lower()) if c else False)
-            or soup.find_all("li", class_=True)
-        )
-
-        logger.info("Capitol Theater: %d Einträge gefunden", len(event_elemente))
+        event_boxen = soup.find_all("div", class_="mmlistbox")
+        logger.info("Capitol Theater: %d Event-Boxen gefunden", len(event_boxen))
 
         gesehene_schluessel: set[str] = set()
 
-        for el in event_elemente:
-            event = _event_aus_element(el, heute)
-            if event:
-                schluessel = f"{event['titel']}_{event['datum']}"
-                if schluessel not in gesehene_schluessel:
-                    gesehene_schluessel.add(schluessel)
-                    events.append(event)
+        for box in event_boxen:
+            titel_el = box.find("div", class_="textarea")
+            if not titel_el:
+                continue
+            titel = titel_el.get_text(strip=True)
+            if not titel or len(titel) < 3:
+                continue
+
+            datum_el = box.find("span", class_="text")
+            if not datum_el:
+                continue
+            datum = _datum_2stellig_parsen(datum_el.get_text(strip=True))
+            if not datum or date.fromisoformat(datum) < heute:
+                continue
+
+            link_el = box.find("a", href=lambda h: h and "/veranstaltung/" in h)
+            quelle_url = urljoin(BASE_URL, link_el["href"].replace("#go", "")) if link_el else PROGRAMM_URL
+
+            bild_el = box.find("img")
+            bild_url = None
+            if bild_el:
+                bild_url = bild_el.get("src")
+                if bild_url and not bild_url.startswith("http"):
+                    bild_url = urljoin(BASE_URL, bild_url)
+
+            kategorie = KATEGORIE_STANDARD
+            titel_klein = titel.lower()
+            if "musical" in titel_klein:
+                kategorie = "musik"
+            elif "comedy" in titel_klein or "kabarett" in titel_klein:
+                kategorie = "kultur"
+
+            schluessel = f"{titel}_{datum}"
+            if schluessel in gesehene_schluessel:
+                continue
+            gesehene_schluessel.add(schluessel)
+
+            events.append({
+                "titel": titel,
+                "datum": datum,
+                "uhrzeit": None,
+                "ort": ORT_STANDARD,
+                "adresse": ADRESSE_STANDARD,
+                "kategorie": kategorie,
+                "beschreibung": None,
+                "preis": None,
+                "quelle_name": QUELLE_NAME,
+                "quelle_url": quelle_url,
+                "bild_url": bild_url,
+                "instagram_caption": None,
+                "datum_bis": None,
+                "ist_wiederkehrend": False,
+                "status": "neu",
+            })
 
     except Exception as fehler:
         logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(fehler))

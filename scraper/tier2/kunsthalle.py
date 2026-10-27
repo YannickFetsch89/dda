@@ -6,7 +6,7 @@ Strategie:
 1. Primär: JSON-LD structured data (schema.org/Event, ExhibitionEvent, VisualArtsEvent)
 2. Fallback: HTML-Parsing der Veranstaltungs-Liste
 
-URL: https://www.kunsthalle-duesseldorf.de/ausstellungen-und-programm/
+URL: https://www.kunsthalle-duesseldorf.de/kalender/
 Adresse: Grabbeplatz 4, 40213 Düsseldorf
 Erstellt: 2026-03-06
 """
@@ -25,7 +25,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.kunsthalle-duesseldorf.de"
-LISTE_URL = "https://www.kunsthalle-duesseldorf.de/ausstellungen-und-programm/"
+LISTE_URL = "https://www.kunsthalle-duesseldorf.de/kalender/"
 QUELLE_NAME = "Kunsthalle Düsseldorf"
 ORT_STANDARD = "Kunsthalle Düsseldorf"
 ADRESSE_STANDARD = "Grabbeplatz 4, 40213 Düsseldorf"

@@ -7,7 +7,7 @@ Strategie:
 2. Fallback: HTML-Parsing der städtischen Website – .event-list, .veranstaltung,
    .program, table-Tags mit Kinoprogramm
 
-URL: https://www.duesseldorf.de/filmmuseum/kinoprogramm.html
+URL: https://filmmuseum-duesseldorf.de/
 Adresse: Schulstraße 4, 40213 Düsseldorf
 Erstellt: 2026-03-06
 """
@@ -25,8 +25,9 @@ from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.duesseldorf.de"
-LISTE_URL = "https://www.duesseldorf.de/filmmuseum/kinoprogramm.html"
+BASE_URL = "https://filmmuseum-duesseldorf.de"
+LISTE_URL = "https://filmmuseum-duesseldorf.de/black-box-kino/kinoprogramm"
+FALLBACK_URL = "https://filmmuseum-duesseldorf.de/"
 QUELLE_NAME = "Filmmuseum Düsseldorf"
 ORT_STANDARD = "Black Box Kino im Filmmuseum Düsseldorf"
 ADRESSE_STANDARD = "Schulstraße 4, 40213 Düsseldorf"
@@ -234,133 +235,68 @@ def _events_aus_json_ld(soup: BeautifulSoup, heute: date) -> list[dict]:
 
 def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
     """
-    Fallback: HTML-Parsing der städtischen Website.
+    HTML-Parsing der filmmuseum-duesseldorf.de Kinoprogramm-Seite.
 
-    Sucht nach .event-list, .veranstaltung, .program oder table-Tags
-    mit dem Kinoprogramm. Bei Filmen: Titel = Filmtitel, Datum aus Spielplan.
-
-    Args:
-        soup: Geparste HTML-Seite
-        heute: Heute-Datum für Filterung
-
-    Returns:
-        Liste von Event-Dicts
+    Struktur: div.b-teaser-slider__content Karten mit
+    - Datum: <strong>Di 27.10.</strong>
+    - Uhrzeit: <p>20:00 Uhr</p>
+    - Titel: <a title="..."><strong>Titel</strong></a>
+    - Info: <p>Regisseur · Land Jahr</p>
     """
     events = []
     gesehene_schluessel: set[str] = set()
 
-    # Tabellen-basiertes Kinoprogramm prüfen
-    tabellen = soup.find_all("table")
-    for tabelle in tabellen:
-        zeilen = tabelle.find_all("tr")
-        aktuelles_datum = None
+    karten = soup.find_all("div", class_="b-teaser-slider__content")
+    if not karten:
+        karten = soup.select("article") or soup.select(".program-item") or soup.select(".veranstaltung")
 
-        for zeile in zeilen:
-            zellen = zeile.find_all(["td", "th"])
-            zellen_texte = [z.get_text(strip=True) for z in zellen]
-            zeile_text = " ".join(zellen_texte)
-
-            # Datum-Zeile erkennen
-            datum_kandidat = _datum_parsen(zeile_text)
-            if datum_kandidat:
-                aktuelles_datum = datum_kandidat
-                continue
-
-            if not aktuelles_datum or not zellen_texte:
-                continue
-
-            # Erster nicht-leerer Zellentext als Filmtitel
-            titel = next((t for t in zellen_texte if t), "")
-            if not titel or len(titel) < 3:
-                continue
-
-            if date.fromisoformat(aktuelles_datum) < heute:
-                continue
-
-            uhrzeit = _uhrzeit_parsen(zeile_text)
-
-            schluessel = f"{titel}_{aktuelles_datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": aktuelles_datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": KATEGORIE_STANDARD,
-                "beschreibung": None,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": LISTE_URL,
-                "bild_url": None,
-                "instagram_caption": None,
-                "datum_bis": None,
-                "ist_wiederkehrend": False,
-                "status": "neu",
-            })
-
-    if events:
-        return events
-
-    # Allgemeine Event-Karten als letzter Versuch
-    kandidaten = (
-        soup.select(".event-list .event")
-        or soup.select(".event-list li")
-        or soup.select(".veranstaltung")
-        or soup.select(".program-item")
-        or soup.select("article")
-    )
-
-    if not kandidaten:
+    if not karten:
         logger.warning("HTML-Fallback: Keine Programm-Einträge gefunden")
         return []
 
-    for karte in kandidaten:
-        titel_tag = (
-            karte.find(["h1", "h2", "h3", "h4"])
-            or karte.find(class_=re.compile(r"title|titel|name|headline", re.I))
-        )
-        if not titel_tag:
+    for karte in karten:
+        datum_el = karte.find("strong")
+        if not datum_el:
             continue
-        titel = titel_tag.get_text(strip=True)
+        datum_text = datum_el.get_text(strip=True)
+
+        treffer = re.search(r"(\d{1,2})\.(\d{1,2})\.", datum_text)
+        if not treffer:
+            continue
+        tag, monat = int(treffer.group(1)), int(treffer.group(2))
+        jahr = heute.year
+        try:
+            datum_obj = date(jahr, monat, tag)
+        except ValueError:
+            continue
+        if datum_obj < heute:
+            datum_obj = date(jahr + 1, monat, tag)
+        datum = datum_obj.isoformat()
+
+        uhrzeit = None
+        for p in karte.find_all("p"):
+            uhrzeit_kandidat = _uhrzeit_parsen(p.get_text(strip=True))
+            if uhrzeit_kandidat:
+                uhrzeit = uhrzeit_kandidat
+                break
+
+        link_el = karte.find("a", href=lambda h: h and "/kinoprogramm/" in h)
+        if not link_el:
+            continue
+        titel = link_el.get("title") or link_el.get_text(strip=True)
         if not titel:
             continue
 
-        datum_tag = (
-            karte.find(class_=re.compile(r"date|datum|zeit|time", re.I))
-            or karte.find("time")
-        )
-        datum_text = ""
-        if datum_tag:
-            datum_text = datum_tag.get("datetime", "") or datum_tag.get_text(strip=True)
-        if not datum_text:
-            datum_text = karte.get_text(" ", strip=True)
+        quelle_url = link_el["href"]
+        if not quelle_url.startswith("http"):
+            quelle_url = urljoin(BASE_URL, quelle_url)
 
-        datum = _datum_parsen(datum_text)
-        if not datum or date.fromisoformat(datum) < heute:
-            continue
-
-        uhrzeit = _uhrzeit_parsen(datum_text)
-
-        link_tag = karte.find("a", href=True)
-        if link_tag:
-            href = link_tag["href"]
-            quelle_url = urljoin(BASE_URL, href) if not href.startswith("http") else href
-        else:
-            quelle_url = LISTE_URL
-
-        beschreibung_tag = karte.find(class_=re.compile(r"desc|text|teaser|excerpt|inhalt", re.I))
-        beschreibung = beschreibung_tag.get_text(strip=True)[:300] if beschreibung_tag else None
-
-        bild_tag = karte.find("img")
+        bild_el = karte.find("img")
         bild_url = None
-        if bild_tag:
-            bild_src = bild_tag.get("src") or bild_tag.get("data-src")
+        if bild_el:
+            bild_src = bild_el.get("src") or bild_el.get("data-src")
             if bild_src:
-                bild_url = urljoin(BASE_URL, bild_src) if not bild_src.startswith("http") else bild_src
+                bild_url = bild_src if bild_src.startswith("http") else urljoin(BASE_URL, bild_src)
 
         schluessel = f"{titel}_{datum}"
         if schluessel in gesehene_schluessel:
@@ -373,8 +309,8 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
             "uhrzeit": uhrzeit,
             "ort": ORT_STANDARD,
             "adresse": ADRESSE_STANDARD,
-            "kategorie": _kategorie_erkennen(titel),
-            "beschreibung": beschreibung,
+            "kategorie": KATEGORIE_STANDARD,
+            "beschreibung": None,
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,
@@ -403,28 +339,33 @@ def scrape() -> list[dict]:
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    try:
-        html = seite_abrufen(LISTE_URL, logger)
-        if html is None:
-            return []
+    for url in [LISTE_URL, FALLBACK_URL]:
+        try:
+            html = seite_abrufen(url, logger)
+            if html is None:
+                logger.warning("Filmmuseum URL nicht erreichbar: %s", url)
+                continue
 
-        soup = BeautifulSoup(html, "html.parser")
+            soup = BeautifulSoup(html, "html.parser")
 
-        events = _events_aus_json_ld(soup, heute)
-        logger.info("JSON-LD: %d Events gefunden", len(events))
+            events = _events_aus_json_ld(soup, heute)
+            logger.info("JSON-LD (%s): %d Events gefunden", url, len(events))
 
-        if not events:
-            logger.warning("JSON-LD leer – versuche HTML-Parsing")
-            events = _events_aus_html(soup, heute)
-            logger.info("HTML-Fallback: %d Events gefunden", len(events))
+            if not events:
+                logger.warning("JSON-LD leer – versuche HTML-Parsing")
+                events = _events_aus_html(soup, heute)
+                logger.info("HTML-Fallback (%s): %d Events gefunden", url, len(events))
 
-        events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
-        logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
-        return events
+            if events:
+                events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
+                logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
+                return events
 
-    except Exception as fehler:
-        logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(fehler))
-        return []
+        except Exception as fehler:
+            logger.error("Scraper %s fehlgeschlagen bei %s: %s", QUELLE_NAME, url, str(fehler))
+
+    logger.warning("Scraper %s: Keine Events von keiner URL gefunden", QUELLE_NAME)
+    return []
 
 
 if __name__ == "__main__":

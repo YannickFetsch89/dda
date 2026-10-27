@@ -1,7 +1,7 @@
 """
 tanzhaus_nrw.py – DiesDasDüsseldorf
 Scraper für das Tanzhaus NRW Düsseldorf.
-URL: https://tanzhaus-nrw.de/calendar
+URL: https://tanzhaus-nrw.de/de/kalender
 
 Das Tanzhaus NRW ist das internationale Zentrum für zeitgenössischen Tanz in
 Düsseldorf. Ca. 200 Bühnenveranstaltungen pro Jahr auf zwei Bühnen.
@@ -26,7 +26,7 @@ from scraper.utils.http_client import seite_abrufen
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://tanzhaus-nrw.de"
-KALENDER_URL = "https://tanzhaus-nrw.de/calendar"
+KALENDER_URL = "https://tanzhaus-nrw.de/de/kalender"
 QUELLE_NAME = "Tanzhaus NRW"
 ORT_STANDARD = "Tanzhaus NRW Düsseldorf"
 ADRESSE_STANDARD = "Erkrather Str. 30, 40233 Düsseldorf"

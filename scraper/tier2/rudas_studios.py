@@ -32,7 +32,7 @@ BASE_URL = "https://www.rudas-studios.de"
 LISTE_URL = "https://www.rudas-studios.de"
 QUELLE_NAME = "Rudas Studios Düsseldorf"
 ORT_STANDARD = "Rudas Studios Düsseldorf"
-ADRESSE_STANDARD = "Am Wehrhahn 3, 40211 Düsseldorf"
+ADRESSE_STANDARD = "Kaistraße 7, 40221 Düsseldorf"
 
 KATEGORIE_MAPPING = {
     "konzert": "musik", "live": "musik", "musik": "musik",

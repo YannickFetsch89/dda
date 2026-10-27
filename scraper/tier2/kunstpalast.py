@@ -320,6 +320,14 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
     """
     Letzter Fallback: HTML-Parsing der Programm-Liste.
 
+    Kunstpalast-Struktur (Stand 2026-10):
+      <a href="/de/event/.../?date=DD.MM.YYYY&time=HH:MM">
+        <h3>Wochentag DD.MM.YYYY</h3>
+        <h4>Event-Titel</h4>
+        <p>HH:MM</p>
+        <p>Untertitel</p>
+      </a>
+
     Args:
         soup: Geparste HTML-Seite
         heute: Heute-Datum für Filterung
@@ -330,73 +338,82 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
     events = []
     gesehene_schluessel: set[str] = set()
 
-    selektoren = [
-        "article.event", "div.event", "li.program-item", ".event-card",
-        "article[class*='event']", "div[class*='program']", "li[class*='event']",
-        "article", ".teaser",
-    ]
-
-    karten = []
-    for selektor in selektoren:
-        karten = soup.select(selektor)
-        if len(karten) > 2:
-            logger.debug("HTML-Fallback: %d Karten mit Selektor '%s'", len(karten), selektor)
-            break
-
-    for karte in karten:
-        try:
-            titel_el = karte.find(["h2", "h3", "h4"])
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel or len(titel) < 3:
-                continue
-
-            link_el = karte.find("a", href=True)
-            quelle_url = urljoin(BASE_URL, link_el["href"]) if link_el else PROGRAMM_URL
-
-            datum_el = karte.find("time") or karte.find(class_=re.compile(r"date|datum|zeit", re.I))
-            if not datum_el:
-                continue
-            datum_text = datum_el.get("datetime") or datum_el.get_text(strip=True)
-            datum = _datum_parsen(datum_text)
-            if not datum or date.fromisoformat(datum) < heute:
-                continue
-
-            uhrzeit = _uhrzeit_parsen(datum_text)
-
-            bild_el = karte.find("img")
-            bild_url = None
-            if bild_el:
-                bild_url = bild_el.get("data-src") or bild_el.get("src")
-                if bild_url and bild_url.startswith("/"):
-                    bild_url = urljoin(BASE_URL, bild_url)
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": KATEGORIE_STANDARD,
-                "beschreibung": None,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "instagram_caption": None,
-                "datum_bis": None,
-                "ist_wiederkehrend": False,
-                "status": "neu",
-            })
-        except Exception as fehler:
-            logger.error("Fehler beim Parsen einer Programm-Karte: %s", str(fehler))
+    for link in soup.find_all("a", href=True):
+        href = link.get("href", "")
+        if "/event/" not in href and "/de/event/" not in href:
             continue
+
+        h4 = link.find("h4")
+        if not h4:
+            continue
+        titel = h4.get_text(strip=True)
+        if not titel or len(titel) < 3:
+            continue
+
+        datum = None
+        uhrzeit = None
+
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(href)
+        qs = parse_qs(parsed.query)
+        if "date" in qs:
+            datum = _datum_parsen(qs["date"][0])
+        if "time" in qs:
+            uhrzeit = _uhrzeit_parsen(qs["time"][0])
+
+        if not datum:
+            h3 = link.find("h3")
+            if h3:
+                datum = _datum_parsen(h3.get_text(strip=True))
+
+        if not datum or date.fromisoformat(datum) < heute:
+            continue
+
+        if not uhrzeit:
+            for p in link.find_all("p"):
+                uhrzeit = _uhrzeit_parsen(p.get_text(strip=True))
+                if uhrzeit:
+                    break
+
+        beschreibung = None
+        ps = link.find_all("p")
+        for p in ps:
+            text = p.get_text(strip=True)
+            if text and not _uhrzeit_parsen(text) and text.lower() not in ("ausverkauft",):
+                beschreibung = text[:300]
+                break
+
+        quelle_url = urljoin(BASE_URL, href)
+
+        bild_el = link.find("img")
+        bild_url = None
+        if bild_el:
+            bild_url = bild_el.get("data-src") or bild_el.get("src")
+            if bild_url and bild_url.startswith("/"):
+                bild_url = urljoin(BASE_URL, bild_url)
+
+        schluessel = f"{titel}_{datum}"
+        if schluessel in gesehene_schluessel:
+            continue
+        gesehene_schluessel.add(schluessel)
+
+        events.append({
+            "titel": titel,
+            "datum": datum,
+            "uhrzeit": uhrzeit,
+            "ort": ORT_STANDARD,
+            "adresse": ADRESSE_STANDARD,
+            "kategorie": KATEGORIE_STANDARD,
+            "beschreibung": beschreibung,
+            "preis": None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": quelle_url,
+            "bild_url": bild_url,
+            "instagram_caption": None,
+            "datum_bis": None,
+            "ist_wiederkehrend": False,
+            "status": "neu",
+        })
 
     return events
 
