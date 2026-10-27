@@ -93,7 +93,7 @@ async def pipeline_ausfuehren():
     logger.info("--- Schritt 1: Scraper ---")
     alle_events = []
 
-    events_rausgegangen = rausgegangen.scrape()
+    events_rausgegangen = await asyncio.to_thread(rausgegangen.scrape)
     logger.info("Rausgegangen: %d Events", len(events_rausgegangen))
     alle_events.extend(events_rausgegangen)
 
@@ -101,7 +101,7 @@ async def pipeline_ausfuehren():
     logger.info("Ticketmaster: %d Events", len(events_ticketmaster))
     alle_events.extend(events_ticketmaster)
 
-    events_kulturportal = kulturportal.scrape()
+    events_kulturportal = await asyncio.to_thread(kulturportal.scrape)
     logger.info("Kulturportal Düsseldorf: %d Events", len(events_kulturportal))
     alle_events.extend(events_kulturportal)
 
@@ -125,11 +125,11 @@ async def pipeline_ausfuehren():
     logger.info("Songkick: %d Events", len(events_songkick))
     alle_events.extend(events_songkick)
 
-    events_allevents = allevents.scrape()
+    events_allevents = await asyncio.to_thread(allevents.scrape)
     logger.info("AllEvents.in Düsseldorf: %d Events", len(events_allevents))
     alle_events.extend(events_allevents)
 
-    events_bandsintown = bandsintown.scrape()
+    events_bandsintown = await asyncio.to_thread(bandsintown.scrape)
     logger.info("Bandsintown: %d Events", len(events_bandsintown))
     alle_events.extend(events_bandsintown)
 
@@ -194,7 +194,7 @@ async def pipeline_ausfuehren():
     logger.info("Salon des Amateurs: %d Events", len(events_salon))
     alle_events.extend(events_salon)
 
-    events_pitcher = pitcher.scrape()
+    events_pitcher = await asyncio.to_thread(pitcher.scrape)
     logger.info("Pitcher Rock HQ: %d Events", len(events_pitcher))
     alle_events.extend(events_pitcher)
 
@@ -222,7 +222,7 @@ async def pipeline_ausfuehren():
     logger.info("Capitol Theater Düsseldorf: %d Events", len(events_capitol))
     alle_events.extend(events_capitol)
 
-    events_komm = kommoedchen.scrape()
+    events_komm = await asyncio.to_thread(kommoedchen.scrape)
     logger.info("Kom(m)ödchen Düsseldorf: %d Events", len(events_komm))
     alle_events.extend(events_komm)
 
