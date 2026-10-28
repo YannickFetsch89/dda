@@ -34,7 +34,8 @@ _ANREICHERBARE_FELDER: list[str] = [
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
-_NICHT_IN_DB: set[str] = {"instagram_location_id"}
+# post_typ (feed | reel) setzen einige Tier-3-Scraper, die Pipeline nutzt es aber noch nicht
+_NICHT_IN_DB: set[str] = {"instagram_location_id", "post_typ"}
 
 # Erkennung von Rausgegangen-Bildern (imageflow.rausgegangen.de / s3/.../rausgegangen)
 _RAUSGEGANGEN_MUSTER = re.compile(r"rausgegangen", re.IGNORECASE)
