@@ -26,9 +26,9 @@ jobs:
             # Neuesten Code holen
             git pull origin claude/setup-project-structure-5QNOf
 
-            # Python-Pakete aktualisieren falls requirements geändert
-            /home/dies_das_duesseldorfadmin/dda/venv/bin/pip install -q -r requirements.txt
-            /home/dies_das_duesseldorfadmin/dda/venv/bin/pip install -q -r dashboard/requirements.txt
+            # Python-Pakete aktualisieren falls requirements geändert (venv stammt von uv, enthält kein pip)
+            uv pip install --python venv/bin/python -q -r requirements.txt
+            uv pip install --python venv/bin/python -q -r dashboard/requirements.txt
 
             # Dashboard neu starten
             pkill -f "streamlit run" || true
