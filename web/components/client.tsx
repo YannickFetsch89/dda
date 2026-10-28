@@ -81,7 +81,22 @@ export function HerzButton({ id, titel, gross = false }: { id: string; titel: st
 
 // ---------- Bild mit Fallback: eigenes Bild → Symbolbild → Kategorie-Platzhalter ----------
 
-export function BildImg({ src, ersatz = null, alt, icon, eager = false }: { src: string | null; ersatz?: string | null; alt: string; icon: string; eager?: boolean }) {
+export function BildImg({
+  src,
+  ersatz = null,
+  alt,
+  icon,
+  eager = false,
+  vollstaendig = false,
+}: {
+  src: string | null;
+  ersatz?: string | null;
+  alt: string;
+  icon: string;
+  eager?: boolean;
+  /** Bild nicht beschneiden, sondern ganz zeigen und den Rand mit einer unscharfen Kopie füllen */
+  vollstaendig?: boolean;
+}) {
   // Kandidaten der Reihe nach; schlägt ein Bild fehl, kommt das nächste
   const kandidaten = [src, ersatz].filter((s): s is string => !!s);
   const [fehler, setFehler] = useState(0);
@@ -97,9 +112,14 @@ export function BildImg({ src, ersatz = null, alt, icon, eager = false }: { src:
   return (
     <>
       {/* Externe Bilder aus vielen Quellen, daher kein next/image */}
+      {vollstaendig && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={`${aktuell}-hg`} className="bild__unscharf" src={aktuell} alt="" aria-hidden referrerPolicy="no-referrer" />
+      )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={aktuell}
+        className={vollstaendig ? "bild__ganz" : undefined}
         src={aktuell}
         alt={istSymbol ? "Symbolbild" : alt}
         loading={eager ? "eager" : "lazy"}
@@ -109,6 +129,84 @@ export function BildImg({ src, ersatz = null, alt, icon, eager = false }: { src:
       />
       {istSymbol && <span className="bild__symbol">Symbolbild</span>}
     </>
+  );
+}
+
+// ---------- Google-Karte mit Zwei-Klick-Lösung (DSGVO) ----------
+// Google Maps wird erst nach Klick geladen, vorher gehen keine Daten an Google.
+// Die Zustimmung gilt danach für alle Karten (localStorage).
+
+const KARTE_KEY = "ddd-karte-zustimmung";
+const KARTE_EVENT = "ddd-karte-geaendert";
+
+function karteAbonnieren(neu: () => void) {
+  window.addEventListener(KARTE_EVENT, neu);
+  window.addEventListener("storage", neu);
+  return () => {
+    window.removeEventListener(KARTE_EVENT, neu);
+    window.removeEventListener("storage", neu);
+  };
+}
+
+function karteZustimmung(): boolean {
+  try {
+    return window.localStorage.getItem(KARTE_KEY) === "ja";
+  } catch {
+    return false;
+  }
+}
+
+export function GoogleKarte({ adresse, routeUrl }: { adresse: string; routeUrl: string }) {
+  const zugestimmt = useSyncExternalStore(karteAbonnieren, karteZustimmung, () => false);
+  const [nurEinmal, setNurEinmal] = useState(false);
+  const anzeigen = zugestimmt || nurEinmal;
+
+  const zustimmen = (merken: boolean) => {
+    if (!merken) return setNurEinmal(true);
+    try {
+      window.localStorage.setItem(KARTE_KEY, "ja");
+    } catch {
+      setNurEinmal(true);
+    }
+    window.dispatchEvent(new Event(KARTE_EVENT));
+  };
+
+  return (
+    <div className="karte-ausschnitt">
+      {anzeigen ? (
+        <iframe
+          className="karte-ausschnitt__frame"
+          src={`https://www.google.com/maps?q=${encodeURIComponent(adresse)}&output=embed&hl=de`}
+          title={`Karte: ${adresse}`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
+      ) : (
+        <div className="karte-ausschnitt__zustimmung">
+          <span className="karte-ausschnitt__pin">
+            <span className="icon" aria-hidden>
+              location_on
+            </span>
+          </span>
+          <p>Beim Laden der Karte werden Daten (u.a. deine IP-Adresse) an Google übertragen.</p>
+          <div>
+            <button type="button" className="btn btn--gold" onClick={() => zustimmen(true)}>
+              Karte anzeigen
+            </button>
+            <button type="button" className="link" onClick={() => zustimmen(false)}>
+              Nur dieses Mal
+            </button>
+          </div>
+        </div>
+      )}
+      <a className="karte-ausschnitt__route" href={routeUrl} target="_blank" rel="noopener noreferrer" aria-label={`Route zu ${adresse} in Google Maps`}>
+        <span className="icon" aria-hidden>
+          directions
+        </span>
+        Route
+      </a>
+    </div>
   );
 }
 

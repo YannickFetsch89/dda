@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
+import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
 import { Bild, EventKarte, Icon, KatBadge, SkeletonKarten, eventPfad } from "@/components/karten";
 import { eventLaden, eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, nachBeliebtheit } from "@/lib/ableitungen";
@@ -40,8 +40,9 @@ export default function EventSeite(props: PageProps<"/event/[id]">) {
   );
 }
 
-function mapsLink(adresse: string) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(adresse)}`;
+// Google Maps Routenplaner mit dem Event als Ziel (Start = aktueller Standort des Nutzers)
+function routenLink(adresse: string) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(adresse)}`;
 }
 
 async function EventInhalt({ params }: Pick<PageProps<"/event/[id]">, "params">) {
@@ -63,7 +64,7 @@ async function EventInhalt({ params }: Pick<PageProps<"/event/[id]">, "params">)
   return (
     <article>
       <div className="detail-hero">
-        <Bild e={e} eager />
+        <Bild e={e} eager vollstaendig />
         <div className="detail-hero__btns">
           <ZurueckButton />
           <div>
@@ -113,15 +114,7 @@ async function EventInhalt({ params }: Pick<PageProps<"/event/[id]">, "params">)
               </div>
             </header>
 
-            <a className="karte-ausschnitt" href={mapsLink(adresse)} target="_blank" rel="noopener noreferrer" aria-label={`${adresse} in Google Maps öffnen`}>
-              <span className="karte-ausschnitt__pin">
-                <Icon name="location_on" />
-              </span>
-              <span className="karte-ausschnitt__route">
-                <Icon name="directions" />
-                Route
-              </span>
-            </a>
+            <GoogleKarte adresse={adresse} routeUrl={routenLink(adresse)} />
 
             {e.beschreibung && (
               <section className="detail__abschnitt">

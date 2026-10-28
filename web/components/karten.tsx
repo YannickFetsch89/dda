@@ -19,10 +19,22 @@ export function Icon({ name, className }: { name: string; className?: string }) 
   );
 }
 
-export function Bild({ e, className = "", eager = false, children }: { e: DddEvent; className?: string; eager?: boolean; children?: React.ReactNode }) {
+export function Bild({
+  e,
+  className = "",
+  eager = false,
+  vollstaendig = false,
+  children,
+}: {
+  e: DddEvent;
+  className?: string;
+  eager?: boolean;
+  vollstaendig?: boolean;
+  children?: React.ReactNode;
+}) {
   return (
     <div className={`bild ${className}`} style={katStil(e.kategorie)}>
-      <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} />
+      <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
       {children}
     </div>
   );
