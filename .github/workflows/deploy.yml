@@ -30,15 +30,13 @@ jobs:
             uv pip install --python venv/bin/python -q -r requirements.txt
             uv pip install --python venv/bin/python -q -r dashboard/requirements.txt
 
-            # Dashboard neu starten
-            pkill -f "streamlit run" || true
-            sleep 2
-            (/home/dies_das_duesseldorfadmin/dda/venv/bin/streamlit run \
-              dashboard/app.py \
-              --server.port 8502 \
-              --server.address 127.0.0.1 \
-              --server.headless true \
-              >> /home/dies_das_duesseldorfadmin/dda/logs/dashboard.log 2>&1 &)
+            # Dashboard neu starten (über PID-Datei, im Jail gibt es kein pkill)
+            mkdir -p /home/dies_das_duesseldorfadmin/bin
+            cp dashboard/dashboard.sh /home/dies_das_duesseldorfadmin/bin/
+            chmod +x /home/dies_das_duesseldorfadmin/bin/dashboard.sh
+            /home/dies_das_duesseldorfadmin/bin/dashboard.sh neustart
+            sleep 5
+            curl -sf -o /dev/null -m 10 http://127.0.0.1:8502/_stcore/health || { echo "Dashboard antwortet nicht"; tail -20 /home/dies_das_duesseldorfadmin/dda/logs/dashboard.log; exit 1; }
 
             # Website (Next.js) bauen und neu starten
             # Start-Skript und /proc-Shim liegen im Repo, Cron ruft ~/bin/website.sh auf
