@@ -33,11 +33,17 @@ export function Bild({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={`bild ${className}`} style={katStil(e.kategorie)}>
+    <div className={`bild ${e.abgesagt ? "bild--abgesagt" : ""} ${className}`} style={katStil(e.kategorie)}>
       <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
+      {e.abgesagt && <AbgesagtTag className="bild__abgesagt" />}
       {children}
     </div>
   );
+}
+
+/** Rotes Schild für abgesagte Events */
+export function AbgesagtTag({ className = "" }: { className?: string }) {
+  return <span className={`abgesagt-tag ${className}`}>Abgesagt</span>;
 }
 
 export function KatBadge({ slug, variante = "" }: { slug: string; variante?: string }) {
@@ -119,6 +125,7 @@ export function ListenZeile({ e, mitKategorie = false, zeit }: { e: DddEvent; mi
       <span className="punkt" style={katStil(e.kategorie)} aria-hidden />
       <div className="zeile__text">
         <span className="zeile__titel">
+          {e.abgesagt && <AbgesagtTag />}
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </span>
         <span className="zeile__sub">

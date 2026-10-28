@@ -44,7 +44,9 @@ export default function Startseite(props: PageProps<"/">) {
 
 async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const sp = await searchParams;
-  const pool = await eventPoolLaden();
+  const geladen = await eventPoolLaden();
+  // Abgesagte Events erscheinen nicht auf der Startseite (in Kalender/Entdecken bleiben sie markiert sichtbar)
+  const pool = { ...geladen, events: geladen.events.filter((e) => !e.abgesagt) };
   const { heute } = pool;
   const z = zeitraumAuflösen(typeof sp.datum === "string" ? sp.datum : undefined, heute);
   const istHeute = z.von === heute && z.bis === heute;

@@ -80,6 +80,14 @@ async function EventInhalt({ params }: Pick<PageProps<"/event/[id]">, "params">)
             <header>
               <KatBadge slug={e.kategorie} />
               <h1 className="detail__titel d">{e.titel}</h1>
+              {e.abgesagt && (
+                <p className="abgesagt-hinweis" role="status">
+                  <Icon name="event_busy" />
+                  <span>
+                    <b>Dieses Event wurde abgesagt.</b> Ob es einen Ersatztermin gibt oder Tickets erstattet werden, erfährst du beim Veranstalter.
+                  </span>
+                </p>
+              )}
               <div className="infozeilen">
                 <div className="infozeile">
                   <span className="infozeile__kachel">

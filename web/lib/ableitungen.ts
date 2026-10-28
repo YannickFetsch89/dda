@@ -25,6 +25,8 @@ function hash(text: string): number {
  * Redaktions-Markierungen, Bild, Beschreibung, Uhrzeit. Deterministisch.
  */
 export function beliebtheit(e: DddEvent): number {
+  // Abgesagte Events landen in jeder Beliebtheits-Sortierung ganz hinten
+  if (e.abgesagt) return -1000 + (hash(e.id) % 100) / 100;
   let s = 0;
   if (e.top_event_des_monats) s += 40;
   if (e.highlight_der_woche) s += 35;
@@ -197,7 +199,7 @@ export function nachBezirken(events: DddEvent[]): { bezirke: BezirkCluster[]; oh
 
 /** Wählt n Events mit möglichst verschiedenen Kategorien. */
 export function vielfaeltig(events: DddEvent[], n: number, ausschliessen = new Set<string>()): DddEvent[] {
-  const kandidaten = events.filter((e) => !ausschliessen.has(e.id)).sort(nachBeliebtheit);
+  const kandidaten = events.filter((e) => !e.abgesagt && !ausschliessen.has(e.id)).sort(nachBeliebtheit);
   const gewaehlt: DddEvent[] = [];
   const kats = new Set<string>();
   for (const e of kandidaten) {
@@ -238,8 +240,9 @@ export function wochenendProgramm(pool: EventPool, proTag = 3) {
 
 /** Highlight der Woche und Top-Event des Monats (Redaktion, sonst Heuristik). */
 export function highlights(pool: EventPool) {
-  const woche = filtern(pool.events, { von: pool.heute, bis: plusTage(pool.heute, 6) });
-  const monat = filtern(pool.events, { von: pool.heute, bis: plusTage(pool.heute, 29) });
+  const aktiv = pool.events.filter((e) => !e.abgesagt);
+  const woche = filtern(aktiv, { von: pool.heute, bis: plusTage(pool.heute, 6) });
+  const monat = filtern(aktiv, { von: pool.heute, bis: plusTage(pool.heute, 29) });
   const highlight = woche.find((e) => e.highlight_der_woche) ?? [...woche].filter((e) => e.bild_url).sort(nachBeliebtheit)[0] ?? woche.sort(nachBeliebtheit)[0] ?? null;
   const top =
     monat.find((e) => e.top_event_des_monats && e.id !== highlight?.id) ??

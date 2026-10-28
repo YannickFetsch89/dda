@@ -7,8 +7,15 @@ import { kategorieAusDb } from "./kategorien";
 import { heuteBerlin, plusTage, tageZwischen } from "./datum";
 import type { DddEvent, EventPool } from "./typen";
 
-const SPALTEN =
+const SPALTEN_BASIS =
   "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
+// Spalte "abgesagt" ist neu; fehlt sie in der DB noch, wird ohne sie geladen (siehe spaltenFehlt)
+const SPALTEN = `${SPALTEN_BASIS}, abgesagt`;
+
+// Absage im Text erkennen (auch für Altdaten, z.B. PRINZ-Ort "© EventimAbgesagt")
+const ABSAGE = /abgesagt|entfällt|fällt aus|cancell?ed/i;
+// Bildnachweise, die ein Scraper fälschlich als Ort gespeichert hat
+const KEIN_ORT = /^(©|quelle:)/i;
 
 // Wie weit in die Zukunft geladen wird
 const TAGE_VORAUS = 60;
@@ -23,13 +30,16 @@ function text(wert: unknown): string | null {
 }
 
 function normalisieren(z: Zeile): DddEvent {
+  const titel = text(z.titel) ?? "Ohne Titel";
+  const ortRoh = text(z.ort);
+  const ortUngueltig = !!ortRoh && KEIN_ORT.test(ortRoh);
   return {
     id: String(z.id),
-    titel: text(z.titel) ?? "Ohne Titel",
+    titel,
     datum: String(z.datum).slice(0, 10),
     datum_bis: text(z.datum_bis)?.slice(0, 10) ?? null,
     uhrzeit: text(z.uhrzeit)?.slice(0, 5) ?? null,
-    ort: text(z.ort) ?? "Düsseldorf",
+    ort: (!ortUngueltig && ortRoh) || "Düsseldorf",
     adresse: text(z.adresse),
     kategorie: kategorieAusDb(text(z.kategorie)),
     beschreibung: text(z.beschreibung),
@@ -42,7 +52,13 @@ function normalisieren(z: Zeile): DddEvent {
     tipp_des_tages: z.tipp_des_tages === true,
     highlight_der_woche: z.highlight_der_woche === true,
     top_event_des_monats: z.top_event_des_monats === true,
+    abgesagt: z.abgesagt === true || ABSAGE.test(titel) || (ortUngueltig && ABSAGE.test(ortRoh ?? "")),
   };
+}
+
+/** Supabase meldet eine unbekannte Spalte "abgesagt" (Migration noch nicht ausgeführt). */
+function spaltenFehlt(meldung: string | undefined): boolean {
+  return !!meldung && /abgesagt/.test(meldung);
 }
 
 function supabaseClient() {
@@ -58,18 +74,25 @@ async function ausSupabaseLaden(heute: string): Promise<DddEvent[]> {
 
   const bis = plusTage(heute, TAGE_VORAUS);
   const events: DddEvent[] = [];
+  let spalten = SPALTEN;
   for (let seite = 0; seite < 20; seite++) {
     const { data, error } = await client
       .from("events")
-      .select(SPALTEN)
+      .select(spalten)
       .eq("abgelehnt", false)
       .or(`datum.gte.${heute},datum_bis.gte.${heute}`)
       .lte("datum", bis)
       .order("datum", { ascending: true })
       .order("id", { ascending: true })
       .range(seite * SEITENGROESSE, (seite + 1) * SEITENGROESSE - 1);
+    if (error && spalten !== SPALTEN_BASIS && spaltenFehlt(error.message)) {
+      console.warn("Spalte 'abgesagt' fehlt in Supabase – lade ohne sie (Migration in schema.sql ausführen)");
+      spalten = SPALTEN_BASIS;
+      seite -= 1;
+      continue;
+    }
     if (error) throw new Error(`Supabase-Fehler: ${error.message}`);
-    events.push(...(data as Zeile[]).map(normalisieren));
+    events.push(...(data as unknown as Zeile[]).map(normalisieren));
     if (!data || data.length < SEITENGROESSE) break;
   }
   return events;
@@ -136,9 +159,11 @@ export async function eventLaden(id: string): Promise<DddEvent | null> {
   const client = supabaseClient();
   if (!client || !/^[0-9a-f-]{36}$/i.test(id)) return null;
   try {
-    const { data, error } = await client.from("events").select(SPALTEN).eq("id", id).eq("abgelehnt", false).maybeSingle();
+    const laden = (spalten: string) => client.from("events").select(spalten).eq("id", id).eq("abgelehnt", false).maybeSingle();
+    let { data, error } = await laden(SPALTEN);
+    if (error && spaltenFehlt(error.message)) ({ data, error } = await laden(SPALTEN_BASIS));
     if (error || !data) return null;
-    return normalisieren(data as Zeile);
+    return normalisieren(data as unknown as Zeile);
   } catch (err) {
     console.error(`Event ${id} konnte nicht geladen werden: ${err instanceof Error ? err.message : err}`);
     return null;
