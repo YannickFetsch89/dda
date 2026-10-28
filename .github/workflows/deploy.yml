@@ -39,4 +39,18 @@ jobs:
               --server.address 127.0.0.1 \
               --server.headless true \
               >> /home/dies_das_duesseldorfadmin/dda/logs/dashboard.log 2>&1 &)
+
+            # Website (Next.js) bauen und neu starten
+            # Start-Skript und /proc-Shim liegen im Repo, Cron ruft ~/bin/website.sh auf
+            mkdir -p /home/dies_das_duesseldorfadmin/bin
+            cp web/deploy/website.sh web/deploy/jail-shim.cjs /home/dies_das_duesseldorfadmin/bin/
+            chmod +x /home/dies_das_duesseldorfadmin/bin/website.sh
+            cd web
+            export NODE_OPTIONS="--require /home/dies_das_duesseldorfadmin/bin/jail-shim.cjs"
+            export NEXT_TELEMETRY_DISABLED=1
+            npm ci --no-audit --no-fund
+            npm run build
+            /home/dies_das_duesseldorfadmin/bin/website.sh neustart
+            sleep 5
+            curl -sf -o /dev/null -m 10 http://127.0.0.1:3847/ || { echo "Website antwortet nicht"; tail -20 /home/dies_das_duesseldorfadmin/dda/logs/website.log; exit 1; }
             echo "Deployment abgeschlossen"
