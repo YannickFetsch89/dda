@@ -42,9 +42,38 @@ AllEvents (25), Filmmuseum (15), Oper am Rhein (12), Tanzhaus NRW (10).
 | `kinder-geschichten` | Geschichtenzeit, Kamishibai, Vorlesen, Kuscheltierübernachtung, LEGO, Familienführung | 18 | 5 |
 | `maker-workshop` | 3D-Druck, Basteln, FabLab, Repair Café, Handarbeit, Musikstudio | 15 | 5 |
 | `tech-meetup` | Azure, C++, Power BI, KI/ML, Data, UX, WordPress | 15 | 5 |
-| `halloween` | Halloween-Partys, Grusel-Basteln, Samhain *(saisonal, Oktober)* | 15 | 5 |
 | `candlelight-klassik` | Candlelight-Konzerte, Trio, Big Band, Einaudi-Hommage, Rezitation | 11 | 5 |
 | `bibliothek-beratung` | Onleihe & Co., Digitalsprechstunde, Bücherflohmarkt, Verbraucherzentrale | 11 | 5 |
+
+## Prio A2 – saisonal
+
+Saisonale Motive haben **Vorrang** vor allen anderen: Passt ein Stichwort *und* liegt das Event im Zeitfenster,
+bekommt es das saisonale Bild (eine Halloween-Party also den Kürbis, nicht die normale Clubnacht).
+Außerhalb des Zeitfensters werden sie nie verwendet – ein „Weihnachts“-Treffen im Juli fällt auf das normale Motiv zurück.
+Die Zeitfenster sind großzügig, weil Events oft vorher angekündigt werden.
+
+| Motiv (`slug`) | Anlass, Stichworte | Zeitfenster | Varianten |
+|---|---|---|---|
+| `halloween` | Halloween, Grusel, Samhain, Kürbis *(aktuell 15 Events)* | 1.–31. Oktober | 5 |
+| `sankt-martin` | Martinszug, Laternen basteln, Weckmann | 1.–15. November | 3 |
+| `karneval` | Sessionseröffnung 11.11., Sitzungen, Altweiber, Rosenmontag, Helau | 1.–15. November und 1. Januar bis Aschermittwoch | 5 |
+| `advent-weihnachtsmarkt` | Weihnachtsmarkt, Advent, Glühwein, Eisbahn | 15. November – 23. Dezember | 5 |
+| `nikolaus` | Nikolaus, Nikolausfeier für Kinder | 1.–6. Dezember | 3 |
+| `weihnachten` | Weihnachtskonzert, Krippenspiel, Christmette, Weihnachtsfeier | 1.–26. Dezember | 4 |
+| `silvester` | Silvester, Jahreswechsel, Neujahrsparty, Feuerwerk | 27. Dezember – 1. Januar | 4 |
+| `valentinstag` | Valentinstag, Candlelight-Dinner zu zweit | 1.–14. Februar | 3 |
+| `ostern` | Ostern, Ostermarkt, Eiersuche, Osterbrunch | 3 Wochen vor bis 1 Tag nach Ostermontag | 4 |
+| `tanz-in-den-mai` | Tanz in den Mai, 1. Mai, Maifest, Vatertag/Bollerwagen | 25. April – 1. Mai und Christi Himmelfahrt | 3 |
+| `nacht-der-museen` | Nacht der Museen, lange Museumsnacht | März – Mai | 3 |
+| `japan-tag` | Japan-Tag Düsseldorf, Feuerwerk am Rhein, Cosplay | Mai – Juni | 3 |
+| `sommer-openair` | Open-Air-Kino, Biergarten, Sommerfest, Open-Air-Konzert, Festival | Juni – August | 4 |
+| `csd-pride` | CSD, Pride, Regenbogen-Parade | Mai – August | 3 |
+| `rheinkirmes` | Rheinkirmes, Kirmes, Schützenfest, Riesenrad | Juni – August | 4 |
+| `oktoberfest` | Oktoberfest, Wiesn, Dirndl | 15. September – 15. Oktober | 3 |
+
+Weitere Ideen, bewusst noch ohne Bilder (erst wenn sie in den Daten auftauchen): Public Viewing bei
+Fußball-Turnieren, Muttertag, Frühlingsfest/Kirschblüte, Weinfeste im Spätsommer, Fastenbrechen/Iftar,
+Lichterfest/Diwali, Chinesisches Neujahr.
 
 ## Prio B
 
@@ -59,8 +88,6 @@ AllEvents (25), Filmmuseum (15), Oper am Rhein (12), Tanzhaus NRW (10).
 | `oper-musiktheater` | Zauberflöte, My Fair Lady, Comedian Harmonists, Musical | 6 | 4 |
 | `laufen` | Lauftreff, 5 km Run, Running Club, Parkrun | 2 (wöchentlich) | 4 |
 | `live-konzert` | Rock/Pop/Indie-Konzerte, Bands, Singer-Songwriter | 4 | 4 |
-| `karneval` | Sessionseröffnung 11.11., Sitzungen *(saisonal, ab November stark)* | 2 | 4 |
-| `weihnachtsmarkt` | Advent, Weihnachtsmärkte, Weihnachtskonzerte *(saisonal, ab Mitte November)* | – | 4 |
 
 ## Prio C – selten, aber eindeutig
 
@@ -72,7 +99,6 @@ AllEvents (25), Filmmuseum (15), Oper am Rhein (12), Tanzhaus NRW (10).
 | `jazz` | Jam Sessions, Jazzclub | 2 | 3 |
 | `food-wein` | Weintasting, Dinner, Street Food, Brunch | 2 | 3 |
 | `tanzkurs` | Tango, Salsa-Abend, Bachata | 1 | 3 |
-| `laterne-martin` | Laterne basteln, Martinszug *(saisonal, November)* | 1 | 3 |
 
 ## Kategorie-Fallbacks – wenn kein Motiv passt (ca. 7 % der Fälle)
 
@@ -80,8 +106,9 @@ Je Kategorie **3 Varianten**: `kat-kultur`, `kat-musik`, `kat-food`, `kat-sport`
 `kat-nightlife`, `kat-familie`, `kat-dating`, `kat-sonstiges`.
 Diese Bilder dürfen allgemeiner sein (Stimmungsbild Düsseldorf + Thema), z.B. `kat-sonstiges` = Rheinufer am Abend.
 
-**Gesamt: 161 Bilder** (Prio A 64 · Prio B 45 · Prio C 22 · Kategorie 30).
-Prio A allein reicht für den Start; der Rest kann nach und nach dazukommen.
+**Gesamt: 203 Bilder** (Prio A 59 · Prio A2 saisonal 59 · Prio B 37 · Prio C 18 · Kategorie 30).
+Für den Start reichen Prio A plus die saisonalen Motive der nächsten Wochen (Halloween, Sankt Martin, Karneval,
+Advent, Nikolaus, Weihnachten, Silvester); der Rest kann nach und nach dazukommen.
 
 ---
 
@@ -160,13 +187,6 @@ damit zwei Events mit demselben Motiv nebeneinander nicht gleich aussehen.
 4. Close-up of hands typing on a laptop, colorful screen reflections
 5. Whiteboard with abstract diagrams (no readable words), sticky notes
 
-**halloween**
-1. Carved pumpkins with candles on a dark wooden table
-2. Halloween party with orange and purple lights, dancing silhouettes
-3. Spooky decorations: cobwebs, candles, autumn leaves
-4. Kids' Halloween crafts: paper bats, pumpkins, scissors
-5. Costumed people from behind at a night party, blurred lights
-
 **candlelight-klassik**
 1. Hundreds of candles on a stage around a string quartet (from a distance, no faces)
 2. Grand piano on a dark stage lit by candles
@@ -180,6 +200,99 @@ damit zwei Events mit demselben Motiv nebeneinander nicht gleich aussehen.
 3. Book flea market: tables with stacked second-hand books
 4. Helpful conversation at a library desk, hands and laptop, no faces
 5. Cozy reading corner with armchair and lamp
+
+### Prio A2 – saisonal
+
+**halloween**
+1. Carved pumpkins with candles on a dark wooden table
+2. Halloween party with orange and purple lights, dancing silhouettes
+3. Spooky decorations: cobwebs, candles, autumn leaves
+4. Kids' Halloween crafts: paper bats, pumpkins, scissors
+5. Costumed people from behind at a night party, blurred lights
+
+**sankt-martin**
+1. Paper lanterns glowing in the dark
+2. Children's hands making paper lanterns at a craft table
+3. Lantern procession in the evening, a row of lights along a street, people from behind
+
+**karneval**
+1. Colorful confetti and streamers in the air, festive crowd blurred
+2. Carnival costumes and jester hats from behind, red and white colors
+3. Festive hall with decorations and people celebrating, no faces
+4. Street parade with colorful costumes and floats, motion blur
+5. Close-up of hands catching candy thrown from a parade float
+
+**advent-weihnachtsmarkt**
+1. Christmas market stalls with warm lights at dusk, people from behind
+2. Mulled wine mugs and gingerbread close-up on a wooden counter
+3. Ice rink with fairy lights, skaters blurred
+4. Ferris wheel and market lights at the Rhine in the evening
+5. Advent wreath with four candles on a table, cozy room
+
+**nikolaus**
+1. Children's boots by a door filled with tangerines, nuts and chocolate
+2. Bishop's staff and red cloak on a chair, warm candle light, no person
+3. Small bag of sweets and a handwritten-style card without readable text
+
+**weihnachten**
+1. Church interior with candles and a Christmas tree, choir from behind
+2. Decorated Christmas tree with warm lights in a living room
+3. Christmas concert: brass instruments with fairy lights, no faces
+4. Festive dinner table with candles and fir branches
+
+**silvester**
+1. Fireworks over the Rhine and the city skyline at night
+2. Champagne glasses toasting with sparklers, faces out of frame
+3. New Year's Eve party with confetti and gold balloons, blurred crowd
+4. Sparklers in hands against the night sky
+
+**valentinstag**
+1. Candlelight dinner table for two with roses
+2. Two hands holding coffee cups with latte-art hearts
+3. Red and pink flowers in a café window
+
+**ostern**
+1. Colorful painted Easter eggs in a basket on grass
+2. Children's hands searching for eggs in a garden, from behind
+3. Easter brunch table with spring flowers and pastries
+4. Easter market stalls with spring decorations
+
+**tanz-in-den-mai**
+1. Maypole with colorful ribbons in the evening light
+2. Outdoor dance in a beer garden with string lights, dancers from behind
+3. Handcart (Bollerwagen) with drinks on a sunny path in the green
+
+**nacht-der-museen**
+1. Museum facade lit in colors at night, visitors from behind
+2. Crowd walking through a dimly lit exhibition hall at night
+3. Night shuttle bus with glowing windows in the city
+
+**japan-tag**
+1. Fireworks over the Rhine at night seen from the riverbank
+2. Japanese lanterns and food stalls along a promenade, blurred visitors
+3. Origami cranes and a small taiko drum on a table
+
+**sommer-openair**
+1. Open-air cinema screen at dusk with deck chairs, no image on the screen
+2. Beer garden under trees with string lights in summer
+3. Open-air concert crowd from behind at sunset
+4. Summer festival on the Rhine meadows, tents and lights
+
+**csd-pride**
+1. Rainbow flags waving above a crowd, from behind
+2. Colorful confetti and rainbow streamers on a street
+3. Parade with colorful outfits, motion blur, no faces
+
+**rheinkirmes**
+1. Illuminated Ferris wheel at night by the Rhine
+2. Carousel lights in motion blur
+3. Fairground stalls with candy apples and roasted almonds
+4. Crowd walking between fairground rides at dusk, from behind
+
+**oktoberfest**
+1. Beer steins and pretzels on a wooden table in a festival tent
+2. Blue-and-white decorations and string lights in a tent
+3. Brass band instruments on a small stage in a festival tent
 
 ### Prio B
 
@@ -238,18 +351,6 @@ damit zwei Events mit demselben Motiv nebeneinander nicht gleich aussehen.
 3. Small club stage with drum kit and warm lights
 4. Microphone on a stand, bokeh stage lights
 
-**karneval**
-1. Colorful confetti and streamers in the air, festive crowd blurred
-2. Carnival costumes and hats from behind, red and white colors
-3. Festive hall with decorations and people celebrating (no faces)
-4. Street parade with colorful costumes, motion blur
-
-**weihnachtsmarkt**
-1. Christmas market stalls with warm lights at dusk
-2. Mulled wine mugs and gingerbread close-up
-3. Ice rink with fairy lights, skaters blurred
-4. Christmas concert in a church with candles
-
 ### Prio C
 
 **gaming** — 1. Game controller in hands, screen glow · 2. Kids playing a console in a library, from behind · 3. Cozy gaming corner with screens and colorful light
@@ -263,15 +364,13 @@ damit zwei Events mit demselben Motiv nebeneinander nicht gleich aussehen.
 **food-wein** — 1. Wine glasses and bottles (no labels) on a tasting table · 2. Shared dinner table with dishes, hands reaching · 3. Street food stalls at dusk with string lights
 
 **tanzkurs** — 1. Couple's feet in dance shoes on a wooden floor · 2. Tango couple silhouette in a warm hall · 3. Salsa night, dancers in motion blur, colorful lights
-
-**laterne-martin** — 1. Paper lanterns glowing in the dark · 2. Children's hands making lanterns · 3. Lantern procession in the evening, lights in a row
-
 ---
 
 ## Nächste Schritte (wenn die Bilder da sind)
 
 1. Bilder als `.webp` nach `web/public/fallback/` legen (Benennung siehe oben).
-2. Zuordnung im Frontend: Stichworte aus Titel/Beschreibung → Motiv, sonst Kategorie-Fallback
-   (die Stichwortlisten aus dieser Analyse werden dafür übernommen).
+2. Zuordnung im Frontend: zuerst saisonale Motive (Stichwort + Zeitfenster), dann Stichworte aus
+   Titel/Beschreibung → Motiv, sonst Kategorie-Fallback (die Stichwortlisten aus dieser Analyse werden übernommen).
+   Fehlt die Bilddatei eines Motivs noch, greift automatisch der Kategorie-Fallback.
 3. Auswahl der Variante stabil per Event-ID; Bild-Alt-Text kennzeichnet es als Symbolbild.
 4. Kennzeichnung „Symbolbild“ klein im Bild, damit niemand es für ein Foto des Events hält.
