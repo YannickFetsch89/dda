@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { BildImg } from "./client";
 import { katStil, kategorie } from "@/lib/kategorien";
 import { minutenBerlin } from "@/lib/datum";
+import { symbolbild } from "@/lib/symbolbild";
 import type { DddEvent } from "@/lib/typen";
 
 export interface Abschnitt {
@@ -32,7 +33,7 @@ function Zeile({ e }: { e: DddEvent }) {
       </span>
       <article className="tl__karte">
         <div className="bild" style={katStil(e.kategorie)}>
-          <BildImg src={e.bild_url} alt="" icon={k.icon} />
+          <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={k.icon} />
         </div>
         <div className="tl__karte-text">
           <span className="katlabel" style={katStil(e.kategorie)}>

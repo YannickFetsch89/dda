@@ -366,7 +366,18 @@ damit zwei Events mit demselben Motiv nebeneinander nicht gleich aussehen.
 **tanzkurs** — 1. Couple's feet in dance shoes on a wooden floor · 2. Tango couple silhouette in a warm hall · 3. Salsa night, dancers in motion blur, colorful lights
 ---
 
-## Nächste Schritte (wenn die Bilder da sind)
+## Neue Bilder hinzufügen
+
+1. Originale (jpg/png/webp, beliebige Dateinamen) in `web/symbolbilder-quellen/<motiv>/` legen –
+   der Ordnername muss genau dem `slug` aus den Tabellen entsprechen (z.B. `kinder-geschichten`, `kat-kultur`).
+   Dieser Ordner ist nicht in Git und wird nicht ausgeliefert.
+2. In `web/` ausführen: `npm run symbolbilder` – erzeugt `public/fallback/<motiv>-<nr>.webp` (1200 px, ca. 80 KB)
+   und `lib/symbolbilder.json`.
+3. Committen und pushen – nach dem Deploy nutzt die Website die neuen Motive automatisch.
+
+Umgesetzt in `web/lib/symbolbild.ts` (Stand: Prio A ohne `kinder-geschichten`, 57 Bilder).
+
+## Ursprünglicher Plan (umgesetzt)
 
 1. Bilder als `.webp` nach `web/public/fallback/` legen (Benennung siehe oben).
 2. Zuordnung im Frontend: zuerst saisonale Motive (Stichwort + Zeitfenster), dann Stichworte aus

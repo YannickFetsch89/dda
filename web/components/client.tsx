@@ -79,21 +79,36 @@ export function HerzButton({ id, titel, gross = false }: { id: string; titel: st
   );
 }
 
-// ---------- Bild mit Fallback auf Kategorie-Platzhalter ----------
+// ---------- Bild mit Fallback: eigenes Bild → Symbolbild → Kategorie-Platzhalter ----------
 
-export function BildImg({ src, alt, icon, eager = false }: { src: string | null; alt: string; icon: string; eager?: boolean }) {
-  const [fehler, setFehler] = useState(false);
-  if (!src || fehler) {
+export function BildImg({ src, ersatz = null, alt, icon, eager = false }: { src: string | null; ersatz?: string | null; alt: string; icon: string; eager?: boolean }) {
+  // Kandidaten der Reihe nach; schlägt ein Bild fehl, kommt das nächste
+  const kandidaten = [src, ersatz].filter((s): s is string => !!s);
+  const [fehler, setFehler] = useState(0);
+  const aktuell = kandidaten[fehler];
+  if (!aktuell) {
     return (
       <span className="bild__platzhalter" aria-hidden>
         <span className="icon">{icon}</span>
       </span>
     );
   }
+  const istSymbol = aktuell === ersatz;
   return (
-    // Externe Bilder aus vielen Quellen, daher kein next/image
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} loading={eager ? "eager" : "lazy"} decoding="async" referrerPolicy="no-referrer" onError={() => setFehler(true)} />
+    <>
+      {/* Externe Bilder aus vielen Quellen, daher kein next/image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={aktuell}
+        src={aktuell}
+        alt={istSymbol ? "Symbolbild" : alt}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setFehler((n) => n + 1)}
+      />
+      {istSymbol && <span className="bild__symbol">Symbolbild</span>}
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import { BildImg, HerzButton } from "./client";
 import { katStil, kategorie } from "@/lib/kategorien";
 import { metaZeile } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
+import { symbolbild } from "@/lib/symbolbild";
 import type { DddEvent } from "@/lib/typen";
 
 export function eventPfad(e: DddEvent) {
@@ -21,7 +22,7 @@ export function Icon({ name, className }: { name: string; className?: string }) 
 export function Bild({ e, className = "", eager = false, children }: { e: DddEvent; className?: string; eager?: boolean; children?: React.ReactNode }) {
   return (
     <div className={`bild ${className}`} style={katStil(e.kategorie)}>
-      <BildImg src={e.bild_url} alt="" icon={kategorie(e.kategorie).icon} eager={eager} />
+      <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} />
       {children}
     </div>
   );

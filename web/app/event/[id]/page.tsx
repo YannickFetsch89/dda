@@ -9,6 +9,7 @@ import { eventLaden, eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, nachBeliebtheit } from "@/lib/ableitungen";
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
+import { symbolbild } from "@/lib/symbolbild";
 
 export async function generateMetadata(props: PageProps<"/event/[id]">): Promise<Metadata> {
   const { id } = await props.params;
@@ -18,7 +19,7 @@ export async function generateMetadata(props: PageProps<"/event/[id]">): Promise
   return {
     title: e.titel,
     description: beschreibung,
-    openGraph: { title: e.titel, description: beschreibung, images: e.bild_url ? [e.bild_url] : undefined },
+    openGraph: { title: e.titel, description: beschreibung, images: [e.bild_url ?? symbolbild(e)].filter((b): b is string => !!b) },
   };
 }
 

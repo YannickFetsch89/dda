@@ -208,6 +208,13 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .bild img { position: relative; width: 100%; height: 100%; object-fit: cover; }
 .bild__platzhalter { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--k-deep); opacity: 0.55; }
 .bild__platzhalter .icon { font-size: 34px; }
+/* Kennzeichnung für Symbolbilder (Events ohne eigenes Foto) */
+.bild__symbol {
+  position: absolute; right: 6px; bottom: 6px; padding: 2px 6px; border-radius: var(--r-pill);
+  background: rgb(0 0 0 / 0.45); color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.zeile__thumb .bild__symbol, .tl__karte .bild__symbol { display: none; }
 
 /* ---------- Badges ---------- */
 .badge {
