@@ -61,4 +61,8 @@ CREATE INDEX IF NOT EXISTS idx_events_featured   ON events (tipp_des_tages, high
 ALTER TABLE events ADD COLUMN IF NOT EXISTS stadtteil TEXT;
 CREATE INDEX IF NOT EXISTS idx_events_stadtteil ON events (stadtteil);
 
+-- Bild-Herkunft laut Datenstruktur (true = KI-generiert, false = vom Veranstalter);
+-- mehrere Tier-3-Scraper setzen das Feld, ohne Spalte schlägt das Speichern fehl
+ALTER TABLE events ADD COLUMN IF NOT EXISTS bild_generiert BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- Benutzer, Rollen (admin | user) und Row Level Security: siehe auth_rollen.sql
