@@ -14,11 +14,13 @@ from datetime import date, timedelta
 
 import streamlit as st
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import Client
 
 # Projektpfad hinzufügen damit Imports funktionieren
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
+
+from dashboard.auth import abmelden_button, admin_client  # noqa: E402
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
@@ -51,14 +53,9 @@ FEATURED_LABEL = {
 
 # ── Datenbankverbindung ───────────────────────────────────────────────────────
 
-@st.cache_resource
 def get_db() -> Client:
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    if not url or not key:
-        st.error("SUPABASE_URL / SUPABASE_KEY fehlen in .env")
-        st.stop()
-    return create_client(url, key)
+    """Client des angemeldeten Admins (pro Browser-Sitzung, siehe auth.py)."""
+    return admin_client()
 
 
 def events_laden(
@@ -288,6 +285,7 @@ def sidebar_rendern():
     with st.sidebar:
         st.title("🎭 DiesDasDüsseldorf")
         st.caption("Admin-Dashboard")
+        abmelden_button()
         st.divider()
 
         # Stats
@@ -469,6 +467,8 @@ def tab_featured(von: date, bis: date):
 # ── Hauptprogramm ─────────────────────────────────────────────────────────────
 
 def main():
+    # Ohne Admin-Login endet die Seite hier mit dem Login-Formular
+    admin_client()
     von, bis, kategorie_filter, stadtteil_filter = sidebar_rendern()
 
     st.title("🎭 DiesDasDüsseldorf – Event-Planer")

@@ -60,3 +60,5 @@ CREATE INDEX IF NOT EXISTS idx_events_featured   ON events (tipp_des_tages, high
 -- Stadtteil-Zuordnung (automatisch über Venue-Name, PLZ oder Straße)
 ALTER TABLE events ADD COLUMN IF NOT EXISTS stadtteil TEXT;
 CREATE INDEX IF NOT EXISTS idx_events_stadtteil ON events (stadtteil);
+
+-- Benutzer, Rollen (admin | user) und Row Level Security: siehe auth_rollen.sql

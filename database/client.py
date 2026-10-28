@@ -90,11 +90,19 @@ def get_supabase_client() -> Client:
         return _supabase_client
 
     url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
+    # Die Pipeline schreibt Events und braucht dafür den service_role-Key (umgeht RLS).
+    # SUPABASE_KEY (anon) reicht seit Einführung der Rollen nur noch zum Lesen.
+    key = os.getenv("SUPABASE_SERVICE_KEY")
+    if not key:
+        key = os.getenv("SUPABASE_KEY")
+        logger.warning(
+            "SUPABASE_SERVICE_KEY fehlt – nutze SUPABASE_KEY. "
+            "Mit aktiver RLS schlägt das Speichern von Events damit fehl."
+        )
 
     if not url or not key:
         raise EnvironmentError(
-            "SUPABASE_URL und SUPABASE_KEY müssen in der .env Datei gesetzt sein."
+            "SUPABASE_URL und SUPABASE_SERVICE_KEY müssen in der .env Datei gesetzt sein."
         )
 
     try:

@@ -26,6 +26,7 @@ echo "$(date "+%F %T") Dashboard wird gestartet" >> "$LOG"
   --server.address 127.0.0.1 \
   --server.headless true \
   --browser.gatherUsageStats false \
+  --client.toolbarMode minimal \
   >> "$LOG" 2>&1 < /dev/null &
 echo $! > "$PIDDATEI"
 disown
