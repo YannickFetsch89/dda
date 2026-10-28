@@ -145,10 +145,34 @@ def _event_aus_artikel(artikel, heute: date) -> Optional[dict]:
         if date.fromisoformat(datum) < heute:
             return None
 
-        # Ort
+        # Ort und Stadt aus dem Meta-Block:
+        # <div class="event-teaser-meta" title="Stadt, Venue">
+        #   <div><span class="fw-bold">20:00</span> - <span class="text-primary">Stadt</span></div>
+        #   <div>Venue</div>
+        # </div>
+        # Achtung: "thumbnail-copyright" (Bildnachweis, z.B. "© Eventim") ist KEIN Ort.
         ort = None
+        stadt = None
+        meta = artikel.find(class_="event-teaser-meta")
+        if meta:
+            stadt_el = meta.find("span", class_="text-primary")
+            stadt = stadt_el.get_text(strip=True) if stadt_el else None
+            zeit_el = meta.find("span", class_="fw-bold")
+            if zeit_el and not uhrzeit:
+                uhrzeit = uhrzeit_parsen(zeit_el.get_text(strip=True))
+            zeilen = [d.get_text(strip=True) for d in meta.find_all("div", recursive=False)]
+            if len(zeilen) >= 2 and zeilen[-1]:
+                ort = zeilen[-1]
+            elif stadt:
+                ort = stadt
+
+        # Absage/Status steht als Overlay auf dem Bild ("Abgesagt")
+        overlay = artikel.find(class_="teaser-thumbnail-overlay")
+        status_text = overlay.get_text(strip=True).lower() if overlay else ""
+        abgesagt = "abgesagt" in status_text or "entfällt" in status_text
+
         ort_indikatoren = ["location", "venue", "ort", "place"]
-        for el in artikel.find_all(True):
+        for el in ([] if ort else artikel.find_all(True)):
             klassen = el.get("class", [])
             klassen_str = " ".join(klassen).lower() if isinstance(klassen, list) else str(klassen).lower()
             if any(ind in klassen_str for ind in ort_indikatoren):
@@ -157,22 +181,23 @@ def _event_aus_artikel(artikel, heute: date) -> Optional[dict]:
                     ort = text
                     break
 
-        if not ort:
-            # Fallback: zweiter signifikanter Text nach dem Datum
-            for text in alle_texte:
-                if text == titel:
-                    continue
-                if datum_parsen(text):
-                    continue
-                if len(text) > 3 and not text.isdigit():
-                    ort = text
-                    break
+        # Bildnachweise ("© Eventim", "Quelle: Reservix") nie als Ort übernehmen
+        if ort and (ort.startswith("©") or ort.lower().startswith("quelle:")):
+            ort = None
 
         if not ort:
             ort = "Düsseldorf"
 
-        # Kategorie
-        kategorie_el = artikel.find(class_=lambda c: c and "kategorie" in c.lower() if c else False)
+        # Adresse für Karte/Route: Venue + Stadt (PRINZ listet auch Events im Umland)
+        if stadt and stadt.lower() not in ort.lower():
+            adresse = f"{ort}, {stadt}"
+        else:
+            adresse = ort if stadt else None
+
+        # Kategorie (PRINZ: <div class="event-teaser-category">Bühne, Theater &amp; Show</div>)
+        kategorie_el = artikel.find(class_="event-teaser-category") or artikel.find(
+            class_=lambda c: c and "kategorie" in c.lower() if c else False
+        )
         kategorie_text = kategorie_el.get_text(strip=True) if kategorie_el else ""
         kategorie = _kategorie_aus_text(kategorie_text)
 
@@ -191,7 +216,8 @@ def _event_aus_artikel(artikel, heute: date) -> Optional[dict]:
             "datum": datum,
             "uhrzeit": uhrzeit,
             "ort": ort,
-            "adresse": None,
+            "adresse": adresse,
+            "abgesagt": abgesagt,
             "kategorie": kategorie,
             "beschreibung": None,
             "preis": None,
@@ -285,7 +311,7 @@ def scrape() -> list[dict]:
                 gesehene_urls.add(event_url)
                 events.append(event)
 
-    # 14-Tage-Fenster
+    # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE)
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 

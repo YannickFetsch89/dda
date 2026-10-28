@@ -71,7 +71,7 @@ KATEGORIEN = [
 RATE_LIMIT_SEKUNDEN = 2  # Mindestwartezeit zwischen Requests
 MAX_RETRIES = 3
 BACKOFF_FAKTOR = 2  # Exponentielles Backoff
-SCRAPER_VORSCHAU_TAGE = 14  # Wie viele Tage in die Zukunft Events gesammelt werden
+SCRAPER_VORSCHAU_TAGE = 60  # Wie viele Tage in die Zukunft Events gesammelt werden (Website zeigt ebenfalls 60)
 
 # --- Scheduler ---
 SCHEDULER_UHRZEIT = "06:00"  # Täglicher Start der Pipeline

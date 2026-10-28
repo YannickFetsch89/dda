@@ -268,7 +268,7 @@ def scrape() -> list[dict]:
     except Exception as fehler:
         logger.error("Fehler beim Scrapen: %s", str(fehler))
 
-    # 14-Tage-Fenster
+    # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE)
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 

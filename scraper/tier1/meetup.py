@@ -346,7 +346,7 @@ def scrape() -> list[dict]:
     if not events:
         logger.warning("Meetup GraphQL lieferte keine Events")
 
-    # 14-Tage-Fenster anwenden
+    # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE) anwenden
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
     logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
     return events

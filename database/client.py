@@ -22,6 +22,7 @@ _IGNORE_FELDER = {"id", "erstellt_am", "gepostet_am"}
 
 # Felder die bei bereits gespeicherten Events ergänzt werden dürfen
 _ANREICHERBARE_FELDER: list[str] = [
+    "abgesagt",  # False → True, wenn eine Quelle die Absage meldet
     "adresse",
     "uhrzeit",
     "beschreibung",

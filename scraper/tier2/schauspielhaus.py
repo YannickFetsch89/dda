@@ -1124,7 +1124,7 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
     else:
-        # 14-Tage-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
+        # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
         enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
         alle_events = [e for e in alle_events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info(

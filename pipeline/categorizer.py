@@ -7,6 +7,7 @@ Erstellt: 2026-02-24
 import logging
 import os
 import time
+from datetime import date
 
 import anthropic
 from dotenv import load_dotenv
@@ -183,6 +184,9 @@ def kategorisieren(limit: int = 10) -> int:
             .select("id, titel, ort, datum, datum_bis, preis, kategorie")
             .eq("status", "neu")
             .is_("beschreibung", "null")
+            # Nächste Events zuerst, vergangene nicht mehr kategorisieren
+            .gte("datum", date.today().isoformat())
+            .order("datum")
             .limit(limit)
             .execute()
         )

@@ -65,4 +65,8 @@ CREATE INDEX IF NOT EXISTS idx_events_stadtteil ON events (stadtteil);
 -- mehrere Tier-3-Scraper setzen das Feld, ohne Spalte schlägt das Speichern fehl
 ALTER TABLE events ADD COLUMN IF NOT EXISTS bild_generiert BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Abgesagte Events bleiben im Kalender, werden aber markiert und nicht mehr hervorgehoben
+ALTER TABLE events ADD COLUMN IF NOT EXISTS abgesagt BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS idx_events_abgesagt ON events (abgesagt);
+
 -- Benutzer, Rollen (admin | user) und Row Level Security: siehe auth_rollen.sql

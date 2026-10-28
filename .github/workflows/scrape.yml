@@ -4,7 +4,9 @@ name: Täglicher Scraper-Lauf
 # Systembibliotheken für Chromium, die Playwright-Scraper starten dort nicht.
 on:
   schedule:
-    # GitHub rechnet in UTC: 05:00 UTC = 06:00 Uhr (Winterzeit) bzw. 07:00 Uhr (Sommerzeit)
+    # GitHub rechnet in UTC: 05:00 UTC = 06:00 Uhr (Winterzeit) bzw. 07:00 Uhr (Sommerzeit).
+    # Täglich angestoßen, der Job "rhythmus" lässt aber nur jeden 3. Tag durch
+    # (ein Cron mit */3 würde am Monatsende springen, z.B. 31. und direkt danach 1.).
     - cron: "0 5 * * *"
   workflow_dispatch:
 
@@ -14,7 +16,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  rhythmus:
+    runs-on: ubuntu-latest
+    outputs:
+      laufen: ${{ steps.pruefen.outputs.laufen }}
+    steps:
+      - name: Alle 3 Tage laufen (manueller Start immer)
+        id: pruefen
+        run: |
+          tag=$(( $(date -u +%s) / 86400 ))
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ $(( tag % 3 )) -eq 0 ]; then
+            echo "laufen=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "laufen=false" >> "$GITHUB_OUTPUT"
+            echo "Heute kein Lauf (nächster in $(( 3 - tag % 3 )) Tag(en))"
+          fi
+
   pipeline:
+    needs: rhythmus
+    if: needs.rhythmus.outputs.laufen == 'true'
     # 22.04: Playwright 1.44 unterstützt neuere Ubuntu-Versionen noch nicht offiziell
     runs-on: ubuntu-22.04
     timeout-minutes: 45

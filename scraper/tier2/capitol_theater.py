@@ -247,7 +247,7 @@ def scrape() -> list[dict]:
         logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(fehler))
         return []
 
-    # 14-Tage-Fenster
+    # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE)
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 

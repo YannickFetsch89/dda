@@ -386,7 +386,7 @@ def scrape() -> list[dict]:
             events = _events_aus_html(soup, heute)
             logger.info("HTML-Fallback: %d Events gefunden", len(events))
 
-        # 14-Tage-Fenster anwenden
+        # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE) anwenden
         events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info("Scraper %s fertig: %d Events nach Datumsfilter", QUELLE_NAME, len(events))
         return events

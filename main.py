@@ -304,7 +304,8 @@ async def pipeline_ausfuehren():
     # Schritt 3: Kategorisierung
     logger.info("--- Schritt 3: Kategorisierung ---")
     from pipeline import categorizer
-    anzahl_kategorisiert = categorizer.kategorisieren(limit=100)
+    # 300 pro Lauf: bei 60 Tagen Vorschau und Lauf alle 3 Tage kommen deutlich mehr neue Events
+    anzahl_kategorisiert = categorizer.kategorisieren(limit=300)
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
 
     # Schritt 4: Caption-Generierung
