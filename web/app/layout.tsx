@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   title: { default: "dies.das.düsseldorf – Was geht heute in Düsseldorf?", template: "%s · dies.das.düsseldorf" },
   description: "Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Kultur, Food, Nightlife, Familie und mehr – nach Tag, Kategorie und Stadtteil.",
   openGraph: { siteName: "dies.das.düsseldorf", locale: "de_DE", type: "website" },
+  // Google Search Console (HTML-Tag-Methode); Token kommt aus .env.local, wird beim Build eingesetzt
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export const viewport: Viewport = {

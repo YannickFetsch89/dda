@@ -1,0 +1,53 @@
+name: Täglicher Scraper-Lauf
+
+# Die Pipeline läuft hier statt auf dem Server: Im Jail des Timme-Servers fehlen
+# Systembibliotheken für Chromium, die Playwright-Scraper starten dort nicht.
+on:
+  schedule:
+    # GitHub rechnet in UTC: 05:00 UTC = 06:00 Uhr (Winterzeit) bzw. 07:00 Uhr (Sommerzeit)
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+# Nie zwei Läufe gleichzeitig
+concurrency:
+  group: scraper
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    # 22.04: Playwright 1.44 unterstützt neuere Ubuntu-Versionen noch nicht offiziell
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python-Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Chromium für Playwright installieren
+        run: python -m playwright install --with-deps chromium
+
+      - name: Pipeline ausführen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TZ: Europe/Berlin
+        run: |
+          mkdir -p logs
+          python main.py --jetzt
+
+      - name: Log aufbewahren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-log-${{ github.run_number }}
+          path: logs/pipeline.log
+          retention-days: 14
