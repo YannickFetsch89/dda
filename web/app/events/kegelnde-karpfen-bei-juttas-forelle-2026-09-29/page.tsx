@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
 };
 
-const PFAD = "/events/kegelnde-karpfen-bei-juttasforelle-202609-29";
+const PFAD = "/events/kegelnde-karpfen-bei-juttas-forelle-2026-09-29";
 const ADRESSE = "Juttas Forelle, Sonnenstraße 56, 40227 Düsseldorf";
 
 function routenLink(adresse: string) {
@@ -122,7 +122,7 @@ export default function KegelndeKarpfenSeite() {
               <p style={{ margin: 0, lineHeight: 1.7 }}>
                 Eintritt ist nur autorisierten Personen gestattet. Es besteht die Möglichkeit,
                 geteert und gefedert zu werden, wenn man keine gültige Einladung vorweisen kann.
-                Die Kegelnden Karpfen übernehmen keine Haftung für Feder-Rückstände in der Kleidung.
+                Die Kegelnden Karpfen übernehmen keine Haftung für Verletzungen jeglicher Art.
               </p>
             </section>
           </div>
