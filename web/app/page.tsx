@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
+import { KalenderToggle } from "@/components/datum-waehler";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, SkeletonKarten, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
@@ -116,6 +117,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
                 </span>
               </Link>
             ))}
+            <KalenderToggle heute={heute} ziel="/" />
           </nav>
           <div className="schnellfilter nur-mobil" aria-label="Zeitraum">
             {SCHNELLFILTER.map((s) => (

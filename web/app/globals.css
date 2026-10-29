@@ -126,11 +126,10 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .kopf__nav a { padding: 9px 10px; }
 }
 .datum-pill { position: relative; }
-.datum-pill > summary {
-  list-style: none; display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: var(--r-pill);
+.datum-pill__btn {
+  display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: var(--r-pill);
   background: var(--ddd-surface); border: 1px solid var(--ddd-border); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
-.datum-pill > summary::-webkit-details-marker { display: none; }
 .datum-pill .icon { font-size: 16px; color: inherit; }
 
 .popover {
@@ -725,6 +724,37 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .daten-hinweis .container { display: flex; gap: 8px; align-items: center; }
 .daten-hinweis .icon { font-size: 18px; }
 :root[data-theme="dark"] .daten-hinweis { background: #3a3220; color: #f0dca0; }
+
+/* ---------- Kalender (Datum-Wähler) ---------- */
+.kalender { width: 280px; padding: 8px; }
+.kalender__kopf { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.kalender__monat { font-size: 14px; font-weight: 700; }
+.kalender__pfeil { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.kalender__pfeil:hover:not(:disabled) { background: var(--ddd-bg); }
+.kalender__pfeil:disabled { opacity: 0.3; cursor: default; }
+.kalender__pfeil .icon { font-size: 20px; }
+.kalender__wt { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; font-weight: 600; color: var(--ddd-text-muted); margin-bottom: 4px; }
+.kalender__tage { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.kalender__tag { height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; cursor: pointer; }
+.kalender__tag:hover:not(:disabled) { background: var(--ddd-gold-tint); color: var(--ddd-navy); }
+.kalender__tag:disabled { opacity: 0.25; cursor: default; }
+.kalender__tag--heute { background: var(--ddd-gold); color: var(--ddd-navy); font-weight: 700; }
+.kalender__tag--heute:hover:not(:disabled) { background: var(--ddd-gold-hover); }
+
+.kalender-toggle { display: inline-flex; position: relative; }
+.kalender-dropdown {
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 50;
+  background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-radius: var(--r-md); box-shadow: var(--sh-l);
+}
+
+.popover-kalender-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; color: var(--ddd-text-body); cursor: pointer;
+}
+.popover-kalender-btn:hover { background: var(--ddd-bg); }
+.popover-kalender {
+  padding: 4px 8px 8px; border-top: 1px solid var(--ddd-border); margin-top: 4px;
+}
 
 /* ---------- Cookie-Banner ---------- */
 .cookie-banner {

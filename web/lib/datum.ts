@@ -96,6 +96,7 @@ export const ZEITRAUM_OPTIONEN = [
   { key: "wochenende", label: "Dieses Wochenende" },
   { key: "woche", label: "Diese Woche" },
   { key: "monat", label: "Nächste 30 Tage" },
+  { key: "alle", label: "60 Tage" },
 ];
 
 /** Nächstes (bzw. laufendes) Wochenende Fr–So. */
@@ -121,7 +122,7 @@ export function zeitraumAuflösen(eingabe: string | undefined, heute: string): Z
     case "monat":
       return { key, label: "Nächste 30 Tage", von: heute, bis: plusTage(heute, 29) };
     case "alle":
-      return { key, label: "Alle Termine", von: heute, bis: plusTage(heute, 365) };
+      return { key, label: "60 Tage", von: heute, bis: plusTage(heute, 59) };
     default:
       return { key: "heute", label: "Heute", von: heute, bis: heute };
   }

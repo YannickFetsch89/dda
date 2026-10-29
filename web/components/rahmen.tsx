@@ -1,6 +1,7 @@
 // Seitenrahmen: Header, Kategorie-Leiste, Footer
 import Link from "next/link";
 import { KopfNav, ThemeToggle } from "./client";
+import { DatumPill } from "./datum-waehler";
 import { Icon } from "./karten";
 import { KATEGORIEN, katStil } from "@/lib/kategorien";
 import { eventPoolLaden } from "@/lib/daten";
@@ -30,20 +31,7 @@ export function Kopf() {
             Suche
           </label>
           <input id="kopf-suche" name="q" type="search" placeholder="Events, Orte, Künstler …" />
-          <details className="datum-pill">
-            <summary>
-              <Icon name="calendar_today" />
-              Heute
-              <Icon name="expand_more" />
-            </summary>
-            <div className="popover">
-              {ZEITRAUM_OPTIONEN.map((z) => (
-                <Link key={z.key} href={`/entdecken?datum=${z.key}`}>
-                  {z.label}
-                </Link>
-              ))}
-            </div>
-          </details>
+          <DatumPill />
         </form>
         <KopfNav />
         <div className="kopf__aktionen">
