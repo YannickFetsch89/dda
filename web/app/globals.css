@@ -160,6 +160,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .btn--navy:hover { background: var(--ddd-navy-hover); color: var(--ddd-on-navy); }
 .btn--outline { border: 1.5px solid var(--ddd-text); color: var(--ddd-text); }
 .btn--outline:hover { background: var(--ddd-text); color: var(--ddd-bg); }
+.btn--klein { height: 36px; font-size: 13px; padding: 0 14px; }
 .btn--gross { height: 48px; font-size: 15px; padding: 0 20px; }
 .btn--block { width: 100%; }
 .btn[aria-disabled="true"] { background: var(--ddd-disabled-bg); color: var(--ddd-disabled-fg); pointer-events: none; }
@@ -724,3 +725,24 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .daten-hinweis .container { display: flex; gap: 8px; align-items: center; }
 .daten-hinweis .icon { font-size: 18px; }
 :root[data-theme="dark"] .daten-hinweis { background: #3a3220; color: #f0dca0; }
+
+/* ---------- Cookie-Banner ---------- */
+.cookie-banner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+  background: var(--ddd-navy); color: var(--ddd-on-navy);
+  padding: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 20px;
+  box-shadow: 0 -2px 12px rgba(0,0,0,.25); font-size: 14px; line-height: 1.5;
+}
+.cookie-banner a { color: var(--ddd-gold); text-decoration: underline; }
+.cookie-banner__btns { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ---------- Rechtliche Seiten (Impressum, Datenschutz) ---------- */
+.rechtliches { max-width: 720px; padding-top: 32px; padding-bottom: 56px; }
+.rechtliches h1 { margin-bottom: 4px; }
+.rechtliches .klein { font-size: 13px; color: var(--ddd-text-muted); margin-bottom: 32px; }
+.rechtliches h2 { font-size: 18px; font-weight: 700; margin-top: 32px; margin-bottom: 8px; }
+.rechtliches p { font-size: 15px; line-height: 1.7; color: var(--ddd-text-body); margin-bottom: 12px; }
+.rechtliches ul { list-style: disc; padding-left: 20px; margin-bottom: 12px; }
+.rechtliches li { font-size: 15px; line-height: 1.7; color: var(--ddd-text-body); margin-bottom: 4px; }
+.rechtliches a { color: var(--ddd-gold); text-decoration: underline; }
+.rechtliches code { font-size: 13px; background: var(--ddd-surface); padding: 2px 6px; border-radius: 4px; }
