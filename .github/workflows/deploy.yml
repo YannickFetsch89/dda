@@ -11,13 +11,25 @@ jobs:
     steps:
       - name: Code auf Server deployen
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: SUPABASE_SERVICE_KEY
           script: |
             set -e
             cd /home/dies_das_duesseldorfadmin/dda
+
+            # SUPABASE_SERVICE_KEY in .env eintragen (falls noch nicht vorhanden)
+            if ! grep -q "^SUPABASE_SERVICE_KEY=" .env 2>/dev/null; then
+              echo "SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY" >> .env
+              echo "Service Key in .env eingetragen"
+            elif [ -n "$SUPABASE_SERVICE_KEY" ]; then
+              sed -i "s|^SUPABASE_SERVICE_KEY=.*|SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY|" .env
+              echo "Service Key in .env aktualisiert"
+            fi
 
             # Umgebungsvariablen für uv/Python
             export LD_LIBRARY_PATH="/home/dies_das_duesseldorfadmin/.local/lib:$LD_LIBRARY_PATH"
