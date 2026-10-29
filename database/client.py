@@ -11,6 +11,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
+from pipeline.slug_generator import slug_fuer_event
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -165,6 +167,12 @@ def events_speichern(events: list[dict]) -> dict:
             )
 
             if not treffer.data:
+                # Slug generieren falls nicht vorhanden
+                if "slug" not in datensatz or not datensatz.get("slug"):
+                    slug = slug_fuer_event(event)
+                    if slug:
+                        datensatz["slug"] = slug
+
                 # Neues Event: direkt einfügen
                 db.table("events").insert(datensatz).execute()
                 gespeichert += 1

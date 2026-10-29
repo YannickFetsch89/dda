@@ -70,3 +70,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS abgesagt BOOLEAN NOT NULL DEFAULT FA
 CREATE INDEX IF NOT EXISTS idx_events_abgesagt ON events (abgesagt);
 
 -- Benutzer, Rollen (admin | user) und Row Level Security: siehe auth_rollen.sql
+
+-- SEO-Slug für lesbare Event-URLs (/event/{kategorie}/{slug})
+ALTER TABLE events ADD COLUMN IF NOT EXISTS slug TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_slug ON events (slug);
