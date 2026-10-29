@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@/components/karten";
 import { GoogleKarte, ZurueckButton, TeilenButton, TeilenLeiste } from "@/components/client";
@@ -7,6 +8,11 @@ export const metadata: Metadata = {
   title: "Kegelnde Karpfen bei Juttas Forelle",
   description: "Kegeln in lockerer Runde mit maximalsportlichem Ehrgeiz – Altbier inklusive. Nur für autorisierte Karpfen.",
   robots: { index: false, follow: false },
+  openGraph: {
+    title: "Kegelnde Karpfen bei Juttas Forelle",
+    description: "Kegeln in lockerer Runde – Altbier darf nicht fehlen. Champions-League-Saison in Vorbereitung.",
+    images: ["/img/karpfen/querkant.jpg"],
+  },
 };
 
 const PFAD = "/events/kegelnde-karpfen-bei-juttasforelle-202609-29";
@@ -20,19 +26,14 @@ export default function KegelndeKarpfenSeite() {
   return (
     <article>
       <div className="detail-hero">
-        <div
-          className="bild"
-          style={{
-            background: "linear-gradient(135deg, #1b2540 0%, #2a4a7f 50%, #c9a84c 100%)",
-            minHeight: 330,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            fontSize: 64,
-          }}
-        >
-          <span role="img" aria-label="Karpfen">🐟🎳</span>
+        <div className="bild" style={{ position: "relative", minHeight: 400, overflow: "hidden" }}>
+          <Image
+            src="/img/karpfen/hochkant.jpg"
+            alt="Kegelnde Karpfen auf der Bahn bei Juttas Forelle"
+            fill
+            priority
+            style={{ objectFit: "cover" }}
+          />
         </div>
         <div className="detail-hero__btns">
           <ZurueckButton />
@@ -94,6 +95,14 @@ export default function KegelndeKarpfenSeite() {
                 geklärt. Fest steht: Altbier fließt, Sprüche klopfen und wer alle Neune trifft,
                 darf den Rest des Abends als „El Capitán" angesprochen werden.
               </p>
+              <div style={{ position: "relative", width: "100%", aspectRatio: "16/10", borderRadius: 12, overflow: "hidden", margin: "16px 0" }}>
+                <Image
+                  src="/img/karpfen/querkant.jpg"
+                  alt="Die Kegelnden Karpfen in Aktion"
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
+              </div>
               <p>
                 Dresscode: Kegelhemd optional, Siegeswille Pflicht. Trainingslager findet an der
                 Theke statt.
