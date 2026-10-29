@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
 };
 
-const PFAD = "/events/kegelnde-karpfen-bei-juttas-forelle-2026-09-29";
+const PFAD = "/events/kegelnde-karpfen-bei-juttas-forelle-2026-10-29";
 const ADRESSE = "Juttas Forelle, Sonnenstraße 56, 40227 Düsseldorf";
 
 function routenLink(adresse: string) {
