@@ -5,11 +5,11 @@ import { eventPfad } from "@/components/karten";
 
 export const instant = false;
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ kategorie: string }> };
 
 export default async function LegacyEventSeite(props: Props) {
-  const { id } = await props.params;
-  const kennung = decodeURIComponent(id);
+  const { kategorie } = await props.params;
+  const kennung = decodeURIComponent(kategorie);
 
   if (!/^[0-9a-f-]{36}$/i.test(kennung)) notFound();
 
