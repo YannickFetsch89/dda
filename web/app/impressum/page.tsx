@@ -16,7 +16,7 @@ export default function ImpressumSeite() {
       <p>
         Rocktician e.&thinsp;K.
         <br />
-        Inhaber: Yannick Fetsch, B.Sc. Augenoptik/Optometrie
+        Inhaber: Yannick Fetsch
       </p>
 
       <h2>Anschrift</h2>

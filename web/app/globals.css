@@ -741,6 +741,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .rechtliches h1 { margin-bottom: 4px; }
 .rechtliches .klein { font-size: 13px; color: var(--ddd-text-muted); margin-bottom: 32px; }
 .rechtliches h2 { font-size: 18px; font-weight: 700; margin-top: 32px; margin-bottom: 8px; }
+.rechtliches h3 { font-size: 16px; font-weight: 600; margin-top: 20px; margin-bottom: 6px; }
 .rechtliches p { font-size: 15px; line-height: 1.7; color: var(--ddd-text-body); margin-bottom: 12px; }
 .rechtliches ul { list-style: disc; padding-left: 20px; margin-bottom: 12px; }
 .rechtliches li { font-size: 15px; line-height: 1.7; color: var(--ddd-text-body); margin-bottom: 4px; }

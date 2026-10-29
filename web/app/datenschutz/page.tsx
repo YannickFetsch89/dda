@@ -117,7 +117,46 @@ export default function DatenschutzSeite() {
         übermittelt. Sie können diese Daten jederzeit über die Browser-Einstellungen löschen.
       </p>
 
-      <h2>8. Externe Inhalte</h2>
+      <h2>8. Social-Media-Auftritte</h2>
+      <p>
+        Wir betreiben Auftritte in den folgenden sozialen Netzwerken:
+      </p>
+
+      <h3>Instagram und Facebook (Meta)</h3>
+      <p>
+        Wir betreiben eine Instagram-Seite und ggf. eine Facebook-Seite innerhalb der Meta-Plattformen.
+        Betreiber ist die Meta Platforms Ireland Limited, Merrion Road, Dublin 4, D04 X2K5, Irland. Wenn Sie
+        unsere Social-Media-Seiten besuchen, erhebt Meta Ihre Daten gemäß der{" "}
+        <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">
+          Meta-Datenschutzrichtlinie
+        </a>
+        . Dazu gehören u.&thinsp;a. Ihre IP-Adresse, Browser-Informationen und Ihr Nutzungsverhalten.
+      </p>
+      <p>
+        Wir nutzen die von Meta bereitgestellten Seitenstatistiken (Insights), um unser Angebot zu verbessern.
+        Diese Statistiken werden uns ausschließlich in anonymisierter bzw. aggregierter Form bereitgestellt. Wir
+        haben mit Meta eine Vereinbarung über die gemeinsame Verantwortlichkeit gemäß Art. 26 DSGVO
+        geschlossen. Weitere Informationen finden Sie in der{" "}
+        <a href="https://www.facebook.com/legal/terms/page_controller_addendum" target="_blank" rel="noopener">
+          Seiten-Insights-Ergänzung von Meta
+        </a>
+        .
+      </p>
+      <p>
+        Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Öffentlichkeitsarbeit und
+        Kommunikation mit Nutzern). Daten können in die USA übertragen werden. Meta stützt die Übermittlung auf
+        Standardvertragsklauseln gemäß Art. 46 Abs. 2 lit. c DSGVO.
+      </p>
+
+      <h3>Instagram Graph API (automatisches Posting)</h3>
+      <p>
+        Wir nutzen die Instagram Graph API, um automatisiert Inhalte auf unserem Instagram-Profil zu
+        veröffentlichen. Dabei werden ausschließlich von uns erstellte Inhalte (Event-Posts, Bilder,
+        Beschreibungen) an die Meta-Server übermittelt. Es werden keine personenbezogenen Daten unserer
+        Website-Nutzer an die Instagram Graph API übertragen.
+      </p>
+
+      <h2>9. Externe Inhalte und Drittanbieter</h2>
       <p>
         Auf unseren Seiten können Inhalte Dritter eingebunden sein:
       </p>
@@ -134,12 +173,38 @@ export default function DatenschutzSeite() {
           Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.
         </li>
         <li>
+          <b>Supabase:</b> Wir nutzen Supabase als Datenbank-Backend für die Speicherung von Event-Daten.
+          Supabase wird von Supabase, Inc., 970 Toa Payoh North #07-04, Singapore 318992 betrieben.
+          Event-Daten werden auf Supabase-Servern (AWS, Region EU) gespeichert. Es werden keine
+          personenbezogenen Daten von Nutzern in Supabase gespeichert.{" "}
+          <a href="https://supabase.com/privacy" target="_blank" rel="noopener">
+            Datenschutzerklärung von Supabase
+          </a>
+        </li>
+        <li>
           <b>Event-Bilder:</b> Bilder können von externen Quellen (Veranstalter-Websites) stammen. Beim Laden
           dieser Bilder wird Ihre IP-Adresse an den jeweiligen Server übermittelt.
         </li>
       </ul>
 
-      <h2>9. Kontaktaufnahme</h2>
+      <h2>10. KI-basierte Datenverarbeitung</h2>
+      <p>
+        Wir nutzen künstliche Intelligenz (Anthropic Claude API und OpenAI DALL-E) zur automatisierten
+        Aufbereitung von Event-Daten. Dies umfasst die Kategorisierung von Events, die Erstellung von
+        Beschreibungstexten und ggf. die Generierung von Vorschaubildern. Es werden dabei ausschließlich
+        öffentlich verfügbare Event-Informationen verarbeitet, keine personenbezogenen Daten von Nutzern.
+      </p>
+
+      <h2>11. Newsletter</h2>
+      <p>
+        Wenn Sie unseren Newsletter abonnieren, wird Ihre E-Mail-Adresse für den regelmäßigen Versand
+        gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Sie können den Newsletter
+        jederzeit über den Abmeldelink in jeder E-Mail oder per E-Mail an{" "}
+        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> abbestellen. Nach Abmeldung wird Ihre
+        E-Mail-Adresse unverzüglich gelöscht.
+      </p>
+
+      <h2>12. Kontaktaufnahme</h2>
       <p>
         Wenn Sie uns per E-Mail kontaktieren, werden Ihre Angaben einschließlich der von Ihnen angegebenen
         Kontaktdaten zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert.
@@ -148,7 +213,7 @@ export default function DatenschutzSeite() {
         Interesse).
       </p>
 
-      <h2>10. Ihre Rechte</h2>
+      <h2>13. Ihre Rechte</h2>
       <p>Sie haben jederzeit das Recht auf:</p>
       <ul>
         <li><b>Auskunft</b> über Ihre bei uns gespeicherten personenbezogenen Daten (Art. 15 DSGVO)</li>
@@ -168,7 +233,7 @@ export default function DatenschutzSeite() {
         personenbezogenen Daten zu beschweren.
       </p>
 
-      <h2>11. Keine Weitergabe an Dritte</h2>
+      <h2>14. Keine Weitergabe an Dritte</h2>
       <p>
         Eine Übermittlung Ihrer persönlichen Daten an Dritte zu anderen als den im Folgenden aufgeführten
         Zwecken findet nicht statt. Wir geben Ihre persönlichen Daten nur an Dritte weiter, wenn Sie Ihre
@@ -176,12 +241,20 @@ export default function DatenschutzSeite() {
         erforderlich ist oder eine gesetzliche Verpflichtung besteht.
       </p>
 
-      <h2>12. Widerspruch gegen Werbe-Mails</h2>
+      <h2>15. Widerspruch gegen Werbe-Mails</h2>
       <p>
         Der Nutzung von im Rahmen der Impressumspflicht veröffentlichten Kontaktdaten zur Übersendung von
         nicht ausdrücklich angeforderter Werbung und Informationsmaterialien wird hiermit widersprochen. Der
         Betreiber der Seiten behält sich ausdrücklich rechtliche Schritte im Falle der unverlangten Zusendung
         von Werbeinformationen vor.
+      </p>
+
+      <h2>16. Aktualität und Änderung dieser Datenschutzerklärung</h2>
+      <p>
+        Diese Datenschutzerklärung ist aktuell gültig und hat den Stand Oktober 2026. Durch die
+        Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben
+        kann es notwendig werden, diese Datenschutzerklärung zu ändern. Die jeweils aktuelle Fassung kann
+        jederzeit auf dieser Seite abgerufen werden.
       </p>
 
       <p style={{ marginTop: 48 }}>
