@@ -5,17 +5,17 @@ import { Icon } from "@/components/karten";
 import { GoogleKarte, ZurueckButton, TeilenButton, TeilenLeiste } from "@/components/client";
 
 export const metadata: Metadata = {
-  title: "Kegelnde Karpfen bei Juttas Forelle",
+  title: "Kegelnde Karpfen in Juttas Forelle",
   description: "Kegeln in lockerer Runde mit maximalsportlichem Ehrgeiz – Altbier inklusive. Nur für autorisierte Karpfen.",
   robots: { index: false, follow: false },
   openGraph: {
-    title: "Kegelnde Karpfen bei Juttas Forelle",
+    title: "Kegelnde Karpfen in Juttas Forelle",
     description: "Kegeln in lockerer Runde – Altbier darf nicht fehlen. Champions-League-Saison in Vorbereitung.",
     images: ["/img/karpfen/querkant.jpg"],
   },
 };
 
-const PFAD = "/events/kegelnde-karpfen-bei-juttas-forelle-2026-10-29";
+const PFAD = "/events/kegelnde-karpfen-in-juttas-forelle-2026-10-29";
 const ADRESSE = "Juttas Forelle, Sonnenstraße 56, 40227 Düsseldorf";
 
 function routenLink(adresse: string) {
@@ -29,7 +29,7 @@ export default function KegelndeKarpfenSeite() {
         <div className="bild" style={{ position: "relative", minHeight: 400, overflow: "hidden" }}>
           <Image
             src="/img/karpfen/hochkant.jpg"
-            alt="Kegelnde Karpfen auf der Bahn bei Juttas Forelle"
+            alt="Kegelnde Karpfen auf der Bahn in Juttas Forelle"
             fill
             priority
             style={{ objectFit: "cover" }}
@@ -38,7 +38,7 @@ export default function KegelndeKarpfenSeite() {
         <div className="detail-hero__btns">
           <ZurueckButton />
           <div>
-            <TeilenButton titel="Kegelnde Karpfen bei Juttas Forelle" pfad={PFAD} />
+            <TeilenButton titel="Kegelnde Karpfen in Juttas Forelle" pfad={PFAD} />
           </div>
         </div>
       </div>
@@ -51,7 +51,7 @@ export default function KegelndeKarpfenSeite() {
                 <Icon name="sports" />
                 Kegeln
               </span>
-              <h1 className="detail__titel d">Kegelnde Karpfen bei Juttas Forelle</h1>
+              <h1 className="detail__titel d">Kegelnde Karpfen in Juttas Forelle</h1>
 
               <div className="infozeilen">
                 <div className="infozeile">
@@ -132,7 +132,7 @@ export default function KegelndeKarpfenSeite() {
               <h2 className="d" style={{ fontSize: 22 }}>
                 Teilen
               </h2>
-              <TeilenLeiste titel="Kegelnde Karpfen bei Juttas Forelle" pfad={PFAD} />
+              <TeilenLeiste titel="Kegelnde Karpfen in Juttas Forelle" pfad={PFAD} />
             </section>
             <Link className="link" href="/entdecken?stadtteil=oberbilk&datum=woche">
               Mehr in Oberbilk <Icon name="arrow_forward" />
