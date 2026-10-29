@@ -32,6 +32,7 @@ export interface DddEvent {
   tipp_des_tages: boolean;
   highlight_der_woche: boolean;
   top_event_des_monats: boolean;
+  slug: string | null;
   /** Bleibt im Kalender sichtbar (markiert), fällt aber aus allen Hervorhebungen und der Startseite */
   abgesagt: boolean;
 }

@@ -8,6 +8,7 @@ import { symbolbild } from "@/lib/symbolbild";
 import type { DddEvent } from "@/lib/typen";
 
 export function eventPfad(e: DddEvent) {
+  if (e.slug) return `/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug)}`;
   return `/event/${encodeURIComponent(e.id)}`;
 }
 

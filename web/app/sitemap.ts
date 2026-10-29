@@ -28,12 +28,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Beispiel-Events (Fallback ohne Supabase) gehören nicht in die Sitemap
   const events: MetadataRoute.Sitemap =
     pool.quelle === "supabase"
-      ? pool.events.map((e) => ({
-          url: `${SITE_URL}/event/${encodeURIComponent(e.id)}`,
-          lastModified: e.erstellt_am ? new Date(e.erstellt_am) : jetzt,
-          changeFrequency: "weekly",
-          priority: 0.5,
-        }))
+      ? pool.events
+          .filter((e) => e.slug)
+          .map((e) => ({
+            url: `${SITE_URL}/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug!)}`,
+            lastModified: e.erstellt_am ? new Date(e.erstellt_am) : jetzt,
+            changeFrequency: "weekly",
+            priority: 0.5,
+          }))
       : [];
 
   return [...feste, ...tage, ...events];

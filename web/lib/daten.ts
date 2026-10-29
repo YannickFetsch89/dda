@@ -8,7 +8,7 @@ import { heuteBerlin, plusTage, tageZwischen } from "./datum";
 import type { DddEvent, EventPool } from "./typen";
 
 const SPALTEN_BASIS =
-  "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
+  "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
 // Spalte "abgesagt" ist neu; fehlt sie in der DB noch, wird ohne sie geladen (siehe spaltenFehlt)
 const SPALTEN = `${SPALTEN_BASIS}, abgesagt`;
 
@@ -48,6 +48,7 @@ function normalisieren(z: Zeile): DddEvent {
     quelle_url: text(z.quelle_url),
     bild_url: text(z.bild_url),
     stadtteil: text(z.stadtteil),
+    slug: text(z.slug),
     erstellt_am: text(z.erstellt_am),
     tipp_des_tages: z.tipp_des_tages === true,
     highlight_der_woche: z.highlight_der_woche === true,
@@ -117,10 +118,12 @@ function beispielEvents(heute: string, jetzt: Date): DddEvent[] {
   return (beispiel as Zeile[]).map((z) => {
     const e = normalisieren(z);
     const id = e.id;
+    const datum = plusTage(e.datum, versatz);
     return {
       ...e,
       id: `beispiel-${id}`,
-      datum: plusTage(e.datum, versatz),
+      datum,
+      slug: `beispiel-${id}-${datum}`,
       stadtteil: BEISPIEL_STADTTEIL[e.ort] ?? e.ort,
       quelle_name: "Beispieldaten",
       erstellt_am: new Date(jetzt.getTime() - (FRISCH.has(id) ? 10 : 72) * 3_600_000).toISOString(),
@@ -147,25 +150,29 @@ export async function eventPoolLaden(): Promise<EventPool> {
   }
 }
 
-/** Einzelnes Event, auch wenn es nicht (mehr) im Pool liegt. */
-export async function eventLaden(id: string): Promise<DddEvent | null> {
+/** Einzelnes Event per Slug laden (Fallback: UUID für Altlinks). */
+export async function eventLaden(kennung: string): Promise<DddEvent | null> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
 
   const pool = await eventPoolLaden();
-  const treffer = pool.events.find((e) => e.id === id);
+  const istUuid = /^[0-9a-f-]{36}$/i.test(kennung);
+  const treffer = pool.events.find((e) => istUuid ? e.id === kennung : e.slug === kennung);
   if (treffer || pool.quelle === "beispiel") return treffer ?? null;
 
   const client = supabaseClient();
-  if (!client || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!client) return null;
   try {
-    const laden = (spalten: string) => client.from("events").select(spalten).eq("id", id).eq("abgelehnt", false).maybeSingle();
+    const laden = (spalten: string) => {
+      const query = client.from("events").select(spalten).eq("abgelehnt", false);
+      return istUuid ? query.eq("id", kennung).maybeSingle() : query.eq("slug", kennung).maybeSingle();
+    };
     let { data, error } = await laden(SPALTEN);
     if (error && spaltenFehlt(error.message)) ({ data, error } = await laden(SPALTEN_BASIS));
     if (error || !data) return null;
     return normalisieren(data as unknown as Zeile);
   } catch (err) {
-    console.error(`Event ${id} konnte nicht geladen werden: ${err instanceof Error ? err.message : err}`);
+    console.error(`Event ${kennung} konnte nicht geladen werden: ${err instanceof Error ? err.message : err}`);
     return null;
   }
 }
