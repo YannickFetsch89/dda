@@ -4,7 +4,7 @@ import Script from "next/script";
 import { useEffect, useState } from "react";
 
 const CONSENT_KEY = "ddd-cookie-consent";
-const GA_ID = "G-5LQQXP50R9";
+const GA_ID = "G-EQWEWLYL35";
 
 type Consent = "granted" | "denied" | null;
 
