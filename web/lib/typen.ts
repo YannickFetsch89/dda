@@ -37,6 +37,43 @@ export interface DddEvent {
   abgesagt: boolean;
 }
 
+/** Typ eines Ortes in der `orte`-Tabelle. */
+export type OrtTyp = "restaurant" | "cafe" | "kneipe" | "club" | "spielplatz" | "ausflug" | "wochenendtipp";
+
+/** Preisniveau eines Ortes. */
+export type PreisNiveau = "€" | "€€" | "€€€";
+
+/** Ort, wie er aus der Supabase-Tabelle `orte` gelesen wird. */
+export interface DddOrt {
+  id: string;
+  name: string;
+  slug: string;
+  typ: OrtTyp;
+  untertitel: string | null;
+  beschreibung: string | null;
+  highlight: string | null;
+  adresse: string | null;
+  stadtteil: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  bild_url: string | null;
+  bild_attribution: string | null;
+  tags: string[];
+  preis_niveau: PreisNiveau | null;
+  oeffnungszeiten: string | null;
+  webseite: string | null;
+  telefon: string | null;
+  instagram: string | null;
+  google_place_id: string | null;
+  google_rating: number | null;
+  google_bewertungen_anzahl: number | null;
+  qualitaets_score: number | null;
+  extras: Record<string, unknown>;
+  sortierung: number;
+  erstellt_am: string | null;
+  aktualisiert_am: string | null;
+}
+
 /** Alle Events eines Ladevorgangs plus Zeitbezug (in Europe/Berlin). */
 export interface EventPool {
   heute: string;

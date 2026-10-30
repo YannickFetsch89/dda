@@ -777,3 +777,145 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .rechtliches li { font-size: 15px; line-height: 1.7; color: var(--ddd-text-body); margin-bottom: 4px; }
 .rechtliches a { color: var(--ddd-gold); text-decoration: underline; }
 .rechtliches code { font-size: 13px; background: var(--ddd-surface); padding: 2px 6px; border-radius: 4px; }
+
+/* ── Ort-Karten (Restaurants, Cafés etc.) ── */
+
+.ort-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--gap);
+}
+
+.ort-karte {
+  background: var(--ddd-surface);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  box-shadow: var(--sh-s);
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.ort-karte:hover { box-shadow: var(--sh-m); transform: translateY(-2px); }
+
+.ort-karte__link { display: block; text-decoration: none; color: inherit; }
+
+.ort-karte__bild {
+  position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--ddd-subtle);
+}
+.ort-karte__bild img { width: 100%; height: 100%; object-fit: cover; }
+.ort-karte__bild .bild__platzhalter {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  font-size: 48px; color: var(--ddd-text-muted);
+}
+.ort-karte__preis {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--ddd-navy); color: var(--ddd-on-navy);
+  font-size: 12px; font-weight: 700; padding: 3px 8px;
+  border-radius: var(--r-sm);
+}
+
+.ort-karte__text { padding: 14px 16px 16px; }
+
+.ort-karte__typ {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--ddd-gold); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.ort-karte__typ .icon { font-size: 14px; }
+
+.ort-karte__name {
+  font-family: var(--font-display); font-size: 18px; font-weight: 700;
+  margin: 4px 0 6px; line-height: 1.3;
+}
+.ort-karte__sub {
+  font-size: 14px; color: var(--ddd-text-muted); margin: 0 0 8px; line-height: 1.4;
+}
+
+.ort-karte__meta {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  font-size: 13px; color: var(--ddd-text-muted);
+}
+.ort-karte__meta .icon { font-size: 14px; vertical-align: -2px; }
+
+.ort-karte__rating { color: var(--ddd-gold); font-weight: 600; }
+.ort-karte__anz { font-weight: 400; color: var(--ddd-text-muted); }
+
+.ort-karte__tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+
+/* ── Filter-Leiste (Restaurants etc.) ── */
+
+.filter-leiste { display: flex; flex-direction: column; gap: 12px; margin-bottom: var(--sektion); }
+.filter-leiste__gruppe { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.filter-leiste__label {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--ddd-text-muted); min-width: 64px;
+}
+.filter-status { font-size: 14px; color: var(--ddd-text-muted); margin-bottom: 12px; }
+
+.chip--aktiv {
+  background: var(--ddd-navy) !important; color: var(--ddd-on-navy) !important;
+}
+.chip__anzahl { font-size: 11px; opacity: 0.7; }
+
+/* ── Ort-Detail ── */
+
+.ort-detail { padding-top: 8px; padding-bottom: 40px; }
+
+.ort-detail__hero {
+  position: relative; border-radius: var(--r-card); overflow: hidden;
+  aspect-ratio: 16/9; max-height: 480px; margin-bottom: 28px;
+}
+.ort-detail__hero img { width: 100%; height: 100%; object-fit: cover; }
+.ort-detail__attribution {
+  position: absolute; bottom: 8px; right: 12px;
+  font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5);
+  padding: 2px 8px; border-radius: var(--r-xs);
+}
+
+.ort-detail__inhalt {
+  display: grid; grid-template-columns: 1fr; gap: 32px;
+}
+@media (min-width: 768px) {
+  .ort-detail__inhalt { grid-template-columns: 1fr 300px; }
+}
+
+.ort-detail__typ {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--ddd-gold); text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.ort-detail__typ .icon { font-size: 16px; }
+
+.ort-detail__highlight {
+  font-size: 18px; font-style: italic; color: var(--ddd-gold);
+  border-left: 3px solid var(--ddd-gold); padding-left: 16px;
+  margin: 16px 0;
+}
+.ort-detail__beschreibung p {
+  font-size: 15px; line-height: 1.7; color: var(--ddd-text-body);
+}
+.ort-detail__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+
+.ort-info {
+  background: var(--ddd-surface); border-radius: var(--r-panel); padding: 20px;
+  box-shadow: var(--sh-s);
+}
+.ort-info h2 { font-size: 16px; font-weight: 700; margin: 0 0 12px; }
+.ort-info__zeile {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 14px; line-height: 1.5; margin-bottom: 10px;
+}
+.ort-info__zeile .icon { font-size: 18px; color: var(--ddd-gold); flex-shrink: 0; margin-top: 1px; }
+.ort-info__links { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.ort-info__links .btn { text-align: center; justify-content: center; }
+
+.ort-extras { margin-top: 28px; }
+.ort-extras h2 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.ort-extras__liste { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.ort-extras__liste dt { font-size: 12px; font-weight: 600; color: var(--ddd-text-muted); text-transform: uppercase; }
+.ort-extras__liste dd { font-size: 15px; margin: 0 0 8px; }
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px; padding: 16px 0 8px;
+  font-size: 13px; color: var(--ddd-text-muted);
+}
+.breadcrumb a { color: var(--ddd-text-muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--ddd-gold); }
+.breadcrumb__sep { opacity: 0.4; }

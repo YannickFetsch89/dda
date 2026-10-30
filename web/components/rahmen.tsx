@@ -55,6 +55,7 @@ export function Kopf() {
               <Link href="/entdecken">Entdecken</Link>
               <Link href="/heute">Heute</Link>
               <Link href="/wochenende">Wochenende</Link>
+              <Link href="/restaurants">Restaurants & Cafés</Link>
               <Link href="/stadtteile">Stadtteile &amp; Karte</Link>
               <Link href="/merkliste">Merkliste</Link>
               <a href={`mailto:${KONTAKT_MAIL}?subject=Event%20melden`}>Event melden</a>
@@ -138,6 +139,10 @@ export async function Fuss() {
             </Link>
           ))}
           <Link href="/stadtteile">Alle Stadtteile</Link>
+        </div>
+        <div className="fuss__spalte">
+          <b>Guides</b>
+          <Link href="/restaurants">Restaurants & Cafés</Link>
         </div>
         <div className="fuss__spalte">
           <b>Service</b>
