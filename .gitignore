@@ -19,3 +19,6 @@ playwright/.auth/
 
 # macOS
 .DS_Store
+
+# Kartendaten (OpenStreetMap-Ausschnitt, ~50 MB) – wird separat auf den Server gebracht, nicht über Git
+web/public/karte/*.pmtiles

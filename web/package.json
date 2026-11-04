@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "symbolbilder": "node scripts/symbolbilder.mjs"
+    "symbolbilder": "node scripts/symbolbilder.mjs",
+    "predev": "node scripts/karte-worker.mjs",
+    "prebuild": "node scripts/karte-worker.mjs"
   },
   "dependencies": {
     "@protomaps/basemaps": "5.7.2",

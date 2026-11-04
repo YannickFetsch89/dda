@@ -1,6 +1,7 @@
 // Event-Darstellungen: Standard-Card, Rang-Card, Kompakt-Card, Listenzeilen
 import Link from "next/link";
 import { BildImg, HerzButton } from "./client";
+import { eventBildUrl } from "@/lib/bilder";
 import { katStil, kategorie } from "@/lib/kategorien";
 import { metaZeile } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
@@ -36,7 +37,7 @@ export function Bild({
 }) {
   return (
     <div className={`bild ${e.abgesagt ? "bild--abgesagt" : ""} ${className}`} style={katStil(e.kategorie)}>
-      <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
+      <BildImg src={eventBildUrl(e)} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
       {e.abgesagt && <AbgesagtTag className="bild__abgesagt" />}
       {!e.abgesagt && istOnline(e) && <OnlineTag className="bild__online" />}
       {children}

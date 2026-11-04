@@ -10,6 +10,7 @@ import { filtern, istKostenlos, istOnline, nachBeliebtheit } from "@/lib/ableitu
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
+import { eventBildUrl } from "@/lib/bilder";
 
 type Props = { params: Promise<{ kategorie: string; slug: string }> };
 
@@ -21,7 +22,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: e.titel,
     description: beschreibung,
-    openGraph: { title: e.titel, description: beschreibung, images: [e.bild_url ?? symbolbild(e)].filter((b): b is string => !!b) },
+    openGraph: { title: e.titel, description: beschreibung, images: [eventBildUrl(e) ?? symbolbild(e)].filter((b): b is string => !!b) },
   };
 }
 

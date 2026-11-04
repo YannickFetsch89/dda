@@ -43,3 +43,9 @@ next-env.d.ts
 
 # Original-Symbolbilder (groß, nur Quelle für npm run symbolbilder)
 /symbolbilder-quellen/
+
+# Bild-Cache des Bild-Proxys (lib/bild-proxy.ts)
+.cache/
+
+# MapLibre-Worker (wird von scripts/karte-worker.mjs aus node_modules kopiert)
+/public/karte/maplibre-gl-worker.mjs

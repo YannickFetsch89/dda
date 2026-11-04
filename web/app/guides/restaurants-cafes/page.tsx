@@ -5,10 +5,12 @@ import { Suspense } from "react";
 import { BildImg } from "@/components/client";
 import { GuideSticky, type StickyLink } from "@/components/guide-sticky";
 import { Icon, SkeletonKarten } from "@/components/karten";
-import { OrtKartenGrid } from "@/components/ort-karten";
+import { GuideKarteLazy } from "@/components/guide-karte-lazy";
+import type { KartenOrt } from "@/components/guide-karte";
+import { OrtKartenGrid, ortPfad, typIcon, typLabel } from "@/components/ort-karten";
 import {
   FILTER_TAGS, SEITE, SORTIERUNGEN, filterHref, filterLesen, filtern, kueche, preisZeichen,
-  sortieren, umschalten, zaehlen, zahl, type GuideFilter,
+  sortieren, sterne, umschalten, zaehlen, zahl, type GuideFilter,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
 import { orteLaden, ortBildUrl } from "@/lib/orte";
@@ -59,6 +61,19 @@ function Chip({ href, aktiv, children, klein = false }: { href: string; aktiv: b
   );
 }
 
+/** Ansicht-Umschalter Grid/Karte (Segmented Control). */
+function Ansicht({ ansichten }: { ansichten: { label: string; icon: string; href: string; aktiv: boolean }[] }) {
+  return (
+    <div className="gd-umschalter" role="group" aria-label="Ansicht">
+      {ansichten.map((a) => (
+        <Link key={a.label} href={a.href} scroll={false} className={a.aktiv ? "is-aktiv" : ""} aria-current={a.aktiv || undefined}>
+          <Icon name={a.icon} /><span className="gd-umschalter__label">{a.label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   // Orte einmal laden (gecached) und an Hero und Liste weitergeben
   const [sp, alle] = await Promise.all([searchParams, orteLaden([...TYPEN])]);
@@ -98,6 +113,31 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   ].join(" · ");
   const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
   const sortOptionen = SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
+  const ansichten = [
+    { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
+    { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
+  ];
+  const zuruecksetzen = href({ typ: null, stadtteil: null, kueche: null, preise: [], tags: [] });
+  // Für die Karte: alle Treffer mit Koordinaten, kompakt (nur was Liste, Pins und Popup brauchen)
+  const kartenOrte: KartenOrt[] =
+    f.ansicht === "karte"
+      ? ergebnis
+          .filter((o) => o.latitude != null && o.longitude != null)
+          .map((o) => ({
+            id: o.id,
+            name: o.name,
+            typLabel: typLabel(o.typ),
+            icon: typIcon(o.typ),
+            stadtteil: o.stadtteil,
+            preis: o.preis_niveau,
+            rating: o.google_rating != null ? sterne(o.google_rating) : null,
+            anzahl: o.google_bewertungen_anzahl != null ? zahl(o.google_bewertungen_anzahl) : null,
+            bild: ortBildUrl(o),
+            href: ortPfad(o),
+            lat: o.latitude!,
+            lng: o.longitude!,
+          }))
+      : [];
 
   return (
     <>
@@ -108,6 +148,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
         chips={aktiv}
         sortLabel={sortLabel}
         sortOptionen={sortOptionen}
+        ansichten={ansichten}
       />
 
       <div className="gd-filter" id="gd-filter" tabIndex={-1}>
@@ -177,6 +218,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
                 ))}
               </div>
             </details>
+            <Ansicht ansichten={ansichten} />
           </div>
         </div>
       </div>
@@ -184,18 +226,20 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
       <div className="container">
         <div className="gd-status">
           <span>{status}</span>
-          {hatFilter && <Link href={BASIS} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>}
+          {hatFilter && <Link href={zuruecksetzen} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>}
         </div>
 
-        {sichtbar.length > 0 ? (
-          <OrtKartenGrid orte={sichtbar} />
-        ) : (
+        {ergebnis.length === 0 ? (
           <div className="gd-leer">
-            Keine Treffer mit diesen Filtern. <Link href={BASIS} scroll={false}>Filter zurücksetzen</Link>
+            Keine Treffer mit diesen Filtern. <Link href={zuruecksetzen} scroll={false}>Filter zurücksetzen</Link>
           </div>
+        ) : f.ansicht === "karte" ? (
+          <GuideKarteLazy orte={kartenOrte} />
+        ) : (
+          <OrtKartenGrid orte={sichtbar} />
         )}
 
-        {rest > 0 && (
+        {f.ansicht === "grid" && rest > 0 && (
           <div className="gd-mehr">
             <Link href={href({ anzahl: f.anzahl + SEITE })} scroll={false} className="gd-mehr__knopf">
               Weitere {Math.min(SEITE, rest)} laden

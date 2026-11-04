@@ -18,12 +18,14 @@ export function GuideSticky({
   chips,
   sortLabel,
   sortOptionen,
+  ansichten = [],
 }: {
   zielId: string;
   typen: StickyLink[];
   chips: StickyLink[];
   sortLabel: string;
   sortOptionen: StickyLink[];
+  ansichten?: StickyLink[];
 }) {
   const [sichtbar, setSichtbar] = useState(false);
 
@@ -84,6 +86,16 @@ export function GuideSticky({
             ))}
           </div>
         </details>
+        {ansichten.length > 0 && (
+          <div className="gd-umschalter gd-sticky__ansicht" role="group" aria-label="Ansicht">
+            {ansichten.map((a) => (
+              <Link key={a.label} href={a.href} scroll={false} className={a.aktiv ? "is-aktiv" : ""} aria-current={a.aktiv || undefined}>
+                {a.icon && <span className="icon" aria-hidden>{a.icon}</span>}
+                <span className="gd-umschalter__label">{a.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

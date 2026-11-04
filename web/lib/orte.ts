@@ -95,8 +95,9 @@ function googleFoto(o: DddOrt): GoogleFoto | null {
  * sonst das Google-Foto über die eigene Route /ort-foto/[slug] (Key bleibt auf dem Server).
  */
 export function ortBildUrl(o: DddOrt): string | null {
-  if (o.bild_url && !o.bild_url.includes("key=")) return o.bild_url;
-  return googleFoto(o) && o.slug ? `/ort-foto/${encodeURIComponent(o.slug)}` : null;
+  // Immer über den eigenen Server – auch ein eigenes bild_url kann auf einem fremden Server liegen
+  const eigenesBild = !!o.bild_url && !o.bild_url.includes("key=");
+  return (eigenesBild || googleFoto(o)) && o.slug ? `/ort-foto/${encodeURIComponent(o.slug)}` : null;
 }
 
 /** Urheber-Link des Google-Fotos (Google verlangt die Nennung beim Foto). */

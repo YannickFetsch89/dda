@@ -167,6 +167,13 @@ export default function DatenschutzSeite() {
           Google oder anderen Schriftanbietern hergestellt.
         </li>
         <li>
+          <b>Bilder und Karten in den Guides:</b> Event-Bilder der Veranstalter und Fotos von Restaurants und
+          Cafés werden über unseren eigenen Server ausgeliefert; Ihr Browser verbindet sich dabei nicht mit den
+          Servern der Veranstalter oder von Google. Die Kartenansicht der Guides nutzt Kartendaten von
+          OpenStreetMap (© OpenStreetMap-Mitwirkende, ODbL), die ebenfalls vollständig auf unserem Server
+          liegen – es werden keine Daten an Kartendienste übermittelt.
+        </li>
+        <li>
           <b>Google Maps:</b> Für Kartenansichten und Routenplanung werden Daten an Google übermittelt.
           Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.
         </li>

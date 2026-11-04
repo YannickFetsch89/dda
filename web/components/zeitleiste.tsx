@@ -6,6 +6,7 @@ import { BildImg } from "./client";
 import { katStil, kategorie } from "@/lib/kategorien";
 import { minutenBerlin } from "@/lib/datum";
 import { symbolbild } from "@/lib/symbolbild";
+import { eventBildUrl } from "@/lib/bilder";
 import type { DddEvent } from "@/lib/typen";
 
 export interface Abschnitt {
@@ -33,7 +34,7 @@ function Zeile({ e }: { e: DddEvent }) {
       </span>
       <article className="tl__karte">
         <div className={`bild ${e.abgesagt ? "bild--abgesagt" : ""}`} style={katStil(e.kategorie)}>
-          <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={k.icon} />
+          <BildImg src={eventBildUrl(e)} ersatz={symbolbild(e)} alt="" icon={k.icon} />
           {e.abgesagt && <span className="abgesagt-tag bild__abgesagt">Abgesagt</span>}
         </div>
         <div className="tl__karte-text">

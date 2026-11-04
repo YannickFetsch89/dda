@@ -28,6 +28,7 @@ export interface GuideFilter {
   tags: string[]; // Slugs
   sort: SortWert;
   anzahl: number;
+  ansicht: "grid" | "karte";
 }
 
 type SP = Record<string, string | string[] | undefined>;
@@ -52,6 +53,7 @@ export function filterLesen(sp: SP): GuideFilter {
     tags: liste(sp.tags),
     sort: SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : "empfohlen",
     anzahl: Number.isFinite(anzahl) && anzahl >= SEITE ? Math.min(anzahl, 2000) : SEITE,
+    ansicht: eins(sp.ansicht) === "karte" ? "karte" : "grid",
   };
 }
 
@@ -66,6 +68,7 @@ export function filterHref(basis: string, f: GuideFilter, aenderung: Partial<Gui
   if (n.tags.length) p.set("tags", n.tags.join(","));
   if (n.sort !== "empfohlen") p.set("sort", n.sort);
   if (n.anzahl > SEITE) p.set("anzahl", String(n.anzahl));
+  if (n.ansicht === "karte") p.set("ansicht", "karte");
   const qs = p.toString().replace(/%2C/g, ",");
   return qs ? `${basis}?${qs}` : basis;
 }
