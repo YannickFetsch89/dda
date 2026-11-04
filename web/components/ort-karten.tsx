@@ -81,7 +81,8 @@ export function OrtKarte({ o }: { o: DddOrt }) {
     <article className="gd-karte" role="listitem">
       <Link href={ortPfad(o)} className="gd-karte__link">
         <div className="gd-karte__bild">
-          <BildImg src={bild} alt={o.name} icon={typIcon(o.typ)} />
+          {/* Name steht im selben Link – Bild ist dekorativ */}
+          <BildImg src={bild} alt="" icon={typIcon(o.typ)} />
           {o.preis_niveau && <span className="gd-karte__preis">{o.preis_niveau}</span>}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>

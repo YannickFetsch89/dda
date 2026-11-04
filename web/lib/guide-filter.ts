@@ -48,7 +48,7 @@ export function filterLesen(sp: SP): GuideFilter {
     typ: typ === "restaurant" || typ === "cafe" ? typ : null,
     stadtteil: eins(sp.stadtteil) || null,
     kueche: eins(sp.kueche) || null,
-    preise: liste(sp.preis).map(Number).filter((n) => n >= 1 && n <= 3),
+    preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 3))],
     tags: liste(sp.tags),
     sort: SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : "empfohlen",
     anzahl: Number.isFinite(anzahl) && anzahl >= SEITE ? Math.min(anzahl, 2000) : SEITE,

@@ -904,7 +904,11 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .gd-menue a:hover { background: var(--ddd-gold-tint); color: var(--ddd-navy); }
 .gd-menue a.is-aktiv { font-weight: 700; }
 /* Das Küchen-Menü liegt in einer horizontal scrollenden Zeile – dort fixiert, damit es nicht abgeschnitten wird */
-.gd-zeile__chips .gd-dropdown[open] .gd-menue { position: fixed; top: auto; left: var(--rand); margin-top: 8px; }
+/* Küche-Dropdown steht vor der scrollenden Chip-Reihe; die Reihe schließt direkt daran an */
+.gd-dropdown + .gd-zeile__chips { margin-left: 0; padding-left: 0; }
+.gd-dropdown > summary.gd-chip { height: 40px; }
+@media (min-width: 768px) { .gd-dropdown > summary.gd-chip { height: 36px; } }
+.gd-filter:focus { outline: none; }
 
 /* Status, Leerzustand, Mehr laden */
 .gd-status { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 14px; font-size: 13px; color: var(--ddd-text-muted); }
@@ -979,7 +983,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 
 /* Detailseite (Ansicht 16/17) */
 .gd-detail { padding-top: 16px; }
-.gd-detail__hero { position: relative; margin-top: 16px; aspect-ratio: 4 / 3; max-height: 480px; width: 100%; border-radius: var(--r-card); overflow: hidden; background: repeating-linear-gradient(135deg, var(--ddd-gold-tint) 0 14px, var(--ddd-surface) 14px 28px); }
+.gd-detail__hero { position: relative; margin-top: 16px; aspect-ratio: 16 / 9; max-height: 480px; width: 100%; border-radius: var(--r-card); overflow: hidden; background: repeating-linear-gradient(135deg, var(--ddd-gold-tint) 0 14px, var(--ddd-surface) 14px 28px); }
 .gd-detail__hero img { width: 100%; height: 100%; object-fit: cover; }
 .gd-detail__hero .bild__platzhalter { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 64px; color: var(--ddd-text-muted); }
 .gd-detail__credit { position: absolute; right: 16px; bottom: 12px; padding: 3px 8px; border-radius: var(--r-xs); background: rgba(27, 37, 64, 0.45); color: rgba(255, 255, 255, 0.85); font-size: 11px; }
@@ -1022,7 +1026,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .gd-abschnitt__kopf h2 { font-size: 26px; color: var(--ddd-text); }
 @media (min-width: 768px) {
   .gd-detail { padding-top: 24px; }
-  .gd-detail__hero { margin-top: 20px; aspect-ratio: 16 / 9; }
+  .gd-detail__hero { margin-top: 20px; }
   .gd-detail__spalten { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 56px; padding-top: 40px; }
   .gd-detail__haupt { gap: 22px; }
   .gd-detail__haupt h1 { font-size: 36px; margin-top: -8px; }
@@ -1036,3 +1040,5 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 /* Auf Guide-Seiten scrollt die Event-Kategorieleiste mit (sonst überlagert sie die Sticky-Filterleiste) */
 body:has(.gd-seite) .katleiste { position: relative; }
 @media (min-width: 768px) { .gd-seite .gd-detail__seite { top: 24px; } }
+/* Ansicht 17: Event-Reihe auf dem Handy mit 220 px breiten Karten (Desktop 258 px) */
+@media (max-width: 767px) { .gd-abschnitt .reihe > * { flex-basis: 220px; } }

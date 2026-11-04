@@ -106,16 +106,44 @@ export function ortBildAutorUrl(o: DddOrt): string | null {
   return typeof url === "string" && url.startsWith("https://") ? url : null;
 }
 
-/** Alle aktiven Orte eines Typs laden. */
+/**
+ * Slug aus der URL sicher dekodieren. Next.js liefert params meist schon dekodiert; ein kaputtes
+ * Prozentzeichen ("%", "%ZZ") darf trotzdem keine 500 auslösen → null (= nicht gefunden).
+ */
+export function slugDekodieren(roh: string): string | null {
+  try {
+    return decodeURIComponent(roh);
+  } catch {
+    return null;
+  }
+}
+
+/** Nur http(s)-Links aus der Datenbank nach außen geben (keine data:-, javascript:- oder //-Adressen). */
+export function sichereUrl(wert: unknown): string | null {
+  if (typeof wert !== "string") return null;
+  try {
+    const url = new URL(wert);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+const KURZ = { stale: 30, revalidate: 60, expire: 120 }; // nach Fehlern: bald neu versuchen
+const NORMAL = { stale: 300, revalidate: 600, expire: 3600 };
+
+/** Alle aktiven Orte eines Typs laden (nur Score ≥ MIN_QUALITAETS_SCORE). */
 export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
   "use cache";
-  cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
-
   const client = supabaseClient();
-  if (!client) return [];
+  if (!client) {
+    cacheLife(KURZ);
+    return [];
+  }
 
   const typen = Array.isArray(typ) ? typ : [typ];
   const orte: DddOrt[] = [];
+  let fehler = false;
 
   try {
     // Seitenweise laden: Supabase liefert pro Abfrage höchstens 1.000 Zeilen
@@ -133,25 +161,30 @@ export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
         .range(seite * SEITENGROESSE, (seite + 1) * SEITENGROESSE - 1);
 
       if (error) {
-        console.error(`Orte konnten nicht geladen werden: ${error.message}`);
-        return orte;
+        console.error(`Orte konnten nicht geladen werden (Seite ${seite + 1}): ${error.message}`);
+        fehler = true;
+        break;
       }
       orte.push(...((data ?? []) as unknown as Zeile[]).map(normalisieren));
       if (!data || data.length < SEITENGROESSE) break;
     }
   } catch (err) {
     console.error(`Fehler beim Laden der Orte: ${err instanceof Error ? err.message : err}`);
+    fehler = true;
   }
+  // Unvollständige Liste nach einem Fehler nur kurz cachen, damit der nächste Aufruf alles holt
+  cacheLife(fehler ? KURZ : NORMAL);
   return orte;
 }
 
-/** Einzelnen Ort per Slug laden. */
+/** Einzelnen Ort per Slug laden (nur aktiv und Score ≥ MIN_QUALITAETS_SCORE). */
 export async function ortLaden(slug: string): Promise<DddOrt | null> {
   "use cache";
-  cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
-
   const client = supabaseClient();
-  if (!client) return null;
+  if (!client) {
+    cacheLife(KURZ);
+    return null;
+  }
 
   try {
     const { data, error } = await client
@@ -162,24 +195,16 @@ export async function ortLaden(slug: string): Promise<DddOrt | null> {
       .eq("slug", slug)
       .maybeSingle();
 
-    if (error || !data) return null;
-    return normalisieren(data as unknown as Zeile);
+    if (error) {
+      console.error(`Ort '${slug}' konnte nicht geladen werden: ${error.message}`);
+      cacheLife(KURZ);
+      return null;
+    }
+    cacheLife(NORMAL);
+    return data ? normalisieren(data as unknown as Zeile) : null;
   } catch (err) {
     console.error(`Ort '${slug}' konnte nicht geladen werden: ${err instanceof Error ? err.message : err}`);
+    cacheLife(KURZ);
     return null;
   }
-}
-
-/** Alle Stadtteile mit Orte-Anzahl für einen Typ. */
-export async function orteNachStadtteil(typ: OrtTyp | OrtTyp[]): Promise<{ stadtteil: string; anzahl: number }[]> {
-  const orte = await orteLaden(typ);
-  const zaehler = new Map<string, number>();
-  for (const o of orte) {
-    if (o.stadtteil) {
-      zaehler.set(o.stadtteil, (zaehler.get(o.stadtteil) ?? 0) + 1);
-    }
-  }
-  return Array.from(zaehler.entries())
-    .map(([stadtteil, anzahl]) => ({ stadtteil, anzahl }))
-    .sort((a, b) => b.anzahl - a.anzahl);
 }

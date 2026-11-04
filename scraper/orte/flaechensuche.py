@@ -103,10 +103,18 @@ KETTEN = re.compile(
     r"\b(starbucks|mcdonald|burger king|kfc|subway|vapiano|l'osteria|cafe extrablatt|coffee fellows|"
     r"back ?werk|kamps|dean ?& ?david|hans im gl[üu]ck|peter pane|five guys|nordsee|tchibo|"
     r"woolworth|ikea|rossmann|domino|pizza hut|call a pizza|smashburger|wienerwald|block house|"
-    r"maredo|alex|enchilada|sausalitos|bulls ?& ?bears|coffee ?shop company|balzac|einstein kaffee|"
+    r"maredo|enchilada|sausalitos|bulls ?& ?bears|coffee ?shop company|balzac|einstein kaffee|"
     r"espresso house|yormas|ditsch|le crobag|kochl[öo]ffel|cinnamood|jim block|dunkin)\b",
     re.IGNORECASE,
 )
+# Kettennamen, die nur am Namensanfang eindeutig sind ("ALEX Düsseldorf", nicht "Restaurant Alex")
+KETTEN_ANFANG = re.compile(r"^(alex)\b", re.IGNORECASE)
+
+
+def ist_kette(name: str) -> bool:
+    """Erkennt Ketten am Namen; typografische Apostrophe (’ ` ´) werden wie ' behandelt."""
+    n = re.sub(r"[’`´‘]", "'", name or "").strip()
+    return bool(KETTEN.search(n) or KETTEN_ANFANG.search(n))
 
 # "40215 Düsseldorf", "41460 Neuss", "41470 Neuss-Rosellerheide", "40878 Ratingen"
 STADT_ADRESSE = re.compile(r"\b\d{5}\s+(" + "|".join(STAEDTE) + r")\b")
@@ -133,22 +141,52 @@ def _km_zu_grad(km: float, breite: float) -> tuple[float, float]:
     return km / 111.32, km / (111.32 * math.cos(math.radians(breite)))
 
 
+# ── Zellen-Gitter ─────────────────────────────────────────────────────────────
+# Jede Zelle ist eindeutig durch (Stufe, Zeile, Spalte) relativ zum Ankerpunkt bestimmt:
+# Stufe 0 = Startzellen (3 km), jede Stufe halbiert die Kantenlänge. Unterzellen entstehen exakt
+# aus den Indizes (2i, 2i+1 …) – so kann dieselbe Zelle nie mit leicht abweichenden Koordinaten
+# zweimal entstehen und doppelt bezahlt werden.
+
+_GRUND_DLAT, _GRUND_DLNG = _km_zu_grad(START_ZELLE_KM, (GEBIET["sued"] + GEBIET["nord"]) / 2)
+
+
+def _gitter_zelle(stufe: int, i: int, j: int, typen: list[str] | None = None) -> dict:
+    """Zelle aus Gitter-Indizes (Mittelpunkt exakt berechnet)."""
+    f = 2 ** stufe
+    zelle = {
+        "stufe": stufe, "i": i, "j": j,
+        "lat": GEBIET["sued"] + (i + 0.5) * _GRUND_DLAT / f,
+        "lng": GEBIET["west"] + (j + 0.5) * _GRUND_DLNG / f,
+        "km": START_ZELLE_KM / f,
+    }
+    if typen:
+        zelle["typen"] = list(typen)
+    return zelle
+
+
+def _gitter_von(zelle: dict) -> tuple[int, int, int]:
+    """(Stufe, Zeile, Spalte) einer Zelle – auch für alte Einträge ohne Indizes (nächster Gitterpunkt)."""
+    if "stufe" in zelle:
+        return zelle["stufe"], zelle["i"], zelle["j"]
+    stufe = round(math.log2(START_ZELLE_KM / zelle["km"]))
+    f = 2 ** stufe
+    i = round((zelle["lat"] - GEBIET["sued"]) / (_GRUND_DLAT / f) - 0.5)
+    j = round((zelle["lng"] - GEBIET["west"]) / (_GRUND_DLNG / f) - 0.5)
+    return stufe, i, j
+
+
 def _startzellen() -> list[dict]:
     """
-    Zerlegt das abgedeckte Gebiet in quadratische Startzellen.
+    Zerlegt das abgedeckte Gebiet in quadratische Startzellen (Stufe 0).
 
     Das Raster ist am festen Ankerpunkt (GEBIET süd/west) ausgerichtet; eine Erweiterung der
     Abdeckung erzeugt dadurch exakt dieselben Zellen wie zuvor plus neue am Rand.
     """
-    d_lat, d_lng = _km_zu_grad(START_ZELLE_KM, (GEBIET["sued"] + GEBIET["nord"]) / 2)
-    i_von = math.floor((ABDECKUNG["sued"] - GEBIET["sued"]) / d_lat)
-    i_bis = math.ceil((ABDECKUNG["nord"] - GEBIET["sued"]) / d_lat)
-    j_von = math.floor((ABDECKUNG["west"] - GEBIET["west"]) / d_lng)
-    j_bis = math.ceil((ABDECKUNG["ost"] - GEBIET["west"]) / d_lng)
-    return [
-        {"lat": GEBIET["sued"] + (i + 0.5) * d_lat, "lng": GEBIET["west"] + (j + 0.5) * d_lng, "km": START_ZELLE_KM}
-        for i in range(i_von, i_bis) for j in range(j_von, j_bis)
-    ]
+    i_von = math.floor((ABDECKUNG["sued"] - GEBIET["sued"]) / _GRUND_DLAT)
+    i_bis = math.ceil((ABDECKUNG["nord"] - GEBIET["sued"]) / _GRUND_DLAT)
+    j_von = math.floor((ABDECKUNG["west"] - GEBIET["west"]) / _GRUND_DLNG)
+    j_bis = math.ceil((ABDECKUNG["ost"] - GEBIET["west"]) / _GRUND_DLNG)
+    return [_gitter_zelle(0, i, j) for i in range(i_von, i_bis) for j in range(j_von, j_bis)]
 
 
 def _im_kreis(zelle: dict, p: dict) -> bool:
@@ -161,17 +199,57 @@ def _im_kreis(zelle: dict, p: dict) -> bool:
     return math.hypot(d_lat_m, d_lng_m) <= zelle["km"] * 1000 * math.sqrt(2) / 2 + 1
 
 
+def _zell_schluessel(zelle: dict) -> str:
+    """Eindeutiger Schlüssel "Stufe:Zeile:Spalte" (bei typbezogenen Nachzügen mit ":typen")."""
+    stufe, i, j = _gitter_von(zelle)
+    typen = zelle.get("typen")
+    return f"{stufe}:{i}:{j}" + (f":{'+'.join(typen)}" if typen else "")
+
+
 def _aus_schluessel(schluessel: str) -> dict:
-    lat, lng, km = schluessel.split(",")
-    return {"lat": float(lat), "lng": float(lng), "km": float(km)}
+    """Zelle aus einem Schlüssel – neues Format "Stufe:Zeile:Spalte[:typen]" oder altes "lat,lng,km"."""
+    if "," in schluessel:
+        lat, lng, km = schluessel.split(",")
+        return _gitter_zelle(*_gitter_von({"lat": float(lat), "lng": float(lng), "km": float(km)}))
+    teile = schluessel.split(":")
+    return _gitter_zelle(int(teile[0]), int(teile[1]), int(teile[2]), teile[3].split("+") if len(teile) > 3 else None)
 
 
-def _nachverfeinern(daten: dict) -> int:
+def _viertel(zelle: dict) -> list[dict]:
+    """Teilt eine Zelle in ihre vier Unterzellen der nächsten Stufe (exakt aus den Gitter-Indizes)."""
+    stufe, i, j = _gitter_von(zelle)
+    return [_gitter_zelle(stufe + 1, 2 * i + di, 2 * j + dj) for di in (0, 1) for dj in (0, 1)]
+
+
+def _typ_nachzuege(zelle: dict) -> list[dict]:
+    """
+    Volle Kleinstzelle getrennt nach Restaurants und Cafés erneut abfragen: In einer gemeinsamen
+    Anfrage (Limit 20) verdrängen bekannte Restaurants sonst die Cafés.
+    """
+    stufe, i, j = _gitter_von(zelle)
+    return [_gitter_zelle(stufe, i, j, ["restaurant"]), _gitter_zelle(stufe, i, j, ["cafe", "coffee_shop"])]
+
+
+def _speicher_normalisieren(daten: dict) -> None:
+    """Rechnet alte Koordinaten-Schlüssel auf Gitter-Schlüssel um und entfernt Doppelte."""
+    daten["erledigt"] = list(dict.fromkeys(_zell_schluessel(_aus_schluessel(s)) for s in daten.get("erledigt", [])))
+    gesehen, schlange = set(daten["erledigt"]), []
+    for z in daten.get("warteschlange", []):
+        k = _zell_schluessel(z)
+        if k not in gesehen:
+            gesehen.add(k)
+            schlange.append(_aus_schluessel(k))
+    daten["warteschlange"] = schlange
+    daten.setdefault("gesaettigt_min_zellen", [])
+
+
+def _nachverfeinern(daten: dict, je_typ: bool = False) -> int:
     """
     Ergänzt die Warteschlange nach einer Änderung der Abdeckung oder der zugelassenen Städte:
       - neue Startzellen am Rand
       - Unterzellen bereits abgefragter Zellen, die voll waren (≥ 20 Orte im Kreis) und in denen
-        jetzt zugelassene Orte liegen, aber bisher nicht verfeinert wurde
+        zugelassene Orte liegen, aber noch nicht verfeinert wurden
+      - mit je_typ=True: volle Kleinstzellen getrennt nach Restaurants und Cafés
 
     Ob eine Zelle voll war, lässt sich aus dem Zwischenspeicher ablesen: Eine nicht volle Zelle hat
     ALLE Orte ihres Kreises geliefert – liegen ≥ 20 bekannte Orte im Kreis, war sie voll.
@@ -184,41 +262,31 @@ def _nachverfeinern(daten: dict) -> int:
     orte = list(daten["orte"].values())
     neu: list[dict] = []
 
-    for zelle in _startzellen():
-        s = _zell_schluessel(zelle)
-        if s not in erledigt and s not in geplant:
+    def einreihen(zelle: dict) -> None:
+        k = _zell_schluessel(zelle)
+        if k not in erledigt and k not in geplant:
             neu.append(zelle)
-            geplant.add(s)
+            geplant.add(k)
+
+    for zelle in _startzellen():
+        einreihen(zelle)
 
     for s in list(erledigt):
         zelle = _aus_schluessel(s)
-        if zelle["km"] / 2 < MIN_ZELLE_KM:
+        if zelle.get("typen"):
             continue
         im_kreis = [p for p in orte if _im_kreis(zelle, p)]
         if len(im_kreis) < MAX_TREFFER or not any(stadt_von(p) for p in im_kreis):
             continue
-        for kind in _viertel(zelle):
-            k = _zell_schluessel(kind)
-            if k not in erledigt and k not in geplant:
-                neu.append(kind)
-                geplant.add(k)
+        if zelle["km"] / 2 >= MIN_ZELLE_KM:
+            for kind in _viertel(zelle):
+                einreihen(kind)
+        elif je_typ:
+            for nachzug in _typ_nachzuege(zelle):
+                einreihen(nachzug)
 
     daten["warteschlange"].extend(neu)
     return len(neu)
-
-
-def _viertel(zelle: dict) -> list[dict]:
-    """Teilt eine Zelle in vier gleich große Unterzellen."""
-    km = zelle["km"] / 2
-    d_lat, d_lng = _km_zu_grad(km / 2, zelle["lat"])
-    return [
-        {"lat": zelle["lat"] + s_lat * d_lat, "lng": zelle["lng"] + s_lng * d_lng, "km": km}
-        for s_lat in (-1, 1) for s_lng in (-1, 1)
-    ]
-
-
-def _zell_schluessel(zelle: dict) -> str:
-    return f"{zelle['lat']:.5f},{zelle['lng']:.5f},{zelle['km']:.4f}"
 
 
 def ort_typ(place: dict) -> str | None:
@@ -266,7 +334,7 @@ def vorab_score(place: dict) -> tuple[int, float, bool]:
     score = round((gewichtet - 3.9) / (4.8 - 3.9) * 9 + 1)
     score = max(1, min(10, score))
     name = (place.get("displayName") or {}).get("text", "")
-    kette = bool(KETTEN.search(name))
+    kette = ist_kette(name)
     if kette:
         score = min(score, 3)
     return score, round(gewichtet, 3), kette
@@ -293,7 +361,7 @@ def _zelle_abfragen(client: httpx.Client, zelle: dict) -> list[dict]:
     """Eine Nearby-Search-Anfrage für eine Zelle (Kreis um den Mittelpunkt, deckt das Quadrat ab)."""
     radius_m = zelle["km"] * 1000 * math.sqrt(2) / 2
     body = {
-        "includedTypes": SUCH_TYPEN,
+        "includedTypes": zelle.get("typen") or SUCH_TYPEN,
         "maxResultCount": MAX_TREFFER,
         "locationRestriction": {"circle": {
             "center": {"latitude": zelle["lat"], "longitude": zelle["lng"]},
@@ -316,8 +384,13 @@ def _zelle_abfragen(client: httpx.Client, zelle: dict) -> list[dict]:
     raise RuntimeError("Zu viele HTTP-429-Antworten, Suche unterbrochen")
 
 
-def suchen(max_anfragen: int, neu: bool = False) -> dict:
-    """Führt die Flächensuche aus bzw. setzt eine unterbrochene fort."""
+def suchen(max_anfragen: int, neu: bool = False, je_typ: bool = False) -> dict:
+    """
+    Führt die Flächensuche aus bzw. setzt eine unterbrochene fort.
+
+    je_typ=True: volle Kleinstzellen zusätzlich getrennt nach Restaurants und Cafés abfragen
+    (kostet je volle Kleinstzelle zwei weitere Anfragen).
+    """
     daten = {} if neu else speicher_laden()
     if not daten:
         daten = {
@@ -326,67 +399,94 @@ def suchen(max_anfragen: int, neu: bool = False) -> dict:
             "erledigt": [],
             "anfragen": 0,
             "gesaettigt_min": 0,
+            "gesaettigt_min_zellen": [],
             "orte": {},
         }
         logger.info("Neue Flächensuche: %d Startzellen à %.1f km", len(daten["warteschlange"]), START_ZELLE_KM)
     else:
-        ergaenzt = _nachverfeinern(daten)
+        _speicher_normalisieren(daten)
+        ergaenzt = _nachverfeinern(daten, je_typ)
         logger.info(
             "Setze Flächensuche fort: %d Anfragen bisher, %d Zellen offen (davon %d neu durch "
-            "erweiterte Abdeckung/Städte), %d Orte gefunden",
-            daten["anfragen"], len(daten["warteschlange"]), ergaenzt, len(daten["orte"]),
+            "erweiterte Abdeckung/Städte%s), %d Orte gefunden",
+            daten["anfragen"], len(daten["warteschlange"]), ergaenzt,
+            "/Typ-Nachzüge" if je_typ else "", len(daten["orte"]),
         )
 
     erledigt = set(daten["erledigt"])
     anfragen_dieser_lauf = 0
 
-    with httpx.Client(timeout=30) as client:
-        while daten["warteschlange"] and anfragen_dieser_lauf < max_anfragen:
-            zelle = daten["warteschlange"].pop(0)
-            schluessel = _zell_schluessel(zelle)
-            if schluessel in erledigt:
-                continue
-            try:
-                treffer = _zelle_abfragen(client, zelle)
-            except httpx.HTTPStatusError as e:
-                daten["warteschlange"].insert(0, zelle)
-                speicher_schreiben(daten)
-                logger.error("API-Fehler, Suche angehalten (Fortsetzen möglich): %s", e.response.text[:300])
-                break
-            daten["anfragen"] += 1
-            anfragen_dieser_lauf += 1
+    try:
+        with httpx.Client(timeout=30) as client:
+            while daten["warteschlange"] and anfragen_dieser_lauf < max_anfragen:
+                zelle = daten["warteschlange"].pop(0)
+                schluessel = _zell_schluessel(zelle)
+                if schluessel in erledigt:
+                    continue
+                try:
+                    treffer = _zelle_abfragen(client, zelle)
+                except (httpx.HTTPError, RuntimeError, ValueError) as e:
+                    # Zelle zurücklegen; Zwischenstand wird im finally gespeichert → Fortsetzen ohne Doppelkosten
+                    daten["warteschlange"].insert(0, zelle)
+                    text = e.response.text[:300] if isinstance(e, httpx.HTTPStatusError) else str(e)
+                    logger.error("Suche angehalten (später fortsetzen mit 'suchen'): %s", text)
+                    break
+                daten["anfragen"] += 1
+                anfragen_dieser_lauf += 1
 
-            in_staedten = 0
-            for p in treffer:
-                if stadt_von(p):
-                    in_staedten += 1
-                daten["orte"][p["id"]] = p
+                in_staedten = 0
+                for p in treffer:
+                    if stadt_von(p):
+                        in_staedten += 1
+                    daten["orte"][p["id"]] = p
 
-            # Volle Zelle mit Treffern in zugelassenen Städten → vierteln (anderswo nicht weiter verfeinern)
-            if len(treffer) >= MAX_TREFFER and in_staedten > 0:
-                if zelle["km"] / 2 >= MIN_ZELLE_KM:
-                    daten["warteschlange"].extend(_viertel(zelle))
-                else:
-                    daten["gesaettigt_min"] += 1
+                # Volle Zelle mit Treffern in zugelassenen Städten → vierteln (anderswo nicht weiter verfeinern)
+                if len(treffer) >= MAX_TREFFER and in_staedten > 0:
+                    if zelle["km"] / 2 >= MIN_ZELLE_KM:
+                        daten["warteschlange"].extend(_viertel(zelle))
+                    elif je_typ and not zelle.get("typen"):
+                        daten["warteschlange"].extend(_typ_nachzuege(zelle))
+                    else:
+                        # Kleinstzelle bleibt unvollständig – in der Auswertung ausweisen
+                        daten["gesaettigt_min"] += 1
+                        daten.setdefault("gesaettigt_min_zellen", []).append(schluessel)
 
-            erledigt.add(schluessel)
-            daten["erledigt"].append(schluessel)
-            if daten["anfragen"] % 10 == 0:
-                speicher_schreiben(daten)
-                logger.info(
-                    "  %d Anfragen | %d Zellen offen | %d Orte gefunden",
-                    daten["anfragen"], len(daten["warteschlange"]), len(daten["orte"]),
-                )
+                erledigt.add(schluessel)
+                daten["erledigt"].append(schluessel)
+                if daten["anfragen"] % 10 == 0:
+                    speicher_schreiben(daten)
+                    logger.info(
+                        "  %d Anfragen | %d Zellen offen | %d Orte gefunden",
+                        daten["anfragen"], len(daten["warteschlange"]), len(daten["orte"]),
+                    )
+    finally:
+        speicher_schreiben(daten)
 
-    speicher_schreiben(daten)
     fertig = not daten["warteschlange"]
     logger.info(
         "Suche %s: %d Anfragen gesamt (ca. %.2f $ ohne Freikontingent), %d Orte gefunden%s",
-        "abgeschlossen" if fertig else "pausiert (Limit erreicht – erneut aufrufen zum Fortsetzen)",
+        "abgeschlossen" if fertig else "pausiert (Limit/Fehler – erneut aufrufen zum Fortsetzen)",
         daten["anfragen"], daten["anfragen"] * PREIS_SUCHE / 1000, len(daten["orte"]),
-        f", {daten['gesaettigt_min']} Kleinstzellen waren noch voll" if daten["gesaettigt_min"] else "",
+        f", {daten['gesaettigt_min']} Kleinstzellen waren noch voll (unvollständig; '--je-typ' fragt sie "
+        f"getrennt nach Restaurants und Cafés nach)" if daten["gesaettigt_min"] else "",
     )
     return daten
+
+
+def volle_kleinstzellen(daten: dict) -> int:
+    """Zählt volle Kleinstzellen, die noch nicht getrennt nach Typ nachgefragt wurden (unvollständige Abdeckung)."""
+    erledigt = {_zell_schluessel(_aus_schluessel(s)) for s in daten.get("erledigt", [])}
+    orte = list(daten.get("orte", {}).values())
+    anzahl = 0
+    for s in erledigt:
+        zelle = _aus_schluessel(s)
+        if zelle.get("typen") or zelle["km"] / 2 >= MIN_ZELLE_KM:
+            continue
+        im_kreis = [p for p in orte if _im_kreis(zelle, p)]
+        if len(im_kreis) >= MAX_TREFFER and any(stadt_von(p) for p in im_kreis):
+            if not all(_zell_schluessel(n) in erledigt for n in _typ_nachzuege(zelle)):
+                anzahl += 1
+    return anzahl
 
 
 # ── Auswertung ────────────────────────────────────────────────────────────────
@@ -427,7 +527,12 @@ def auswertung() -> None:
         ort_stadtteil(p["displayName"]["text"], p.get("formattedAddress"), stadt_von(p)) or "?" for p in liste
     )
     print("Stadtteile:", ", ".join(f"{s} {n}" for s, n in stadtteile.most_common(15)), "…")
-    print(f"Details für alle Kandidaten: ca. {len(liste) * PREIS_DETAILS / 1000:.2f} $ (ohne Freikontingent)\n")
+    print(f"Details für alle Kandidaten: ca. {len(liste) * PREIS_DETAILS / 1000:.2f} $ (ohne Freikontingent)")
+    voll = volle_kleinstzellen(daten)
+    if voll:
+        print(f"Unvollständig: {voll} volle Kleinstzellen (dort fehlen ggf. weniger bekannte Orte). "
+              f"Nachfragen getrennt nach Typ: 'suchen --je-typ' ≈ {2 * voll} Anfragen ≈ {2 * voll * PREIS_SUCHE / 1000:.2f} $")
+    print()
     print("Top 15:")
     for p in liste[:15]:
         print(f"  {p['_score']:2d}  {p['displayName']['text'][:40]:40s} {p['_typ']:10s} "
@@ -508,6 +613,7 @@ def scores_nachziehen(db) -> int:
         .execute()
         .data or []
     )
+    nachgetragen = 0
     for o in ohne:
         if o.get("google_rating") is None:
             continue
@@ -518,9 +624,60 @@ def scores_nachziehen(db) -> int:
         })
         extras = {**(o.get("extras") or {}), "vorab_score": gewichtet, "kette": kette}
         db.table("orte").update({"qualitaets_score": score, "extras": extras}).eq("id", o["id"]).execute()
-    if ohne:
-        logger.info("Vorab-Score für %d bestehende Orte nachgetragen", len(ohne))
-    return len(ohne)
+        nachgetragen += 1
+    if nachgetragen:
+        logger.info("Vorab-Score für %d bestehende Orte nachgetragen", nachgetragen)
+    return nachgetragen
+
+
+def neu_bewerten(dry_run: bool) -> list[dict]:
+    """
+    Berechnet den Vorab-Score aller Orte neu (z.B. nach Änderung der Ketten-Erkennung).
+    Ändert nur qualitaets_score und extras.vorab_score/kette – sonst nichts.
+
+    Returns:
+        Liste der geänderten Orte (Name, alt, neu, aktiv)
+    """
+    from database.client import get_supabase_client
+
+    db = get_supabase_client()
+    orte, seite = [], 0
+    while True:
+        teil = (
+            db.table("orte")
+            .select("id, name, aktiv, qualitaets_score, google_rating, google_bewertungen_anzahl, extras")
+            .range(seite * 1000, seite * 1000 + 999)
+            .execute()
+            .data or []
+        )
+        orte += teil
+        if len(teil) < 1000:
+            break
+        seite += 1
+
+    geaendert = []
+    for o in orte:
+        if o.get("google_rating") is None:
+            continue
+        score, gewichtet, kette = vorab_score({
+            "rating": o["google_rating"],
+            "userRatingCount": o.get("google_bewertungen_anzahl") or 0,
+            "displayName": {"text": o["name"]},
+        })
+        ex = o.get("extras") or {}
+        if score == o.get("qualitaets_score") and bool(ex.get("kette")) == kette:
+            continue
+        geaendert.append({"name": o["name"], "alt": o.get("qualitaets_score"), "neu": score, "aktiv": o["aktiv"], "kette": kette})
+        if not dry_run:
+            db.table("orte").update({
+                "qualitaets_score": score,
+                "extras": {**ex, "vorab_score": gewichtet, "kette": kette},
+            }).eq("id", o["id"]).execute()
+
+    for g in geaendert:
+        logger.info("  %s: Score %s → %s%s%s", g["name"], g["alt"], g["neu"], " (Kette)" if g["kette"] else "", " [aktiv]" if g["aktiv"] else "")
+    logger.info("%d Orte %s", len(geaendert), "würden geändert (Dry-Run)" if dry_run else "neu bewertet")
+    return geaendert
 
 
 def main():
@@ -530,8 +687,13 @@ def main():
     p_suchen = befehle.add_parser("suchen", help="Flächensuche ausführen/fortsetzen")
     p_suchen.add_argument("--max-anfragen", type=int, default=900, help="Höchstzahl Suchanfragen in diesem Lauf")
     p_suchen.add_argument("--neu", action="store_true", help="Zwischenspeicher verwerfen und neu beginnen")
+    p_suchen.add_argument("--je-typ", action="store_true",
+                          help="Volle Kleinstzellen getrennt nach Restaurants und Cafés nachfragen (2 Anfragen je Zelle)")
 
     befehle.add_parser("auswertung", help="Kandidaten-Pool anzeigen (kostenlos)")
+
+    p_bewerten = befehle.add_parser("bewerten", help="Vorab-Score aller Orte neu berechnen (kostenlos)")
+    p_bewerten.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts speichern")
 
     p_import = befehle.add_parser("importieren", help="Details laden und in Supabase speichern")
     p_import.add_argument("--max", type=int, default=900, help="Höchstzahl Orte (= Detail-Abrufe)")
@@ -539,14 +701,16 @@ def main():
     p_import.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts abrufen oder speichern")
 
     args = parser.parse_args()
-    if args.befehl != "auswertung" and not GOOGLE_PLACES_API_KEY:
+    if args.befehl in ("suchen", "importieren") and not GOOGLE_PLACES_API_KEY:
         logger.error("GOOGLE_PLACES_API_KEY fehlt in .env")
         sys.exit(1)
 
     if args.befehl == "suchen":
-        suchen(args.max_anfragen, args.neu)
+        suchen(args.max_anfragen, args.neu, args.je_typ)
     elif args.befehl == "auswertung":
         auswertung()
+    elif args.befehl == "bewerten":
+        neu_bewerten(args.dry_run)
     else:
         importieren(args.max, args.min_score, args.dry_run)
 

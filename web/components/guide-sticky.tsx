@@ -40,7 +40,10 @@ export function GuideSticky({
 
   const zurFilterleiste = () => {
     const ziel = document.getElementById(zielId);
-    if (ziel) window.scrollTo({ top: ziel.getBoundingClientRect().top + window.scrollY - 8, behavior: "smooth" });
+    if (!ziel) return;
+    window.scrollTo({ top: ziel.getBoundingClientRect().top + window.scrollY - 8, behavior: "smooth" });
+    // Der Knopf wird gleich inert (Leiste verschwindet) – Fokus in die große Filterleiste mitnehmen
+    ziel.focus({ preventScroll: true });
   };
 
   return (
@@ -48,7 +51,7 @@ export function GuideSticky({
       <div className="gd-sticky__innen container">
         <div className="gd-sticky__typen">
           {typen.map((t) => (
-            <Link key={t.label} href={t.href} scroll={false} className={`gd-chip ${t.aktiv ? "gd-chip--an" : ""}`}>
+            <Link key={t.label} href={t.href} scroll={false} className={`gd-chip ${t.aktiv ? "gd-chip--an" : ""}`} aria-current={t.aktiv || undefined}>
               {t.icon && <span className="icon" aria-hidden>{t.icon}</span>}
               {t.label}
             </Link>

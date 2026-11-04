@@ -110,7 +110,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
         sortOptionen={sortOptionen}
       />
 
-      <div className="gd-filter" id="gd-filter">
+      <div className="gd-filter" id="gd-filter" tabIndex={-1}>
         <div className="container gd-filter__innen">
           <div className="gd-typen">
             {typTabs.map((t) => (
@@ -136,8 +136,8 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
 
           <div className="gd-zeile">
             <span className="gd-zeile__label">Filter</span>
-            <div className="gd-zeile__chips">
-              <details className="gd-dropdown">
+            {/* Küche steht außerhalb der scrollenden Chip-Reihe, damit das Menü nicht abgeschnitten wird */}
+            <details className="gd-dropdown">
                 <summary className={`gd-chip gd-chip--gross ${f.kueche ? "gd-chip--an" : ""}`}>
                   <Icon name="ramen_dining" />{kuecheName ?? "Küche"}<Icon name="expand_more" />
                 </summary>
@@ -149,8 +149,9 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
                     </Link>
                   ))}
                 </div>
-              </details>
-              <span className="gd-trenner gd-trenner--hoch" aria-hidden />
+            </details>
+            <div className="gd-zeile__chips">
+              <span className="gd-trenner gd-trenner--hoch gd-nur-breit" aria-hidden />
               {[1, 2, 3].map((p) => (
                 <Chip key={p} href={href({ preise: umschalten(f.preise, p) })} aktiv={f.preise.includes(p)}>{preisZeichen(p)}</Chip>
               ))}

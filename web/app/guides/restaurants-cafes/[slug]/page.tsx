@@ -11,15 +11,15 @@ import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { kueche, sortieren, sterne, zahl } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
-import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden } from "@/lib/orte";
+import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { slug } = await props.params;
-  const ort = await ortLaden(decodeURIComponent(slug));
+  const slug = slugDekodieren((await props.params).slug);
+  const ort = slug ? await ortLaden(slug) : null;
   if (!ort) return { title: "Nicht gefunden" };
   const bild = ortBildUrl(ort);
   return {
@@ -34,15 +34,34 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 const PREIS_TEXT: Record<string, string> = { "€": "günstig", "€€": "mittleres Preisniveau", "€€€": "gehoben" };
 
-/** Google-Öffnungszeiten ("Montag: 12:00–22:00 | Dienstag: …") → Zeilen; dazu die von heute (Berlin). */
-function oeffnungszeiten(text: string | null): { heute: string | null; tage: { tag: string; zeit: string }[] } {
-  if (!text) return { heute: null, tage: [] };
-  const tage = text.split("|").map((z) => z.trim()).filter(Boolean).map((z) => {
+const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+const ZEITRAUM = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/g;
+
+/**
+ * Google-Öffnungszeiten ("Montag: 12:00–22:00 Uhr | Dienstag: …") → Zeilen, dazu die von heute (Berlin).
+ * Reicht ein Zeitraum des Vortags über Mitternacht ("Freitag: 18:00–02:00") und ist es jetzt davor,
+ * gilt das Lokal als noch geöffnet – sonst stünde samstags um 01:00 oft "Geschlossen" da.
+ */
+function oeffnungszeiten(text: string | null, jetzt: Date) {
+  const tage = (text ?? "").split("|").map((z) => z.trim()).filter(Boolean).map((z) => {
     const i = z.indexOf(":");
     return i > 0 ? { tag: z.slice(0, i).trim(), zeit: z.slice(i + 1).trim() } : { tag: "", zeit: z };
   });
-  const heuteName = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", weekday: "long" }).format(new Date());
-  return { heute: tage.find((t) => t.tag === heuteName)?.zeit ?? null, tage };
+  const teile = Object.fromEntries(
+    new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(jetzt).map((p) => [p.type, p.value]),
+  );
+  const heuteName = teile.weekday;
+  const minuten = Number(teile.hour) * 60 + Number(teile.minute);
+  const vortag = WOCHENTAGE[(WOCHENTAGE.indexOf(heuteName) + 6) % 7];
+
+  let nochBis: string | null = null;
+  for (const m of (tage.find((t) => t.tag === vortag)?.zeit ?? "").matchAll(ZEITRAUM)) {
+    const start = Number(m[1]) * 60 + Number(m[2]);
+    const ende = Number(m[3]) * 60 + Number(m[4]);
+    if (ende < start && minuten < ende) nochBis = `${m[3].padStart(2, "0")}:${m[4]}`;
+  }
+  return { heute: tage.find((t) => t.tag === heuteName)?.zeit ?? null, nochBis, tage };
 }
 
 function InfoZeile({ icon, l1, l2, children }: { icon: string; l1: React.ReactNode; l2?: React.ReactNode; children?: React.ReactNode }) {
@@ -61,9 +80,10 @@ function InfoZeile({ icon, l1, l2, children }: { icon: string; l1: React.ReactNo
 /** Öffnungszeiten hängen vom heutigen Wochentag ab – daher erst zur Anfragezeit (eigene Suspense-Grenze). */
 async function Oeffnungszeiten({ text }: { text: string }) {
   await connection();
-  const oz = oeffnungszeiten(text);
+  const oz = oeffnungszeiten(text, new Date());
+  const heute = oz.heute ? `Heute: ${oz.heute}` : "Öffnungszeiten";
   return (
-    <InfoZeile icon="schedule" l1={oz.heute ? `Heute: ${oz.heute}` : "Öffnungszeiten"}>
+    <InfoZeile icon="schedule" l1={oz.nochBis ? `Noch geöffnet bis ${oz.nochBis} Uhr` : heute} l2={oz.nochBis ? heute : undefined}>
       <details className="gd-oz">
         <summary>Alle Öffnungszeiten</summary>
         <dl>
@@ -131,17 +151,19 @@ async function Aehnliche({ ort }: { ort: DddOrt }) {
 }
 
 export default async function OrtDetail(props: Props) {
-  const { slug } = await props.params;
-  const ort = await ortLaden(decodeURIComponent(slug));
+  const slug = slugDekodieren((await props.params).slug);
+  const ort = slug ? await ortLaden(slug) : null;
   if (!ort || !["restaurant", "cafe"].includes(ort.typ)) notFound();
 
   const bild = ortBildUrl(ort);
   const autorUrl = ortBildAutorUrl(ort);
   const kuecheName = kueche(ort)?.name ?? (typeof ort.extras.kueche === "string" ? ort.extras.kueche : null);
   const highlightGericht = typeof ort.extras.highlight_gericht === "string" ? ort.extras.highlight_gericht : null;
-  const reservierung = typeof ort.extras.reservierung_url === "string" ? ort.extras.reservierung_url : null;
+  // Links aus der Datenbank nur als http(s) nach außen geben
+  const webseite = sichereUrl(ort.webseite);
+  const reservierung = sichereUrl(ort.extras.reservierung_url);
   const mapsUrl =
-    (typeof ort.extras.google_maps_url === "string" && ort.extras.google_maps_url) ||
+    sichereUrl(ort.extras.google_maps_url) ||
     (ort.latitude != null && ort.longitude != null
       ? `https://www.google.com/maps/search/?api=1&query=${ort.latitude},${ort.longitude}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${ort.name} ${ort.adresse ?? ""}`)}`);
@@ -210,9 +232,9 @@ export default async function OrtDetail(props: Props) {
             )}
             {ort.preis_niveau && <InfoZeile icon="payments" l1={ort.preis_niveau} l2={PREIS_TEXT[ort.preis_niveau]} />}
           </div>
-          {ort.webseite && (
-            <a href={ort.webseite} target="_blank" rel="noopener" className="gd-knopf gd-knopf--navy">
-              <Icon name="language" />Website<span className="gd-knopf__zusatz">{domain(ort.webseite)}</span>
+          {webseite && (
+            <a href={webseite} target="_blank" rel="noopener" className="gd-knopf gd-knopf--navy">
+              <Icon name="language" />Website<span className="gd-knopf__zusatz">{domain(webseite)}</span>
             </a>
           )}
           {reservierung && (
@@ -221,7 +243,7 @@ export default async function OrtDetail(props: Props) {
             </a>
           )}
           {ort.instagram && (
-            <a href={`https://instagram.com/${ort.instagram.replace(/^@/, "")}`} target="_blank" rel="noopener" className="gd-knopf">
+            <a href={`https://instagram.com/${encodeURIComponent(ort.instagram.replace(/^@/, ""))}`} target="_blank" rel="noopener" className="gd-knopf">
               <Icon name="photo_camera" />Instagram<span className="gd-knopf__zusatz muted">@{ort.instagram.replace(/^@/, "")}</span>
             </a>
           )}
