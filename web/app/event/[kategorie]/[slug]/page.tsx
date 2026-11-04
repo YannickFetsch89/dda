@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
-import { Bild, EventKarte, Icon, KatBadge, OnlineTag, SkeletonKarten, eventPfad } from "@/components/karten";
+import { Bild, EventKarte, Icon, KatBadge, SkeletonKarten, eventPfad } from "@/components/karten";
 import { eventLaden, eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, istOnline, nachBeliebtheit } from "@/lib/ableitungen";
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
@@ -105,7 +105,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                     <Icon name={online ? "videocam" : "location_on"} />
                   </span>
                   <div>
-                    <b>{online && <OnlineTag />} {e.ort}</b>
+                    <b>{e.ort}</b>
                     <span>
                       {online ? "Online-Veranstaltung" : (e.adresse ?? "Düsseldorf")}
                       {!online && e.stadtteil ? ` · ${stadtteilName(e.stadtteil)}` : ""}

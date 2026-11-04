@@ -38,6 +38,7 @@ export function Bild({
     <div className={`bild ${e.abgesagt ? "bild--abgesagt" : ""} ${className}`} style={katStil(e.kategorie)}>
       <BildImg src={e.bild_url} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
       {e.abgesagt && <AbgesagtTag className="bild__abgesagt" />}
+      {!e.abgesagt && istOnline(e) && <OnlineTag className="bild__online" />}
       {children}
     </div>
   );
@@ -93,7 +94,7 @@ export function EventKarte({ e, heute, variante = "standard", rang, gross = fals
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </h3>
         <span className="karte__fuss">
-          <span>{istOnline(e) ? <><OnlineTag /> {e.ort}</> : e.ort}</span>
+          <span>{e.ort}</span>
           <span className="preis">{preisText(e)}</span>
         </span>
       </div>
@@ -115,7 +116,6 @@ export function KompaktKarte({ e, heute }: { e: DddEvent; heute: string }) {
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </h3>
         <span className="kompakt__ort">
-          {istOnline(e) && <OnlineTag />}{" "}
           {e.ort}
           {e.preis ? ` · ${e.preis}` : ""}
         </span>
@@ -133,7 +133,6 @@ export function ListenZeile({ e, mitKategorie = false, zeit }: { e: DddEvent; mi
       <div className="zeile__text">
         <span className="zeile__titel">
           {e.abgesagt && <AbgesagtTag />}
-          {istOnline(e) && <OnlineTag />}
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </span>
         <span className="zeile__sub">
