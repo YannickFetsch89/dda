@@ -61,6 +61,34 @@ function normalisieren(z: Zeile): DddOrt {
   };
 }
 
+/** Google-Foto-Infos aus extras (nur Name und Urheber, nie eine URL mit API-Key). */
+interface GoogleFoto {
+  name?: string;
+  autor?: string | null;
+  autor_url?: string | null;
+}
+
+function googleFoto(o: DddOrt): GoogleFoto | null {
+  const foto = o.extras?.google_foto;
+  return foto && typeof foto === "object" && typeof (foto as GoogleFoto).name === "string" ? (foto as GoogleFoto) : null;
+}
+
+/**
+ * Bild-Adresse eines Ortes: eigenes Bild (bild_url) hat Vorrang,
+ * sonst das Google-Foto über die eigene Route /ort-foto/[slug] (Key bleibt auf dem Server).
+ */
+export function ortBildUrl(o: DddOrt): string | null {
+  if (o.bild_url && !o.bild_url.includes("key=")) return o.bild_url;
+  return googleFoto(o) && o.slug ? `/ort-foto/${encodeURIComponent(o.slug)}` : null;
+}
+
+/** Urheber-Link des Google-Fotos (Google verlangt die Nennung beim Foto). */
+export function ortBildAutorUrl(o: DddOrt): string | null {
+  if (o.bild_url && !o.bild_url.includes("key=")) return null;
+  const url = googleFoto(o)?.autor_url;
+  return typeof url === "string" && url.startsWith("https://") ? url : null;
+}
+
 /** Alle aktiven Orte eines Typs laden. */
 export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
   "use cache";

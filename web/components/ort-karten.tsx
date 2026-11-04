@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
+import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
 /** URL-Pfad zur Detailseite eines Ortes. */
@@ -63,8 +64,11 @@ export function OrtKarte({ o }: { o: DddOrt }) {
     <article className="ort-karte" role="listitem">
       <Link href={ortPfad(o)} className="ort-karte__link">
         <div className="ort-karte__bild">
-          <BildImg src={o.bild_url} alt={o.name} icon={typIcon(o.typ)} />
+          <BildImg src={ortBildUrl(o)} alt={o.name} icon={typIcon(o.typ)} />
           {o.preis_niveau && <span className="ort-karte__preis">{o.preis_niveau}</span>}
+          {ortBildUrl(o) && o.bild_attribution && (
+            <span className="ort-karte__foto-credit">Foto: {o.bild_attribution}</span>
+          )}
         </div>
         <div className="ort-karte__text">
           <span className="ort-karte__typ">

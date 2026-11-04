@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/karten";
 import { OrtKartenGrid, ortPfad } from "@/components/ort-karten";
-import { ortLaden, orteLaden } from "@/lib/orte";
+import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -18,7 +18,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: `${ort.name} – ${typ} in ${ort.stadtteil ?? "Düsseldorf"}`,
     description: ort.beschreibung ?? `${ort.name} – ${typ} in Düsseldorf. Kuratierte Empfehlung von DiesDasDüsseldorf.`,
-    openGraph: ort.bild_url ? { images: [{ url: ort.bild_url }] } : undefined,
+    openGraph: ortBildUrl(ort) ? { images: [{ url: ortBildUrl(ort)! }] } : undefined,
   };
 }
 
@@ -60,6 +60,8 @@ export default async function RestaurantDetail(props: Props) {
   if (!ort) notFound();
 
   const typ = ort.typ === "cafe" ? "Café" : "Restaurant";
+  const bildUrl = ortBildUrl(ort);
+  const autorUrl = ortBildAutorUrl(ort);
 
   const alle = await orteLaden(["restaurant", "cafe"]);
   const aehnliche = alle
@@ -78,12 +80,21 @@ export default async function RestaurantDetail(props: Props) {
 
       <article className="ort-detail">
         {/* Hero-Bild */}
-        {ort.bild_url && (
+        {bildUrl && (
           <div className="ort-detail__hero">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ort.bild_url} alt={ort.name} loading="eager" />
+            <img src={bildUrl} alt={ort.name} loading="eager" />
             {ort.bild_attribution && (
-              <span className="ort-detail__attribution">Foto: {ort.bild_attribution}</span>
+              <span className="ort-detail__attribution">
+                Foto:{" "}
+                {autorUrl ? (
+                  <a href={autorUrl} target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>
+                    {ort.bild_attribution}
+                  </a>
+                ) : (
+                  ort.bild_attribution
+                )}
+              </span>
             )}
           </div>
         )}

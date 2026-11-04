@@ -4,12 +4,19 @@ Recherchiert Restaurants und Cafés in Düsseldorf über die Google Places API (
 
 Ablauf:
   1. Nearby Search: Findet Orte nach Typ im Stadtgebiet
-  2. Place Details: Lädt Details, Bewertungen, Fotos pro Ort
-  3. Foto-Download: Speichert das beste Foto lokal
-  4. Speicherung: Schreibt alles in die Supabase-Tabelle `orte`
+  2. Place Details: Lädt pro Ort Beschreibung (editorialSummary), Bewertungstexte und
+     Ausstattung (Terrasse, vegetarisch, Frühstück, kinderfreundlich …)
+  3. Speicherung: Schreibt alles in die Supabase-Tabelle `orte` (aktiv = false)
+
+Fotos: Gespeichert wird nur der Foto-Ressourcenname (extras.google_foto), NIE eine URL mit
+API-Key – sonst stünde der Key öffentlich im HTML der Website. Die Auslieferung des Fotos
+übernimmt später die Website serverseitig.
 
 Nutzung:
   python -m scraper.orte.google_places [--typ restaurant|cafe] [--limit 50] [--dry-run]
+  python -m scraper.orte.google_places --aktualisieren [--dry-run]
+      → lädt für alle bereits gespeicherten Orte die Details nach und entfernt
+        API-Keys aus alten Bild-URLs (kuratierte Felder bleiben unangetastet)
 """
 import argparse
 import json
@@ -38,6 +45,7 @@ from config import (
     GOOGLE_PLACES_RADIUS,
 )
 from database.client import get_supabase_client
+from pipeline.slug_generator import _slugify
 from pipeline.stadtteil_mapper import stadtteil_ermitteln
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -71,18 +79,10 @@ def _headers(field_mask: str) -> dict:
 
 
 def _slug_erzeugen(name: str, stadtteil: str | None = None) -> str:
-    """Erzeugt einen URL-freundlichen Slug aus dem Namen."""
-    text = name.lower()
-    # Umlaute ersetzen
-    text = text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-    # Nur Buchstaben, Zahlen, Bindestriche
-    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
-    # Doppelte Bindestriche entfernen
-    text = re.sub(r"-+", "-", text)
+    """Erzeugt einen URL-freundlichen Slug aus dem Namen (Umlaute → ae/oe/ue, Akzente → ASCII: Café → cafe)."""
+    text = _slugify(name)
     if stadtteil:
-        st = stadtteil.lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-        st = re.sub(r"[^a-z0-9]+", "-", st).strip("-")
-        text = f"{text}-{st}"
+        text = f"{text}-{_slugify(stadtteil)}"
     return text
 
 
@@ -114,22 +114,75 @@ def nearby_search(typ_keyword: str, page_token: str | None = None) -> dict:
         return resp.json()
 
 
-def place_details(place_id: str) -> dict:
-    """Place Details (New) – lädt vollständige Infos zu einem Ort."""
-    field_mask = "id,displayName,formattedAddress,location,rating,userRatingCount,primaryType,types,priceLevel,googleMapsUri,websiteUri,nationalPhoneNumber,regularOpeningHours,editorialSummary,reviews,photos"
+# Basisfelder für Place Details
+_DETAIL_FELDER_BASIS = (
+    "id,displayName,formattedAddress,location,rating,userRatingCount,primaryType,types,"
+    "priceLevel,googleMapsUri,websiteUri,nationalPhoneNumber,regularOpeningHours,"
+    "editorialSummary,reviews,photos"
+)
+# Ausstattungsmerkmale (Places API New, boolesche Felder) → Tag auf der Website
+_AUSSTATTUNG_TAGS = {
+    "outdoorSeating": "Terrasse",
+    "servesBreakfast": "Frühstück",
+    "servesBrunch": "Brunch",
+    "servesVegetarianFood": "Vegetarisch",
+    "servesCocktails": "Cocktails",
+    "servesDessert": "Desserts",
+    "goodForChildren": "Kinderfreundlich",
+    "menuForChildren": "Kinderkarte",
+    "allowsDogs": "Hunde willkommen",
+    "goodForGroups": "Gruppen",
+    "reservable": "Reservierbar",
+    "takeout": "To go",
+    "liveMusic": "Live-Musik",
+}
+_DETAIL_FELDER_VOLL = _DETAIL_FELDER_BASIS + "," + ",".join(_AUSSTATTUNG_TAGS)
 
-    url = f"{API_BASE}/{place_id}"
-    time.sleep(0.3)
+# Wie viele Bewertungstexte als Material für die spätere KI-Beschreibung gespeichert werden
+_MAX_BEWERTUNGEN = 5
+
+
+def place_details(place_id: str) -> dict:
+    """
+    Place Details (New) – lädt vollständige Infos zu einem Ort (auf Deutsch).
+
+    Lehnt die API die Ausstattungsfelder ab (HTTP 400), wird mit den Basisfeldern wiederholt.
+    """
+    url = f"{API_BASE}/places/{place_id}"
+    params = {"languageCode": "de", "regionCode": "DE"}
 
     with httpx.Client(timeout=30) as client:
-        resp = client.get(url, headers=_headers(field_mask))
-        resp.raise_for_status()
-        return resp.json()
+        for field_mask in (_DETAIL_FELDER_VOLL, _DETAIL_FELDER_BASIS):
+            time.sleep(0.5)  # Rate Limiting
+            resp = client.get(url, params=params, headers=_headers(field_mask))
+            if resp.status_code == 400 and field_mask is _DETAIL_FELDER_VOLL:
+                logger.warning("Details mit Ausstattungsfeldern abgelehnt, versuche Basisfelder: %s", resp.text[:300])
+                continue
+            resp.raise_for_status()
+            return resp.json()
+    return {}
 
 
-def foto_url(foto_name: str, max_breite: int = 800) -> str:
-    """Erzeugt eine Foto-URL aus dem Foto-Ressourcennamen."""
-    return f"{API_BASE}/{foto_name}/media?maxWidthPx={max_breite}&key={GOOGLE_PLACES_API_KEY}"
+def _foto_info(fotos: list[dict]) -> tuple[dict | None, str | None]:
+    """
+    Wählt das erste Foto und gibt (Foto-Info für extras, Attribution) zurück.
+
+    Gespeichert wird nur der Ressourcenname ("places/…/photos/…"), keine URL mit API-Key.
+    Google verlangt, dass der Urheber (authorAttributions) beim Foto angezeigt wird.
+    """
+    if not fotos:
+        return None, None
+    foto = fotos[0]
+    autoren = foto.get("authorAttributions", [])
+    autor = autoren[0] if autoren else {}
+    info = {
+        "name": foto.get("name"),
+        "breite": foto.get("widthPx"),
+        "hoehe": foto.get("heightPx"),
+        "autor": autor.get("displayName"),
+        "autor_url": autor.get("uri"),
+    }
+    return info, autor.get("displayName") or "Google"
 
 
 def _preis_niveau(price_level: str | None) -> str | None:
@@ -202,16 +255,6 @@ def ort_aus_place(place: dict, gewuenschter_typ: str) -> dict | None:
 
     stadtteil = stadtteil_ermitteln(name, adresse)
 
-    # Bestes Foto
-    fotos = place.get("photos", [])
-    bild_url = None
-    bild_attribution = None
-    if fotos:
-        bild_url = foto_url(fotos[0]["name"])
-        autoren = fotos[0].get("authorAttributions", [])
-        if autoren:
-            bild_attribution = autoren[0].get("displayName", "Google")
-
     typ = _unser_typ(place, gewuenschter_typ)
     slug = _slug_erzeugen(name, stadtteil)
 
@@ -223,8 +266,7 @@ def ort_aus_place(place: dict, gewuenschter_typ: str) -> dict | None:
         "stadtteil": stadtteil,
         "latitude": lat,
         "longitude": lng,
-        "bild_url": bild_url,
-        "bild_attribution": bild_attribution,
+        "bild_url": None,  # Foto wird über extras.google_foto serverseitig ausgeliefert
         "preis_niveau": _preis_niveau(place.get("priceLevel")),
         "oeffnungszeiten": _oeffnungszeiten(place.get("regularOpeningHours")),
         "webseite": place.get("websiteUri"),
@@ -234,13 +276,59 @@ def ort_aus_place(place: dict, gewuenschter_typ: str) -> dict | None:
         "google_bewertungen_anzahl": bewertungen,
         "aktiv": False,  # Wird erst nach Kuration aktiviert
     }
-
-    # Editorial Summary als Beschreibung (falls vorhanden)
-    editorial = place.get("editorialSummary", {})
-    if editorial and editorial.get("text"):
-        ort["beschreibung"] = editorial["text"]
-
+    ort.update(_detail_felder(place))
     return ort
+
+
+def _detail_felder(place: dict) -> dict:
+    """
+    Wertet die Detail-Felder eines Place aus: Beschreibung, Foto, Ausstattung, Bewertungen.
+
+    Returns:
+        Teil-Dict für die orte-Tabelle (beschreibung, bild_attribution, tags, extras)
+    """
+    felder: dict = {}
+    extras: dict = {}
+
+    # Kurzbeschreibung von Google – Platzhalter bis zur eigenen KI-Beschreibung
+    editorial = place.get("editorialSummary") or {}
+    if editorial.get("text"):
+        felder["beschreibung"] = editorial["text"]
+        extras["google_zusammenfassung"] = editorial["text"]
+
+    foto, attribution = _foto_info(place.get("photos", []))
+    if foto:
+        extras["google_foto"] = foto
+        felder["bild_attribution"] = attribution
+
+    # Ausstattung → Tags (nur Merkmale, die Google ausdrücklich mit "ja" belegt)
+    tags = [tag for feld, tag in _AUSSTATTUNG_TAGS.items() if place.get(feld) is True]
+    if tags:
+        felder["tags"] = tags
+    ausstattung = {feld: place[feld] for feld in _AUSSTATTUNG_TAGS if isinstance(place.get(feld), bool)}
+    if ausstattung:
+        extras["google_ausstattung"] = ausstattung
+    if place.get("outdoorSeating") is True:
+        extras["terrasse"] = True  # wird auf der Detailseite angezeigt
+
+    if place.get("googleMapsUri"):
+        extras["google_maps_url"] = place["googleMapsUri"]
+
+    # Bewertungstexte als Material für die spätere KI-Beschreibung (werden nicht angezeigt)
+    bewertungen = []
+    for r in (place.get("reviews") or [])[:_MAX_BEWERTUNGEN]:
+        text = (r.get("text") or {}).get("text") or (r.get("originalText") or {}).get("text")
+        if text:
+            bewertungen.append({
+                "sterne": r.get("rating"),
+                "text": text[:1000],
+                "datum": (r.get("publishTime") or "")[:10] or None,
+            })
+    if bewertungen:
+        extras["google_bewertungen"] = bewertungen
+
+    felder["extras"] = extras
+    return felder
 
 
 def alle_orte_suchen(typ: str, limit: int = 0) -> list[dict]:
@@ -273,6 +361,14 @@ def alle_orte_suchen(typ: str, limit: int = 0) -> list[dict]:
                 if place_id in gesehen:
                     continue
                 gesehen.add(place_id)
+
+                # Erst mit den Suchdaten filtern, dann nur für passende Orte Details laden (kostet pro Abruf)
+                if not ort_aus_place(place, typ):
+                    continue
+                try:
+                    place = {**place, **place_details(place_id)}
+                except Exception as e:
+                    logger.warning("  Details für '%s' nicht geladen: %s", place.get("displayName", {}).get("text", "?"), e)
 
                 ort = ort_aus_place(place, typ)
                 if ort:
@@ -331,17 +427,92 @@ def in_supabase_speichern(orte: list[dict]) -> dict:
     return {"gespeichert": gespeichert, "duplikate": duplikate, "fehler": fehler}
 
 
+def bestehende_aktualisieren(dry_run: bool = False) -> dict:
+    """
+    Lädt für alle gespeicherten Orte mit google_place_id die Details nach.
+
+    Aktualisiert werden nur Google-Daten (Bewertung, Öffnungszeiten, Kontakt, Foto, extras).
+    Kuratierte Felder (Name, Slug, Untertitel, Highlight, Score, aktiv) bleiben unangetastet;
+    Beschreibung und Tags werden nur gesetzt, wenn sie noch leer sind.
+    Bild-URLs mit eingebettetem API-Key werden entfernt.
+    """
+    db = get_supabase_client()
+    orte = (
+        db.table("orte")
+        .select("id, name, google_place_id, beschreibung, tags, bild_url, extras")
+        .not_.is_("google_place_id", "null")
+        .execute()
+        .data or []
+    )
+    logger.info("%d Orte mit Google-ID gefunden", len(orte))
+    aktualisiert = fehler = 0
+
+    for ort in orte:
+        try:
+            place = place_details(ort["google_place_id"])
+        except Exception as e:
+            fehler += 1
+            logger.error("Details für '%s' fehlgeschlagen: %s", ort["name"], e)
+            continue
+
+        details = _detail_felder(place)
+        update: dict = {
+            "google_rating": place.get("rating"),
+            "google_bewertungen_anzahl": place.get("userRatingCount"),
+            "oeffnungszeiten": _oeffnungszeiten(place.get("regularOpeningHours")),
+            "webseite": place.get("websiteUri"),
+            "telefon": place.get("nationalPhoneNumber"),
+            "preis_niveau": _preis_niveau(place.get("priceLevel")),
+            # Bestehende extras behalten (z.B. manuell gepflegte Küche), Google-Daten ergänzen
+            "extras": {**(ort.get("extras") or {}), **details["extras"]},
+        }
+        update = {k: v for k, v in update.items() if v is not None}
+        if "bild_attribution" in details:
+            update["bild_attribution"] = details["bild_attribution"]
+        if not ort.get("beschreibung") and details.get("beschreibung"):
+            update["beschreibung"] = details["beschreibung"]
+        if not ort.get("tags") and details.get("tags"):
+            update["tags"] = details["tags"]
+        if ort.get("bild_url") and "key=" in ort["bild_url"]:
+            update["bild_url"] = None  # API-Key nicht öffentlich ausliefern
+
+        logger.info(
+            "  %s %s – Tags: %s | Beschreibung: %s | Foto: %s",
+            "(Dry-Run)" if dry_run else "✓", ort["name"],
+            ", ".join(update.get("tags") or ort.get("tags") or []) or "–",
+            "neu" if "beschreibung" in update else ("vorhanden" if ort.get("beschreibung") else "–"),
+            "ja" if details["extras"].get("google_foto") else "nein",
+        )
+        if dry_run:
+            continue
+        try:
+            db.table("orte").update(update).eq("id", ort["id"]).execute()
+            aktualisiert += 1
+        except Exception as e:
+            fehler += 1
+            logger.error("Speichern für '%s' fehlgeschlagen: %s", ort["name"], e)
+
+    logger.info("Aktualisierung: %d aktualisiert | %d Fehler", aktualisiert, fehler)
+    return {"aktualisiert": aktualisiert, "fehler": fehler}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Google Places Recherche für DiesDasDüsseldorf")
     parser.add_argument("--typ", choices=["restaurant", "cafe"], default="restaurant", help="Typ der Orte")
     parser.add_argument("--limit", type=int, default=0, help="Maximale Anzahl (0 = alle)")
     parser.add_argument("--dry-run", action="store_true", help="Nur suchen, nicht speichern")
     parser.add_argument("--json", action="store_true", help="Ergebnisse als JSON ausgeben")
+    parser.add_argument("--aktualisieren", action="store_true",
+                        help="Details für alle bereits gespeicherten Orte nachladen")
     args = parser.parse_args()
 
     if not GOOGLE_PLACES_API_KEY:
         logger.error("GOOGLE_PLACES_API_KEY fehlt in .env")
         sys.exit(1)
+
+    if args.aktualisieren:
+        bestehende_aktualisieren(dry_run=args.dry_run)
+        return
 
     logger.info("Starte Google Places Recherche: typ=%s, limit=%s", args.typ, args.limit or "alle")
     orte = alle_orte_suchen(args.typ, args.limit)
@@ -353,7 +524,10 @@ def main():
     if args.dry_run:
         logger.info("Dry-Run: %d Orte gefunden, nichts gespeichert.", len(orte))
         for o in orte:
-            print(f"  {o['name']:40s} {o.get('stadtteil', '?'):15s} ★{o.get('google_rating', '?')} ({o.get('google_bewertungen_anzahl', 0)} Bew.)")
+            print(
+                f"  {o['name']:40s} {o.get('stadtteil') or '?':15s} ★{o.get('google_rating', '?')} "
+                f"({o.get('google_bewertungen_anzahl', 0)} Bew.) | Tags: {', '.join(o.get('tags') or []) or '–'}"
+            )
         return
 
     ergebnis = in_supabase_speichern(orte)

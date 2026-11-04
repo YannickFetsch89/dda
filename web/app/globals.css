@@ -822,6 +822,13 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   border-radius: var(--r-sm);
 }
 
+.ort-karte__foto-credit {
+  position: absolute; bottom: 6px; right: 8px; max-width: calc(100% - 16px);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; color: rgba(255,255,255,0.85); background: rgba(0,0,0,0.45);
+  padding: 1px 6px; border-radius: var(--r-xs);
+}
+
 .ort-karte__text { padding: 14px 16px 16px; }
 
 .ort-karte__typ {
