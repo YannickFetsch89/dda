@@ -57,7 +57,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
         <h1 className="d">Restaurants & Cafés</h1>
         <p className="seitentitel__sub">
           {alle.length > 0
-            ? `${restaurants} Restaurants und ${cafes} Cafés – kuratiert für Düsseldorf`
+            ? `${restaurants} Restaurants und ${cafes} Cafés – kuratiert für Düsseldorf, Neuss und Ratingen`
             : "Kuratierte Empfehlungen für Düsseldorf. Bald verfügbar!"}
         </p>
       </div>

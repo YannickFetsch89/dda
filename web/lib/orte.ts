@@ -16,6 +16,13 @@ const SPALTEN = [
 
 type Zeile = Record<string, unknown>;
 
+/**
+ * Nur Orte ab diesem Qualitäts-Score (1–10) erscheinen auf der Website.
+ * In der Datenbank liegen bewusst auch schwächere Kandidaten (für Kuration und spätere Auswertungen).
+ */
+export const MIN_QUALITAETS_SCORE = 7;
+const SEITENGROESSE = 1000;
+
 function supabaseClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_KEY;
@@ -101,21 +108,26 @@ export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
   const orte: DddOrt[] = [];
 
   try {
-    const { data, error } = await client
-      .from("orte")
-      .select(SPALTEN)
-      .eq("aktiv", true)
-      .in("typ", typen)
-      .order("sortierung", { ascending: false })
-      .order("qualitaets_score", { ascending: false, nullsFirst: false })
-      .order("name", { ascending: true });
+    // Seitenweise laden: Supabase liefert pro Abfrage höchstens 1.000 Zeilen
+    for (let seite = 0; seite < 10; seite++) {
+      const { data, error } = await client
+        .from("orte")
+        .select(SPALTEN)
+        .eq("aktiv", true)
+        .gte("qualitaets_score", MIN_QUALITAETS_SCORE)
+        .in("typ", typen)
+        .order("sortierung", { ascending: false })
+        .order("qualitaets_score", { ascending: false, nullsFirst: false })
+        .order("name", { ascending: true })
+        .order("id", { ascending: true })
+        .range(seite * SEITENGROESSE, (seite + 1) * SEITENGROESSE - 1);
 
-    if (error) {
-      console.error(`Orte konnten nicht geladen werden: ${error.message}`);
-      return [];
-    }
-    if (data) {
-      orte.push(...(data as unknown as Zeile[]).map(normalisieren));
+      if (error) {
+        console.error(`Orte konnten nicht geladen werden: ${error.message}`);
+        return orte;
+      }
+      orte.push(...((data ?? []) as unknown as Zeile[]).map(normalisieren));
+      if (!data || data.length < SEITENGROESSE) break;
     }
   } catch (err) {
     console.error(`Fehler beim Laden der Orte: ${err instanceof Error ? err.message : err}`);
@@ -136,6 +148,7 @@ export async function ortLaden(slug: string): Promise<DddOrt | null> {
       .from("orte")
       .select(SPALTEN)
       .eq("aktiv", true)
+      .gte("qualitaets_score", MIN_QUALITAETS_SCORE)
       .eq("slug", slug)
       .maybeSingle();
 

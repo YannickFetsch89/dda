@@ -49,6 +49,7 @@ from pipeline.slug_generator import slug_mit_suffix  # noqa: E402
 from scraper.orte.google_places import (  # noqa: E402
     API_BASE,
     _AUSSCHLUSS_TYPEN,
+    _slug_erzeugen,
     ort_aus_place,
     place_details,
 )
@@ -59,8 +60,13 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
-# Rechteck um das Stadtgebiet Düsseldorf (etwas großzügiger; Orte außerhalb werden über die Adresse aussortiert)
+# Ankerpunkt des Zellenrasters (fest, damit bereits abgefragte Zellen beim Erweitern wiedererkannt werden)
 GEBIET = {"sued": 51.124, "nord": 51.353, "west": 6.688, "ost": 6.940}
+# Abgedecktes Rechteck: Düsseldorf plus Neuss (Westen) und Ratingen (Nordosten).
+# Orte anderer Städte darin (Meerbusch, Hilden …) werden über die Adresse aussortiert.
+ABDECKUNG = {"sued": 51.100, "nord": 51.370, "west": 6.580, "ost": 6.960}
+# Städte, deren Restaurants/Cafés in den Guide dürfen
+STAEDTE = ("Düsseldorf", "Neuss", "Ratingen")
 START_ZELLE_KM = 3.0      # Kantenlänge der Startzellen
 MIN_ZELLE_KM = 0.3        # feiner wird nicht geteilt
 MAX_TREFFER = 20          # Obergrenze der API pro Anfrage
@@ -102,7 +108,22 @@ KETTEN = re.compile(
     re.IGNORECASE,
 )
 
-DUESSELDORF_ADRESSE = re.compile(r"\b40\d{3}\s+Düsseldorf\b")
+# "40215 Düsseldorf", "41460 Neuss", "41470 Neuss-Rosellerheide", "40878 Ratingen"
+STADT_ADRESSE = re.compile(r"\b\d{5}\s+(" + "|".join(STAEDTE) + r")\b")
+
+
+def stadt_von(place: dict) -> str | None:
+    """Stadt aus der Google-Adresse (nur die zugelassenen Städte, sonst None)."""
+    treffer = STADT_ADRESSE.search(place.get("formattedAddress") or "")
+    return treffer.group(1) if treffer else None
+
+
+def ort_stadtteil(name: str, adresse: str | None, stadt: str | None) -> str | None:
+    """Stadtteil für Düsseldorf über den Mapper; Neuss und Ratingen erscheinen als eigener 'Stadtteil'."""
+    from pipeline.stadtteil_mapper import stadtteil_ermitteln
+    if stadt and stadt != "Düsseldorf":
+        return stadt
+    return stadtteil_ermitteln(name, adresse)
 
 
 # ── Hilfsfunktionen ───────────────────────────────────────────────────────────
@@ -113,17 +134,77 @@ def _km_zu_grad(km: float, breite: float) -> tuple[float, float]:
 
 
 def _startzellen() -> list[dict]:
-    """Zerlegt das Gebiet in quadratische Startzellen."""
+    """
+    Zerlegt das abgedeckte Gebiet in quadratische Startzellen.
+
+    Das Raster ist am festen Ankerpunkt (GEBIET süd/west) ausgerichtet; eine Erweiterung der
+    Abdeckung erzeugt dadurch exakt dieselben Zellen wie zuvor plus neue am Rand.
+    """
     d_lat, d_lng = _km_zu_grad(START_ZELLE_KM, (GEBIET["sued"] + GEBIET["nord"]) / 2)
-    zellen = []
-    lat = GEBIET["sued"]
-    while lat < GEBIET["nord"]:
-        lng = GEBIET["west"]
-        while lng < GEBIET["ost"]:
-            zellen.append({"lat": lat + d_lat / 2, "lng": lng + d_lng / 2, "km": START_ZELLE_KM})
-            lng += d_lng
-        lat += d_lat
-    return zellen
+    i_von = math.floor((ABDECKUNG["sued"] - GEBIET["sued"]) / d_lat)
+    i_bis = math.ceil((ABDECKUNG["nord"] - GEBIET["sued"]) / d_lat)
+    j_von = math.floor((ABDECKUNG["west"] - GEBIET["west"]) / d_lng)
+    j_bis = math.ceil((ABDECKUNG["ost"] - GEBIET["west"]) / d_lng)
+    return [
+        {"lat": GEBIET["sued"] + (i + 0.5) * d_lat, "lng": GEBIET["west"] + (j + 0.5) * d_lng, "km": START_ZELLE_KM}
+        for i in range(i_von, i_bis) for j in range(j_von, j_bis)
+    ]
+
+
+def _im_kreis(zelle: dict, p: dict) -> bool:
+    """Liegt ein Ort im Suchkreis der Zelle?"""
+    loc = p.get("location") or {}
+    if "latitude" not in loc:
+        return False
+    d_lat_m = (loc["latitude"] - zelle["lat"]) * 111320
+    d_lng_m = (loc["longitude"] - zelle["lng"]) * 111320 * math.cos(math.radians(zelle["lat"]))
+    return math.hypot(d_lat_m, d_lng_m) <= zelle["km"] * 1000 * math.sqrt(2) / 2 + 1
+
+
+def _aus_schluessel(schluessel: str) -> dict:
+    lat, lng, km = schluessel.split(",")
+    return {"lat": float(lat), "lng": float(lng), "km": float(km)}
+
+
+def _nachverfeinern(daten: dict) -> int:
+    """
+    Ergänzt die Warteschlange nach einer Änderung der Abdeckung oder der zugelassenen Städte:
+      - neue Startzellen am Rand
+      - Unterzellen bereits abgefragter Zellen, die voll waren (≥ 20 Orte im Kreis) und in denen
+        jetzt zugelassene Orte liegen, aber bisher nicht verfeinert wurde
+
+    Ob eine Zelle voll war, lässt sich aus dem Zwischenspeicher ablesen: Eine nicht volle Zelle hat
+    ALLE Orte ihres Kreises geliefert – liegen ≥ 20 bekannte Orte im Kreis, war sie voll.
+
+    Returns:
+        Anzahl neu eingereihter Zellen
+    """
+    erledigt = set(daten["erledigt"])
+    geplant = {_zell_schluessel(z) for z in daten["warteschlange"]}
+    orte = list(daten["orte"].values())
+    neu: list[dict] = []
+
+    for zelle in _startzellen():
+        s = _zell_schluessel(zelle)
+        if s not in erledigt and s not in geplant:
+            neu.append(zelle)
+            geplant.add(s)
+
+    for s in list(erledigt):
+        zelle = _aus_schluessel(s)
+        if zelle["km"] / 2 < MIN_ZELLE_KM:
+            continue
+        im_kreis = [p for p in orte if _im_kreis(zelle, p)]
+        if len(im_kreis) < MAX_TREFFER or not any(stadt_von(p) for p in im_kreis):
+            continue
+        for kind in _viertel(zelle):
+            k = _zell_schluessel(kind)
+            if k not in erledigt and k not in geplant:
+                neu.append(kind)
+                geplant.add(k)
+
+    daten["warteschlange"].extend(neu)
+    return len(neu)
 
 
 def _viertel(zelle: dict) -> list[dict]:
@@ -154,7 +235,7 @@ def ist_kandidat(place: dict) -> tuple[bool, str]:
     """Prüft, ob ein Suchtreffer in den Kandidaten-Pool gehört. Gibt (ja/nein, Grund) zurück."""
     if place.get("businessStatus") not in (None, "OPERATIONAL"):
         return False, "geschlossen"
-    if not DUESSELDORF_ADRESSE.search(place.get("formattedAddress") or ""):
+    if not stadt_von(place):
         return False, "außerhalb"
     if set(place.get("types") or []) & _AUSSCHLUSS_TYPEN:
         return False, "Ausschlusstyp"
@@ -249,9 +330,11 @@ def suchen(max_anfragen: int, neu: bool = False) -> dict:
         }
         logger.info("Neue Flächensuche: %d Startzellen à %.1f km", len(daten["warteschlange"]), START_ZELLE_KM)
     else:
+        ergaenzt = _nachverfeinern(daten)
         logger.info(
-            "Setze Flächensuche fort: %d Anfragen bisher, %d Zellen offen, %d Orte gefunden",
-            daten["anfragen"], len(daten["warteschlange"]), len(daten["orte"]),
+            "Setze Flächensuche fort: %d Anfragen bisher, %d Zellen offen (davon %d neu durch "
+            "erweiterte Abdeckung/Städte), %d Orte gefunden",
+            daten["anfragen"], len(daten["warteschlange"]), ergaenzt, len(daten["orte"]),
         )
 
     erledigt = set(daten["erledigt"])
@@ -273,14 +356,14 @@ def suchen(max_anfragen: int, neu: bool = False) -> dict:
             daten["anfragen"] += 1
             anfragen_dieser_lauf += 1
 
-            in_ddf = 0
+            in_staedten = 0
             for p in treffer:
-                if DUESSELDORF_ADRESSE.search(p.get("formattedAddress") or ""):
-                    in_ddf += 1
+                if stadt_von(p):
+                    in_staedten += 1
                 daten["orte"][p["id"]] = p
 
-            # Volle Zelle mit Düsseldorfer Treffern → vierteln (außerhalb der Stadt nicht weiter verfeinern)
-            if len(treffer) >= MAX_TREFFER and in_ddf > 0:
+            # Volle Zelle mit Treffern in zugelassenen Städten → vierteln (anderswo nicht weiter verfeinern)
+            if len(treffer) >= MAX_TREFFER and in_staedten > 0:
                 if zelle["km"] / 2 >= MIN_ZELLE_KM:
                     daten["warteschlange"].extend(_viertel(zelle))
                 else:
@@ -331,8 +414,6 @@ def auswertung() -> None:
         return
     gruende = Counter(ist_kandidat(p)[1] for p in daten["orte"].values())
     liste = kandidaten(daten)
-    from pipeline.stadtteil_mapper import stadtteil_ermitteln
-
     print(f"\nAnfragen: {daten['anfragen']} (ca. {daten['anfragen'] * PREIS_SUCHE / 1000:.2f} $) | "
           f"offene Zellen: {len(daten['warteschlange'])}")
     print(f"Treffer gesamt: {len(daten['orte'])}")
@@ -341,7 +422,10 @@ def auswertung() -> None:
     print(f"\nKandidaten: {len(liste)}  (Restaurants: {sum(p['_typ'] == 'restaurant' for p in liste)}, "
           f"Cafés: {sum(p['_typ'] == 'cafe' for p in liste)}, davon Ketten: {sum(p['_kette'] for p in liste)})")
     print("Vorab-Score:", dict(sorted(Counter(p["_score"] for p in liste).items(), reverse=True)))
-    stadtteile = Counter(stadtteil_ermitteln(p["displayName"]["text"], p.get("formattedAddress")) or "?" for p in liste)
+    print("Städte:", dict(Counter(stadt_von(p) for p in liste)), "| davon Score ≥ 7:", sum(p["_score"] >= 7 for p in liste))
+    stadtteile = Counter(
+        ort_stadtteil(p["displayName"]["text"], p.get("formattedAddress"), stadt_von(p)) or "?" for p in liste
+    )
     print("Stadtteile:", ", ".join(f"{s} {n}" for s, n in stadtteile.most_common(15)), "…")
     print(f"Details für alle Kandidaten: ca. {len(liste) * PREIS_DETAILS / 1000:.2f} $ (ohne Freikontingent)\n")
     print("Top 15:")
@@ -390,7 +474,9 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
             if not ort:
                 continue
             ort["typ"] = p["_typ"]
-            ort["slug"] = slug_mit_suffix(ort["slug"], vergebene_slugs)
+            # Neuss/Ratingen: Stadt statt (falsch zugeordnetem) Düsseldorfer Stadtteil, Slug passend dazu
+            ort["stadtteil"] = ort_stadtteil(name, ort.get("adresse"), stadt_von(p))
+            ort["slug"] = slug_mit_suffix(_slug_erzeugen(name, ort["stadtteil"]), vergebene_slugs)
             ort["qualitaets_score"] = p["_score"]
             ort["extras"] = {
                 **ort.get("extras", {}),
@@ -409,7 +495,32 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
             logger.info("  %d/%d verarbeitet (%d gespeichert, %d Fehler)", i, len(auswahl), gespeichert, fehler)
 
     logger.info("Import fertig: %d gespeichert | %d Fehler", gespeichert, fehler)
+    scores_nachziehen(db)
     return {"gespeichert": gespeichert, "fehler": fehler}
+
+
+def scores_nachziehen(db) -> int:
+    """Gibt Orten ohne qualitaets_score (z.B. aus dem ersten Import) den Vorab-Score."""
+    ohne = (
+        db.table("orte")
+        .select("id, name, google_rating, google_bewertungen_anzahl, extras")
+        .is_("qualitaets_score", "null")
+        .execute()
+        .data or []
+    )
+    for o in ohne:
+        if o.get("google_rating") is None:
+            continue
+        score, gewichtet, kette = vorab_score({
+            "rating": o["google_rating"],
+            "userRatingCount": o.get("google_bewertungen_anzahl") or 0,
+            "displayName": {"text": o["name"]},
+        })
+        extras = {**(o.get("extras") or {}), "vorab_score": gewichtet, "kette": kette}
+        db.table("orte").update({"qualitaets_score": score, "extras": extras}).eq("id", o["id"]).execute()
+    if ohne:
+        logger.info("Vorab-Score für %d bestehende Orte nachgetragen", len(ohne))
+    return len(ohne)
 
 
 def main():
