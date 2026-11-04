@@ -5,6 +5,7 @@ import { katStil, kategorie } from "@/lib/kategorien";
 import { metaZeile } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
+import { istOnline } from "@/lib/ableitungen";
 import type { DddEvent } from "@/lib/typen";
 
 export function eventPfad(e: DddEvent) {
@@ -45,6 +46,10 @@ export function Bild({
 /** Rotes Schild für abgesagte Events */
 export function AbgesagtTag({ className = "" }: { className?: string }) {
   return <span className={`abgesagt-tag ${className}`}>Abgesagt</span>;
+}
+
+export function OnlineTag({ className = "" }: { className?: string }) {
+  return <span className={`online-tag ${className}`}><Icon name="videocam" />Online</span>;
 }
 
 export function KatBadge({ slug, variante = "" }: { slug: string; variante?: string }) {
@@ -88,7 +93,7 @@ export function EventKarte({ e, heute, variante = "standard", rang, gross = fals
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </h3>
         <span className="karte__fuss">
-          <span>{e.ort}</span>
+          <span>{istOnline(e) ? <><OnlineTag /> {e.ort}</> : e.ort}</span>
           <span className="preis">{preisText(e)}</span>
         </span>
       </div>
@@ -110,6 +115,7 @@ export function KompaktKarte({ e, heute }: { e: DddEvent; heute: string }) {
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </h3>
         <span className="kompakt__ort">
+          {istOnline(e) && <OnlineTag />}{" "}
           {e.ort}
           {e.preis ? ` · ${e.preis}` : ""}
         </span>
@@ -127,6 +133,7 @@ export function ListenZeile({ e, mitKategorie = false, zeit }: { e: DddEvent; mi
       <div className="zeile__text">
         <span className="zeile__titel">
           {e.abgesagt && <AbgesagtTag />}
+          {istOnline(e) && <OnlineTag />}
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </span>
         <span className="zeile__sub">

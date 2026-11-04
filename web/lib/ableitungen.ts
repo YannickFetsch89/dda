@@ -14,6 +14,12 @@ export function istKostenlos(e: DddEvent): boolean {
   return !!e.preis && KOSTENLOS.test(e.preis.trim());
 }
 
+const ONLINE = /\b(online|webinar|livestream|live.?stream|virtuell|digital|zoom|teams)\b/i;
+
+export function istOnline(e: DddEvent): boolean {
+  return ONLINE.test(e.ort) || ONLINE.test(e.titel);
+}
+
 function hash(text: string): number {
   let h = 0;
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;

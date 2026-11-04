@@ -4,9 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
-import { Bild, EventKarte, Icon, KatBadge, SkeletonKarten, eventPfad } from "@/components/karten";
+import { Bild, EventKarte, Icon, KatBadge, OnlineTag, SkeletonKarten, eventPfad } from "@/components/karten";
 import { eventLaden, eventPoolLaden } from "@/lib/daten";
-import { filtern, istKostenlos, nachBeliebtheit } from "@/lib/ableitungen";
+import { filtern, istKostenlos, istOnline, nachBeliebtheit } from "@/lib/ableitungen";
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
@@ -58,6 +58,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
     .sort(nachBeliebtheit)
     .slice(0, 8);
 
+  const online = istOnline(e);
   const adresse = e.adresse ?? `${e.ort}, Düsseldorf`;
   const zeitText = e.datum_bis && e.datum_bis !== e.datum ? `${tagLang(e.datum, false)} bis ${kurzDatum(e.datum_bis)}` : tagLang(e.datum);
   const pfad = eventPfad(e);
@@ -101,13 +102,13 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                 </div>
                 <div className="infozeile">
                   <span className="infozeile__kachel">
-                    <Icon name="location_on" />
+                    <Icon name={online ? "videocam" : "location_on"} />
                   </span>
                   <div>
-                    <b>{e.ort}</b>
+                    <b>{online && <OnlineTag />} {e.ort}</b>
                     <span>
-                      {e.adresse ?? "Düsseldorf"}
-                      {e.stadtteil ? ` · ${stadtteilName(e.stadtteil)}` : ""}
+                      {online ? "Online-Veranstaltung" : (e.adresse ?? "Düsseldorf")}
+                      {!online && e.stadtteil ? ` · ${stadtteilName(e.stadtteil)}` : ""}
                     </span>
                   </div>
                 </div>
@@ -123,7 +124,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
               </div>
             </header>
 
-            <GoogleKarte adresse={adresse} routeUrl={routenLink(adresse)} />
+            {!online && <GoogleKarte adresse={adresse} routeUrl={routenLink(adresse)} />}
 
             {e.beschreibung && (
               <section className="detail__abschnitt">

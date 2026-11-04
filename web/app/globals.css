@@ -234,6 +234,14 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 }
 .abgesagt-hinweis .icon { color: #C0392B; font-size: 22px; }
 
+/* ---------- Online-Tag ---------- */
+.online-tag {
+  display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: var(--r-pill);
+  background: #2980B9; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  white-space: nowrap; vertical-align: middle; margin-right: 4px;
+}
+.online-tag .icon { font-size: 13px; }
+
 /* ---------- Badges ---------- */
 .badge {
   display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px 4px 7px; border-radius: var(--r-pill);
