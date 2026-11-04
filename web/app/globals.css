@@ -1099,3 +1099,42 @@ body:has(.gd-seite) .katleiste { position: relative; }
 .ddd-pop__name { font-size: 17px; line-height: 1.2; }
 .ddd-pop__fuss { display: flex; justify-content: space-between; font-size: 12px; color: var(--ddd-text-body); }
 .ddd-pop__mehr { color: var(--ddd-link); font-weight: 600; }
+
+/* "Düsseldorf entdecken" /guides (Ansichten 10/11): typografischer Kopf + 6 Hub-Kacheln */
+.gd-entdecken { display: flex; flex-direction: column; gap: 14px; padding-top: 36px; padding-bottom: 28px; border-top: 1px solid var(--ddd-border); }
+.gd-entdecken h1 { font-size: 48px; line-height: 0.98; color: var(--ddd-text); }
+.gd-entdecken__linie { width: 72px; height: 3px; background: var(--ddd-gold); }
+.gd-entdecken p { max-width: 640px; font-size: 16px; line-height: 1.5; color: var(--ddd-text-body); text-wrap: pretty; }
+@media (min-width: 768px) {
+  .gd-entdecken { gap: 18px; padding-top: 72px; padding-bottom: 48px; }
+  .gd-entdecken h1 { font-size: 96px; }
+  .gd-entdecken__linie { width: 120px; height: 4px; }
+  .gd-entdecken p { font-size: 20px; }
+}
+.gd-hubs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 768px) { .gd-hubs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; } }
+.gd-hub { display: flex; flex-direction: column; background: var(--ddd-surface); border-radius: var(--r-card); overflow: hidden; box-shadow: var(--sh-m); transition: box-shadow 0.3s ease; color: inherit; }
+a.gd-hub:hover { box-shadow: var(--gd-sh-hover); color: inherit; }
+.gd-hub__bild { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-card) var(--r-card) 0 0; }
+.gd-hub__motiv { position: absolute; inset: 0; background: linear-gradient(135deg, #2c3654 0%, #1b2540 100%); display: flex; align-items: center; justify-content: center; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
+.gd-hub__motiv img, .gd-hub__motiv .bild__platzhalter { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gd-hub__platzhalter { font-size: 120px; color: rgba(201, 168, 76, 0.22); transform: translateY(-14%); }
+.gd-hub__verlauf { position: absolute; inset: 0; background: linear-gradient(to top, rgba(27, 37, 64, 0.88) 0%, rgba(27, 37, 64, 0.35) 45%, rgba(27, 37, 64, 0) 75%); }
+.gd-hub__kopf { position: absolute; left: 20px; right: 20px; bottom: 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.gd-hub__kopf h2 { font-size: 30px; line-height: 1; color: #ffffff; }
+.gd-hub__icon { width: 44px; height: 44px; border-radius: 50%; background: rgba(247, 248, 250, 0.16); border: 1px solid rgba(247, 248, 250, 0.4); color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.gd-hub__icon .icon { font-size: 22px; }
+.gd-hub__fuss { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px 18px; }
+.gd-hub__teaser { font-size: 15px; line-height: 1.45; color: var(--ddd-text-body); }
+.gd-hub__zahl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--ddd-navy); }
+.gd-hub__badge { padding: 5px 10px; border-radius: var(--r-pill); background: var(--ddd-gold-tint); color: var(--ddd-navy); font-size: 13px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.gd-hub__badge--bald { background: var(--ddd-bg); color: var(--ddd-text-muted); border: 1px solid var(--ddd-border); font-weight: 600; }
+.gd-hub__pfeil { color: var(--ddd-gold); font-size: 18px; }
+.gd-hub--bald .gd-hub__kopf h2 { opacity: 0.85; }
+@media (min-width: 768px) {
+  .gd-hub__kopf { left: 24px; right: 24px; bottom: 20px; }
+  .gd-hub__kopf h2 { font-size: 44px; }
+  .gd-hub__fuss { padding: 18px 24px 20px; }
+  .gd-hub__teaser { font-size: 16px; }
+}

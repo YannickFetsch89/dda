@@ -44,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const orte = await orteLaden(["restaurant", "cafe"]);
   const guides: MetadataRoute.Sitemap = orte.length
     ? [
+        { url: `${SITE_URL}/guides`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
         { url: `${SITE_URL}/guides/restaurants-cafes`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
         ...orte.map((o) => ({
           url: `${SITE_URL}${ortPfad(o)}`,

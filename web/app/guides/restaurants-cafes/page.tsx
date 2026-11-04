@@ -42,7 +42,7 @@ function Hero({ orte }: { orte: DddOrt[] }) {
       <div className="gd-hero__verlauf" aria-hidden />
       <div className="gd-hero__inhalt container">
         <nav className="gd-krumen gd-krumen--hell" aria-label="Brotkrumen">
-          <Link href="/">Start</Link><span>/</span><span>Düsseldorf entdecken</span><span>/</span>
+          <Link href="/">Start</Link><span>/</span><Link href="/guides">Düsseldorf entdecken</Link><span>/</span>
           <span aria-current="page">Restaurants &amp; Cafés</span>
         </nav>
         <h1 className="d">Restaurants &amp; Cafés</h1>
