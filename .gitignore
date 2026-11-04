@@ -11,6 +11,9 @@ venv/
 # Logs
 logs/*.log
 
+# Lokale Zwischenspeicher (z.B. Google-Places-Flächensuche, enthält Google-Inhalte)
+data/
+
 # Playwright
 playwright/.auth/
 
