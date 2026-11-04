@@ -82,7 +82,10 @@ def _slug_erzeugen(name: str, stadtteil: str | None = None) -> str:
     """Erzeugt einen URL-freundlichen Slug aus dem Namen (Umlaute → ae/oe/ue, Akzente → ASCII: Café → cafe)."""
     text = _slugify(name)
     if stadtteil:
-        text = f"{text}-{_slugify(stadtteil)}"
+        teil = _slugify(stadtteil)
+        # Steckt der Stadtteil schon im Namen ("The Döner Brothers Neuss"), nicht doppelt anhängen
+        if not (text == teil or text.endswith(f"-{teil}") or f"-{teil}-" in text):
+            text = f"{text}-{teil}"
     return text
 
 

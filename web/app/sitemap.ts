@@ -3,6 +3,8 @@
 import type { MetadataRoute } from "next";
 import { eventPoolLaden } from "@/lib/daten";
 import { plusTage } from "@/lib/datum";
+import { orteLaden } from "@/lib/orte";
+import { ortPfad } from "@/components/ort-karten";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -38,5 +40,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           }))
       : [];
 
-  return [...feste, ...tage, ...events];
+  // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
+  const orte = await orteLaden(["restaurant", "cafe"]);
+  const guides: MetadataRoute.Sitemap = orte.length
+    ? [
+        { url: `${SITE_URL}/guides/restaurants-cafes`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
+        ...orte.map((o) => ({
+          url: `${SITE_URL}${ortPfad(o)}`,
+          lastModified: o.aktualisiert_am ? new Date(o.aktualisiert_am) : jetzt,
+          changeFrequency: "monthly" as const,
+          priority: 0.4,
+        })),
+      ]
+    : [];
+
+  return [...feste, ...tage, ...events, ...guides];
 }

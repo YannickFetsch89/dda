@@ -1,35 +1,35 @@
-// Darstellungs-Komponenten für Orte (Restaurants, Cafés etc.)
+// Darstellungs-Komponenten für Orte (Guides) – Card nach Design-Handoff v2, Ansicht 12/14
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
+import { kueche, sterne, zahl } from "@/lib/guide-filter";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
-/** URL-Pfad zur Detailseite eines Ortes. */
-export function ortPfad(o: DddOrt): string {
-  const route = ortRoute(o.typ);
-  return `/${route}/${encodeURIComponent(o.slug)}`;
-}
-
-/** Basis-Route für einen Ort-Typ. */
-function ortRoute(typ: string): string {
+/** Basis-Route eines Ort-Typs (Guide-Hub). */
+export function ortRoute(typ: string): string {
   switch (typ) {
     case "restaurant":
     case "cafe":
-      return "restaurants";
+      return "/guides/restaurants-cafes";
     case "kneipe":
-      return "kneipen";
+      return "/guides/kneipen-bars";
     case "club":
-      return "clubs";
+      return "/guides/clubs";
     case "spielplatz":
-      return "spielplaetze";
+      return "/guides/spielplaetze";
     case "ausflug":
-      return "ausfluege";
+      return "/guides/ausfluege";
     case "wochenendtipp":
-      return "wochenendtipps";
+      return "/guides/wochenendtipps";
     default:
-      return "restaurants";
+      return "/guides/restaurants-cafes";
   }
+}
+
+/** URL-Pfad zur Detailseite eines Ortes. */
+export function ortPfad(o: DddOrt): string {
+  return `${ortRoute(o.typ)}/${encodeURIComponent(o.slug)}`;
 }
 
 const TYP_ICON: Record<string, string> = {
@@ -42,11 +42,11 @@ const TYP_ICON: Record<string, string> = {
   wochenendtipp: "luggage",
 };
 
-function typIcon(typ: string): string {
+export function typIcon(typ: string): string {
   return TYP_ICON[typ] ?? "place";
 }
 
-function typLabel(typ: string): string {
+export function typLabel(typ: string): string {
   switch (typ) {
     case "restaurant": return "Restaurant";
     case "cafe": return "Café";
@@ -59,38 +59,45 @@ function typLabel(typ: string): string {
   }
 }
 
-export function OrtKarte({ o }: { o: DddOrt }) {
+/** Untertitel der Card: "Japanisch · Flingern · €€" (fehlende Teile entfallen). */
+export function ortUntertitel(o: DddOrt): string {
+  return [o.untertitel ?? kueche(o)?.name, o.stadtteil, o.preis_niveau].filter(Boolean).join(" · ");
+}
+
+export function Bewertung({ o }: { o: DddOrt }) {
+  if (o.google_rating == null) return null;
   return (
-    <article className="ort-karte" role="listitem">
-      <Link href={ortPfad(o)} className="ort-karte__link">
-        <div className="ort-karte__bild">
-          <BildImg src={ortBildUrl(o)} alt={o.name} icon={typIcon(o.typ)} />
-          {o.preis_niveau && <span className="ort-karte__preis">{o.preis_niveau}</span>}
-          {ortBildUrl(o) && o.bild_attribution && (
-            <span className="ort-karte__foto-credit">Foto: {o.bild_attribution}</span>
-          )}
+    <span className="gd-bewertung">
+      <Icon name="star" className="is-active" />
+      <b>{sterne(o.google_rating)}</b>
+      {o.google_bewertungen_anzahl != null && <span className="muted">({zahl(o.google_bewertungen_anzahl)})</span>}
+    </span>
+  );
+}
+
+export function OrtKarte({ o }: { o: DddOrt }) {
+  const bild = ortBildUrl(o);
+  return (
+    <article className="gd-karte" role="listitem">
+      <Link href={ortPfad(o)} className="gd-karte__link">
+        <div className="gd-karte__bild">
+          <BildImg src={bild} alt={o.name} icon={typIcon(o.typ)} />
+          {o.preis_niveau && <span className="gd-karte__preis">{o.preis_niveau}</span>}
+          {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>
-        <div className="ort-karte__text">
-          <span className="ort-karte__typ">
-            <Icon name={typIcon(o.typ)} /> {typLabel(o.typ)}
-          </span>
-          <h3 className="ort-karte__name">{o.name}</h3>
-          {o.untertitel && <p className="ort-karte__sub">{o.untertitel}</p>}
-          <span className="ort-karte__meta">
-            {o.stadtteil && <span><Icon name="location_on" /> {o.stadtteil}</span>}
-            {o.google_rating != null && (
-              <span className="ort-karte__rating">
-                <Icon name="star" /> {o.google_rating.toFixed(1)}
-                {o.google_bewertungen_anzahl != null && (
-                  <span className="ort-karte__anz"> ({o.google_bewertungen_anzahl})</span>
-                )}
-              </span>
-            )}
+        <div className="gd-karte__text">
+          <span className="gd-typ"><Icon name={typIcon(o.typ)} />{typLabel(o.typ)}</span>
+          <h3 className="gd-karte__name d">{o.name}</h3>
+          <span className="gd-karte__sub">{ortUntertitel(o)}</span>
+          <span className="gd-karte__meta">
+            {o.stadtteil && <span className="gd-karte__ort"><Icon name="location_on" />{o.stadtteil}</span>}
+            {o.stadtteil && o.google_rating != null && <span className="gd-trenner" aria-hidden />}
+            <Bewertung o={o} />
           </span>
           {o.tags.length > 0 && (
-            <div className="ort-karte__tags">
-              {o.tags.slice(0, 4).map((t) => <span key={t} className="chip chip--klein">{t}</span>)}
-            </div>
+            <span className="gd-karte__tags">
+              {o.tags.slice(0, 3).map((t) => <span key={t} className="gd-tag">{t}</span>)}
+            </span>
           )}
         </div>
       </Link>
@@ -98,20 +105,9 @@ export function OrtKarte({ o }: { o: DddOrt }) {
   );
 }
 
-export function OrtKartenGrid({ orte }: { orte: DddOrt[] }) {
-  if (!orte.length) {
-    return (
-      <div className="leer">
-        <Icon name="restaurant" />
-        <p>Noch keine Einträge vorhanden.</p>
-        <p style={{ fontSize: 14, color: "var(--ddd-text-muted)" }}>
-          Wir arbeiten daran – bald findest du hier kuratierte Empfehlungen!
-        </p>
-      </div>
-    );
-  }
+export function OrtKartenGrid({ orte, spalten = 3 }: { orte: DddOrt[]; spalten?: 3 | 4 }) {
   return (
-    <div className="ort-grid" role="list">
+    <div className={`gd-grid gd-grid--${spalten}`} role="list">
       {orte.map((o) => <OrtKarte key={o.id} o={o} />)}
     </div>
   );

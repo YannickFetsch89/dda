@@ -3,7 +3,8 @@
 // Gespeichert ist nur der Foto-Ressourcenname (orte.extras.google_foto.name). Diese Route fragt
 // serverseitig bei der Places API die eigentliche Bild-Adresse ab (skipHttpRedirect → photoUri
 // auf googleusercontent.com, ohne Key) und leitet den Browser per 302 dorthin weiter.
-// Die Adresse wird einige Stunden gecached, damit nicht jeder Seitenaufruf einen API-Abruf kostet.
+// Die Adresse enthält keinen Ablaufparameter und wird bis zu 7 Tage gecached, damit nicht jeder
+// Seitenaufruf einen (kostenpflichtigen) Foto-Abruf auslöst – bei über 600 Orten wichtig.
 import { cacheLife } from "next/cache";
 import type { NextRequest } from "next/server";
 import { ortLaden } from "@/lib/orte";
@@ -11,11 +12,12 @@ import { ortLaden } from "@/lib/orte";
 const FOTO_BREITE = 1200;
 // Nur echte Ressourcennamen zulassen ("places/<id>/photos/<id>"), nichts anderes an Google weiterreichen
 const FOTO_NAME = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
-const BROWSER_CACHE_SEKUNDEN = 6 * 3600;
+const BROWSER_CACHE_SEKUNDEN = 24 * 3600;
+const TAG = 24 * 3600;
 
 async function fotoAdresseLaden(slug: string): Promise<string | null> {
   "use cache";
-  cacheLife({ stale: 3600, revalidate: 6 * 3600, expire: 24 * 3600 });
+  cacheLife({ stale: TAG, revalidate: 7 * TAG, expire: 30 * TAG });
 
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (!key) {

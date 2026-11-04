@@ -10,9 +10,17 @@ const SPALTEN = [
   "bild_url", "bild_attribution", "tags", "preis_niveau",
   "oeffnungszeiten", "webseite", "telefon", "instagram",
   "google_place_id", "google_rating", "google_bewertungen_anzahl",
-  "qualitaets_score", "extras", "sortierung",
+  "qualitaets_score", "sortierung",
   "erstellt_am", "aktualisiert_am",
 ].join(", ");
+
+// Aus `extras` nur die Felder laden, die die Website braucht – dort liegen auch Google-Bewertungstexte
+// (Material für KI-Beschreibungen), die sonst mehrere MB pro Abfrage ausmachen würden.
+const EXTRAS_FELDER = [
+  "google_foto", "google_primaertyp", "google_maps_url", "vorab_score",
+  "kueche", "highlight_gericht", "reservierung_url", "terrasse",
+];
+const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 
 type Zeile = Record<string, unknown>;
 
@@ -61,7 +69,9 @@ function normalisieren(z: Zeile): DddOrt {
     google_rating: typeof z.google_rating === "number" ? z.google_rating : null,
     google_bewertungen_anzahl: typeof z.google_bewertungen_anzahl === "number" ? z.google_bewertungen_anzahl : null,
     qualitaets_score: typeof z.qualitaets_score === "number" ? z.qualitaets_score : null,
-    extras: (typeof z.extras === "object" && z.extras !== null ? z.extras : {}) as Record<string, unknown>,
+    extras: Object.fromEntries(
+      EXTRAS_FELDER.map((k) => [k, z[`x_${k}`]]).filter(([, v]) => v !== null && v !== undefined),
+    ),
     sortierung: typeof z.sortierung === "number" ? z.sortierung : 0,
     erstellt_am: text(z.erstellt_am),
     aktualisiert_am: text(z.aktualisiert_am),
@@ -112,7 +122,7 @@ export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
     for (let seite = 0; seite < 10; seite++) {
       const { data, error } = await client
         .from("orte")
-        .select(SPALTEN)
+        .select(SPALTEN_MIT_EXTRAS)
         .eq("aktiv", true)
         .gte("qualitaets_score", MIN_QUALITAETS_SCORE)
         .in("typ", typen)
@@ -146,7 +156,7 @@ export async function ortLaden(slug: string): Promise<DddOrt | null> {
   try {
     const { data, error } = await client
       .from("orte")
-      .select(SPALTEN)
+      .select(SPALTEN_MIT_EXTRAS)
       .eq("aktiv", true)
       .gte("qualitaets_score", MIN_QUALITAETS_SCORE)
       .eq("slug", slug)
