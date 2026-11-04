@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Serif_Display, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { DetailsVerhalten, TabBar } from "@/components/client";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DatenHinweis, Fuss, KategorieLeiste, Kopf } from "@/components/rahmen";
@@ -7,6 +8,16 @@ import "./globals.css";
 
 const dmSerif = DM_Serif_Display({ variable: "--font-dm-serif", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], weight: ["400", "500", "600", "700", "800", "900"] });
+// Icon-Schrift (Material Symbols Rounded, Apache 2.0) vom eigenen Server statt von fonts.googleapis.com –
+// so geht beim Seitenaufruf keine IP-Adresse an Google. "block" verhindert, dass kurz Icon-Namen als Text erscheinen.
+const icons = localFont({
+  src: "./fonts/material-symbols-rounded.woff2",
+  variable: "--font-icons",
+  weight: "400",
+  style: "normal",
+  display: "block",
+  adjustFontFallback: false,
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "https://diesdas.events"),
@@ -26,12 +37,9 @@ const THEME_SCRIPT = `try{var t=localStorage.getItem('ddd-theme');if(!t){t=match
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="de" className={`${dmSerif.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="de" className={`${dmSerif.variable} ${inter.variable} ${icons.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-        {/* Material Symbols Rounded (Icons laut Brand Identity) */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=swap" />
       </head>
       <body>
         <DatenHinweis />

@@ -162,11 +162,9 @@ export default function DatenschutzSeite() {
       </p>
       <ul>
         <li>
-          <b>Google Fonts:</b> Schriftarten werden von Google-Servern geladen. Dabei wird Ihre IP-Adresse an
-          Google übermittelt. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.{" "}
-          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">
-            Datenschutzerklärung von Google
-          </a>
+          <b>Schriftarten:</b> Alle Schriftarten dieser Website (einschließlich der Icon-Schrift) werden lokal
+          von unserem eigenen Server ausgeliefert. Beim Seitenaufruf wird keine Verbindung zu Servern von
+          Google oder anderen Schriftanbietern hergestellt.
         </li>
         <li>
           <b>Google Maps:</b> Für Kartenansichten und Routenplanung werden Daten an Google übermittelt.
