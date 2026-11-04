@@ -9,6 +9,7 @@ from datetime import date
 
 from config import LOG_LEVEL, LOG_DIR, SCHEDULER_UHRZEIT
 from database.client import events_speichern
+from pipeline.lauf_report import LaufReport
 from scraper.tier1 import (
     rausgegangen,
     ticketmaster,
@@ -19,7 +20,7 @@ from scraper.tier1 import (
     prinz,
     songkick,
     allevents,
-    bandsintown,
+    # bandsintown deaktiviert – komplette Domain per Cloudflare-WAF blockiert (HTTP 403)
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
     # eventbrite deaktiviert – API v3 abgeschaltet, Website durch Bot-Schutz blockiert
     # eventfinder deaktiviert – keine zuverlässige Datenquelle
@@ -58,7 +59,7 @@ from scraper.tier3 import (
     japan_center,
     classic_remise,
     stadtstrand,
-    spontacts,
+    # spontacts deaktiviert – Aktivitäten nur noch nach Login sichtbar (robots.txt sperrt Listen)
     ihk,
     startupdorf,
     street_food_thursday,
@@ -75,218 +76,105 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Alle Quellen in Ausführungsreihenfolge: (Anzeigename, Tier, scrape-Funktion).
+# Der Anzeigename erscheint so im Log und im Scraper-Report des Dashboards –
+# bei Umbenennung reißt dort der Verlauf der Quelle ab.
+QUELLEN = [
+    # Tier 1: Aggregatoren und APIs
+    ("Rausgegangen", 1, rausgegangen.scrape),
+    ("Ticketmaster", 1, ticketmaster.scrape),
+    ("Kulturportal Düsseldorf", 1, kulturportal.scrape),
+    ("VisitDüsseldorf", 1, visitduesseldorf.scrape),
+    ("Meetup.com", 1, meetup.scrape),
+    ("Resident Advisor", 1, resident_advisor.scrape),
+    ("PRINZ.de Düsseldorf", 1, prinz.scrape),
+    ("Songkick", 1, songkick.scrape),
+    ("AllEvents.in Düsseldorf", 1, allevents.scrape),
+    # Tier 2: Venue-eigene Kalender
+    ("Tonhalle Düsseldorf", 2, tonhalle.scrape),
+    ("zakk", 2, zakk.scrape),
+    ("Deutsche Oper am Rhein", 2, oper_am_rhein.scrape),
+    ("Düsseldorfer Schauspielhaus", 2, schauspielhaus.scrape),
+    ("d-live", 2, dlive.scrape),
+    ("Kunstpalast Düsseldorf", 2, kunstpalast.scrape),
+    ("Kunstsammlung NRW (K20/K21)", 2, kunstsammlung.scrape),
+    ("NRW-Forum Düsseldorf", 2, nrw_forum.scrape),
+    ("FFT Düsseldorf", 2, fft_duesseldorf.scrape),
+    ("Stahlwerk Düsseldorf", 2, stahlwerk.scrape),
+    ("Rudas Studios Düsseldorf", 2, rudas_studios.scrape),
+    ("Mitsubishi Electric HALLE", 2, mitsubishi_halle.scrape),
+    ("Kulturschlachthof R25", 2, kulturschlachthof_r25.scrape),
+    ("Salon des Amateurs", 2, salon_des_amateurs.scrape),
+    ("Pitcher Rock HQ", 2, pitcher.scrape),
+    ("Kunsthalle Düsseldorf", 2, kunsthalle.scrape),
+    ("Filmmuseum Düsseldorf", 2, filmmuseum.scrape),
+    ("Stadtbüchereien Düsseldorf", 2, stadtbuechereien.scrape),
+    ("Tanzhaus NRW", 2, tanzhaus_nrw.scrape),
+    ("Jazz-Schmiede Düsseldorf", 2, jazz_schmiede.scrape),
+    ("Capitol Theater Düsseldorf", 2, capitol_theater.scrape),
+    ("Kom(m)ödchen Düsseldorf", 2, kommoedchen.scrape),
+    ("STARTPLATZ Düsseldorf", 2, startplatz.scrape),
+    # Tier 3: Nischen- und Spezialquellen
+    ("Parkrun Volksgarten Düsseldorf", 3, parkrun.scrape),
+    ("Sport im Park Düsseldorf", 3, sport_im_park.scrape),
+    ("Fortuna Düsseldorf", 3, fortuna.scrape),
+    ("DEG Eishockey Düsseldorf", 3, deg.scrape),
+    ("Messe Düsseldorf", 3, messe.scrape),
+    ("EKŌ-Haus der Japanischen Kultur", 3, japan_center.scrape),  # Ersatz für das Japan Center (Domain tot)
+    ("Classic Remise Düsseldorf", 3, classic_remise.scrape),
+    ("Stadtstrand Düsseldorf", 3, stadtstrand.scrape),
+    ("IHK Düsseldorf", 3, ihk.scrape),
+    ("StartupDorf Meetup", 3, startupdorf.scrape),
+    ("Street Food Thursday", 3, street_food_thursday.scrape),
+]
+
 
 async def pipeline_ausfuehren():
     """
-    Führt die vollständige tägliche Pipeline aus:
+    Führt die vollständige Pipeline aus und protokolliert sie im Lauf-Report:
     1. Scraper starten (Tier 1, 2, 3)
-    2. Duplikate entfernen
+    2. Duplikate entfernen, Stadtteile zuordnen, speichern
     3. Events kategorisieren
     4. Instagram Captions generieren
     5. Posts veröffentlichen
     """
     logger.info("=== DiesDasDüsseldorf Pipeline gestartet ===")
-    heute = date.today()
-    logger.info("Datum: %s", heute.isoformat())
+    logger.info("Datum: %s", date.today().isoformat())
 
-    # Schritt 1: Scraper ausführen
+    report = LaufReport()
+    report.starten()
+
+    try:
+        await _schritte_ausfuehren(report)
+    except Exception as e:
+        logger.exception("Pipeline abgebrochen: %s", e)
+        report.abschliessen(fehlermeldung=f"{type(e).__name__}: {e}")
+        raise
+
+    report.abschliessen()
+    logger.info("=== Pipeline abgeschlossen ===")
+
+
+async def _schritte_ausfuehren(report: LaufReport):
+    """Die eigentlichen Pipeline-Schritte (Fehler werden in pipeline_ausfuehren protokolliert)."""
+    # Schritt 1: Scraper ausführen (nacheinander, jeder einzeln abgesichert)
     logger.info("--- Schritt 1: Scraper ---")
     alle_events = []
-
-    events_rausgegangen = await asyncio.to_thread(rausgegangen.scrape)
-    logger.info("Rausgegangen: %d Events", len(events_rausgegangen))
-    alle_events.extend(events_rausgegangen)
-
-    events_ticketmaster = ticketmaster.scrape()
-    logger.info("Ticketmaster: %d Events", len(events_ticketmaster))
-    alle_events.extend(events_ticketmaster)
-
-    events_kulturportal = await asyncio.to_thread(kulturportal.scrape)
-    logger.info("Kulturportal Düsseldorf: %d Events", len(events_kulturportal))
-    alle_events.extend(events_kulturportal)
-
-    events_visitduesseldorf = visitduesseldorf.scrape()
-    logger.info("VisitDüsseldorf: %d Events", len(events_visitduesseldorf))
-    alle_events.extend(events_visitduesseldorf)
-
-    events_meetup = meetup.scrape()
-    logger.info("Meetup.com: %d Events", len(events_meetup))
-    alle_events.extend(events_meetup)
-
-    events_ra = resident_advisor.scrape()
-    logger.info("Resident Advisor: %d Events", len(events_ra))
-    alle_events.extend(events_ra)
-
-    events_prinz = prinz.scrape()
-    logger.info("PRINZ.de Düsseldorf: %d Events", len(events_prinz))
-    alle_events.extend(events_prinz)
-
-    events_songkick = songkick.scrape()
-    logger.info("Songkick: %d Events", len(events_songkick))
-    alle_events.extend(events_songkick)
-
-    events_allevents = await asyncio.to_thread(allevents.scrape)
-    logger.info("AllEvents.in Düsseldorf: %d Events", len(events_allevents))
-    alle_events.extend(events_allevents)
-
-    events_bandsintown = await asyncio.to_thread(bandsintown.scrape)
-    logger.info("Bandsintown: %d Events", len(events_bandsintown))
-    alle_events.extend(events_bandsintown)
-
-    # meinestadt.scrape() wurde entfernt – Quelle dauerhaft durch Akamai WAF blockiert (HTTP 403)
-
-    # Tier 2: Venue-eigene Scraper
-    logger.info("--- Schritt 1b: Tier-2-Scraper ---")
-
-    events_tonhalle = tonhalle.scrape()
-    logger.info("Tonhalle Düsseldorf: %d Events", len(events_tonhalle))
-    alle_events.extend(events_tonhalle)
-
-    events_zakk = zakk.scrape()
-    logger.info("zakk: %d Events", len(events_zakk))
-    alle_events.extend(events_zakk)
-
-    events_oper = oper_am_rhein.scrape()
-    logger.info("Deutsche Oper am Rhein: %d Events", len(events_oper))
-    alle_events.extend(events_oper)
-
-    events_schauspielhaus = schauspielhaus.scrape()
-    logger.info("Düsseldorfer Schauspielhaus: %d Events", len(events_schauspielhaus))
-    alle_events.extend(events_schauspielhaus)
-
-    events_dlive = dlive.scrape()
-    logger.info("d-live: %d Events", len(events_dlive))
-    alle_events.extend(events_dlive)
-
-    events_kunstpalast = kunstpalast.scrape()
-    logger.info("Kunstpalast Düsseldorf: %d Events", len(events_kunstpalast))
-    alle_events.extend(events_kunstpalast)
-
-    events_kunstsammlung = kunstsammlung.scrape()
-    logger.info("Kunstsammlung NRW (K20/K21): %d Events", len(events_kunstsammlung))
-    alle_events.extend(events_kunstsammlung)
-
-    events_nrw_forum = await asyncio.to_thread(nrw_forum.scrape)
-    logger.info("NRW-Forum Düsseldorf: %d Events", len(events_nrw_forum))
-    alle_events.extend(events_nrw_forum)
-
-    events_fft = fft_duesseldorf.scrape()
-    logger.info("FFT Düsseldorf: %d Events", len(events_fft))
-    alle_events.extend(events_fft)
-
-    events_stahlwerk = stahlwerk.scrape()
-    logger.info("Stahlwerk Düsseldorf: %d Events", len(events_stahlwerk))
-    alle_events.extend(events_stahlwerk)
-
-    events_rudas = rudas_studios.scrape()
-    logger.info("Rudas Studios Düsseldorf: %d Events", len(events_rudas))
-    alle_events.extend(events_rudas)
-
-    events_meh = mitsubishi_halle.scrape()
-    logger.info("Mitsubishi Electric HALLE: %d Events", len(events_meh))
-    alle_events.extend(events_meh)
-
-    events_r25 = kulturschlachthof_r25.scrape()
-    logger.info("Kulturschlachthof R25: %d Events", len(events_r25))
-    alle_events.extend(events_r25)
-
-    events_salon = salon_des_amateurs.scrape()
-    logger.info("Salon des Amateurs: %d Events", len(events_salon))
-    alle_events.extend(events_salon)
-
-    events_pitcher = await asyncio.to_thread(pitcher.scrape)
-    logger.info("Pitcher Rock HQ: %d Events", len(events_pitcher))
-    alle_events.extend(events_pitcher)
-
-    events_kunsthalle = kunsthalle.scrape()
-    logger.info("Kunsthalle Düsseldorf: %d Events", len(events_kunsthalle))
-    alle_events.extend(events_kunsthalle)
-
-    events_filmmuseum = filmmuseum.scrape()
-    logger.info("Filmmuseum Düsseldorf: %d Events", len(events_filmmuseum))
-    alle_events.extend(events_filmmuseum)
-
-    events_stadtbuechereien = stadtbuechereien.scrape()
-    logger.info("Stadtbüchereien Düsseldorf: %d Events", len(events_stadtbuechereien))
-    alle_events.extend(events_stadtbuechereien)
-
-    events_tanzhaus = tanzhaus_nrw.scrape()
-    logger.info("Tanzhaus NRW: %d Events", len(events_tanzhaus))
-    alle_events.extend(events_tanzhaus)
-
-    events_jazz = jazz_schmiede.scrape()
-    logger.info("Jazz-Schmiede Düsseldorf: %d Events", len(events_jazz))
-    alle_events.extend(events_jazz)
-
-    events_capitol = capitol_theater.scrape()
-    logger.info("Capitol Theater Düsseldorf: %d Events", len(events_capitol))
-    alle_events.extend(events_capitol)
-
-    events_komm = await asyncio.to_thread(kommoedchen.scrape)
-    logger.info("Kom(m)ödchen Düsseldorf: %d Events", len(events_komm))
-    alle_events.extend(events_komm)
-
-    events_startplatz = startplatz.scrape()
-    logger.info("STARTPLATZ Düsseldorf: %d Events", len(events_startplatz))
-    alle_events.extend(events_startplatz)
-
-    # Tier 3: Nischen- und Spezialquellen
-    logger.info("--- Schritt 1c: Tier-3-Scraper ---")
-
-    events_parkrun = parkrun.scrape()
-    logger.info("Parkrun Volksgarten Düsseldorf: %d Events", len(events_parkrun))
-    alle_events.extend(events_parkrun)
-
-    events_sport_im_park = await sport_im_park.scrape()
-    logger.info("Sport im Park Düsseldorf: %d Events", len(events_sport_im_park))
-    alle_events.extend(events_sport_im_park)
-
-    events_fortuna = await fortuna.scrape()
-    logger.info("Fortuna Düsseldorf: %d Events", len(events_fortuna))
-    alle_events.extend(events_fortuna)
-
-    events_deg = await deg.scrape()
-    logger.info("DEG Eishockey Düsseldorf: %d Events", len(events_deg))
-    alle_events.extend(events_deg)
-
-    events_messe = await messe.scrape()
-    logger.info("Messe Düsseldorf: %d Events", len(events_messe))
-    alle_events.extend(events_messe)
-
-    events_japan_center = await japan_center.scrape()
-    logger.info("Japan Center Düsseldorf: %d Events", len(events_japan_center))
-    alle_events.extend(events_japan_center)
-
-    events_classic_remise = await classic_remise.scrape()
-    logger.info("Classic Remise Düsseldorf: %d Events", len(events_classic_remise))
-    alle_events.extend(events_classic_remise)
-
-    events_stadtstrand = await stadtstrand.scrape()
-    logger.info("Stadtstrand Düsseldorf: %d Events", len(events_stadtstrand))
-    alle_events.extend(events_stadtstrand)
-
-    events_spontacts = await spontacts.scrape()
-    logger.info("Spontacts Düsseldorf: %d Events", len(events_spontacts))
-    alle_events.extend(events_spontacts)
-
-    events_ihk = await ihk.scrape()
-    logger.info("IHK Düsseldorf: %d Events", len(events_ihk))
-    alle_events.extend(events_ihk)
-
-    events_startupdorf = await startupdorf.scrape()
-    logger.info("StartupDorf Meetup: %d Events", len(events_startupdorf))
-    alle_events.extend(events_startupdorf)
-
-    events_sft = street_food_thursday.scrape()
-    logger.info("Street Food Thursday: %d Events", len(events_sft))
-    alle_events.extend(events_sft)
+    aktueller_tier = 0
+    for name, tier, funktion in QUELLEN:
+        if tier != aktueller_tier:
+            aktueller_tier = tier
+            logger.info("--- Tier-%d-Scraper ---", tier)
+        alle_events.extend(await report.scraper_ausfuehren(name, tier, funktion))
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
+    report.kennzahl(events_gesammelt=len(alle_events))
 
     # Schritt 1d: In-Memory-Deduplizierung mit Merge-Logik
     logger.info("--- Schritt 1d: In-Memory-Deduplizierung ---")
     from pipeline.deduplication import deduplizieren
     alle_events = deduplizieren(alle_events)
+    report.kennzahl(events_nach_dedup=len(alle_events))
 
     # Schritt 1e: Stadtteil-Zuordnung
     logger.info("--- Schritt 1e: Stadtteil-Zuordnung ---")
@@ -300,6 +188,13 @@ async def pipeline_ausfuehren():
         "Ergebnis – Neu gespeichert: %d | Duplikate: %d | Angereichert: %d | Fehler: %d",
         stats["gespeichert"], stats["duplikate"], stats.get("angereichert", 0), stats["fehler"]
     )
+    report.kennzahl(
+        neu_gespeichert=stats["gespeichert"],
+        duplikate=stats["duplikate"],
+        angereichert=stats.get("angereichert", 0),
+        speicher_fehler=stats["fehler"],
+    )
+    report.neu_pro_quelle_setzen(stats.get("neu_pro_quelle") or {})
 
     # Schritt 3: Kategorisierung
     logger.info("--- Schritt 3: Kategorisierung ---")
@@ -307,20 +202,21 @@ async def pipeline_ausfuehren():
     # 300 pro Lauf: bei 60 Tagen Vorschau und Lauf alle 3 Tage kommen deutlich mehr neue Events
     anzahl_kategorisiert = categorizer.kategorisieren(limit=300)
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
+    report.kennzahl(kategorisiert=anzahl_kategorisiert)
 
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")
     from pipeline import caption_generator
     anzahl_captions = caption_generator.captions_generieren(limit=50)
     logger.info("Captions generiert: %d Events aufbereitet", anzahl_captions)
+    report.kennzahl(captions=anzahl_captions)
 
     # Schritt 5: Instagram-Posting
     logger.info("--- Schritt 5: Instagram-Posting ---")
     from pipeline import publisher
     anzahl_gepostet = publisher.posten(limit=5)
     logger.info("Instagram: %d Events gepostet", anzahl_gepostet)
-
-    logger.info("=== Pipeline abgeschlossen ===")
+    report.kennzahl(gepostet=anzahl_gepostet)
 
 
 def scheduler_starten():

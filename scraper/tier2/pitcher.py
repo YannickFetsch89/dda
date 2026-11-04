@@ -1,366 +1,261 @@
 """
 pitcher.py – DiesDasDüsseldorf
-Scraper für den Pitcher Rock HQ Düsseldorf.
+Scraper für das Pitcher – Rock'n'Roll Headquarter Düsseldorf.
+
+Hintergrund (Stand 2026-11-04):
+Die alte Domain pitcher.de zeigt nur noch eine IONOS-Parkingseite
+(HTTPS: TLS-Fehler, HTTP: 404 + Sedo-Parking). Der Club ist auf
+https://pitcher29.com umgezogen (WordPress mit dem Ticket-Plugin
+"EventFlow Pro"). Die Veranstaltungsseite rendert ihre Liste per
+JavaScript aus einer öffentlichen WP-REST-Route.
 
 Strategie:
-1. Primär: Playwright-Scraper für pitcher.de/programm (JavaScript-gerenderte Seite)
-2. Fallback: JSON-LD structured data aus dem HTML
-3. Fallback: HTML-Parsing der Event-Liste
+1. Öffentliche EventFlow-REST-API:
+   https://pitcher29.com/wp-json/eventflow/v1/public/events
+   (liefert nur kommende Events, paginiert, sortiert nach Startdatum)
+   Kein Playwright nötig. robots.txt sperrt nur /wp-admin/.
 
-Hinweis: Die Website (pitcher.de) war zum Entwicklungszeitpunkt
-(2026-03-05) nicht erreichbar (503 TLS-Fehler). Der Scraper ist
-implementiert und wird aktiv, sobald die Website wieder verfügbar ist.
-
-Der Pitcher Rock HQ ist ein Livemusik-Club in Düsseldorf mit Fokus
-auf Rock, Metal, Punk und Alternative sowie DJ-Abende.
-
-URL: https://www.pitcher.de
-Adresse: Himmelgeister Str. 130, 40225 Düsseldorf
+URL: https://pitcher29.com
+Adresse: Oberbilker Allee 29, 40215 Düsseldorf
 Erstellt: 2026-03-05
+Überarbeitet: 2026-11-04 (Umzug auf pitcher29.com, REST-API statt HTML)
 """
 import json
 import logging
 import re
-import time
 from datetime import date, timedelta
 from typing import Optional
-from urllib.parse import urljoin
 
-import httpx
 from bs4 import BeautifulSoup
 
 from config import SCRAPER_VORSCHAU_TAGE
-from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.pitcher.de"
-LISTE_URL = "https://www.pitcher.de/programm"
+BASE_URL = "https://pitcher29.com"
+LISTE_URL = "https://pitcher29.com/veranstaltungen-2/"
+API_URL = "https://pitcher29.com/wp-json/eventflow/v1/public/events"
 QUELLE_NAME = "Pitcher Rock HQ"
 ORT_STANDARD = "Pitcher Rock HQ"
-ADRESSE_STANDARD = "Himmelgeister Str. 130, 40225 Düsseldorf"
+ADRESSE_STANDARD = "Oberbilker Allee 29, 40215 Düsseldorf"
 
+SEITENGROESSE = 100
+MAX_SEITEN = 5
+
+# Reihenfolge ist relevant: spezifische Formate vor allgemeinen Musik-Begriffen,
+# damit z.B. "Musikkneipenquiz (mit Liveband)" als community erkannt wird.
 KATEGORIE_MAPPING: dict[str, str] = {
-    "rock": "musik",
-    "metal": "musik",
-    "punk": "musik",
-    "alternative": "musik",
-    "indie": "musik",
-    "konzert": "musik",
-    "live": "musik",
-    "band": "musik",
-    "acoustic": "musik",
-    "open mic": "musik",
+    "poetry slam": "kultur",
+    "comedy": "kultur",
+    "lesung": "kultur",
+    "impro": "kultur",
+    "quiz": "community",
+    "karaoke": "nightlife",
     "party": "nightlife",
     "dj": "nightlife",
-    "club": "nightlife",
     "80er": "nightlife",
     "90er": "nightlife",
-    "karaoke": "nightlife",
-    "quiz": "community",
-    "comedy": "kultur",
 }
 
 
-def _kategorie_erkennen(text: str) -> str:
+def _kategorie_erkennen(titel: str) -> str:
     """
-    Mappt Titel/Kategorietexte auf DiesDasDüsseldorf-Kategorien.
+    Mappt den Event-Titel auf eine DiesDasDüsseldorf-Kategorie.
+
+    Kurze Schlüssel (≤ 3 Zeichen, z.B. "dj") werden nur als ganzes Wort
+    erkannt, um Fehltreffer in längeren Wörtern zu vermeiden.
 
     Args:
-        text: Titel oder Kategorietext
+        titel: Event-Titel
 
     Returns:
-        Gültige Kategorie
+        Gültige Kategorie (Standard beim Pitcher: musik)
     """
-    if not text:
+    if not titel:
         return "musik"
-    text_klein = text.lower()
+    text_klein = titel.lower()
     for schluessel, kategorie in KATEGORIE_MAPPING.items():
-        if schluessel in text_klein:
+        if len(schluessel) <= 3:
+            if re.search(rf"\b{re.escape(schluessel)}\b", text_klein):
+                return kategorie
+        elif schluessel in text_klein:
             return kategorie
-    return "musik"  # Standard beim Pitcher: Live-Musik
+    return "musik"
 
 
-def _events_aus_json_ld(soup: BeautifulSoup, heute: date) -> list[dict]:
+def _text_bereinigen(roh: Optional[str], max_laenge: int = 300) -> Optional[str]:
     """
-    Primärstrategie: JSON-LD structured data extrahieren.
+    Entfernt HTML-Tags und überflüssige Leerzeichen und kürzt auf max_laenge.
 
     Args:
-        soup: Geparste HTML-Seite
-        heute: Heute-Datum für Filterung
+        roh:        Roher Beschreibungstext (ggf. mit HTML)
+        max_laenge: Maximale Länge des Ergebnisses
 
     Returns:
-        Liste von Event-Dicts
+        Bereinigter Text oder None
     """
-    events = []
-    gesehene_schluessel: set[str] = set()
-
-    for script in soup.find_all("script", type="application/ld+json"):
-        try:
-            daten = json.loads(script.string or "{}")
-        except (json.JSONDecodeError, AttributeError):
-            continue
-
-        eintraege = daten if isinstance(daten, list) else [daten]
-        for eintrag in eintraege:
-            if not isinstance(eintrag, dict):
-                continue
-            if eintrag.get("@type") not in ("Event", "MusicEvent", "DanceEvent", "SocialEvent"):
-                continue
-
-            titel = eintrag.get("name", "").strip()
-            if not titel:
-                continue
-
-            datum_roh = eintrag.get("startDate") or eintrag.get("startDateTime")
-            datum = _datum_parsen(str(datum_roh)) if datum_roh else None
-            if not datum or date.fromisoformat(datum) < heute:
-                continue
-
-            uhrzeit = _uhrzeit_parsen(str(datum_roh))
-
-            url_roh = eintrag.get("url")
-            quelle_url = str(url_roh) if url_roh else LISTE_URL
-            if quelle_url.startswith("/"):
-                quelle_url = urljoin(BASE_URL, quelle_url)
-
-            beschreibung_roh = eintrag.get("description")
-            beschreibung = str(beschreibung_roh).strip()[:300] if beschreibung_roh else None
-
-            bild_roh = eintrag.get("image")
-            if isinstance(bild_roh, list) and bild_roh:
-                bild_roh = bild_roh[0]
-            if isinstance(bild_roh, dict):
-                bild_url = bild_roh.get("url") or bild_roh.get("contentUrl")
-            elif isinstance(bild_roh, str) and bild_roh.startswith("http"):
-                bild_url = bild_roh
-            else:
-                bild_url = None
-
-            preis = None
-            angebote = eintrag.get("offers", [])
-            if isinstance(angebote, dict):
-                angebote = [angebote]
-            if angebote:
-                preise = [str(a.get("price", "")) for a in angebote if a.get("price")]
-                if preise:
-                    preis = f"ab {preise[0]}€"
-
-            kategorie = _kategorie_erkennen(titel + " " + (beschreibung or ""))
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": kategorie,
-                "beschreibung": beschreibung,
-                "preis": preis,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "instagram_caption": None,
-                "datum_bis": None,
-                "ist_wiederkehrend": False,
-                "status": "neu",
-            })
-
-    return events
+    if not roh:
+        return None
+    # BeautifulSoup nur bei echtem HTML nutzen (vermeidet Warnungen bei Klartext)
+    text = BeautifulSoup(roh, "html.parser").get_text(" ") if "<" in roh else roh
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return None
+    if len(text) > max_laenge:
+        text = text[: max_laenge - 1].rsplit(" ", 1)[0] + "…"
+    return text
 
 
-def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
+def _preis_formatieren(preis_ab) -> Optional[str]:
     """
-    Fallback: HTML-Parsing der Event-Übersicht.
+    Formatiert den Mindestpreis aus der API (z.B. 18.5 → "ab 18,50€").
+
+    Die API liefert 0, wenn der Verkauf nicht über EventFlow läuft
+    (z.B. externer Ticketshop) – dann ist kein Preis bekannt.
 
     Args:
-        soup: Geparste HTML-Seite
-        heute: Heute-Datum für Filterung
+        preis_ab: Zahl oder None
 
     Returns:
-        Liste von Event-Dicts
+        Preis-String oder None
     """
-    events = []
-    gesehene_schluessel: set[str] = set()
-
-    selektoren = [
-        "article.event", "div.event", "li.event", ".event-item",
-        "article[class*='event']", "div[class*='event']",
-        ".show-item", ".concert-item", ".programm-item",
-        ".veranstaltung", "[class*='programm']",
-    ]
-
-    karten = []
-    for selektor in selektoren:
-        karten = soup.select(selektor)
-        if len(karten) > 1:
-            logger.debug("HTML-Fallback: %d Karten mit Selektor '%s'", len(karten), selektor)
-            break
-
-    for karte in karten:
-        try:
-            titel_el = karte.find(["h2", "h3", "h4", "strong"])
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel or len(titel) < 3:
-                continue
-
-            link_el = karte.find("a", href=True)
-            quelle_url = urljoin(BASE_URL, link_el["href"]) if link_el else LISTE_URL
-
-            datum_el = karte.find("time") or karte.find(class_=re.compile(r"date|datum|zeit", re.I))
-            if not datum_el:
-                continue
-            datum_text = datum_el.get("datetime") or datum_el.get_text(strip=True)
-            datum = _datum_parsen(datum_text)
-            if not datum or date.fromisoformat(datum) < heute:
-                continue
-
-            uhrzeit = _uhrzeit_parsen(datum_text)
-
-            bild_el = karte.find("img")
-            bild_url = None
-            if bild_el:
-                bild_url = bild_el.get("data-src") or bild_el.get("src")
-                if bild_url and bild_url.startswith("/"):
-                    bild_url = urljoin(BASE_URL, bild_url)
-
-            kategorie = _kategorie_erkennen(titel)
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": kategorie,
-                "beschreibung": None,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "instagram_caption": None,
-                "datum_bis": None,
-                "ist_wiederkehrend": False,
-                "status": "neu",
-            })
-
-        except Exception as fehler:
-            logger.error("Fehler beim Parsen einer Pitcher-Event-Karte: %s", str(fehler))
-            continue
-
-    return events
-
-
-def _playwright_scrape() -> str:
-    """
-    Ruft die Pitcher-Programm-Seite via Playwright ab.
-
-    Returns:
-        HTML-String der gerenderten Seite, oder leer bei Fehler
-    """
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
-
     try:
-        time.sleep(2)
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True)
-            seite = browser.new_page(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/122.0.0.0 Safari/537.36"
-                )
-            )
-            try:
-                seite.goto(LISTE_URL, timeout=30000, wait_until="domcontentloaded")
-                # Kurz warten bis dynamische Inhalte geladen
-                seite.wait_for_timeout(3000)
-                html = seite.content()
-            except PlaywrightTimeout:
-                logger.warning("Pitcher Playwright-Timeout beim Laden von %s", LISTE_URL)
-                html = ""
-            except Exception as fehler:
-                logger.error("Pitcher Playwright-Fehler: %s", fehler)
-                html = ""
-            finally:
-                browser.close()
-        return html
-    except Exception as fehler:
-        logger.error("Pitcher Playwright konnte nicht gestartet werden: %s", fehler)
-        return ""
+        wert = float(preis_ab)
+    except (TypeError, ValueError):
+        return None
+    if wert <= 0:
+        return None
+    if wert.is_integer():
+        return f"ab {int(wert)}€"
+    return f"ab {wert:.2f}€".replace(".", ",")
+
+
+def _event_umwandeln(eintrag: dict, heute: date, enddatum: date) -> Optional[dict]:
+    """
+    Wandelt einen EventFlow-API-Eintrag in ein DDD-Event-Dict um.
+
+    Args:
+        eintrag:  Event-Objekt aus der API
+        heute:    Untere Datumsgrenze
+        enddatum: Obere Datumsgrenze
+
+    Returns:
+        Event-Dict oder None, wenn das Event übersprungen werden soll
+    """
+    titel = (eintrag.get("title") or "").strip()
+    if not titel:
+        return None
+
+    # Abgesagte, private oder unveröffentlichte Events überspringen
+    if eintrag.get("status") != "published":
+        logger.debug("Pitcher: überspringe '%s' (Status %s)", titel, eintrag.get("status"))
+        return None
+    if eintrag.get("is_private_event") or eintrag.get("last_cancellation"):
+        logger.debug("Pitcher: überspringe '%s' (privat/abgesagt)", titel)
+        return None
+
+    # start_date ist ISO 8601 mit lokalem Offset, z.B. "2026-11-05T19:00:00+01:00"
+    start = eintrag.get("start_date") or ""
+    if not re.match(r"\d{4}-\d{2}-\d{2}", start):
+        return None
+    datum = start[:10]
+    datum_obj = date.fromisoformat(datum)
+    # Mehrtägige Aktionen mit Start in der Vergangenheit (z.B. Verlosungen) entfallen
+    if datum_obj < heute or datum_obj > enddatum:
+        return None
+
+    uhrzeit = start[11:16] if re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", start) else None
+
+    beschreibung = _text_bereinigen(eintrag.get("short_description")) or _text_bereinigen(
+        eintrag.get("description")
+    )
+
+    return {
+        "titel": titel,
+        "datum": datum,
+        "uhrzeit": uhrzeit,
+        "ort": ORT_STANDARD,
+        "adresse": ADRESSE_STANDARD,
+        "kategorie": _kategorie_erkennen(titel),
+        "beschreibung": beschreibung,
+        "preis": _preis_formatieren(eintrag.get("price_from")),
+        "quelle_name": QUELLE_NAME,
+        "quelle_url": eintrag.get("detail_url") or LISTE_URL,
+        "bild_url": eintrag.get("featured_image_url") or None,
+        "instagram_caption": None,
+        "datum_bis": None,
+        "ist_wiederkehrend": False,
+        "status": "neu",
+    }
 
 
 def scrape() -> list[dict]:
     """
-    Scrapt Veranstaltungen des Pitcher Rock HQ Düsseldorf.
-
-    Strategie:
-    1. Playwright (JavaScript-Rendering) für pitcher.de/programm
-    2. Fallback: statischer HTTP-Request
-    3. JSON-LD structured data parsen
-    4. HTML-Parsing als letzter Fallback
-
-    Hinweis: Die Website war zum Entwicklungszeitpunkt (2026-03-05)
-    nicht erreichbar (503 TLS-Fehler). Der Scraper läuft sobald
-    die Website wieder verfügbar ist.
+    Scrapt Veranstaltungen des Pitcher Rock HQ Düsseldorf über die
+    öffentliche EventFlow-REST-API von pitcher29.com.
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
+        Leere Liste bei Fehler.
     """
-    import concurrent.futures
-
     heute = date.today()
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    html = ""
+    events: list[dict] = []
+    gesehene_schluessel: set[str] = set()
 
-    # Strategie 1: Playwright
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_playwright_scrape)
-            html = future.result(timeout=60)
+        for seite in range(1, MAX_SEITEN + 1):
+            url = (
+                f"{API_URL}?per_page={SEITENGROESSE}&page={seite}"
+                "&sort=start_date_asc"
+            )
+            # seite_abrufen wartet vor jedem Request 2 s (Rate Limiting)
+            antwort = seite_abrufen(url, logger)
+            if antwort is None:
+                logger.warning("Pitcher: API-Seite %d nicht abrufbar", seite)
+                break
+
+            try:
+                daten = json.loads(antwort)
+            except json.JSONDecodeError:
+                logger.error("Pitcher: API-Antwort ist kein gültiges JSON (Seite %d)", seite)
+                break
+
+            eintraege = daten.get("items") if isinstance(daten, dict) else None
+            if not isinstance(eintraege, list) or not eintraege:
+                break
+
+            letztes_datum: Optional[str] = None
+            for eintrag in eintraege:
+                if not isinstance(eintrag, dict):
+                    continue
+                try:
+                    letztes_datum = (eintrag.get("start_date") or "")[:10] or letztes_datum
+                    event = _event_umwandeln(eintrag, heute, enddatum)
+                except Exception as fehler:
+                    logger.error("Pitcher: Fehler bei Event-Verarbeitung: %s", fehler)
+                    continue
+                if not event:
+                    continue
+                schluessel = f"{event['titel']}_{event['datum']}"
+                if schluessel in gesehene_schluessel:
+                    continue
+                gesehene_schluessel.add(schluessel)
+                events.append(event)
+
+            # Abbruch: letzte Seite erreicht oder Vorschau-Zeitraum überschritten
+            if len(eintraege) < SEITENGROESSE:
+                break
+            if letztes_datum and letztes_datum > enddatum.isoformat():
+                break
+
     except Exception as fehler:
-        logger.warning("Pitcher Playwright fehlgeschlagen: %s – versuche HTTP-Fallback", fehler)
-
-    # Strategie 2: Statischer HTTP-Request als Fallback
-    if not html:
-        logger.info("Pitcher: Wechsle zu HTTP-Fallback")
-        html = seite_abrufen(LISTE_URL, logger) or ""
-
-    if not html:
-        logger.warning(
-            "Scraper %s: Seite %s nicht erreichbar – "
-            "Website möglicherweise vorübergehend offline (503 TLS-Fehler bekannt)",
-            QUELLE_NAME, LISTE_URL,
-        )
+        logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, fehler)
         return []
 
-    soup = BeautifulSoup(html, "html.parser")
-
-    # JSON-LD zuerst
-    events = _events_aus_json_ld(soup, heute)
-    logger.info("Pitcher JSON-LD: %d Events", len(events))
-
-    if not events:
-        logger.info("Pitcher JSON-LD leer – versuche HTML-Parsing")
-        events = _events_aus_html(soup, heute)
-        logger.info("Pitcher HTML-Fallback: %d Events", len(events))
-
-    events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
     logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
     return events
 
@@ -370,9 +265,8 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    import json as _json
     ergebnisse = scrape()
     print(f"\n=== {len(ergebnisse)} Events gefunden ===\n")
     for e in ergebnisse[:5]:
-        print(_json.dumps(e, ensure_ascii=False, indent=2))
+        print(json.dumps(e, ensure_ascii=False, indent=2))
         print()

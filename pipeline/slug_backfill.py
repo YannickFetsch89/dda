@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from database.client import get_supabase_client
-from pipeline.slug_generator import slug_erzeugen
+from pipeline.slug_generator import slug_erzeugen, slug_mit_suffix
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,12 +66,8 @@ def backfill():
                 gesamt_fehler += 1
                 continue
 
-            # Eindeutigkeit sicherstellen
-            basis_slug = slug
-            zaehler = 2
-            while slug in bekannte_slugs:
-                slug = f"{basis_slug}-{zaehler}"
-                zaehler += 1
+            # Eindeutigkeit sicherstellen (weitere Vorstellungen: -b, -c …)
+            slug = slug_mit_suffix(slug, bekannte_slugs)
 
             try:
                 db.table("events").update({"slug": slug}).eq("id", event["id"]).execute()

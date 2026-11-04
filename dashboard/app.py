@@ -464,6 +464,215 @@ def tab_featured(von: date, bis: date):
             event_karte(event, key_prefix=f"featured_{feld}")
 
 
+# ── Scraper-Report ────────────────────────────────────────────────────────────
+
+STATUS_ANZEIGE = {
+    "fehler":        "🔴 Fehler",
+    "leer":          "🔴 leer",
+    "rueckgang":     "🟡 Rückgang",
+    "ok":            "🟢 ok",
+    "saisonal":      "⚪ saisonal",
+    "uebersprungen": "⚪ übersprungen",
+}
+# Reihenfolge in der Tabelle: Auffälliges zuerst
+STATUS_REIHENFOLGE = list(STATUS_ANZEIGE.keys())
+
+# Ab wann ein Rückgang gemeldet wird: weniger als die Hälfte des Medians der Vorläufe,
+# und nur bei Quellen, die sonst nennenswert liefern
+RUECKGANG_FAKTOR = 0.5
+RUECKGANG_MIN_MEDIAN = 6
+
+# Rhythmus aus .github/workflows/scrape.yml: täglich 05:00 UTC angestoßen,
+# gelaufen wird nur, wenn (Tage seit 1970-01-01) % 3 == 0
+_EPOCHE = date(1970, 1, 1)
+
+
+def naechster_lauf() -> date:
+    """Berechnet das Datum des nächsten planmäßigen Scraper-Laufs."""
+    from datetime import datetime, timezone
+    jetzt = datetime.now(timezone.utc)
+    tag = jetzt.date()
+    if jetzt.hour >= 5:
+        tag += timedelta(days=1)
+    while (tag - _EPOCHE).days % 3 != 0:
+        tag += timedelta(days=1)
+    return tag
+
+
+def laeufe_laden(anzahl: int = 10) -> list[dict] | None:
+    """Lädt die letzten Pipeline-Läufe (None = Tabelle fehlt / Fehler)."""
+    try:
+        return (
+            get_db().table("scraper_laeufe")
+            .select("*")
+            .order("gestartet_am", desc=True)
+            .limit(anzahl)
+            .execute()
+            .data or []
+        )
+    except Exception as e:
+        st.warning(
+            "Scraper-Report nicht verfügbar – wurde `database/scraper_report.sql` "
+            f"im Supabase SQL Editor ausgeführt?\n\n`{e}`"
+        )
+        return None
+
+
+def ergebnisse_laden(lauf_ids: list[str]) -> list[dict]:
+    """Lädt die Ergebnisse pro Quelle für die angegebenen Läufe."""
+    if not lauf_ids:
+        return []
+    try:
+        return (
+            get_db().table("scraper_ergebnisse")
+            .select("lauf_id, quelle, tier, status, anzahl, neu_gespeichert, dauer_sekunden, warnungen, fehler, meldung")
+            .in_("lauf_id", lauf_ids)
+            .limit(2000)
+            .execute()
+            .data or []
+        )
+    except Exception as e:
+        st.error(f"Ergebnisse konnten nicht geladen werden: {e}")
+        return []
+
+
+def _zeit(iso: str | None) -> str:
+    """ISO-Zeitstempel → '03.11. 14:10' in deutscher Zeit."""
+    if not iso:
+        return "–"
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(ZoneInfo("Europe/Berlin")).strftime("%d.%m. %H:%M")
+    except Exception:
+        return iso[:16]
+
+
+def _dauer(lauf: dict) -> str:
+    from datetime import datetime
+    try:
+        start = datetime.fromisoformat(lauf["gestartet_am"].replace("Z", "+00:00"))
+        ende = datetime.fromisoformat(lauf["beendet_am"].replace("Z", "+00:00"))
+        return f"{round((ende - start).total_seconds() / 60)} min"
+    except Exception:
+        return "–"
+
+
+def tab_scraper_report():
+    """Übersicht: Wie hat jede Quelle im letzten Lauf abgeschnitten – und im Vergleich zu vorher?"""
+    import statistics
+    import pandas as pd
+
+    laeufe = laeufe_laden(10)
+    if laeufe is None:
+        return
+
+    naechster = naechster_lauf()
+    wochentag = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"][naechster.weekday()]
+    st.caption(
+        f"Die Scraper laufen alle 3 Tage über GitHub Actions. "
+        f"Nächster planmäßiger Lauf: **{wochentag}, {naechster.strftime('%d.%m.%Y')}** "
+        f"(angestoßen 06:00 Uhr, GitHub startet oft mit Verzögerung)."
+    )
+
+    if not laeufe:
+        st.info("Noch kein Lauf protokolliert. Der Report füllt sich mit dem nächsten Scraper-Lauf.")
+        return
+
+    # Lauf auswählen (Standard: neuester)
+    optionen = {
+        f"{_zeit(l['gestartet_am'])} · {l.get('ausloeser') or '?'} · {l.get('status')}": l for l in laeufe
+    }
+    auswahl = st.selectbox("Lauf", list(optionen.keys()), index=0, key="report_lauf")
+    lauf = optionen[auswahl]
+
+    # Kopfzeile mit Kennzahlen
+    if lauf.get("status") == "fehler":
+        st.error(f"Lauf abgebrochen: {lauf.get('fehlermeldung') or 'unbekannter Fehler'}")
+    elif lauf.get("status") == "laeuft":
+        st.info("Dieser Lauf ist noch nicht abgeschlossen (oder wurde hart abgebrochen).")
+
+    k = st.columns(6)
+    k[0].metric("Gesammelt", lauf.get("events_gesammelt") or 0)
+    k[1].metric("Nach Dedup", lauf.get("events_nach_dedup") or 0)
+    k[2].metric("Neu in DB", lauf.get("neu_gespeichert") or 0)
+    k[3].metric("Speicherfehler", lauf.get("speicher_fehler") or 0)
+    k[4].metric("Kategorisiert", lauf.get("kategorisiert") or 0)
+    k[5].metric("Dauer", _dauer(lauf))
+    if lauf.get("github_run_url"):
+        st.link_button("📜 Log bei GitHub öffnen", lauf["github_run_url"])
+
+    # Ergebnisse aller geladenen Läufe (für Vergleich und Verlauf)
+    alle = ergebnisse_laden([l["id"] for l in laeufe])
+    if not alle:
+        st.info("Für diesen Lauf liegen keine Quellen-Ergebnisse vor.")
+        return
+
+    reihenfolge = {l["id"]: i for i, l in enumerate(laeufe)}  # 0 = neuester
+    position = reihenfolge[lauf["id"]]
+    aktuell = [e for e in alle if e["lauf_id"] == lauf["id"]]
+
+    zeilen = []
+    for e in aktuell:
+        # Vergleichswert: Median der bis zu 5 Läufe VOR dem ausgewählten
+        vorher = sorted(
+            (x for x in alle if x["quelle"] == e["quelle"] and reihenfolge.get(x["lauf_id"], -1) > position),
+            key=lambda x: reihenfolge[x["lauf_id"]],
+        )[:5]
+        median = statistics.median([x["anzahl"] for x in vorher]) if vorher else None
+
+        status = e["status"]
+        if status == "ok" and median and median >= RUECKGANG_MIN_MEDIAN and e["anzahl"] < median * RUECKGANG_FAKTOR:
+            status = "rueckgang"
+
+        zeilen.append({
+            "_sort": STATUS_REIHENFOLGE.index(status) if status in STATUS_REIHENFOLGE else 99,
+            "Status": STATUS_ANZEIGE.get(status, status),
+            "Quelle": e["quelle"],
+            "Tier": e.get("tier"),
+            "Events": e["anzahl"],
+            "Ø vorher": round(median) if median is not None else None,
+            "Neu in DB": e.get("neu_gespeichert"),
+            "Dauer (s)": float(e["dauer_sekunden"]) if e.get("dauer_sekunden") is not None else None,
+            "Hinweis": e.get("meldung") or "",
+        })
+
+    zeilen.sort(key=lambda z: (z["_sort"], z["Tier"] or 9, z["Quelle"]))
+    auffaellig = [z for z in zeilen if z["Status"].startswith(("🔴", "🟡"))]
+    if auffaellig:
+        st.warning(
+            f"**{len(auffaellig)} von {len(zeilen)} Quellen auffällig:** "
+            + ", ".join(z["Quelle"] for z in auffaellig)
+        )
+    else:
+        st.success(f"Alle {len(zeilen)} Quellen unauffällig.")
+
+    df = pd.DataFrame(zeilen).drop(columns=["_sort"])
+    st.dataframe(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        height=min(38 * (len(df) + 1), 1200),
+        column_config={
+            "Events": st.column_config.NumberColumn(format="%d"),
+            "Ø vorher": st.column_config.NumberColumn(format="%d", help="Median der bis zu 5 vorherigen Läufe"),
+            "Neu in DB": st.column_config.NumberColumn(format="%d", help="Davon neu gespeichert (Rest: Duplikate)"),
+            "Dauer (s)": st.column_config.NumberColumn(format="%.1f"),
+            "Hinweis": st.column_config.TextColumn(width="large"),
+        },
+    )
+
+    # Verlauf: Events je Quelle über die letzten Läufe
+    with st.expander("📈 Verlauf der letzten Läufe"):
+        spalten = {l["id"]: _zeit(l["gestartet_am"]) for l in reversed(laeufe)}
+        verlauf = pd.DataFrame(
+            [{"Quelle": e["quelle"], "Lauf": spalten[e["lauf_id"]], "Events": e["anzahl"]} for e in alle]
+        ).pivot_table(index="Quelle", columns="Lauf", values="Events", aggfunc="sum")
+        verlauf = verlauf[[s for s in spalten.values() if s in verlauf.columns]]
+        st.caption("Anzahl gelieferter Events pro Quelle und Lauf (älteste links). Leere Zelle = Quelle in dem Lauf nicht erfasst.")
+        st.dataframe(verlauf, use_container_width=True)
+
+
 # ── Hauptprogramm ─────────────────────────────────────────────────────────────
 
 def main():
@@ -473,10 +682,11 @@ def main():
 
     st.title("🎭 DiesDasDüsseldorf – Event-Planer")
 
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📅 Tagesplaner",
         "📋 Event-Liste",
         "⭐ Featured Events",
+        "📊 Scraper-Report",
     ])
 
     with tab1:
@@ -487,6 +697,9 @@ def main():
 
     with tab3:
         tab_featured(von, bis)
+
+    with tab4:
+        tab_scraper_report()
 
 
 if __name__ == "__main__":

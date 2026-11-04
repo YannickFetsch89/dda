@@ -11,6 +11,19 @@ Strategie:
 
 URL: https://www.spontacts.com/p/duesseldorf
 Erstellt: 2026-03-06
+
+Status 2026-11-04 – Quelle deaktiviert (keine öffentlichen Aktivitäten mehr):
+- https://www.spontacts.com/p/duesseldorf → HTTP 404 (Umzug nach spontacts.com).
+- Die neue Stadtseite https://spontacts.com/duesseldorf (und die Themenseiten
+  wie /sport/duesseldorf) ist eine reine Marketing-Landingpage ohne
+  Aktivitätsliste, ohne Datumsangaben und ohne Event-JSON-LD
+  (nur schema.org/WebApplication).
+- Aktivitäten sind nur noch nach Login (community.spontacts.com) sichtbar;
+  robots.txt sperrt dort /browse und /search, auf spontacts.com /entdecken/
+  und /activities/. Ein Login bzw. das Umgehen von robots.txt ist nicht erlaubt.
+Daher gibt scrape() ohne Netzwerkzugriff eine leere Liste zurück. Der
+Parser-Code bleibt erhalten, falls Spontacts wieder öffentliche Listen anbietet
+(dann QUELLE_AKTIV auf True setzen und LISTE_URL prüfen).
 """
 import asyncio
 import json
@@ -26,8 +39,11 @@ from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
 
-LISTE_URL = "https://www.spontacts.com/p/duesseldorf"
-BASE_URL = "https://www.spontacts.com"
+LISTE_URL = "https://spontacts.com/duesseldorf"
+BASE_URL = "https://spontacts.com"
+
+# Quelle seit 2026-11 ohne öffentliche Aktivitätsliste (siehe Modul-Docstring)
+QUELLE_AKTIV = False
 QUELLE_NAME = "Spontacts Düsseldorf"
 ORT_STANDARD = "Düsseldorf"
 ADRESSE_STANDARD = None
@@ -327,6 +343,14 @@ async def scrape() -> list[dict]:
     heute = date.today()
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
+
+    if not QUELLE_AKTIV:
+        logger.warning(
+            "Scraper %s deaktiviert: Spontacts zeigt Aktivitäten nur noch nach Login "
+            "(robots.txt sperrt /activities/, /entdecken/, /browse, /search) – 0 Events.",
+            QUELLE_NAME,
+        )
+        return []
 
     html = None
     try:

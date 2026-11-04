@@ -87,6 +87,8 @@ VENUE_STADTTEIL: dict[str, str] = {
     "Kommödchen": "Altstadt",
     "Komödchen": "Altstadt",
     "Japan Center": "Altstadt",
+    "EKŌ-Haus": "Niederkassel",  # Brüggener Weg 6, 40547
+    "EKO-Haus": "Niederkassel",
     "Japanisches Kulturzentrum": "Altstadt",
     "Robert-Schumann-Saal": "Altstadt",
     "Savoy Theater": "Altstadt",
@@ -144,7 +146,7 @@ VENUE_STADTTEIL: dict[str, str] = {
     "Museum für Gartenkunst": "Benrath",
     "Naturkundemuseum": "Benrath",
     # --- Sonstige ---
-    "Classic Remise": "Mörsenbroich",
+    "Classic Remise": "Wersten",  # Harffstraße 110a, 40591
     "Volksgarten": "Oberbilk",
     "Ghorban": "Pempelfort",
     "The Craft Studio": "Friedrichstadt",

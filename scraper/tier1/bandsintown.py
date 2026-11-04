@@ -12,6 +12,14 @@ Authentifizierung: App-ID via Umgebungsvariable BANDSINTOWN_APP_ID
 Hinweis: Die Bandsintown API ist künstler-zentriert, nicht standort-zentriert.
 Für stadtbasiertes Scraping wird die Event-Discovery Seite genutzt.
 
+Status 2026-11-04: Die komplette Domain www.bandsintown.com (auch Startseite
+und Sitemap) antwortet mit HTTP 403 "Sorry, you have been blocked"
+(Cloudflare-WAF-Block) – sowohl für httpx als auch für headless Chromium.
+Die REST-API (rest.bandsintown.com) verweigert unregistrierte app_ids
+(403 "explicit deny"). Der interne Endpoint /choose-dates/ ist per
+robots.txt gesperrt. Ein WAF-Block wird bewusst NICHT umgangen – der
+Scraper erkennt ihn, protokolliert ihn eindeutig und gibt [] zurück.
+
 Erstellt: 2026-04-02
 """
 import logging
@@ -25,7 +33,7 @@ from bs4 import BeautifulSoup
 
 from config import SCRAPER_VORSCHAU_TAGE
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
-from scraper.utils.http_client import seite_abrufen
+from scraper.utils.http_client import STANDARD_HEADERS
 
 logger = logging.getLogger(__name__)
 
@@ -164,23 +172,85 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
         return None
 
 
-def _seite_mit_playwright(url: str) -> Optional[str]:
+def _ist_waf_block(status: Optional[int], html: Optional[str]) -> bool:
     """
-    Lädt eine Seite mit Playwright (headless Chromium) bei Bot-Schutz.
+    Erkennt eine Cloudflare-/WAF-Sperrseite anhand von Statuscode und Inhalt.
+
+    Args:
+        status: HTTP-Statuscode (oder None)
+        html:   Antwort-Body (oder None)
+
+    Returns:
+        True, wenn die Antwort eine Bot-Schutz-/Sperrseite ist
+    """
+    text = (html or "")[:20000].lower()
+    merkmale = (
+        "attention required! | cloudflare",
+        "sorry, you have been blocked",
+        "cf-error-details",
+        "just a moment...",
+        "challenge-platform",
+    )
+    if any(m in text for m in merkmale):
+        return True
+    return status in (403, 503) and "cloudflare" in text
+
+
+def _seite_mit_httpx(url: str) -> tuple[Optional[str], bool]:
+    """
+    Lädt eine Seite per httpx (mit Rate Limiting) und prüft auf WAF-Block.
+
+    Args:
+        url: Ziel-URL
+
+    Returns:
+        Tuple (html oder None, waf_block_erkannt)
+    """
+    time.sleep(2)  # Rate Limiting
+    try:
+        with httpx.Client(headers=STANDARD_HEADERS, timeout=30, follow_redirects=True) as client:
+            antwort = client.get(url)
+    except Exception as fehler:
+        logger.error("Fehler beim Abrufen von %s: %s", url, str(fehler))
+        return None, False
+
+    if _ist_waf_block(antwort.status_code, antwort.text):
+        return None, True
+    if antwort.status_code >= 400:
+        logger.error("HTTP Fehler %s beim Abrufen von %s", antwort.status_code, url)
+        return None, False
+    return antwort.text, False
+
+
+def _seite_mit_playwright(url: str) -> tuple[Optional[str], bool]:
+    """
+    Lädt eine Seite mit Playwright (headless Chromium), z.B. bei Timeouts
+    oder falls die Seite clientseitig gerendert wird.
+
+    Eine WAF-Sperrseite wird erkannt und nicht als Inhalt zurückgegeben.
+
+    Returns:
+        Tuple (html oder None, waf_block_erkannt)
     """
     try:
         from playwright.sync_api import sync_playwright
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            seite = browser.new_page()
-            seite.goto(url, wait_until="domcontentloaded", timeout=30000)
-            seite.wait_for_timeout(3000)
-            html = seite.content()
-            browser.close()
-            return html
+            try:
+                seite = browser.new_page(user_agent=STANDARD_HEADERS["User-Agent"])
+                time.sleep(2)  # Rate Limiting
+                antwort = seite.goto(url, wait_until="domcontentloaded", timeout=30000)
+                seite.wait_for_timeout(3000)
+                html = seite.content()
+            finally:
+                browser.close()
+        status = antwort.status if antwort else None
+        if _ist_waf_block(status, html):
+            return None, True
+        return html, False
     except Exception as fehler:
         logger.warning("Playwright-Fallback fehlgeschlagen: %s", fehler)
-        return None
+        return None, False
 
 
 def scrape() -> list[dict]:
@@ -198,10 +268,17 @@ def scrape() -> list[dict]:
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     try:
-        html = seite_abrufen(DISCOVER_URL, logger)
-        if html is None:
+        html, waf_block = _seite_mit_httpx(DISCOVER_URL)
+        if html is None and not waf_block:
             logger.warning("httpx fehlgeschlagen – versuche Playwright")
-            html = _seite_mit_playwright(DISCOVER_URL)
+            html, waf_block = _seite_mit_playwright(DISCOVER_URL)
+        if waf_block:
+            # Bot-Schutz wird bewusst nicht umgangen (Scraping-Regeln)
+            logger.warning(
+                "Bandsintown blockiert den Zugriff per Cloudflare-WAF (HTTP 403 "
+                "'Sorry, you have been blocked') – Quelle wird übersprungen, 0 Events."
+            )
+            return []
         if html is None:
             logger.warning("Bandsintown Discover-Seite nicht erreichbar.")
             return []

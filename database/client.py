@@ -6,12 +6,13 @@ Erstellt: 2026-02-24
 import logging
 import os
 import re
+from collections import Counter
 from typing import Optional
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from pipeline.slug_generator import slug_fuer_event
+from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
 
@@ -83,6 +84,58 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict) -> dict:
     return update
 
 
+def _uhrzeit_hhmm(wert: Optional[str]) -> Optional[str]:
+    """Normalisiert Uhrzeiten auf HH:MM ("20:00:00" → "20:00"), leer → None."""
+    if not wert:
+        return None
+    return str(wert)[:5]
+
+
+def _slug_pruefen(db: Client, basis: str, uhrzeit: Optional[str]) -> tuple[Optional[dict], str]:
+    """
+    Prüft einen neuen Slug gegen bereits gespeicherte Events.
+
+    - Gibt es unter dem Basis-Slug (oder seinen Suffix-Varianten -b, -c …) ein Event mit
+      gleicher Uhrzeit (oder fehlt bei einem der beiden die Uhrzeit), ist es dasselbe Event
+      aus einer anderen Quelle → dieses Event wird zur Anreicherung zurückgegeben.
+    - Sonst ist es eine weitere Vorstellung am selben Tag → erster freier Slug (-b, -c …).
+
+    Returns:
+        (bestehendes_event_oder_None, freier_slug)
+    """
+    try:
+        antwort = (
+            db.table("events")
+            .select("id,slug,uhrzeit," + ",".join(f for f in _ANREICHERBARE_FELDER if f != "uhrzeit"))
+            .like("slug", f"{basis}%")
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("Slug-Prüfung für '%s' fehlgeschlagen: %s", basis, str(e))
+        return None, basis
+
+    # Nur exakt den Basis-Slug und seine Suffix-Varianten berücksichtigen
+    # (".like" findet auch längere Slugs, die zufällig mit dem Basis-Slug beginnen)
+    muster = re.compile(rf"^{re.escape(basis)}(-[a-z]|-\d+)?$")
+    kandidaten = [z for z in (antwort.data or []) if muster.match(z.get("slug") or "")]
+
+    neue_zeit = _uhrzeit_hhmm(uhrzeit)
+    for kandidat in kandidaten:
+        alte_zeit = _uhrzeit_hhmm(kandidat.get("uhrzeit"))
+        if neue_zeit is None or alte_zeit is None or neue_zeit == alte_zeit:
+            logger.info(
+                "Duplikat über Slug erkannt: '%s' (%s) – wird angereichert statt neu angelegt",
+                kandidat["slug"], neue_zeit or "ohne Uhrzeit",
+            )
+            return kandidat, kandidat["slug"]
+
+    vergeben = {z["slug"] for z in kandidaten}
+    freier_slug = slug_mit_suffix(basis, vergeben)
+    if freier_slug != basis:
+        logger.info("Weitere Vorstellung am selben Tag: Slug '%s'", freier_slug)
+    return None, freier_slug
+
+
 def get_supabase_client() -> Client:
     """
     Gibt eine Supabase-Client-Instanz zurück (Singleton).
@@ -134,11 +187,13 @@ def events_speichern(events: list[dict]) -> dict:
 
     Returns:
         Dict mit Statistiken: {"gespeichert": int, "duplikate": int,
-                                "angereichert": int, "fehler": int}
+                                "angereichert": int, "fehler": int,
+                                "neu_pro_quelle": Counter}
     """
+    neu_pro_quelle: Counter = Counter()
     if not events:
         logger.info("Keine Events zum Speichern übergeben.")
-        return {"gespeichert": 0, "duplikate": 0, "angereichert": 0, "fehler": 0}
+        return {"gespeichert": 0, "duplikate": 0, "angereichert": 0, "fehler": 0, "neu_pro_quelle": neu_pro_quelle}
 
     db = get_supabase_client()
     gespeichert = 0
@@ -147,8 +202,11 @@ def events_speichern(events: list[dict]) -> dict:
     fehler = 0
 
     for event in events:
-        # Server-seitige Felder und noch nicht existierende DB-Spalten entfernen
-        datensatz = {k: v for k, v in event.items() if k not in _IGNORE_FELDER and k not in _NICHT_IN_DB}
+        # Server-seitige Felder, noch nicht existierende DB-Spalten und interne Felder ("_scraper") entfernen
+        datensatz = {
+            k: v for k, v in event.items()
+            if k not in _IGNORE_FELDER and k not in _NICHT_IN_DB and not k.startswith("_")
+        }
 
         titel = event.get("titel", "?")
         datum = event.get("datum", "?")
@@ -166,21 +224,32 @@ def events_speichern(events: list[dict]) -> dict:
                 .execute()
             )
 
-            if not treffer.data:
+            bestehendes = treffer.data[0] if treffer.data else None
+
+            if bestehendes is None:
                 # Slug generieren falls nicht vorhanden
-                if "slug" not in datensatz or not datensatz.get("slug"):
+                if not datensatz.get("slug"):
                     slug = slug_fuer_event(event)
                     if slug:
                         datensatz["slug"] = slug
 
+                # Schritt 2: Gleicher Slug schon vergeben? Der Slug normalisiert Groß-/Kleinschreibung,
+                # Umlaute, Satzzeichen und kürzt den Ort – so fallen Duplikate aus anderen Quellen auf
+                # ("DIE MÖWE" vs. "Die Möwe"). Gleiche Uhrzeit = Duplikat, andere Uhrzeit = weitere Vorstellung.
+                if datensatz.get("slug"):
+                    bestehendes, freier_slug = _slug_pruefen(db, datensatz["slug"], datensatz.get("uhrzeit"))
+                    if bestehendes is None:
+                        datensatz["slug"] = freier_slug
+
+            if bestehendes is None:
                 # Neues Event: direkt einfügen
                 db.table("events").insert(datensatz).execute()
                 gespeichert += 1
+                neu_pro_quelle[event.get("_scraper") or event.get("quelle_name") or "?"] += 1
 
             else:
                 # Duplikat: Anreicherung prüfen
                 duplikate += 1
-                bestehendes = treffer.data[0]
                 update = _anreicherungs_update_bauen(bestehendes, datensatz)
 
                 if update:
@@ -207,4 +276,7 @@ def events_speichern(events: list[dict]) -> dict:
         "Speicherung abgeschlossen – Neu: %d | Duplikate: %d | Angereichert: %d | Fehler: %d",
         gespeichert, duplikate, angereichert, fehler,
     )
-    return {"gespeichert": gespeichert, "duplikate": duplikate, "angereichert": angereichert, "fehler": fehler}
+    return {
+        "gespeichert": gespeichert, "duplikate": duplikate, "angereichert": angereichert,
+        "fehler": fehler, "neu_pro_quelle": neu_pro_quelle,
+    }

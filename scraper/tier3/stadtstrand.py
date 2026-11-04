@@ -1,78 +1,100 @@
 """
 stadtstrand.py – DiesDasDüsseldorf
-Playwright-Scraper für den Stadtstrand Düsseldorf.
+Scraper für die Events des StadtStrand Düsseldorf.
 
-Scrapt saisonale Events und Veranstaltungen vom Stadtstrand Düsseldorf,
-dem beliebten Freizeitbereich am Rheinufer (aktiv ca. Mai–September).
+Der StadtStrand bespielt im Sommer die Strände am Rheinufer (z.B. Tonhallenufer)
+und im Winter die Indoor-Location "KLONKK" auf dem Factory Campus. Die Website
+(Webflow) listet alle geplanten Events als Karten (Klasse "event19_item") mit
+Kategorie-Tag, Standort, Datum/Uhrzeit ("13.11.2026 19:00") und Titel.
 
-Saisonaler Hinweis: Außerhalb der Saison werden keine Events gefunden –
-das ist normal und kein Fehler. Es wird eine leere Liste zurückgegeben.
+Saisonaler Hinweis: Liegen im Vorschauzeitraum keine Events, wird eine leere
+Liste zurückgegeben und per INFO-Log als Saisonpause gekennzeichnet.
 
 Strategie:
-1. Primär: JSON-LD structured data (schema.org/Event)
-2. Fallback: HTML-Parsing der Veranstaltungsliste
+1. Event-Übersicht laden (httpx, statisches HTML, Rate Limiting über http_client)
+2. Event-Karten parsen, abgesagte Events überspringen
+3. Für Events im Vorschauzeitraum die Detailseite laden (Kurzbeschreibung)
 
-URL: https://www.stadtstrand-duesseldorf.de/events/
-Adresse: Stadtstrand Düsseldorf, Am Rheinufer, 40213 Düsseldorf
+URL: https://www.stadtstrand-duesseldorf.de/events
 Erstellt: 2026-03-06
+Überarbeitet: 2026-11-04 – Parser an Webflow-Struktur (event19_item) angepasst,
+                            Standorte/Adressen, Absagen, Detail-Beschreibung
 """
 import asyncio
-import json
 import logging
 import re
 from datetime import date, timedelta
+from typing import Optional
 from urllib.parse import urljoin
 
-from playwright.async_api import async_playwright
+from bs4 import BeautifulSoup
 
 from config import SCRAPER_VORSCHAU_TAGE
-from scraper.utils.datum import datum_parsen, uhrzeit_parsen
+from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
-LISTE_URL = "https://www.stadtstrand-duesseldorf.de/events/"
+LISTE_URL = "https://www.stadtstrand-duesseldorf.de/events"
 BASE_URL = "https://www.stadtstrand-duesseldorf.de"
 QUELLE_NAME = "Stadtstrand Düsseldorf"
 ORT_STANDARD = "Stadtstrand Düsseldorf"
 ADRESSE_STANDARD = "Am Rheinufer, 40213 Düsseldorf"
 KATEGORIE = "outdoor"
 
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36"
-)
+# Maximale Anzahl Detailseiten pro Lauf (je Request min. 2 s Wartezeit)
+MAX_DETAILSEITEN = 15
 
-# Kategorie-Mapping für Stadtstrand Events
+# Bekannte Standorte (Schlüssel: Standort-Text der Website in Kleinbuchstaben)
+# Adresse KLONKK laut https://www.stadtstrand-duesseldorf.de/standorte/klonkk
+STANDORTE = {
+    "klonkk": ("KLONKK – StadtStrand Indoor-Location", "Factory Campus, Erkrather Straße 401, 40231 Düsseldorf"),
+    "kl0nkk": ("KLONKK – StadtStrand Indoor-Location", "Factory Campus, Erkrather Straße 401, 40231 Düsseldorf"),
+    "tonhallenufer": ("StadtStrand Tonhallenufer", "Tonhallenufer, Düsseldorf"),
+    "mannesmannufer": ("StadtStrand Mannesmannufer", "Mannesmannufer, Düsseldorf"),
+    "robert-lehr-ufer": ("StadtStrand Robert-Lehr-Ufer", "Robert-Lehr-Ufer, Düsseldorf"),
+}
+
+# Kategorie-Tags der Website → DiesDasDüsseldorf-Kategorien
+TAG_MAPPING = {
+    "musik": "musik", "konzert": "musik",
+    "comedy": "kultur", "kunst": "kultur", "kultur": "kultur", "theater": "kultur", "lesung": "kultur",
+    "tanz": "nightlife", "party": "nightlife", "drinks": "nightlife",
+    "food": "food",
+    "sport": "sport",
+    "family": "family", "kinder": "family",
+    "workshop": "community",
+}
+
+# Fallback: Schlüsselwörter im Titel
 KATEGORIE_MAPPING = {
+    "quiz": "community", "bingo": "community",
     "konzert": "musik", "musik": "musik", "live": "musik", "dj": "musik",
-    "party": "nightlife", "club": "nightlife", "nacht": "nightlife",
-    "festival": "musik",
-    "outdoor": "outdoor", "strand": "outdoor", "rhein": "outdoor",
+    "party": "nightlife", "club": "nightlife", "nacht": "nightlife", "fiesta": "nightlife",
+    "festival": "musik", "comedy": "kultur",
     "sport": "sport", "volleyball": "sport", "fitness": "sport",
     "workshop": "community", "meetup": "community",
     "kinder": "family", "familie": "family",
     "essen": "food", "food": "food", "bbq": "food", "grill": "food",
+    "strand": "outdoor", "rhein": "outdoor",
 }
 
+# "13.11.2026 19:00" bzw. "5.12.2026 18:00"
+DATUM_REGEX = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?")
 
-def _kategorie_erkennen(text: str) -> str:
+
+def _text(element) -> str:
     """
-    Erkennt die passende Kategorie anhand von Titel oder Beschreibung.
+    Liefert den bereinigten Text eines Elements.
 
     Args:
-        text: Titel oder Beschreibungstext des Events
+        element: BeautifulSoup-Element oder None
 
     Returns:
-        Gültige Kategorie als String
+        Text mit normalisiertem Whitespace (leer bei None)
     """
-    if not text:
-        return KATEGORIE
-    text_klein = text.lower()
-    for schluessel, kategorie in KATEGORIE_MAPPING.items():
-        if schluessel in text_klein:
-            return kategorie
-    return KATEGORIE
+    if element is None:
+        return ""
+    return " ".join(element.get_text(" ", strip=True).split())
 
 
 def _beschreibung_kuerzen(text: str) -> str:
@@ -91,261 +113,261 @@ def _beschreibung_kuerzen(text: str) -> str:
     return bereinigt[:300]
 
 
-def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
+def _kategorie_erkennen(tag: str, titel: str) -> str:
     """
-    Extrahiert Events aus JSON-LD structured data.
+    Erkennt die Kategorie anhand des Website-Tags, ersatzweise anhand des Titels.
+
+    "Family" wird nur übernommen, wenn der Titel nicht auf ein Erwachsenen-Format
+    wie Bingo oder Pubquiz hinweist (die Website taggt diese ebenfalls als "Family").
 
     Args:
-        html: HTML-Quelltext der Seite
-        heute: Aktuelles Datum
-        enddatum: Maximales Datum für Events
+        tag:   Kategorie-Tag der Website (z.B. "Musik")
+        titel: Event-Titel
 
     Returns:
-        Liste von Event-Dicts
+        Gültige Kategorie als String
     """
-    from bs4 import BeautifulSoup
+    tag_klein = (tag or "").lower().strip()
+    titel_klein = (titel or "").lower()
 
-    events = []
-    gesehene_schluessel: set[str] = set()
-    soup = BeautifulSoup(html, "html.parser")
+    kategorie = TAG_MAPPING.get(tag_klein)
+    if kategorie and not (kategorie == "family" and ("bingo" in titel_klein or "quiz" in titel_klein)):
+        return kategorie
 
-    for script in soup.find_all("script", type="application/ld+json"):
-        try:
-            daten = json.loads(script.string or "{}")
-        except (json.JSONDecodeError, AttributeError):
+    for schluessel, kat in KATEGORIE_MAPPING.items():
+        if schluessel in titel_klein:
+            return kat
+    return KATEGORIE
+
+
+def _standort_aufloesen(standort: str) -> tuple[str, str]:
+    """
+    Ordnet den Standort-Text der Website einem Venue-Namen und einer Adresse zu.
+
+    Args:
+        standort: Standort-Text der Karte (z.B. "klOnkk", "Tonhallenufer")
+
+    Returns:
+        Tupel (ort, adresse)
+    """
+    schluessel = (standort or "").lower().strip()
+    if schluessel in STANDORTE:
+        return STANDORTE[schluessel]
+    if schluessel:
+        return f"StadtStrand {standort.strip()}", ADRESSE_STANDARD
+    return ORT_STANDARD, ADRESSE_STANDARD
+
+
+def _ist_abgesagt(karte) -> bool:
+    """
+    Prüft, ob eine Event-Karte als abgesagt markiert ist.
+
+    Webflow blendet leere Hinweise per Klasse "w-condition-invisible" aus; ein
+    sichtbarer Hinweis mit "abgesagt" bedeutet eine Absage.
+
+    Args:
+        karte: BeautifulSoup-Element der Event-Karte
+
+    Returns:
+        True, wenn abgesagt
+    """
+    for hinweis in karte.select(".event19_notice-wrapper"):
+        if "w-condition-invisible" in (hinweis.get("class") or []):
             continue
-
-        eintraege = daten if isinstance(daten, list) else [daten]
-        for eintrag in eintraege:
-            if not isinstance(eintrag, dict):
-                continue
-            if eintrag.get("@type") not in ("Event", "SocialEvent", "MusicEvent", "Festival"):
-                continue
-
-            titel = eintrag.get("name", "").strip()
-            if not titel:
-                continue
-
-            datum_roh = eintrag.get("startDate") or eintrag.get("startDateTime")
-            datum = datum_parsen(str(datum_roh)) if datum_roh else None
-            if not datum:
-                continue
-            datum_obj = date.fromisoformat(datum)
-            if datum_obj < heute or datum_obj > enddatum:
-                continue
-
-            uhrzeit = uhrzeit_parsen(str(datum_roh))
-            url_roh = eintrag.get("url")
-            quelle_url = urljoin(BASE_URL, str(url_roh)) if url_roh else LISTE_URL
-
-            beschreibung_roh = eintrag.get("description")
-            beschreibung = _beschreibung_kuerzen(str(beschreibung_roh)) if beschreibung_roh else None
-
-            bild_roh = eintrag.get("image")
-            if isinstance(bild_roh, list) and bild_roh:
-                bild_roh = bild_roh[0]
-            if isinstance(bild_roh, dict):
-                bild_url = bild_roh.get("url") or bild_roh.get("contentUrl")
-            elif isinstance(bild_roh, str) and bild_roh.startswith("http"):
-                bild_url = bild_roh
-            else:
-                bild_url = None
-
-            # Preis aus Angeboten extrahieren
-            preis = None
-            angebote = eintrag.get("offers", [])
-            if isinstance(angebote, dict):
-                angebote = [angebote]
-            if angebote:
-                preise = [str(a.get("price", "")) for a in angebote if a.get("price")]
-                if preise:
-                    preis = f"ab {preise[0]}€"
-
-            kat_text = titel + (" " + beschreibung if beschreibung else "")
-            kategorie = _kategorie_erkennen(kat_text)
-
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": kategorie,
-                "beschreibung": beschreibung,
-                "preis": preis,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "bild_generiert": False,
-                "post_typ": "feed",
-                "instagram_caption": None,
-                "instagram_location_id": None,
-                "status": "neu",
-            })
-
-    return events
+        text = _text(hinweis).lower()
+        if "abgesagt" in text or "season closed" in text or "fällt aus" in text:
+            return True
+    return False
 
 
-def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
+def _karte_parsen(karte) -> Optional[dict]:
     """
-    Fallback: HTML-Parsing der Veranstaltungsliste.
+    Parst eine Event-Karte der Übersicht.
 
     Args:
-        html: HTML-Quelltext der Seite
-        heute: Aktuelles Datum
-        enddatum: Maximales Datum für Events
+        karte: BeautifulSoup-Element mit Klasse "event19_item"
 
     Returns:
-        Liste von Event-Dicts
+        Dict mit titel, datum (date), uhrzeit, standort, tag, url, bild_url, abgesagt
+        oder None, wenn Pflichtangaben fehlen
     """
-    from bs4 import BeautifulSoup
+    titel_el = karte.find(["h2", "h3", "h4"])
+    titel = _text(titel_el)
+    if len(titel) < 3:
+        return None
 
-    events = []
-    gesehene_schluessel: set[str] = set()
-    soup = BeautifulSoup(html, "html.parser")
+    datum_obj = None
+    uhrzeit = None
+    standort = ""
+    for meta in karte.select(".event19_meta-tag"):
+        meta_text = _text(meta)
+        treffer = DATUM_REGEX.search(meta_text)
+        if treffer and datum_obj is None:
+            try:
+                datum_obj = date(int(treffer.group(3)), int(treffer.group(2)), int(treffer.group(1)))
+            except ValueError:
+                continue
+            if treffer.group(4):
+                uhrzeit = f"{int(treffer.group(4)):02d}:{treffer.group(5)}"
+        elif meta_text and not standort:
+            standort = meta_text
+    if datum_obj is None:
+        return None
 
-    # Mehrere CSS-Selektoren als Fallback-Kette
-    selektoren = [
-        "article.event", "div.event", "li.event",
-        ".event-item", ".event-card", ".event-entry",
-        "article[class*='event']", "div[class*='event']",
-        ".veranstaltung", ".post", "article",
-    ]
+    tag = _text(karte.select_one(".event19_category-wrapper"))
 
-    karten = []
-    for selektor in selektoren:
-        karten = soup.select(selektor)
-        if len(karten) > 1:
-            logger.debug("HTML-Fallback: %d Karten mit Selektor '%s'", len(karten), selektor)
+    link_el = karte.find("a", href=True)
+    url = urljoin(BASE_URL, link_el["href"]) if link_el else LISTE_URL
+
+    bild_url = None
+    for bild_el in karte.select("img.event19_image"):
+        if "w-condition-invisible" in (bild_el.get("class") or []):
+            continue
+        src = bild_el.get("src") or ""
+        if src.startswith("http") and "placeholder" not in src.lower():
+            bild_url = src
             break
 
-    for karte in karten:
-        try:
-            titel_el = karte.find(["h2", "h3", "h4", "strong"])
-            if not titel_el:
-                continue
-            titel = titel_el.get_text(strip=True)
-            if not titel or len(titel) < 3:
-                continue
+    return {
+        "titel": titel,
+        "datum": datum_obj,
+        "uhrzeit": uhrzeit,
+        "standort": standort,
+        "tag": tag,
+        "url": url,
+        "bild_url": bild_url,
+        "abgesagt": _ist_abgesagt(karte),
+    }
 
-            datum_el = karte.find("time") or karte.find(class_=re.compile(r"date|datum|zeit", re.I))
-            if not datum_el:
-                continue
-            datum_text = datum_el.get("datetime") or datum_el.get_text(strip=True)
-            datum = datum_parsen(datum_text)
-            if not datum:
-                continue
-            datum_obj = date.fromisoformat(datum)
-            if datum_obj < heute or datum_obj > enddatum:
-                continue
 
-            uhrzeit = uhrzeit_parsen(datum_text)
+def _beschreibung_von_detailseite(url: str) -> Optional[str]:
+    """
+    Lädt die Detailseite eines Events und liest die Kurzbeschreibung.
 
-            link_el = karte.find("a", href=True)
-            quelle_url = urljoin(BASE_URL, link_el["href"]) if link_el else LISTE_URL
+    Args:
+        url: URL der Detailseite
 
-            bild_el = karte.find("img")
-            bild_url = None
-            if bild_el:
-                bild_url = bild_el.get("data-src") or bild_el.get("src")
-                if bild_url and bild_url.startswith("/"):
-                    bild_url = urljoin(BASE_URL, bild_url)
-                if bild_url and not bild_url.startswith("http"):
-                    bild_url = None
+    Returns:
+        Beschreibung (max. 300 Zeichen) oder None
+    """
+    html = seite_abrufen(url, logger)
+    if not html:
+        return None
+    soup = BeautifulSoup(html, "html.parser")
 
-            beschreibung_el = karte.find("p")
-            beschreibung = _beschreibung_kuerzen(beschreibung_el.get_text(strip=True)) if beschreibung_el else None
+    meta = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", property="og:description")
+    kurz = (meta.get("content") or "").strip() if meta else ""
 
-            kat_text = titel + (" " + beschreibung if beschreibung else "")
-            kategorie = _kategorie_erkennen(kat_text)
+    rich = soup.select_one(".w-richtext")
+    lang = _text(rich) if rich else ""
 
-            schluessel = f"{titel}_{datum}"
-            if schluessel in gesehene_schluessel:
-                continue
-            gesehene_schluessel.add(schluessel)
-
-            events.append({
-                "titel": titel,
-                "datum": datum,
-                "uhrzeit": uhrzeit,
-                "ort": ORT_STANDARD,
-                "adresse": ADRESSE_STANDARD,
-                "kategorie": kategorie,
-                "beschreibung": beschreibung,
-                "preis": None,
-                "quelle_name": QUELLE_NAME,
-                "quelle_url": quelle_url,
-                "bild_url": bild_url,
-                "bild_generiert": False,
-                "post_typ": "feed",
-                "instagram_caption": None,
-                "instagram_location_id": None,
-                "status": "neu",
-            })
-
-        except Exception as fehler:
-            logger.error("Fehler beim Parsen einer Event-Karte: %s", str(fehler))
-            continue
-
-    return events
+    if kurz and lang:
+        return _beschreibung_kuerzen(f"{kurz}. {lang}" if not kurz.endswith((".", "!", "?")) else f"{kurz} {lang}")
+    return _beschreibung_kuerzen(kurz or lang) or None
 
 
 async def scrape() -> list[dict]:
     """
-    Scrapt saisonale Events des Stadtstrand Düsseldorf.
+    Scrapt die Events des StadtStrand Düsseldorf (Strand im Sommer, KLONKK im Winter).
 
-    Hinweis: Außerhalb der Saison (ca. Oktober–April) werden keine Events
-    gefunden. Das ist kein Fehler – es wird eine leere Liste zurückgegeben.
-
-    Strategie:
-    1. JSON-LD structured data
-    2. HTML-Fallback
+    Liegen im Vorschauzeitraum keine Termine, wird eine leere Liste
+    zurückgegeben (Saisonpause, kein Fehler).
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
-        Leere Liste außerhalb der Saison (kein Fehler).
     """
     heute = date.today()
     enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    html = None
     try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await page.set_extra_http_headers({"User-Agent": USER_AGENT})
-            try:
-                await page.goto(LISTE_URL, wait_until="networkidle", timeout=30000)
-                await asyncio.sleep(2)
-                html = await page.content()
-            except Exception as fehler:
-                logger.error("Playwright Fehler beim Laden von %s: %s", LISTE_URL, str(fehler))
-            finally:
-                await browser.close()
+        html = await asyncio.to_thread(seite_abrufen, LISTE_URL, logger)
     except Exception as fehler:
-        logger.error("Scraper %s: Playwright konnte nicht gestartet werden: %s", QUELLE_NAME, str(fehler))
-
-    if not html:
-        # Außerhalb der Saison oder technischer Fehler – leere Liste ist OK
-        logger.info("Scraper %s: Kein HTML geladen – wahrscheinlich außerhalb der Saison", QUELLE_NAME)
+        logger.error("Scraper %s: Abruf von %s fehlgeschlagen: %s", QUELLE_NAME, LISTE_URL, str(fehler))
         return []
 
-    events = _events_aus_json_ld(html, heute, enddatum)
-    logger.info("JSON-LD: %d Events gefunden", len(events))
+    if not html:
+        logger.warning("Scraper %s: Kein HTML geladen – leere Liste wird zurückgegeben", QUELLE_NAME)
+        return []
+
+    soup = BeautifulSoup(html, "html.parser")
+    karten = soup.select(".event19_item")
+    if not karten:
+        logger.warning(
+            "Scraper %s: Keine Event-Karten (.event19_item) gefunden – Seitenstruktur prüfen (%s)",
+            QUELLE_NAME, LISTE_URL,
+        )
+        return []
+
+    kandidaten = []
+    gesehene_schluessel: set[str] = set()
+    anzahl_geparst = 0
+    anzahl_abgesagt = 0
+    for karte in karten:
+        try:
+            daten = _karte_parsen(karte)
+        except Exception as fehler:
+            logger.error("Fehler beim Parsen einer Event-Karte: %s", str(fehler))
+            continue
+        if not daten:
+            continue
+        anzahl_geparst += 1
+
+        if daten["datum"] < heute or daten["datum"] > enddatum:
+            continue
+        if daten["abgesagt"]:
+            anzahl_abgesagt += 1
+            logger.info("Überspringe abgesagtes Event: %s (%s)", daten["titel"], daten["datum"].isoformat())
+            continue
+
+        schluessel = f"{daten['titel']}_{daten['datum'].isoformat()}"
+        if schluessel in gesehene_schluessel:
+            continue
+        gesehene_schluessel.add(schluessel)
+        kandidaten.append(daten)
+
+    if anzahl_geparst == 0:
+        logger.warning(
+            "Scraper %s: %d Karten gefunden, aber keine mit Titel und Datum – Seitenstruktur prüfen",
+            QUELLE_NAME, len(karten),
+        )
+        return []
+
+    events = []
+    for index, daten in enumerate(kandidaten):
+        beschreibung = None
+        if index < MAX_DETAILSEITEN and daten["url"] != LISTE_URL:
+            try:
+                beschreibung = await asyncio.to_thread(_beschreibung_von_detailseite, daten["url"])
+            except Exception as fehler:
+                logger.warning("Detailseite %s nicht lesbar: %s", daten["url"], str(fehler))
+
+        ort, adresse = _standort_aufloesen(daten["standort"])
+        events.append({
+            "titel": daten["titel"],
+            "datum": daten["datum"].isoformat(),
+            "uhrzeit": daten["uhrzeit"],
+            "ort": ort,
+            "adresse": adresse,
+            "kategorie": _kategorie_erkennen(daten["tag"], daten["titel"]),
+            "beschreibung": beschreibung,
+            "preis": None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": daten["url"],
+            "bild_url": daten["bild_url"],
+            "bild_generiert": False,
+            "post_typ": "feed",
+            "instagram_caption": None,
+            "instagram_location_id": None,
+            "status": "neu",
+        })
 
     if not events:
-        logger.info("JSON-LD leer – versuche HTML-Fallback")
-        events = _events_aus_html(html, heute, enddatum)
-        logger.info("HTML-Fallback: %d Events gefunden", len(events))
-
-    if not events:
-        logger.info("Scraper %s: Keine Events – wahrscheinlich außerhalb der Saison (Mai–September)", QUELLE_NAME)
+        logger.info(
+            "Scraper %s: Außerhalb der Saison – keine Termine im Vorschauzeitraum "
+            "(%d Events auf der Seite, %d davon abgesagt im Zeitraum)",
+            QUELLE_NAME, anzahl_geparst, anzahl_abgesagt,
+        )
     else:
         logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
 

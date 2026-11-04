@@ -72,6 +72,33 @@ def slug_erzeugen(titel: str, ort: str, datum: str) -> str:
     return "-".join(teile)
 
 
+def slug_mit_suffix(basis: str, vergeben: set[str]) -> str:
+    """
+    Liefert den ersten freien Slug für weitere Vorstellungen am selben Tag.
+
+    Die erste Vorstellung behält den Basis-Slug (bestehende URLs bleiben stabil),
+    jede weitere bekommt einen Buchstaben hinter dem Datum: -b, -c, -d …
+
+    Args:
+        basis: Slug ohne Suffix (z.B. "tyll-duesseldorfer-schauspielh-2026-11-07")
+        vergeben: Bereits belegte Slugs
+
+    Returns:
+        Freier Slug, z.B. "tyll-duesseldorfer-schauspielh-2026-11-07-b"
+    """
+    if basis not in vergeben:
+        return basis
+    for buchstabe in "bcdefghijklmnopqrstuvwxyz":
+        kandidat = f"{basis}-{buchstabe}"
+        if kandidat not in vergeben:
+            return kandidat
+    # Mehr als 25 Vorstellungen an einem Tag: Zahl anhängen
+    zaehler = 26
+    while f"{basis}-{zaehler}" in vergeben:
+        zaehler += 1
+    return f"{basis}-{zaehler}"
+
+
 def slug_fuer_event(event: dict) -> str:
     """Erzeugt einen Slug aus einem Event-Dict."""
     return slug_erzeugen(

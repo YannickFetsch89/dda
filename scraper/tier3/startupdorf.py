@@ -6,11 +6,18 @@ Scrapt öffentliche Community-Events der StartupDorf-Gruppe auf Meetup.com.
 StartupDorf ist die wichtigste Startup- und Tech-Community in Düsseldorf.
 
 Hinweis: Die Meetup API ist kostenpflichtig – daher wird die öffentliche
-Meetup-Webseite per Playwright gescrapt (JavaScript-heavy).
+Meetup-Webseite gescrapt.
 
-Strategie:
-1. Primär: JSON-LD structured data (schema.org/Event)
-2. Fallback: HTML-Parsing der Event-Liste
+Strategie (seit 2026-11 angepasst):
+1. Seite per httpx laden (Meetup rendert serverseitig, kein JS nötig);
+   Playwright nur noch als Fallback (wait_until="domcontentloaded" –
+   "networkidle" wird bei Meetup wegen Dauer-Tracking-Requests oft nie
+   erreicht und lief in CI in den Timeout).
+2. Primär: __NEXT_DATA__ → __APOLLO_STATE__ (Event-, Venue-, PhotoInfo-Objekte).
+   Meetup liefert im JSON-LD seit Herbst 2026 keine Events mehr, nur noch
+   Organization/BreadcrumbList.
+3. Fallback: JSON-LD structured data (schema.org/Event)
+4. Fallback: HTML-Parsing der Event-Liste
 
 URL: https://www.meetup.com/startupdorf/events/
 Erstellt: 2026-03-06
@@ -20,12 +27,14 @@ import json
 import logging
 import re
 from datetime import date, timedelta
+from typing import Optional
 from urllib.parse import urljoin
 
 from playwright.async_api import async_playwright
 
 from config import SCRAPER_VORSCHAU_TAGE
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
+from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +95,172 @@ def _ort_aus_location(location_daten: dict | None) -> tuple[str, str | None]:
         adresse = adresse_obj
 
     return ort, adresse
+
+
+def _markdown_bereinigen(text: str) -> str:
+    """
+    Entfernt gängige Markdown-Auszeichnungen aus Meetup-Beschreibungen.
+
+    Args:
+        text: Beschreibung im Meetup-Markdown-Format
+
+    Returns:
+        Reiner Text ohne Links-Syntax, Überschriften- und Fett-Markierungen
+    """
+    if not text:
+        return ""
+    # Links [Text](URL) → Text
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    # Überschriften, Fett/Kursiv, Escape-Backslashes
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.M)
+    text = text.replace("**", "").replace("__", "").replace("\\", "")
+    text = re.sub(r"(?<!\w)\*(?!\s)|(?<!\s)\*(?!\w)", "", text)
+    return text
+
+
+def _apollo_aufloesen(apollo: dict, wert) -> Optional[dict]:
+    """
+    Löst eine Apollo-Cache-Referenz ({"__ref": "Typ:ID"}) auf.
+
+    Args:
+        apollo: Kompletter __APOLLO_STATE__-Cache
+        wert:   Referenz-Dict, bereits aufgelöstes Objekt oder None
+
+    Returns:
+        Aufgelöstes Objekt oder None
+    """
+    if isinstance(wert, dict):
+        ref = wert.get("__ref")
+        if ref:
+            aufgeloest = apollo.get(ref)
+            return aufgeloest if isinstance(aufgeloest, dict) else None
+        return wert
+    return None
+
+
+def _events_aus_apollo(html: str, heute: date, enddatum: date) -> list[dict]:
+    """
+    Extrahiert Events aus dem Next.js-Apollo-Cache (__NEXT_DATA__).
+
+    Meetup bettet alle Gruppen-Events (kommende und vergangene) als
+    "Event:<id>"-Objekte im __APOLLO_STATE__ ein. Venue und Bild sind
+    über __ref-Verweise verknüpft.
+
+    Args:
+        html: HTML-Quelltext der Seite
+        heute: Aktuelles Datum
+        enddatum: Maximales Datum für Events
+
+    Returns:
+        Liste von Event-Dicts
+    """
+    from bs4 import BeautifulSoup
+
+    events: list[dict] = []
+    soup = BeautifulSoup(html, "html.parser")
+    skript = soup.find("script", id="__NEXT_DATA__")
+    if not skript or not skript.string:
+        logger.warning("Kein __NEXT_DATA__ im HTML gefunden")
+        return events
+
+    try:
+        daten = json.loads(skript.string)
+        apollo = daten["props"]["pageProps"]["__APOLLO_STATE__"]
+    except (json.JSONDecodeError, KeyError, TypeError) as fehler:
+        logger.warning("__APOLLO_STATE__ nicht lesbar: %s", str(fehler))
+        return events
+
+    if not isinstance(apollo, dict):
+        return events
+
+    gesehene_ids: set[str] = set()
+    for schluessel, eintrag in apollo.items():
+        if not schluessel.startswith("Event:") or not isinstance(eintrag, dict):
+            continue
+        try:
+            event_id = str(eintrag.get("id") or schluessel)
+            if event_id in gesehene_ids:
+                continue
+
+            # Nur aktive Events (keine abgesagten / vergangenen / Entwürfe)
+            status = str(eintrag.get("status") or "").upper()
+            if status and status not in ("ACTIVE", "UPCOMING"):
+                continue
+
+            titel = str(eintrag.get("title") or "").strip()
+            if not titel:
+                continue
+
+            datum_roh = str(eintrag.get("dateTime") or "")
+            datum = datum_parsen(datum_roh) if datum_roh else None
+            if not datum:
+                continue
+            datum_obj = date.fromisoformat(datum)
+            if datum_obj < heute or datum_obj > enddatum:
+                continue
+            uhrzeit = uhrzeit_parsen(datum_roh)
+
+            # Ort und Adresse aus verknüpfter Venue
+            ort = ORT_STANDARD
+            adresse = ADRESSE_STANDARD
+            if eintrag.get("isOnline") or str(eintrag.get("eventType") or "").upper() == "ONLINE":
+                ort = "Online"
+            else:
+                venue = _apollo_aufloesen(apollo, eintrag.get("venue"))
+                if venue:
+                    ort = (venue.get("name") or ORT_STANDARD).strip()
+                    adresse_roh = (venue.get("address") or "").strip()
+                    stadt = (venue.get("city") or "").strip()
+                    if adresse_roh and stadt and stadt.lower() not in adresse_roh.lower():
+                        adresse = f"{adresse_roh}, {stadt}"
+                    else:
+                        adresse = adresse_roh or ADRESSE_STANDARD
+
+            # Bild (featuredEventPhoto bzw. displayPhoto)
+            bild_url = None
+            foto = (
+                _apollo_aufloesen(apollo, eintrag.get("featuredEventPhoto"))
+                or _apollo_aufloesen(apollo, eintrag.get("displayPhoto"))
+            )
+            if foto:
+                kandidat = foto.get("highResUrl") or foto.get("standardUrl")
+                if isinstance(kandidat, str) and kandidat.startswith("http"):
+                    bild_url = kandidat
+
+            beschreibung_roh = eintrag.get("description")
+            beschreibung = (
+                _beschreibung_kuerzen(_markdown_bereinigen(str(beschreibung_roh)))
+                if beschreibung_roh else None
+            ) or None
+
+            url_roh = eintrag.get("eventUrl")
+            quelle_url = urljoin(BASE_URL, str(url_roh)) if url_roh else LISTE_URL
+
+            gesehene_ids.add(event_id)
+            events.append({
+                "titel": titel,
+                "datum": datum,
+                "uhrzeit": uhrzeit,
+                "ort": ort,
+                "adresse": adresse,
+                "kategorie": KATEGORIE,
+                "beschreibung": beschreibung,
+                "preis": None,
+                "quelle_name": QUELLE_NAME,
+                "quelle_url": quelle_url,
+                "bild_url": bild_url,
+                "bild_generiert": False,
+                "post_typ": "feed",
+                "instagram_caption": None,
+                "instagram_location_id": None,
+                "status": "neu",
+            })
+        except Exception as fehler:
+            logger.error("Fehler beim Parsen eines Apollo-Events (%s): %s", schluessel, str(fehler))
+            continue
+
+    events.sort(key=lambda e: (e["datum"], e["uhrzeit"] or ""))
+    return events
 
 
 def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
@@ -293,16 +468,51 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     return events
 
 
+async def _html_mit_playwright() -> Optional[str]:
+    """
+    Fallback: Lädt die Gruppen-Eventseite mit Playwright (headless Chromium).
+
+    Wartet nur auf "domcontentloaded" und das __NEXT_DATA__-Skript –
+    "networkidle" wird bei Meetup durch Tracking-Requests häufig nie erreicht.
+
+    Returns:
+        HTML-Quelltext oder None bei Fehler
+    """
+    html = None
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            try:
+                page = await browser.new_page(user_agent=USER_AGENT, locale="de-DE")
+                await asyncio.sleep(2)  # Rate Limiting
+                await page.goto(LISTE_URL, wait_until="domcontentloaded", timeout=45000)
+                try:
+                    await page.wait_for_selector(
+                        "script#__NEXT_DATA__", state="attached", timeout=15000
+                    )
+                except Exception:
+                    logger.warning("__NEXT_DATA__ nicht erschienen – verwende aktuellen DOM-Stand")
+                html = await page.content()
+            except Exception as fehler:
+                logger.error("Playwright Fehler beim Laden von %s: %s", LISTE_URL, str(fehler))
+            finally:
+                await browser.close()
+    except Exception as fehler:
+        logger.error("Scraper %s: Playwright konnte nicht gestartet werden: %s", QUELLE_NAME, str(fehler))
+    return html
+
+
 async def scrape() -> list[dict]:
     """
     Scrapt öffentliche Events der StartupDorf-Gruppe auf Meetup.com.
 
-    Meetup.com ist JavaScript-heavy – Playwright wird verwendet.
     Die Meetup API ist kostenpflichtig und wird daher nicht genutzt.
 
     Strategie:
-    1. JSON-LD structured data (bevorzugt)
-    2. HTML-Fallback
+    1. HTML per httpx (serverseitig gerendert), Playwright nur als Fallback
+    2. __APOLLO_STATE__ aus __NEXT_DATA__ (bevorzugt)
+    3. JSON-LD structured data
+    4. HTML-Fallback
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
@@ -313,29 +523,25 @@ async def scrape() -> list[dict]:
 
     html = None
     try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await page.set_extra_http_headers({"User-Agent": USER_AGENT})
-            try:
-                # Meetup.com benötigt vollständiges Laden der JavaScript-Inhalte
-                await page.goto(LISTE_URL, wait_until="networkidle", timeout=45000)
-                # Zusätzliche Wartezeit für dynamisch geladene Event-Karten
-                await asyncio.sleep(3)
-                html = await page.content()
-            except Exception as fehler:
-                logger.error("Playwright Fehler beim Laden von %s: %s", LISTE_URL, str(fehler))
-            finally:
-                await browser.close()
+        # seite_abrufen ist synchron (inkl. 2 s Rate Limiting) → im Thread ausführen
+        html = await asyncio.to_thread(seite_abrufen, LISTE_URL, logger)
     except Exception as fehler:
-        logger.error("Scraper %s: Playwright konnte nicht gestartet werden: %s", QUELLE_NAME, str(fehler))
+        logger.error("httpx-Abruf von %s fehlgeschlagen: %s", LISTE_URL, str(fehler))
+
+    if not html or "__NEXT_DATA__" not in html:
+        logger.warning("httpx lieferte kein verwertbares HTML – versuche Playwright")
+        html = await _html_mit_playwright() or html
 
     if not html:
         logger.warning("Scraper %s: Kein HTML geladen – leere Liste wird zurückgegeben", QUELLE_NAME)
         return []
 
-    events = _events_aus_json_ld(html, heute, enddatum)
-    logger.info("JSON-LD: %d Events gefunden", len(events))
+    events = _events_aus_apollo(html, heute, enddatum)
+    logger.info("Apollo-State: %d Events gefunden", len(events))
+
+    if not events:
+        events = _events_aus_json_ld(html, heute, enddatum)
+        logger.info("JSON-LD: %d Events gefunden", len(events))
 
     if not events:
         logger.warning("JSON-LD leer – versuche HTML-Fallback")

@@ -92,7 +92,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Meetup.com | meetup.com/api | API Key |
 | Resident Advisor (RA) | ra.co/api (inoffiziell) | Scraping-Fallback |
 | Songkick | songkick.com/developer (Metro Area ID: 28470) | API Key (SONGKICK_API_KEY) |
-| Bandsintown | bandsintown.com/c/dusseldorf-germany | HTML Scraper (kein Key nötig) |
+| ~~Bandsintown~~ | bandsintown.com | **Deaktiviert** – Cloudflare blockiert jeden Zugriff |
 
 ---
 
@@ -104,10 +104,10 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Stahlwerk Düsseldorf | stahlwerk-duesseldorf.de |
 | Tonhalle Düsseldorf | tonhalle.de/programm |
 | zakk | zakk.de/programm |
-| Rudas Studios | rudas-studios.de |
+| Rudas Studios | rudas-studios.com (Tickets: stagedates.com, Fallback RA) |
 | Kulturschlachthof R25 | kulturschlachthof.de |
 | Salon des Amateurs | salonamateurs.de |
-| Pitcher Rock HQ | pitcher.de |
+| Pitcher Rock HQ | pitcher29.com (WordPress-REST-API) |
 | Jazz-Schmiede Düsseldorf | jazz-schmiede.de/veranstaltungen |
 
 #### Große Venues / Arenen
@@ -144,17 +144,17 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Quelle | Typ | Methode |
 |---|---|---|
 | Parkrun Düsseldorf (Volksgarten) | Sport, jeden Sa. 9 Uhr | Statischer Eintrag |
-| Sport im Park Düsseldorf | Outdoor-Fitness, kostenlos | duesseldorf.de/sportamt Scraper |
+| Sport im Park Düsseldorf | Outdoor-Fitness, kostenlos (Mai–Okt.) | ssbduesseldorf.de Scraper (duesseldorf.de sperrt Bots per robots.txt) |
 | Fortuna Düsseldorf | Fußball Heimspiele | fortuna-duesseldorf.de |
 | DEG (Eishockey) | Heimspiele | deg-hockey.de |
 | Messe Düsseldorf | Leitmessen | messe-duesseldorf.de/events |
-| Japan Center Düsseldorf | Japanische Kulturevents | japan-duesseldorf.de |
+| EKŌ-Haus der Japanischen Kultur | Japanische Kulturevents (Ersatz für das nicht mehr erreichbare Japan Center) | eko-haus.de (Scraper: tier3/japan_center.py) |
 | Classic Remise | Oldtimer + Kulturevents | classic-remise.de |
-| Stadtstrand Düsseldorf | Saisonale Events (ab Frühjahr) | stadtstrand-duesseldorf.de |
-| Spontacts Düsseldorf | Freizeitaktivitäten | spontacts.de |
+| Stadtstrand Düsseldorf | Sommer am Rheinufer, im Winter Indoor-Location KLONKK | stadtstrand-duesseldorf.de/events |
+| ~~Spontacts Düsseldorf~~ | Freizeitaktivitäten | **Deaktiviert** – nur noch nach Login sichtbar |
 | IHK Düsseldorf | Business-Events | duesseldorf.ihk.de/veranstaltungen |
 | StartupDorf (Meetup) | Startup-Community | meetup.com/startupdorf |
-| Street Food Thursday | Food-Event, monatlich (Stahlwerk, 2. Do. im Monat) | Statisch + Scraping-Fallback |
+| Street Food Thursday | Food-Event, 1. Do. im Monat, März–Okt. | streetfood-duesseldorf.de/termine + berechneter Fallback |
 
 ---
 
