@@ -70,6 +70,26 @@ SUCH_TYPEN = {
 }
 
 
+def alle_zeilen(db, tabelle: str, spalten: str, filter_fn=None) -> list[dict]:
+    """
+    Lädt ALLE Zeilen einer Tabelle seitenweise (Supabase liefert pro Abfrage höchstens 1.000).
+    Stabil sortiert nach id, damit beim Blättern nichts doppelt oder verloren geht.
+
+    Args:
+        filter_fn: optionale Funktion, die die Abfrage weiter einschränkt (z.B. lambda q: q.eq("aktiv", True))
+    """
+    zeilen, seite = [], 0
+    while True:
+        abfrage = db.table(tabelle).select(spalten)
+        if filter_fn:
+            abfrage = filter_fn(abfrage)
+        teil = abfrage.order("id").range(seite * 1000, seite * 1000 + 999).execute().data or []
+        zeilen += teil
+        if len(teil) < 1000:
+            return zeilen
+        seite += 1
+
+
 def _headers(field_mask: str) -> dict:
     return {
         "Content-Type": "application/json",
@@ -440,12 +460,9 @@ def bestehende_aktualisieren(dry_run: bool = False) -> dict:
     Bild-URLs mit eingebettetem API-Key werden entfernt.
     """
     db = get_supabase_client()
-    orte = (
-        db.table("orte")
-        .select("id, name, google_place_id, beschreibung, tags, bild_url, extras")
-        .not_.is_("google_place_id", "null")
-        .execute()
-        .data or []
+    orte = alle_zeilen(
+        db, "orte", "id, name, google_place_id, beschreibung, tags, bild_url, extras",
+        lambda q: q.not_.is_("google_place_id", "null"),
     )
     logger.info("%d Orte mit Google-ID gefunden", len(orte))
     aktualisiert = fehler = 0

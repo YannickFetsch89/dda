@@ -50,6 +50,7 @@ from scraper.orte.google_places import (  # noqa: E402
     API_BASE,
     _AUSSCHLUSS_TYPEN,
     _slug_erzeugen,
+    alle_zeilen,
     ort_aus_place,
     place_details,
 )
@@ -467,9 +468,11 @@ def suchen(max_anfragen: int, neu: bool = False, je_typ: bool = False) -> dict:
         "Suche %s: %d Anfragen gesamt (ca. %.2f $ ohne Freikontingent), %d Orte gefunden%s",
         "abgeschlossen" if fertig else "pausiert (Limit/Fehler – erneut aufrufen zum Fortsetzen)",
         daten["anfragen"], daten["anfragen"] * PREIS_SUCHE / 1000, len(daten["orte"]),
-        f", {daten['gesaettigt_min']} Kleinstzellen waren noch voll (unvollständig; '--je-typ' fragt sie "
-        f"getrennt nach Restaurants und Cafés nach)" if daten["gesaettigt_min"] else "",
+        f", {daten['gesaettigt_min']} Kleinstzellen lieferten volle 20 Treffer" if daten["gesaettigt_min"] else "",
     )
+    offen = volle_kleinstzellen(daten)
+    if offen:
+        logger.info("%d volle Kleinstzellen noch nicht nach Typ getrennt abgefragt → 'suchen --je-typ'", offen)
     return daten
 
 
@@ -553,7 +556,7 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
         logger.warning("Flächensuche ist noch nicht abgeschlossen (%d Zellen offen).", len(daten["warteschlange"]))
 
     db = get_supabase_client()
-    bestehend = db.table("orte").select("google_place_id, slug").execute().data or []
+    bestehend = alle_zeilen(db, "orte", "id, google_place_id, slug")  # alle Seiten, nicht nur die ersten 1.000
     bekannte_ids = {o["google_place_id"] for o in bestehend if o.get("google_place_id")}
     vergebene_slugs = {o["slug"] for o in bestehend}
 
@@ -606,12 +609,9 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
 
 def scores_nachziehen(db) -> int:
     """Gibt Orten ohne qualitaets_score (z.B. aus dem ersten Import) den Vorab-Score."""
-    ohne = (
-        db.table("orte")
-        .select("id, name, google_rating, google_bewertungen_anzahl, extras")
-        .is_("qualitaets_score", "null")
-        .execute()
-        .data or []
+    ohne = alle_zeilen(
+        db, "orte", "id, name, google_rating, google_bewertungen_anzahl, extras",
+        lambda q: q.is_("qualitaets_score", "null"),
     )
     nachgetragen = 0
     for o in ohne:
@@ -641,19 +641,7 @@ def neu_bewerten(dry_run: bool) -> list[dict]:
     from database.client import get_supabase_client
 
     db = get_supabase_client()
-    orte, seite = [], 0
-    while True:
-        teil = (
-            db.table("orte")
-            .select("id, name, aktiv, qualitaets_score, google_rating, google_bewertungen_anzahl, extras")
-            .range(seite * 1000, seite * 1000 + 999)
-            .execute()
-            .data or []
-        )
-        orte += teil
-        if len(teil) < 1000:
-            break
-        seite += 1
+    orte = alle_zeilen(db, "orte", "id, name, aktiv, qualitaets_score, google_rating, google_bewertungen_anzahl, extras")
 
     geaendert = []
     for o in orte:
