@@ -32,8 +32,9 @@ CREATE TABLE IF NOT EXISTS events (
     erstellt_am     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     gepostet_am     TIMESTAMPTZ,
 
-    -- Duplikat-Schutz: gleicher Titel + Datum + Ort = Duplikat
-    UNIQUE (titel, datum, ort)
+    -- Duplikat-Schutz: gleicher Titel + Datum + Ort + Uhrzeit = Duplikat;
+    -- je Uhrzeit ein Termin (mehrere Vorstellungen/Führungen am selben Tag), siehe mehrere_uhrzeiten_2026-11-05.sql
+    UNIQUE NULLS NOT DISTINCT (titel, datum, ort, uhrzeit)
 );
 
 -- Index für häufige Abfragen

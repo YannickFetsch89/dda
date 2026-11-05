@@ -50,6 +50,12 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     return bool(_RAUSGEGANGEN_MUSTER.search(bild_url))
 
 
+def _uhrzeit(event: dict) -> Optional[str]:
+    """Uhrzeit als HH:MM ("20:00:00" → "20:00"), leer → None."""
+    wert = event.get("uhrzeit")
+    return str(wert)[:5] if wert else None
+
+
 def _normalisiere_schluessel(titel: str, datum: str, ort: str) -> str:
     """
     Erstellt einen normalisierten Deduplizierungs-Schlüssel.
@@ -122,6 +128,10 @@ def deduplizieren(events: list[dict]) -> list[dict]:
     sondern in den ersten Eintrag gemergt. Fehlende Felder werden
     ergänzt, Rausgegangen-Bilder durch bessere Quellen ersetzt.
 
+    Verschiedene Uhrzeiten am selben Tag sind KEINE Duplikate, sondern weitere
+    Termine (z.B. Führungen um 11 und 14 Uhr) und bleiben getrennt. Fehlt bei
+    einem der beiden die Uhrzeit, gilt es als dasselbe Event.
+
     Args:
         events: Rohe Event-Liste aus allen Scrapern
 
@@ -133,6 +143,7 @@ def deduplizieren(events: list[dict]) -> list[dict]:
 
     reihenfolge: list[str] = []
     index: dict[str, dict] = {}
+    varianten: dict[str, list[str]] = {}  # Titel|Datum|Ort → Schlüssel der einzelnen Uhrzeiten
     duplikat_anzahl = 0
     angereichert_anzahl = 0
 
@@ -145,7 +156,16 @@ def deduplizieren(events: list[dict]) -> list[dict]:
             # Pflichtfelder fehlen – trotzdem aufnehmen
             schluessel = f"_unvollstaendig_{id(event)}"
         else:
-            schluessel = _normalisiere_schluessel(titel, datum, ort)
+            basis = _normalisiere_schluessel(titel, datum, ort)
+            zeit = _uhrzeit(event)
+            # Gleiche Uhrzeit (oder eine fehlt) = dasselbe Event, sonst weiterer Termin am selben Tag
+            schluessel = next(
+                (k for k in varianten.get(basis, []) if zeit is None or _uhrzeit(index[k]) in (None, zeit)),
+                None,
+            )
+            if schluessel is None:
+                schluessel = f"{basis}|{zeit or '-'}|{len(varianten.get(basis, []))}"
+                varianten.setdefault(basis, []).append(schluessel)
 
         if schluessel not in index:
             index[schluessel] = event

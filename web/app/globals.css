@@ -625,6 +625,12 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .infozeile__kachel .icon { font-size: 22px; }
 .infozeile b { display: block; font-size: 15px; font-weight: 600; }
 .infozeile span { font-size: 13px; color: var(--ddd-text-muted); }
+/* Uhrzeit-Auswahl, wenn ein Event am selben Tag mehrfach stattfindet (lib/termine.ts) */
+.uhrzeit-wahl { margin-top: 18px; }
+.uhrzeit-wahl__label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--ddd-text-muted); }
+.uhrzeit-wahl__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.uhrzeit-wahl .chip { font-variant-numeric: tabular-nums; }
+.uhrzeit-wahl .chip--abgesagt { text-decoration: line-through; opacity: 0.6; }
 .karte-ausschnitt {
   position: relative; aspect-ratio: 16 / 9; border-radius: var(--r-card); overflow: hidden; display: block;
   background:

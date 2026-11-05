@@ -7,7 +7,8 @@ import { metaZeile } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
 import { istOnline } from "@/lib/ableitungen";
-import type { DddEvent } from "@/lib/typen";
+import type { DddEvent } from "@/lib/typen";
+import { zeitKurz } from "@/lib/termine";
 
 export function eventPfad(e: DddEvent) {
   if (e.slug) return `/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug)}`;
@@ -129,7 +130,7 @@ export function KompaktKarte({ e, heute }: { e: DddEvent; heute: string }) {
 export function ListenZeile({ e, mitKategorie = false, zeit }: { e: DddEvent; mitKategorie?: boolean; zeit?: string }) {
   return (
     <div className="zeile">
-      <span className="zeile__zeit">{zeit ?? e.uhrzeit ?? "–"}</span>
+      <span className="zeile__zeit">{zeit ?? zeitKurz(e) ?? "–"}</span>
       <span className="punkt" style={katStil(e.kategorie)} aria-hidden />
       <div className="zeile__text">
         <span className="zeile__titel">

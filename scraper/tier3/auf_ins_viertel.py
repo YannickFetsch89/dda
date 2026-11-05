@@ -11,15 +11,14 @@ Hintergrund (Stand 2026-11):
   robots.txt: aufinsviertel.de erlaubt alles außer /wp-admin/, bookingkit erlaubt /onPage/.
 
 Es werden nur Touren in Düsseldorf übernommen (Treffpunkt-Adresse), ausgebuchte Termine
-werden übersprungen. Kategorie aller Touren: stadtfuehrung. Haben zwei Termine derselben Tour denselben Tag, bekommt der Titel die
-Uhrzeit angehängt – die Datenbank erkennt Duplikate an Titel + Datum + Ort.
+werden übersprungen. Kategorie aller Touren: stadtfuehrung. Mehrere Termine einer Tour am
+selben Tag werden als einzelne Events mit eigener Uhrzeit geliefert (Website: „Diverse Uhrzeiten“).
 
 Quelle (Link für Besucher): die Tour-Seite auf aufinsviertel.de mit Buchungs-Widget.
 Erstellt: 2026-11-05
 """
 import logging
 import re
-from collections import Counter
 from datetime import date, timedelta
 from typing import Optional
 
@@ -85,17 +84,14 @@ def _beschreibung_kuerzen(text: Optional[str]) -> Optional[str]:
 
 def _events_bauen(termine: list[BookingkitTermin], beschreibungen: dict[str, Optional[str]]) -> list[dict]:
     """Termine in das Event-Format der Pipeline umwandeln."""
-    # Mehrere Termine derselben Tour an einem Tag → Uhrzeit in den Titel (Datenbank: UNIQUE titel+datum+ort)
-    pro_tag = Counter((t.event_id, t.start.date()) for t in termine)
+    # Mehrere Termine einer Tour am selben Tag bleiben einzelne Events mit eigener Uhrzeit
+    # (Datenbank: UNIQUE titel+datum+ort+uhrzeit); die Website bündelt sie zu „Diverse Uhrzeiten“.
     events = []
     for t in termine:
         adresse = _adresse_kuerzen(t.adresse or "")
         uhrzeit = t.start.strftime("%H:%M")
-        titel = t.titel
-        if pro_tag[(t.event_id, t.start.date())] > 1:
-            titel = f"{titel} ({uhrzeit} Uhr)"
         events.append({
-            "titel": titel,
+            "titel": t.titel,
             "datum": t.start.date().isoformat(),
             "uhrzeit": uhrzeit,
             "ort": f"Auf ins Viertel – Treffpunkt {adresse.split(',')[0]}",

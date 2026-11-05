@@ -74,6 +74,7 @@ export function istLanglaeufer(e: DddEvent): boolean {
 export function metaZeile(e: DddEvent, heute: string): string {
   if (e.datum_bis && e.datum < heute) return `läuft bis ${kurzDatum(e.datum_bis)}`;
   const tag = e.datum === heute ? "Heute" : e.datum === plusTage(heute, 1) ? "Morgen" : tagKurz(e.datum);
+  if (e.uhrzeiten) return `${tag} · Diverse Uhrzeiten`;
   return e.uhrzeit ? `${tag} · ${e.uhrzeit}` : tag;
 }
 

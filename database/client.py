@@ -177,7 +177,8 @@ def events_speichern(events: list[dict]) -> dict:
     Speichert eine Liste von Events in Supabase.
 
     Für neue Events: INSERT.
-    Für bereits vorhandene Events (Duplikat nach Titel + Datum + Ort):
+    Für bereits vorhandene Events (Duplikat nach Titel + Datum + Ort und gleicher bzw. fehlender Uhrzeit;
+    eine andere Uhrzeit ist ein weiterer Termin am selben Tag und wird neu angelegt):
       - Fehlende Felder werden aus dem neuen Eintrag ergänzt.
       - Ein Rausgegangen-Bild wird durch ein Bild einer anderen Quelle ersetzt,
         sofern der neue Eintrag ein besseres Bild mitbringt.
@@ -213,18 +214,24 @@ def events_speichern(events: list[dict]) -> dict:
         ort = event.get("ort", "?")
 
         try:
-            # Schritt 1: Prüfen ob Event bereits in DB vorhanden
+            # Schritt 1: Prüfen ob Event bereits in DB vorhanden – gleicher Titel + Datum + Ort und
+            # gleiche Uhrzeit (oder bei einem fehlt sie). Andere Uhrzeit = weiterer Termin am selben Tag.
             treffer = (
                 db.table("events")
                 .select("id," + ",".join(_ANREICHERBARE_FELDER))
                 .eq("titel", titel)
                 .eq("datum", datum)
                 .eq("ort", ort)
-                .limit(1)
                 .execute()
             )
-
-            bestehendes = treffer.data[0] if treffer.data else None
+            neue_zeit = _uhrzeit_hhmm(event.get("uhrzeit"))
+            bestehendes = next(
+                (
+                    z for z in (treffer.data or [])
+                    if neue_zeit is None or _uhrzeit_hhmm(z.get("uhrzeit")) in (None, neue_zeit)
+                ),
+                None,
+            )
 
             if bestehendes is None:
                 # Slug generieren falls nicht vorhanden

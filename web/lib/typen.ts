@@ -36,6 +36,8 @@ export interface DddEvent {
   slug: string | null;
   /** Bleibt im Kalender sichtbar (markiert), fällt aber aus allen Hervorhebungen und der Startseite */
   abgesagt: boolean;
+  /** Nur bei gebündelten Listeneinträgen (lib/termine.ts): alle Uhrzeiten des Tages, sonst null */
+  uhrzeiten: string[] | null;
 }
 
 /** Typ eines Ortes in der `orte`-Tabelle. */
@@ -79,7 +81,10 @@ export interface DddOrt {
 export interface EventPool {
   heute: string;
   jetzt: string; // ISO-Zeitstempel des Ladezeitpunkts
+  /** Für alle Listen: mehrere Uhrzeiten desselben Events am selben Tag zu einem Eintrag gebündelt */
   events: DddEvent[];
+  /** Alle Termine einzeln (Detailseiten, Uhrzeit-Auswahl) */
+  alle: DddEvent[];
   quelle: "supabase" | "beispiel";
   fehler: string | null;
 }

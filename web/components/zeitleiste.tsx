@@ -8,6 +8,7 @@ import { minutenBerlin } from "@/lib/datum";
 import { symbolbild } from "@/lib/symbolbild";
 import { eventBildUrl } from "@/lib/bilder";
 import type { DddEvent } from "@/lib/typen";
+import { zeitKurz } from "@/lib/termine";
 
 export interface Abschnitt {
   name: string;
@@ -28,7 +29,7 @@ function Zeile({ e }: { e: DddEvent }) {
   const k = kategorie(e.kategorie);
   return (
     <div className="tl">
-      <span className="tl__zeit">{e.uhrzeit ?? ""}</span>
+      <span className="tl__zeit">{zeitKurz(e) ?? ""}</span>
       <span className="tl__linie">
         <span className="punkt" style={katStil(e.kategorie)} />
       </span>

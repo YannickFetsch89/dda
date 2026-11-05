@@ -8,6 +8,7 @@ import { filtern, nachBezirken } from "@/lib/ableitungen";
 import { zeitraumAuflösen } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
+import { zeitKurz } from "@/lib/termine";
 
 export const metadata: Metadata = {
   title: "Events nach Stadtteil",
@@ -126,7 +127,7 @@ async function StadtteileInhalt({ searchParams }: Pick<PageProps<"/stadtteile">,
                 {b.top.length > 0 && (
                   <div>
                     {b.top.map((e) => (
-                      <ListenZeile key={e.id} e={e} zeit={e.datum === pool.heute ? e.uhrzeit ?? "heute" : `${e.datum.slice(8, 10)}.${e.datum.slice(5, 7)}.`} />
+                      <ListenZeile key={e.id} e={e} zeit={e.datum === pool.heute ? zeitKurz(e) ?? "heute" : `${e.datum.slice(8, 10)}.${e.datum.slice(5, 7)}.`} />
                     ))}
                   </div>
                 )}

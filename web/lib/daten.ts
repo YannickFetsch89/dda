@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import beispiel from "./beispiel-events.json";
 import { kategorieAusDb } from "./kategorien";
 import { heuteBerlin, plusTage, tageZwischen } from "./datum";
+import { buendeln } from "./termine";
 import type { DddEvent, EventPool } from "./typen";
 
 const SPALTEN_BASIS =
@@ -54,6 +55,7 @@ function normalisieren(z: Zeile): DddEvent {
     highlight_der_woche: z.highlight_der_woche === true,
     top_event_des_monats: z.top_event_des_monats === true,
     abgesagt: z.abgesagt === true || ABSAGE.test(titel) || (ortUngueltig && ABSAGE.test(ortRoh ?? "")),
+    uhrzeiten: null,
   };
 }
 
@@ -141,12 +143,13 @@ export async function eventPoolLaden(): Promise<EventPool> {
   const jetzt = new Date();
   const heute = heuteBerlin(jetzt);
   try {
-    const events = await ausSupabaseLaden(heute);
-    return { heute, jetzt: jetzt.toISOString(), events, quelle: "supabase", fehler: null };
+    const alle = await ausSupabaseLaden(heute);
+    return { heute, jetzt: jetzt.toISOString(), events: buendeln(alle), alle, quelle: "supabase", fehler: null };
   } catch (err) {
     const fehler = err instanceof Error ? err.message : String(err);
     console.warn(`Events konnten nicht geladen werden, nutze Beispieldaten: ${fehler}`);
-    return { heute, jetzt: jetzt.toISOString(), events: beispielEvents(heute, jetzt), quelle: "beispiel", fehler };
+    const alle = beispielEvents(heute, jetzt);
+    return { heute, jetzt: jetzt.toISOString(), events: buendeln(alle), alle, quelle: "beispiel", fehler };
   }
 }
 
@@ -157,7 +160,7 @@ export async function eventLaden(kennung: string): Promise<DddEvent | null> {
 
   const pool = await eventPoolLaden();
   const istUuid = /^[0-9a-f-]{36}$/i.test(kennung);
-  const treffer = pool.events.find((e) => istUuid ? e.id === kennung : e.slug === kennung);
+  const treffer = pool.alle.find((e) => istUuid ? e.id === kennung : e.slug === kennung);
   if (treffer || pool.quelle === "beispiel") return treffer ?? null;
 
   const client = supabaseClient();

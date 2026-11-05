@@ -26,7 +26,6 @@ import html
 import json
 import logging
 import re
-from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -322,22 +321,16 @@ async def scrape() -> list[dict]:
                 roh.append((url, event, termin))
 
     # Gleiche Führung kann auf mehreren Seiten stehen → über Titel + Termin entdoppeln.
-    # Mehrere Termine einer Führung am selben Tag → Uhrzeit in den Titel (UNIQUE titel+datum+ort)
+    # Mehrere Uhrzeiten am selben Tag bleiben einzelne Events (Website: „Diverse Uhrzeiten“).
     gesehen = set()
-    eindeutig = []
+    events = []
     for url, event, termin in sorted(roh, key=lambda r: (r[2]["datum"], r[2]["uhrzeit"] or "")):
         schluessel = (event["titel"].lower(), termin["datum"], termin["uhrzeit"])
-        if schluessel not in gesehen:
-            gesehen.add(schluessel)
-            eindeutig.append((url, event, termin))
-    pro_tag = Counter((event["titel"].lower(), termin["datum"]) for _u, event, termin in eindeutig)
-    events = []
-    for url, event, termin in eindeutig:
-        titel = event["titel"]
-        if pro_tag[(titel.lower(), termin["datum"])] > 1 and termin["uhrzeit"]:
-            titel = f"{titel} ({termin['uhrzeit']} Uhr)"
+        if schluessel in gesehen:
+            continue
+        gesehen.add(schluessel)
         events.append({
-            "titel": titel,
+            "titel": event["titel"],
             "datum": termin["datum"],
             "uhrzeit": termin["uhrzeit"],
             "ort": event["ort"],

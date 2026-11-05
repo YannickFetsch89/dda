@@ -6,6 +6,7 @@ import { Bild, Icon, KatBadge, Leer, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { wochenendProgramm } from "@/lib/ableitungen";
 import { kurzDatum, tagMonat } from "@/lib/datum";
+import { zeitKurz } from "@/lib/termine";
 
 export const metadata: Metadata = {
   title: "Unser Wochenend-Programm",
@@ -65,7 +66,7 @@ async function WochenendeInhalt({ searchParams }: Pick<PageProps<"/wochenende">,
                 <div className="wk-eintrag__kopf">
                   <span className="wk-eintrag__nr">{String(i + 1).padStart(2, "0")}</span>
                   <span>
-                    {e.uhrzeit} · {e.ort}
+                    {zeitKurz(e)} · {e.ort}
                   </span>
                 </div>
                 <Bild e={e} eager={i === 0}>

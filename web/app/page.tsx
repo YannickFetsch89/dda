@@ -9,7 +9,8 @@ import { filtern, istKostenlos, nachBeliebtheit, nachNeu, nachZeit, neuSeit, sta
 import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, uhrzeitMinuten, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
-import type { DddEvent } from "@/lib/typen";
+import type { DddEvent } from "@/lib/typen";
+import { zeitKurz, zeitLang } from "@/lib/termine";
 
 const SCHNELLFILTER = [
   { key: "heute", label: "Heute" },
@@ -305,7 +306,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
                 {tag.events.length ? (
                   tag.events.map((e) => (
                     <div key={e.id} className="zeile">
-                      <span className="zeile__zeit">{e.uhrzeit}</span>
+                      <span className="zeile__zeit">{zeitKurz(e)}</span>
                       <div className="zeile__text">
                         <span className="zeile__titel">
                           <Link href={eventPfad(e)}>{e.titel}</Link>
@@ -359,7 +360,7 @@ function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
           <span className="nur-desktop">{k.name}</span>
           <span className="nur-mobil">
             {k.name}
-            {e.uhrzeit ? ` · ${e.uhrzeit} Uhr` : ""} · {e.ort}
+            {zeitLang(e) ? ` · ${zeitLang(e)}` : ""} · {e.ort}
           </span>
         </span>
         <h2 className="sticker__titel d">
@@ -370,7 +371,7 @@ function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
           <span>
             <Icon name="schedule" />
             {metaZeile(e, heute)}
-            {e.uhrzeit ? " Uhr" : ""}
+            {e.uhrzeit && !e.uhrzeiten ? " Uhr" : ""}
           </span>
           <span>
             <Icon name="location_on" />
