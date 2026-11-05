@@ -57,10 +57,11 @@ def _in_duesseldorf(adresse: Optional[str]) -> bool:
     if not adresse:
         return False
     text = adresse.lower().replace("ü", "ue")
-    if "duesseldorf" not in text:
+    # Wortende: „Düsseldorfer Straße“ (z.B. in Duisburg) zählt nicht als Ortsname
+    if not re.search(r"duesseldorf\b", text):
         return False
-    plz = re.search(r"\b(\d{5})\b", text)
-    return plz is None or plz.group(1).startswith("40")
+    plzs = re.findall(r"\b(\d{5})\b", text)
+    return not plzs or any(p.startswith("40") for p in plzs)
 
 
 def _adresse_kuerzen(adresse: str) -> str:

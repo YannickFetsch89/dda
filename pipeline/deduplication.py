@@ -50,14 +50,22 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     return bool(_RAUSGEGANGEN_MUSTER.search(bild_url))
 
 
-# Eine spezifischere Kategorie aus einer Fach-Quelle ersetzt eine allgemeine aus einem Kalender
-# (z.B. Visit-Düsseldorf-Kalender: "kultur" → Führungs-Scraper: "stadtfuehrung")
-_SPEZIFISCHE_KATEGORIEN = {"stadtfuehrung": {"kultur", "sonstiges", "outdoor", "food", "nightlife"}}
+# "stadtfuehrung" ersetzt beim Zusammenführen eine allgemeine Kategorie aus einem Kalender
+# (z.B. Visit-Düsseldorf-Kalender "kultur" → Führungs-Scraper "stadtfuehrung").
+# Eine thematische Kategorie (food, nightlife, outdoor) nur, wenn die neue Quelle ausschließlich
+# Führungen liefert – sonst bliebe z.B. ein Food-Event mit gleichem Titel fälschlich Stadtführung.
+FUEHRUNGS_QUELLEN = {"VisitDüsseldorf Führungen", "Auf ins Viertel"}  # Anzeigenamen aus main.QUELLEN
+_ALLGEMEINE_KATEGORIEN = {"kultur", "sonstiges"}
+_THEMEN_KATEGORIEN = {"food", "nightlife", "outdoor"}
 
 
-def kategorie_ersetzen(bisher: Optional[str], neu: Optional[str]) -> bool:
+def kategorie_ersetzen(bisher: Optional[str], neu: Optional[str], neue_quelle: Optional[str] = None) -> bool:
     """True, wenn die neue Kategorie die bisherige ersetzen soll (statt nur leere Felder zu füllen)."""
-    return bool(neu) and bisher != neu and bisher in _SPEZIFISCHE_KATEGORIEN.get(neu, set())
+    if neu != "stadtfuehrung" or not bisher or bisher == neu:
+        return False
+    if bisher in _ALLGEMEINE_KATEGORIEN:
+        return True
+    return bisher in _THEMEN_KATEGORIEN and neue_quelle in FUEHRUNGS_QUELLEN
 
 
 def _uhrzeit(event: dict) -> Optional[str]:
@@ -118,7 +126,9 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
                 )
             elif not basis_wert and dupli_wert:
                 merged["bild_url"] = dupli_wert
-        elif feld == "kategorie" and kategorie_ersetzen(basis_wert, dupli_wert):
+        elif feld == "kategorie" and kategorie_ersetzen(
+            basis_wert, dupli_wert, duplikat.get("_scraper") or duplikat.get("quelle_name")
+        ):
             merged["kategorie"] = dupli_wert
         else:
             # Feld ergänzen wenn leer

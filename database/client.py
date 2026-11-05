@@ -50,7 +50,7 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     return bool(bild_url and _RAUSGEGANGEN_MUSTER.search(bild_url))
 
 
-def _anreicherungs_update_bauen(bestehendes: dict, neu: dict) -> dict:
+def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, neue_quelle: Optional[str] = None) -> dict:
     """
     Berechnet welche Felder eines bestehenden DB-Eintrags angereichert werden sollen.
 
@@ -78,7 +78,7 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict) -> dict:
                 update[feld] = neu_wert
             elif not db_wert and neu_wert:
                 update[feld] = neu_wert
-        elif feld == "kategorie" and kategorie_ersetzen(db_wert, neu_wert):
+        elif feld == "kategorie" and kategorie_ersetzen(db_wert, neu_wert, neue_quelle):
             # z.B. Kalender lieferte "kultur", Führungs-Scraper weiß: "stadtfuehrung"
             update[feld] = neu_wert
         else:
@@ -261,7 +261,9 @@ def events_speichern(events: list[dict]) -> dict:
             else:
                 # Duplikat: Anreicherung prüfen
                 duplikate += 1
-                update = _anreicherungs_update_bauen(bestehendes, datensatz)
+                update = _anreicherungs_update_bauen(
+                    bestehendes, datensatz, event.get("_scraper") or event.get("quelle_name")
+                )
 
                 if update:
                     db.table("events").update(update).eq("id", bestehendes["id"]).execute()

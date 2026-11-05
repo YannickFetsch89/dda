@@ -19,17 +19,32 @@ export interface Abschnitt {
   events: DddEvent[];
 }
 
-function minuten(e: DddEvent): number {
-  if (!e.uhrzeit) return -1;
-  const [h, m] = e.uhrzeit.split(":").map(Number);
+function zuMinuten(z: string): number {
+  const [h, m] = z.split(":").map(Number);
   return h * 60 + m;
 }
 
-function Zeile({ e }: { e: DddEvent }) {
+/**
+ * Uhrzeit eines Eintrags innerhalb des Abschnitts: Bei gebündelten Terminen (11:00 und 19:00)
+ * zählt im Abschnitt „Abends“ 19:00 – für den Jetzt-Marker und die angezeigte Zeit.
+ */
+function zeitImAbschnitt(e: DddEvent, a: Pick<Abschnitt, "von" | "bis">): string | null {
+  const zeiten = e.uhrzeiten ?? (e.uhrzeit ? [e.uhrzeit] : []);
+  return zeiten.find((z) => zuMinuten(z) >= a.von && zuMinuten(z) < a.bis) ?? zeiten[0] ?? null;
+}
+
+function minuten(e: DddEvent, a: Pick<Abschnitt, "von" | "bis">): number {
+  const z = zeitImAbschnitt(e, a);
+  return z ? zuMinuten(z) : -1;
+}
+
+function Zeile({ e, abschnitt }: { e: DddEvent; abschnitt: Pick<Abschnitt, "von" | "bis"> }) {
   const k = kategorie(e.kategorie);
+  // Im Abschnitt die passende Uhrzeit zeigen; „Ganztägig“ (von = -1) bleibt ohne Zeit
+  const zeit = e.uhrzeiten && abschnitt.von >= 0 ? zeitImAbschnitt(e, abschnitt) : zeitKurz(e);
   return (
     <div className="tl">
-      <span className="tl__zeit">{zeitKurz(e) ?? ""}</span>
+      <span className="tl__zeit">{zeit ?? ""}</span>
       <span className="tl__linie">
         <span className="punkt" style={katStil(e.kategorie)} />
       </span>
@@ -88,8 +103,8 @@ export function Zeitleiste({ abschnitte, istHeute }: { abschnitte: Abschnitt[]; 
       {abschnitte.map((a) => {
         const markerHier = jetzt !== null && jetzt >= a.von && jetzt < a.bis;
         if (!a.events.length && !markerHier) return null;
-        const vorher = markerHier ? a.events.filter((e) => minuten(e) <= jetzt!) : a.events;
-        const nachher = markerHier ? a.events.filter((e) => minuten(e) > jetzt!) : [];
+        const vorher = markerHier ? a.events.filter((e) => minuten(e, a) <= jetzt!) : a.events;
+        const nachher = markerHier ? a.events.filter((e) => minuten(e, a) > jetzt!) : [];
         return (
           <section key={a.name} className="tagesabschnitt">
             <div className="tagesabschnitt__kopf">
@@ -100,11 +115,11 @@ export function Zeitleiste({ abschnitte, istHeute }: { abschnitte: Abschnitt[]; 
               <span>{a.bereich}</span>
             </div>
             {vorher.map((e) => (
-              <Zeile key={e.id} e={e} />
+              <Zeile key={e.id} e={e} abschnitt={a} />
             ))}
             {markerHier && <Jetzt zeit={jetztText} />}
             {nachher.map((e) => (
-              <Zeile key={e.id} e={e} />
+              <Zeile key={e.id} e={e} abschnitt={a} />
             ))}
           </section>
         );

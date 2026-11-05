@@ -52,20 +52,27 @@ KANDIDAT_MUSTER = re.compile(
 FUEHRUNG_KATEGORIEN = {"führung", "stadtführung", "stadtrundgang", "stadtrundfahrt", "rundfahrt", "themenführung"}
 AUSSCHLUSS_KATEGORIEN = {"museumsführung", "konzert"}
 
-# Selbstgeführte Smartphone-Rallyes stehen täglich im Kalender, sind aber keine Führung;
-# Führungen durch Museen/Ausstellungen gehören zu kultur (liefern die Museums-Scraper)
-AUSSCHLUSS_TITEL = re.compile(r"stadtrallye|rallye|escape|museum|ausstellung|kurator", re.I)
+# Selbstgeführte Smartphone-Rallyes stehen täglich im Kalender, sind aber keine Führung.
+# Führungen DURCH ein Museum/eine Ausstellung gehören zu kultur (liefern die Museums-Scraper) –
+# ein Museum als Wegpunkt („Rundgang vom Museum zum Rhein“) bleibt eine Stadtführung.
+AUSSCHLUSS_TITEL = re.compile(
+    r"rallye|escape"
+    r"|museumsf(?:ü|ue)hrung|ausstellungsf(?:ü|ue)hrung|kurator\*?(?:innen)?f(?:ü|ue)hrung"
+    r"|f(?:ü|ue)hrung\s+(?:im|in\s+der|durch\s+(?:das|die|den))\s[^,:]*?(?:museum|ausstellung)",
+    re.I,
+)
 
-# Straße + Hausnummer, danach optional „, 40213 Düsseldorf“. Straßenformen:
-#   „Am Marktplatz 12“, „Auf der Bolker 3“ (Präfix + Name) · „Rheinstraße 3-5“, „Heinrich-Heine-Allee 16A“
-#   (ein Wort mit Straßen-Endung) · „Apollo Platz 1“ (zwei Wörter) · „Markt 5“ (nur das Grundwort)
+# Straße + Hausnummer, danach optional „, 40213 Düsseldorf“ (Ortsteil nur mit Bindestrich,
+# damit kein folgendes Wort wie „Treffpunkt“ als Ort gilt). Straßenformen:
+#   „Am Marktplatz 12“, „Zum Goldenen Ring 1“ (Präfix + ein/zwei Wörter) · „Rheinstraße 3-5“,
+#   „Heinrich-Heine-Allee 16A“ (ein Wort mit Straßen-Endung) · „Apollo Platz 1“ · „Markt 5“
 ADRESSE_MUSTER = re.compile(
-    r"((?:(?:Am|An der|An den|Auf der|Auf dem|Im|In der|Zum|Zur|Unter den)\s[A-ZÄÖÜ][\wäöüß\-]*"
+    r"((?:(?:Am|An der|An den|Auf der|Auf dem|Im|In der|Zum|Zur|Unter den)\s[A-ZÄÖÜ][\wäöüß\-]*(?:\s[A-ZÄÖÜ][\wäöüß\-]*)?"
     r"|[A-ZÄÖÜ][\wäöüß\-]*(?i:straße|strasse|str\.|platz|allee|weg|ufer|gasse|markt|ring|damm|wall)"
     r"|[A-ZÄÖÜ][\wäöüß\-]*\s(?:Platz|Straße|Allee|Weg|Ufer|Markt)"
     r"|Markt|Wall|Ring)"
     r"\s*\d+(?:\s?-\s?\d+|\s?[a-zA-Z]\b)?)"
-    r"(?:\s*,?\s*(\d{5})(?:\s+([A-ZÄÖÜ][\wäöüß\-]+(?:\s[A-ZÄÖÜ][\wäöüß\-]+)?))?)?"
+    r"(?:\s*,?\s*(\d{5})(?:\s+([A-ZÄÖÜ][\wäöüß]+(?:-[A-ZÄÖÜ][\wäöüß]+)*))?)?"
 )
 
 
@@ -295,15 +302,16 @@ async def scrape() -> list[dict]:
 
             for url, lastmod in kandidaten.items():
                 alt = cache.get(url)
-                if alt and alt.get("lastmod") == lastmod:
-                    continue
+                if alt and lastmod in (alt.get("lastmod"), alt.get("fehl_lastmod")):
+                    continue  # unverändert bzw. dieser Seitenstand war schon unlesbar
                 seite = await _abrufen(client, url)
                 if seite is None:
-                    continue  # alten Stand behalten
+                    continue  # Netzfehler: alten Stand behalten, nächster Lauf versucht erneut
                 roh = _event_lesen(seite, url)
                 if roh is None:
-                    # Seite ohne lesbares Event-JSON: alten Stand behalten und nicht als „gelesen“
-                    # merken (lastmod bleibt alt) – beim nächsten Lauf wird die Seite erneut versucht
+                    # Seite ohne lesbares Event-JSON: alten Stand (roh) behalten, diesen Seitenstand
+                    # aber merken – erst bei neuem lastmod wird die 1,8-MB-Seite erneut geladen
+                    cache[url] = {**(alt or {"lastmod": "", "roh": None}), "fehl_lastmod": lastmod}
                     continue
                 cache[url] = {"lastmod": lastmod, "roh": roh}
                 neu_geladen += 1
