@@ -12,6 +12,11 @@ import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
 import { eventBildUrl } from "@/lib/bilder";
 import { basisTitel, terminSchluessel, termineAmTag } from "@/lib/termine";
+import { istAbgelaufen, kommendeEmpfehlungen, ortSchluessel } from "@/lib/abgelaufen";
+import { eventJsonLd, jsonLdText } from "@/lib/json-ld";
+import { AbgelaufenHinweis } from "@/components/abgelaufen-hinweis";
+
+const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
 type Props = { params: Promise<{ kategorie: string; slug: string }> };
 
@@ -62,7 +67,15 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   // „Zum Termin um …“ nur, wenn dieser Termin einen eigenen Link hat (sonst führen alle Uhrzeiten zur selben Seite)
   const eigenerTerminLink = termine.length > 0 && !!e.quelle_url && termine.filter((t) => t.quelle_url === e.quelle_url).length === 1;
   const eigenerSchluessel = terminSchluessel(e);
-  const aehnliche = filtern(pool.events, { von: plusTage(e.datum, -7) < heute ? heute : plusTage(e.datum, -7), bis: plusTage(e.datum, 7), kategorie: e.kategorie })
+  // Abgelaufen: Seite bleibt (HTTP 200, indexierbar), zeigt aber einen Hinweis und kommende Events
+  const abgelaufen = istAbgelaufen(e, heute);
+  const empfehlungen = abgelaufen ? kommendeEmpfehlungen(e, pool.events, heute) : [];
+  // „Weitere Events an diesem Ort“ nur, wenn die Suche dort auch kommende Events findet (keine leere Seite)
+  const ortHatMehr =
+    !!ortSchluessel(e.ort) &&
+    filtern(pool.events, { von: heute, bis: plusTage(heute, 59), suche: e.ort, mitLanglaeufern: true }).some((x) => x.id !== e.id);
+  const ortSuche = ortHatMehr ? `/entdecken?q=${encodeURIComponent(e.ort)}&datum=alle` : null;
+  const aehnliche = abgelaufen ? [] : filtern(pool.events, { von: plusTage(e.datum, -7) < heute ? heute : plusTage(e.datum, -7), bis: plusTage(e.datum, 7), kategorie: e.kategorie })
     .filter((x) => x.id !== e.id && terminSchluessel(x) !== eigenerSchluessel)
     .sort(nachBeliebtheit)
     .slice(0, 8);
@@ -71,9 +84,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   const adresse = e.adresse ?? `${e.ort}, Düsseldorf`;
   const zeitText = e.datum_bis && e.datum_bis !== e.datum ? `${tagLang(e.datum, false)} bis ${kurzDatum(e.datum_bis)}` : tagLang(e.datum);
   const pfad = eventPfad(e);
+  const jsonLd = eventJsonLd(e, `${SITE_URL}${pfad}`, SITE_URL);
 
   return (
     <article>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
       <div className="detail-hero">
         <Bild e={e} eager vollstaendig />
         <div className="detail-hero__btns">
@@ -89,6 +104,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
         <div className="container detail-raster">
           <div style={{ display: "flex", flexDirection: "column", gap: 28, minWidth: 0 }}>
             <header>
+              <AbgelaufenHinweis abgelaufen={abgelaufen} />
               <KatBadge slug={e.kategorie} />
               <h1 className="detail__titel d">{titel}</h1>
               {e.abgesagt && (
@@ -175,10 +191,16 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           </div>
 
           <aside className="detail-seite" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {e.quelle_url && (
+            {e.quelle_url && !abgelaufen && (
               <a className="btn btn--gold btn--gross btn--block" href={e.quelle_url} target="_blank" rel="noopener">
                 {eigenerTerminLink && e.uhrzeit ? `Zum Termin um ${e.uhrzeit} Uhr` : "Zur Veranstalter-Seite"}
                 <Icon name="open_in_new" />
+              </a>
+            )}
+            {/* Abgelaufen: kein Ticket-Button mehr, nur ein schlichter Verweis auf den Original-Eintrag */}
+            {e.quelle_url && abgelaufen && (
+              <a className="link" href={e.quelle_url} target="_blank" rel="noopener">
+                Original-Eintrag beim Veranstalter <Icon name="open_in_new" />
               </a>
             )}
             <section className="detail__abschnitt">
@@ -188,6 +210,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
               <TeilenLeiste titel={titel} pfad={pfad} />
             </section>
             {e.quelle_name && <p className="quelle">Quelle: {e.quelle_name}</p>}
+            {ortSuche && (
+              <Link className="link" href={ortSuche}>
+                Weitere Events an diesem Ort <Icon name="arrow_forward" />
+              </Link>
+            )}
             {e.stadtteil && (
               <Link className="link" href={`/entdecken?stadtteil=${encodeURIComponent(e.stadtteil)}&datum=woche`}>
                 Mehr in {stadtteilName(e.stadtteil)} <Icon name="arrow_forward" />
@@ -195,6 +222,20 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
             )}
           </aside>
         </div>
+
+        {empfehlungen.length > 0 && (
+          <section className="container sektion" aria-labelledby="kommende-events">
+            <div className="sektionskopf">
+              <h2 className="d" id="kommende-events">Kommende Events</h2>
+              <Link href="/entdecken">Alle</Link>
+            </div>
+            <Reihe breite={200} label="Kommende Events">
+              {empfehlungen.map((x) => (
+                <EventKarte key={x.id} e={x} heute={heute} variante="reihe" />
+              ))}
+            </Reihe>
+          </section>
+        )}
 
         {aehnliche.length > 0 && (
           <section className="container sektion">

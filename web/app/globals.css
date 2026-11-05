@@ -1217,3 +1217,12 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 .formular__danke > .icon { font-size: 44px; color: #2f855a; }
 .formular__danke h2 { font-size: 28px; margin: 0; }
 .formular__danke p { margin: 0; color: var(--ddd-text-body); line-height: 1.55; }
+
+/* ---------- Abgelaufenes Event ---------- */
+.abgelaufen-hinweis {
+  display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ddd-text) 6%, var(--ddd-surface)); border: 1px solid color-mix(in srgb, var(--ddd-text) 22%, transparent);
+  color: var(--ddd-text); font-size: 14px; line-height: 1.5;
+}
+.abgelaufen-hinweis .icon { font-size: 22px; opacity: 0.75; }
+.abgelaufen-hinweis .link { display: inline; white-space: normal; font-size: inherit; }

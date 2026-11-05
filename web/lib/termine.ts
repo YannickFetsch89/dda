@@ -12,7 +12,8 @@ export function basisTitel(titel: string): string {
   return titel.replace(ZEIT_IM_TITEL, "").trim() || titel;
 }
 
-function norm(s: string): string {
+/** Text für Vergleiche vereinheitlichen (Kleinschreibung, ohne Satzzeichen, einfache Leerzeichen). */
+export function norm(s: string): string {
   return s
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s-]/gu, "")

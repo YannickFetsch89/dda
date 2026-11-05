@@ -1,6 +1,7 @@
 // sitemap.xml: feste Seiten, Tagesansichten der nächsten 14 Tage und alle aktuellen Events.
 // Nutzt denselben Event-Pool wie die Seiten (Cache 10 min).
 import type { MetadataRoute } from "next";
+import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
 import { plusTage } from "@/lib/datum";
 import { orteLaden } from "@/lib/orte";
@@ -32,7 +33,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const events: MetadataRoute.Sitemap =
     pool.quelle === "supabase"
       ? pool.alle // jede Uhrzeit hat eine eigene Seite (Listen zeigen sie gebündelt)
-          .filter((e) => e.slug)
+          // Abgelaufene Events raus (ihre Seiten bleiben online, gehören aber nicht mehr in die Sitemap)
+          .filter((e) => e.slug && !istAbgelaufen(e, pool.heute))
           .map((e) => ({
             url: `${SITE_URL}/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug!)}`,
             lastModified: e.erstellt_am ? new Date(e.erstellt_am) : jetzt,
