@@ -13,6 +13,8 @@ const KATEGORIEN = new Set([
 const MAX_BILD = 2 * 1024 * 1024; // = Grenze des Buckets (der Browser schickt ein verkleinertes JPEG)
 const MAX_ANFRAGE = 3 * 1024 * 1024; // Bild + Textfelder; größere Anfragen werden gar nicht erst eingelesen
 const MAX_KANTE = 1600;
+const MAX_GLEICHZEITIG = 2; // gleichzeitige sharp-Neukodierungen im Prozess
+let bildInArbeit = 0;
 
 /** Dateityp an den ersten Bytes erkennen (nicht der Angabe des Browsers vertrauen). */
 function bildTyp(b: Uint8Array): string | null {
@@ -114,19 +116,15 @@ export async function POST(request: Request) {
 
   if (form.get("datenschutz") !== "ja") felder.datenschutz = "Bitte bestätige die Datenschutzhinweise.";
 
-  // Bild (optional): Größe und Signatur prüfen, dann auf dem Server neu kodieren
+  // Bild (optional): Größe, Signatur und Rechte prüfen – neu kodiert wird erst ganz unten
   const bild = form.get("bild");
-  let bildJpeg: Buffer | null = null;
+  let bildBytes: Uint8Array | null = null;
   if (bild instanceof File && bild.size > 0) {
     if (form.get("bild_rechte") !== "ja") felder.bild_rechte = "Bitte bestätige, dass du das Bild verwenden darfst.";
     if (bild.size > MAX_BILD) felder.bild = "Das Bild ist zu groß (max. 2 MB).";
     else {
-      const bytes = new Uint8Array(await bild.arrayBuffer());
-      if (!bildTyp(bytes)) felder.bild = "Bitte lade ein JPG-, PNG- oder WebP-Bild hoch.";
-      else if (!felder.bild_rechte) {
-        bildJpeg = await bildNeuKodieren(bytes);
-        if (!bildJpeg) felder.bild = "Das Bild konnte nicht verarbeitet werden. Bitte versuch ein anderes oder melde ohne Bild.";
-      }
+      bildBytes = new Uint8Array(await bild.arrayBuffer());
+      if (!bildTyp(bildBytes)) felder.bild = "Bitte lade ein JPG-, PNG- oder WebP-Bild hoch.";
     }
   }
 
@@ -135,6 +133,27 @@ export async function POST(request: Request) {
   }
   if (zuVieleAnfragen("event-melden", ip, 5, 60 * 60 * 1000)) {
     return antwort(429, { fehler: "Zu viele Meldungen in kurzer Zeit. Bitte versuch es später noch einmal." });
+  }
+
+  // Teure Bildverarbeitung erst jetzt (gültige Meldung, Limit gezählt) und nie mehr als
+  // MAX_GLEICHZEITIG Bilder auf einmal – schützt den Speicher des einen Node-Prozesses
+  let bildJpeg: Buffer | null = null;
+  if (bildBytes) {
+    if (bildInArbeit >= MAX_GLEICHZEITIG) {
+      return antwort(503, { fehler: "Gerade ist viel los. Bitte versuch es in einer Minute noch einmal." });
+    }
+    bildInArbeit++;
+    try {
+      bildJpeg = await bildNeuKodieren(bildBytes);
+    } finally {
+      bildInArbeit--;
+    }
+    if (!bildJpeg) {
+      return antwort(400, {
+        fehler: "Bitte prüfe die markierten Felder.",
+        felder: { bild: "Das Bild konnte nicht verarbeitet werden. Bitte versuch ein anderes oder melde ohne Bild." },
+      });
+    }
   }
 
   const db = schreibClient();

@@ -16,6 +16,7 @@ import csv
 import io
 import logging
 import re
+import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
 import streamlit as st
@@ -136,12 +137,9 @@ def _bild_veroeffentlichen(db: Client, meldung: dict) -> tuple[str | None, str |
     endung = pfad.rsplit(".", 1)[-1].lower()
     typ = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(endung, "image/jpeg")
     daten = db.storage.from_("event-meldungen").download(pfad)
-    ziel = f"meldungen/{meldung['id']}.{endung}"
-    # Reste eines abgebrochenen früheren Versuchs entfernen (upsert ist für Admins nicht erlaubt)
-    try:
-        db.storage.from_("event-bilder").remove([ziel])
-    except Exception:
-        pass
+    # Eigener Pfad pro Freigabe-Versuch: Eine Rückabwicklung löscht so nur ihr eigenes Bild, nie das
+    # eines anderen Versuchs (z.B. wenn nach abgelaufener Sperre ein zweiter Admin freigegeben hat)
+    ziel = f"meldungen/{meldung['id']}-{uuid.uuid4().hex[:12]}.{endung}"
     db.storage.from_("event-bilder").upload(ziel, daten, {"content-type": typ, "upsert": "false"})
     return db.storage.from_("event-bilder").get_public_url(ziel), ziel
 
@@ -201,13 +199,15 @@ def _freigeben(db: Client, meldung: dict, werte: dict) -> str:
                                  "bearbeitet – die Freigabe wurde zurückgenommen. Bitte Seite neu laden.")
     except Exception:
         # Rückabwicklung. Löschen dürfen Admins Events nicht → das neue Event wird ausgeblendet.
+        bild_frei = True  # das eigene Bild darf nur weg, wenn kein sichtbares Event mehr darauf zeigt
         if event_id:
             try:
                 (db.table("events").update({"abgelehnt": True, "bild_url": None})
                  .eq("id", event_id).execute())
             except Exception as e:
+                bild_frei = False
                 logger.error("Event %s nach Fehler nicht ausgeblendet – bitte im Events-Tab prüfen: %s", event_id, e)
-        if bild_ziel:
+        if bild_ziel and bild_frei:
             try:
                 db.storage.from_("event-bilder").remove([bild_ziel])
             except Exception as e:
