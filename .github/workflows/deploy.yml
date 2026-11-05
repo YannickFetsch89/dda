@@ -75,4 +75,12 @@ jobs:
             /home/dies_das_duesseldorfadmin/bin/website.sh neustart
             sleep 5
             curl -sf -o /dev/null -m 10 http://127.0.0.1:3847/ || { echo "Website antwortet nicht"; tail -20 /home/dies_das_duesseldorfadmin/dda/logs/website.log; exit 1; }
+
+            # Kartendaten (nicht im Git, per scp hochgeladen) – fehlt die Datei, zeigt die Kartenansicht nur einen Hinweis
+            if [ ! -s public/karte/region.pmtiles ]; then
+              echo "WARNUNG: web/public/karte/region.pmtiles fehlt – Kartenansicht der Guides funktioniert nicht"
+            else
+              KARTE_STATUS=$(curl -s -o /dev/null -m 10 -r 0-15 -w "%{http_code}" http://127.0.0.1:3847/karte/region.pmtiles || true)
+              [ "$KARTE_STATUS" = "206" ] && echo "Kartendaten erreichbar (206)" || echo "WARNUNG: /karte/region.pmtiles liefert HTTP $KARTE_STATUS statt 206"
+            fi
             echo "Deployment abgeschlossen"

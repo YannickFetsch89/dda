@@ -179,7 +179,7 @@ export function GoogleKarte({ adresse, routeUrl }: { adresse: string; routeUrl: 
           src={`https://www.google.com/maps?q=${encodeURIComponent(adresse)}&output=embed&hl=de`}
           title={`Karte: ${adresse}`}
           loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
+          referrerPolicy="no-referrer"
           allowFullScreen
         />
       ) : (

@@ -6,7 +6,8 @@
 //   dabei nie mit Google, der API-Key verlässt nie den Server. Google-Bilder werden nicht dauerhaft
 //   gespeichert (Nutzungsbedingungen); nur die Bildadresse wird gecached, weil jeder Abruf kostet:
 //     Treffer 30 Tage · dauerhaft kein Foto 1 Tag · vorübergehender Fehler 5 Minuten
-import { cacheLife } from "next/cache";
+//   Lehnt Google eine gecachte Bildadresse ab (abgelaufen), wird sie verworfen (max. 1×/Stunde je Ort).
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
 import { ortLaden, slugDekodieren } from "@/lib/orte";
@@ -17,6 +18,17 @@ const FOTO_NAME = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
 const TAG = 24 * 3600;
 
 type Ergebnis = { adresse: string | null; voruebergehend?: boolean };
+
+const fotoTag = (slug: string) => `ort-foto:${slug}`.slice(0, 256);
+const zuletztVerworfen = new Map<string, number>();
+
+/** Abgelaufene Google-Bildadresse verwerfen – höchstens einmal pro Stunde je Ort (jeder Neuabruf kostet). */
+function adresseVerwerfen(slug: string): void {
+  const jetzt = Date.now();
+  if (jetzt - (zuletztVerworfen.get(slug) ?? 0) < 3600_000) return;
+  zuletztVerworfen.set(slug, jetzt);
+  revalidateTag(fotoTag(slug), { expire: 0 });
+}
 
 /** Nur Bildadressen von Google ohne Key verwenden. */
 function gueltigeGoogleAdresse(wert: unknown): string | null {
@@ -57,6 +69,7 @@ async function googleFotoAdresse(name: string, slug: string): Promise<Ergebnis> 
 /** Bildquelle eines Ortes: { adresse, google } – gecached nach Ergebnis (siehe Kopfkommentar). */
 async function bildQuelle(slug: string): Promise<{ adresse: string | null; google: boolean }> {
   "use cache";
+  cacheTag(fotoTag(slug));
   const ort = await ortLaden(slug);
   if (ort?.bild_url && !ort.bild_url.includes("key=")) {
     cacheLife({ stale: 3600, revalidate: TAG, expire: 7 * TAG });
@@ -76,6 +89,9 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]
   const slug = slugDekodieren((await ctx.params).slug);
   const quelle = slug ? await bildQuelle(slug) : null;
   // Google-Fotos nur durchreichen (nicht auf der Platte speichern), eigene Bilder cachen
-  const bild = quelle?.adresse ? await bildHolen(quelle.adresse, !quelle.google) : null;
-  return bildAntwort(bild, TAG);
+  if (!slug || !quelle?.adresse) return bildAntwort(null, TAG);
+  const { bild, status } = await bildHolen(quelle.adresse, !quelle.google);
+  if (!bild && quelle.google && (status === 403 || status === 404 || status === 410)) adresseVerwerfen(slug);
+  // Google-Fotos: nur der Browser darf cachen (keine geteilten Caches)
+  return bildAntwort(bild, TAG, quelle.google);
 }

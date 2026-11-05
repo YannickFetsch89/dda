@@ -111,6 +111,7 @@ export default function DatenschutzSeite() {
         <li>Speicherung Ihrer Merkliste (favorisierte Events)</li>
         <li>Speicherung Ihrer Theme-Einstellung (hell/dunkel)</li>
         <li>Speicherung Ihrer Cookie-Consent-Entscheidung</li>
+        <li>Speicherung Ihrer Entscheidung, Google-Maps-Karten auf Event-Seiten anzuzeigen (siehe Abschnitt 9)</li>
       </ul>
       <p>
         Diese Daten werden ausschließlich lokal in Ihrem Browser gespeichert und nicht an uns oder Dritte
@@ -174,8 +175,16 @@ export default function DatenschutzSeite() {
           liegen – es werden keine Daten an Kartendienste übermittelt.
         </li>
         <li>
-          <b>Google Maps:</b> Für Kartenansichten und Routenplanung werden Daten an Google übermittelt.
-          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.
+          <b>Google Maps (nur nach Klick):</b> Auf Event-Seiten können Sie einen Kartenausschnitt von Google Maps
+          (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland) einblenden. Die Karte wird erst
+          geladen, wenn Sie auf „Karte anzeigen“ oder „Nur dieses Mal“ klicken; erst dann werden Daten (u.a. Ihre
+          IP-Adresse) an Google übermittelt, ggf. auch in die USA. Bei „Karte anzeigen“ speichern wir Ihre
+          Entscheidung lokal in Ihrem Browser (siehe Abschnitt 7); Sie können sie dort jederzeit löschen. Links
+          zur Routenplanung öffnen Google Maps erst, wenn Sie sie anklicken. Rechtsgrundlage: Ihre Einwilligung
+          (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).{" "}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">
+            Datenschutzerklärung von Google
+          </a>
         </li>
         <li>
           <b>Supabase:</b> Wir nutzen Supabase als Datenbank-Backend für die Speicherung von Event-Daten.
@@ -185,10 +194,6 @@ export default function DatenschutzSeite() {
           <a href="https://supabase.com/privacy" target="_blank" rel="noopener">
             Datenschutzerklärung von Supabase
           </a>
-        </li>
-        <li>
-          <b>Event-Bilder:</b> Bilder können von externen Quellen (Veranstalter-Websites) stammen. Beim Laden
-          dieser Bilder wird Ihre IP-Adresse an den jeweiligen Server übermittelt.
         </li>
       </ul>
 

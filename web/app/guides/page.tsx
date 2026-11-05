@@ -1,12 +1,12 @@
 // "Düsseldorf entdecken" – Übersicht aller Guide-Hubs (Design-Handoff v2, Ansichten 10 und 11)
-// Fertige Hubs sind verlinkt (mit echter Anzahl und Foto), die übrigen erscheinen als "Bald verfügbar".
+// Fertige Hubs sind verlinkt (mit echter Anzahl), die übrigen erscheinen als "Bald verfügbar".
+// Kachelbilder: KI-generiert, liegen als WebP unter public/guides/<slug>.webp
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { BildImg } from "@/components/client";
 import { Icon } from "@/components/karten";
-import { sortieren, zahl } from "@/lib/guide-filter";
-import { orteLaden, ortBildUrl } from "@/lib/orte";
+import { zahl } from "@/lib/guide-filter";
+import { orteLaden } from "@/lib/orte";
 
 export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
@@ -34,12 +34,22 @@ const HUBS: Hub[] = [
   { slug: "wochenendtipps", label: "Wochenendtipps", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
 ];
 
-function HubKachel({ hub, anzahl, bild }: { hub: Hub; anzahl: number | null; bild: string | null }) {
+function HubKachel({ hub, anzahl, oben }: { hub: Hub; anzahl: number | null; oben: boolean }) {
   const inhalt = (
     <>
       <div className="gd-hub__bild">
         <div className="gd-hub__motiv">
-          {bild ? <BildImg src={bild} alt="" icon={hub.icon} /> : <Icon name={hub.icon} className="gd-hub__platzhalter" />}
+          <Icon name={hub.icon} className="gd-hub__platzhalter" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- statisches, bereits optimiertes WebP */}
+          <img
+            src={`/guides/${hub.slug}.webp`}
+            alt=""
+            width={1400}
+            height={768}
+            loading={oben ? "eager" : "lazy"}
+            fetchPriority={oben ? "high" : undefined}
+            decoding="async"
+          />
         </div>
         <div className="gd-hub__verlauf" aria-hidden />
         <div className="gd-hub__kopf">
@@ -67,22 +77,20 @@ function HubKachel({ hub, anzahl, bild }: { hub: Hub; anzahl: number | null; bil
   );
 }
 
-/** Kacheln mit echten Zahlen und Foto (Daten gecached über orteLaden). */
-async function Kacheln() {
-  const restaurants = sortieren(await orteLaden(["restaurant", "cafe"]), "empfohlen");
-  const titelbild = restaurants.map(ortBildUrl).find(Boolean) ?? null;
+function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
   return (
     <div className="gd-hubs" role="list">
-      {HUBS.map((hub) => (
-        <HubKachel
-          key={hub.slug}
-          hub={hub}
-          anzahl={hub.slug === "restaurants-cafes" ? restaurants.length : null}
-          bild={hub.slug === "restaurants-cafes" ? titelbild : null}
-        />
+      {HUBS.map((hub, i) => (
+        <HubKachel key={hub.slug} hub={hub} anzahl={anzahl[hub.slug] ?? null} oben={i < 2} />
       ))}
     </div>
   );
+}
+
+/** Kacheln mit echten Zahlen (Daten gecached über orteLaden). */
+async function Kacheln() {
+  const restaurants = await orteLaden(["restaurant", "cafe"]);
+  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length }} />;
 }
 
 export default function GuidesUebersicht() {
@@ -97,13 +105,7 @@ export default function GuidesUebersicht() {
         <p>Kuratierte Tipps für Restaurants, Cafés, Kneipen, Clubs, Spielplätze und Ausflüge – von uns für euch.</p>
       </header>
       <div className="container">
-        <Suspense
-          fallback={
-            <div className="gd-hubs" role="list">
-              {HUBS.map((hub) => <HubKachel key={hub.slug} hub={hub} anzahl={null} bild={null} />)}
-            </div>
-          }
-        >
+        <Suspense fallback={<KachelListe anzahl={{}} />}>
           <Kacheln />
         </Suspense>
       </div>

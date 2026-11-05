@@ -102,6 +102,10 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   const [bereich, setBereich] = useState<maplibregl.LngLatBounds | null>(null);
   const [bewegt, setBewegt] = useState(false);
+  const [fehler, setFehler] = useState(false);
+  // Inhalt der zuletzt gesetzten Pins – neu aufbauen nur, wenn sich die Orte wirklich ändern
+  // (nicht bei jeder neuen Array-Instanz, z.B. nach Sortierwechsel), damit Ausschnitt/Bereich erhalten bleiben
+  const pinSchluessel = useRef("");
 
   const sichtbar = useMemo(
     () => (bereich ? orte.filter((o) => bereich.contains([o.lng, o.lat])) : orte),
@@ -155,6 +159,10 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
     map.on("dragend", () => setBewegt(true));
     // Nur vom Nutzer ausgelöstes Zoomen zählt (nicht fitBounds/flyTo aus dem Code)
     map.on("zoomend", (e: { originalEvent?: unknown }) => { if (e.originalEvent) setBewegt(true); });
+    // Kartendaten fehlen (z.B. region.pmtiles nicht auf dem Server) → Hinweis statt leerer Fläche
+    map.on("error", (e: { sourceId?: string; error?: { message?: string } }) => {
+      if (e.sourceId === "protomaps" || /pmtiles|region.pmtiles/i.test(e.error?.message ?? "")) setFehler(true);
+    });
     mapRef.current = map;
 
     // Nach Layout-Wechseln Größe neu berechnen (sonst zeigt die Karte nur ein Stück)
@@ -172,6 +180,7 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
       map.remove();
       mapRef.current = null;
       marker.clear();
+      pinSchluessel.current = "";
     };
   }, []);
 
@@ -179,6 +188,12 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    const schluessel = orte.map((o) => `${o.id}@${o.lat},${o.lng}`).sort().join("|");
+    if (schluessel === pinSchluessel.current) return;
+    pinSchluessel.current = schluessel;
+    popupRef.current?.remove();
+    popupRef.current = null;
+    setGewaehlt(null);
     for (const { marker } of markerRef.current.values()) marker.remove();
     markerRef.current.clear();
     for (const o of orte) {
@@ -200,6 +215,16 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
     setBereich(null);
     setBewegt(false);
   }, [orte, auswaehlen]);
+
+  // Bei "In diesem Bereich suchen" nur die Pins der Liste zeigen
+  useEffect(() => {
+    const ids = new Set(sichtbar.map((o) => o.id));
+    for (const [id, { el }] of markerRef.current) el.classList.toggle("gd-pin--aus", !ids.has(id));
+    if (gewaehlt && !ids.has(gewaehlt)) {
+      popupRef.current?.remove();
+      popupRef.current = null;
+    }
+  }, [sichtbar, gewaehlt]);
 
   // Ausgewählten Pin hervorheben
   useEffect(() => {
@@ -248,6 +273,12 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
       </div>
       <div className="gd-karte-box">
         <div ref={kartenRef} className="gd-karte-map" />
+        {fehler && (
+          <div className="gd-karte-fehler" role="status">
+            <span className="icon" aria-hidden>map</span>
+            Die Karte konnte gerade nicht geladen werden. Die Liste links funktioniert weiterhin.
+          </div>
+        )}
         {bewegt && (
           <button
             type="button"

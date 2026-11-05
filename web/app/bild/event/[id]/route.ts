@@ -35,6 +35,6 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/bild/event/[id]
   const { id } = await ctx.params;
   if (!UUID.test(id)) return bildAntwort(null, 0);
   const quelle = await bildQuelle(id.toLowerCase());
-  const bild = quelle ? await bildHolen(quelle, true) : null;
+  const { bild } = quelle ? await bildHolen(quelle, true) : { bild: null };
   return bildAntwort(bild, 86_400);
 }
