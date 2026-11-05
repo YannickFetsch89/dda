@@ -92,10 +92,12 @@ class FreigabeFehler(Exception):
 SPERRE_MINUTEN = 10  # so lange gilt eine angefangene Bearbeitung als „in Arbeit“
 
 
-def _reservieren(db: Client, meldung_id: str) -> None:
+def _reservieren(db: Client, meldung_id: str) -> str:
     """
     Meldung für diese Bearbeitung reservieren (nur wenn noch 'neu' und nicht gerade in Arbeit).
-    Verhindert doppelte Freigaben bei Doppelklick oder zwei Admins gleichzeitig.
+    Verhindert doppelte Bearbeitung bei Doppelklick oder zwei Admins gleichzeitig – Freigeben UND
+    Ablehnen laufen darüber. Gibt das Token zurück (der gesetzte Zeitstempel), mit dem die
+    Bearbeitung abgeschlossen werden muss.
     """
     grenze = (datetime.now(timezone.utc) - timedelta(minutes=SPERRE_MINUTEN)).isoformat()
     zeilen = (db.table("event_meldungen").update({"bearbeitet_am": _jetzt(), "bearbeitet_von": _admin_id(db)})
@@ -104,12 +106,21 @@ def _reservieren(db: Client, meldung_id: str) -> None:
               .execute().data)
     if not zeilen:
         raise FreigabeFehler("Diese Meldung wird gerade bearbeitet oder ist schon erledigt – bitte Seite neu laden.")
+    return zeilen[0]["bearbeitet_am"]
 
 
-def _reservierung_loesen(db: Client, meldung_id: str) -> None:
+def _abschliessen(db: Client, meldung_id: str, token: str, werte: dict) -> bool:
+    """Meldung abschließen – nur wenn sie noch 'neu' ist und unsere Reservierung noch gilt."""
+    zeilen = (db.table("event_meldungen").update({**werte, "bearbeitet_am": _jetzt(), "bearbeitet_von": _admin_id(db)})
+              .eq("id", meldung_id).eq("status", "neu").eq("bearbeitet_am", token)
+              .execute().data)
+    return bool(zeilen)
+
+
+def _reservierung_loesen(db: Client, meldung_id: str, token: str) -> None:
     try:
         (db.table("event_meldungen").update({"bearbeitet_am": None, "bearbeitet_von": None})
-         .eq("id", meldung_id).eq("status", "neu").execute())
+         .eq("id", meldung_id).eq("status", "neu").eq("bearbeitet_am", token).execute())
     except Exception as e:
         logger.warning("Reservierung nicht gelöst: %s", e)
 
@@ -149,7 +160,8 @@ def _event_einfuegen(db: Client, event: dict) -> str:
             if "23505" in text and "slug" in text and versuch == 0:
                 continue
             if "23505" in text:
-                raise FreigabeFehler("Ein Event mit gleichem Titel, Datum, Ort und Uhrzeit gibt es schon.") from e
+                raise FreigabeFehler("Ein Event mit gleichem Titel, Datum, Ort und Uhrzeit gibt es schon "
+                                     "(ggf. ausgeblendet im Events-Tab unter „Abgelehnt“).") from e
             raise
     raise FreigabeFehler("Slug konnte nicht vergeben werden – bitte erneut versuchen.")
 
@@ -160,8 +172,9 @@ def _freigeben(db: Client, meldung: dict, werte: dict) -> str:
     Ablauf mit Rückabwicklung: reservieren → Bild veröffentlichen → Event anlegen → Meldung abschließen
     → privates Original löschen. Scheitert ein Schritt, werden öffentliches Bild und Reservierung entfernt.
     """
-    _reservieren(db, meldung["id"])
+    token = _reservieren(db, meldung["id"])
     bild_ziel = None
+    event_id = None
     try:
         bild_url, bild_ziel = _bild_veroeffentlichen(db, meldung)
         event = {
@@ -183,22 +196,25 @@ def _freigeben(db: Client, meldung: dict, werte: dict) -> str:
         }
         event = stadtteil_batch_zuordnen([event])[0]
         event_id = _event_einfuegen(db, event)
+        if not _abschliessen(db, meldung["id"], token, {"status": "freigegeben", "event_id": event_id}):
+            raise FreigabeFehler("Die Reservierung ist abgelaufen oder die Meldung wurde inzwischen anders "
+                                 "bearbeitet – die Freigabe wurde zurückgenommen. Bitte Seite neu laden.")
     except Exception:
-        # Rückabwicklung: öffentliches Bild entfernen, Reservierung lösen
+        # Rückabwicklung. Löschen dürfen Admins Events nicht → das neue Event wird ausgeblendet.
+        if event_id:
+            try:
+                (db.table("events").update({"abgelehnt": True, "bild_url": None})
+                 .eq("id", event_id).execute())
+            except Exception as e:
+                logger.error("Event %s nach Fehler nicht ausgeblendet – bitte im Events-Tab prüfen: %s", event_id, e)
         if bild_ziel:
             try:
                 db.storage.from_("event-bilder").remove([bild_ziel])
             except Exception as e:
                 logger.warning("Öffentliches Bild nach Fehler nicht entfernt: %s", e)
-        _reservierung_loesen(db, meldung["id"])
+        _reservierung_loesen(db, meldung["id"], token)
         raise
 
-    db.table("event_meldungen").update({
-        "status": "freigegeben",
-        "event_id": event_id,
-        "bearbeitet_am": _jetzt(),
-        "bearbeitet_von": _admin_id(db),
-    }).eq("id", meldung["id"]).eq("status", "neu").execute()
     # Privates Original wird nicht mehr gebraucht (öffentliche Kopie liegt in event-bilder)
     if meldung.get("bild_pfad"):
         try:
@@ -210,14 +226,14 @@ def _freigeben(db: Client, meldung: dict, werte: dict) -> str:
 
 def _ablehnen(db: Client, meldung: dict, grund: str) -> str | None:
     """Meldung ablehnen und das private Bild löschen. Gibt eine Warnung zurück, falls etwas offen blieb."""
-    zeilen = (db.table("event_meldungen").update({
-        "status": "abgelehnt",
-        "ablehngrund": grund or None,
-        "bearbeitet_am": _jetzt(),
-        "bearbeitet_von": _admin_id(db),
-    }).eq("id", meldung["id"]).eq("status", "neu").execute().data)
-    if not zeilen:
-        raise FreigabeFehler("Diese Meldung ist schon erledigt – bitte Seite neu laden.")
+    token = _reservieren(db, meldung["id"])
+    try:
+        erledigt = _abschliessen(db, meldung["id"], token, {"status": "abgelehnt", "ablehngrund": grund or None})
+    except Exception:
+        _reservierung_loesen(db, meldung["id"], token)
+        raise
+    if not erledigt:
+        raise FreigabeFehler("Diese Meldung wurde inzwischen anders bearbeitet – bitte Seite neu laden.")
     if meldung.get("bild_pfad"):
         try:
             db.storage.from_("event-meldungen").remove([meldung["bild_pfad"]])

@@ -4,6 +4,11 @@ import { absenderIp, antwort, emailGueltig, schreibClient, text, zuGross, zuViel
 
 export async function POST(request: Request) {
   if (zuGross(request, 4 * 1024)) return antwort(413, { fehler: "Ungültige Anfrage." });
+  // Grobes Bremslimit vor dem Einlesen: jede Anfrage zählt (auch Honeypot-Treffer und Tippfehler)
+  const ip = absenderIp(request.headers);
+  if (zuVieleAnfragen("newsletter-anfragen", ip, 20, 60 * 60 * 1000)) {
+    return antwort(429, { fehler: "Zu viele Anfragen in kurzer Zeit. Bitte versuch es später noch einmal." });
+  }
   let daten: Record<string, unknown>;
   try {
     daten = await request.json();
@@ -16,8 +21,7 @@ export async function POST(request: Request) {
 
   const email = text(daten.email, 254)?.toLowerCase() ?? "";
   if (!emailGueltig(email)) return antwort(400, { fehler: "Bitte gib eine gültige E-Mail-Adresse ein." });
-
-  if (zuVieleAnfragen("newsletter", absenderIp(request.headers), 5, 60 * 60 * 1000)) {
+  if (zuVieleAnfragen("newsletter", ip, 5, 60 * 60 * 1000)) {
     return antwort(429, { fehler: "Zu viele Anmeldungen in kurzer Zeit. Bitte versuch es später noch einmal." });
   }
 

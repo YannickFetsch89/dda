@@ -15,8 +15,54 @@ const MAX_KANTE = 1600;
 const ZIEL_BYTES = 1.5 * 1024 * 1024;
 const MAX_PIXEL = 50_000_000; // wie auf dem Server – größere Bilder würden beim Dekodieren den Speicher sprengen
 
-/** Abmessungen lesen, ohne das ganze Bild zu dekodieren (der Browser liest dafür nur den Dateikopf). */
-function bildMasse(datei: File): Promise<{ breite: number; hoehe: number }> {
+type Masse = { breite: number; hoehe: number };
+
+/**
+ * Breite und Höhe direkt aus dem Dateikopf lesen (JPEG/PNG/WebP), ohne das Bild zu dekodieren.
+ * Die Ausrichtung (EXIF) ist hier egal – es geht nur um die Pixelzahl. null = Kopf nicht erkannt.
+ */
+async function kopfMasse(datei: File): Promise<Masse | null> {
+  const b = new Uint8Array(await datei.slice(0, 256 * 1024).arrayBuffer());
+  const u16 = (i: number) => (b[i] << 8) | b[i + 1];
+  const u24le = (i: number) => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16);
+  const ascii = (i: number, n: number) => String.fromCharCode(...b.slice(i, i + n));
+  // PNG: IHDR direkt nach der Signatur
+  if (b[0] === 0x89 && ascii(1, 3) === "PNG" && b.length >= 24) {
+    return { breite: (u16(16) << 16) | u16(18), hoehe: (u16(20) << 16) | u16(22) };
+  }
+  // WebP: erster Chunk nach „RIFF....WEBP“
+  if (ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP" && b.length >= 30) {
+    const chunk = ascii(12, 4);
+    if (chunk === "VP8X") return { breite: 1 + u24le(24), hoehe: 1 + u24le(27) };
+    if (chunk === "VP8 ") return { breite: (b[26] | (b[27] << 8)) & 0x3fff, hoehe: (b[28] | (b[29] << 8)) & 0x3fff };
+    if (chunk === "VP8L") {
+      return {
+        breite: 1 + (((b[22] & 0x3f) << 8) | b[21]),
+        hoehe: 1 + (((b[24] & 0x0f) << 10) | (b[23] << 2) | ((b[22] & 0xc0) >> 6)),
+      };
+    }
+    return null;
+  }
+  // JPEG: Segmente bis zum Frame-Header (SOF0–SOF15 außer DHT/JPG/DAC) durchlaufen
+  if (b[0] === 0xff && b[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 0xff) return null;
+      const marker = b[i + 1];
+      if (marker === 0xff) { i++; continue; } // Füllbytes
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { breite: u16(i + 7), hoehe: u16(i + 5) };
+      }
+      if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) { i += 2; continue; }
+      if (marker === 0xda || marker === 0xd9) return null; // Bilddaten ohne Frame-Header
+      i += 2 + u16(i + 2);
+    }
+  }
+  return null;
+}
+
+/** Ausgerichtete Abmessungen über den Browser (nur für Bilder, deren Pixelzahl schon geprüft ist). */
+function bildMasse(datei: File): Promise<Masse> {
   return new Promise((fertig, fehler) => {
     const url = URL.createObjectURL(datei);
     const img = new Image();
@@ -34,6 +80,10 @@ function bildMasse(datei: File): Promise<{ breite: number; hoehe: number }> {
 
 /** Bild im Browser verkleinern und als JPEG neu kodieren (weißer Hintergrund für Transparenz). */
 async function bildVerkleinern(datei: File): Promise<Blob> {
+  // Pixelgrenze VOR jedem Dekodieren – aus dem Dateikopf
+  const kopf = await kopfMasse(datei);
+  if (!kopf || !kopf.breite || !kopf.hoehe) throw new Error("Bild nicht lesbar");
+  if (kopf.breite * kopf.hoehe > MAX_PIXEL) throw new Error("Bild zu groß");
   const { breite, hoehe } = await bildMasse(datei);
   if (!breite || !hoehe || breite * hoehe > MAX_PIXEL) throw new Error("Bild zu groß");
   const faktor = Math.min(1, MAX_KANTE / Math.max(breite, hoehe));

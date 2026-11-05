@@ -46,9 +46,10 @@ export function kalenderdatum(wert: string | null): boolean {
 }
 
 /**
- * IP des Absenders. Unser Reverse-Proxy HÄNGT die echte Client-Adresse an X-Forwarded-For an – der
- * letzte Eintrag stammt also vom Proxy, alle davor kann der Client selbst setzen. X-Real-IP (vom Proxy
- * gesetzt, falls vorhanden) hat Vorrang.
+ * IP des Absenders. X-Real-IP setzt unser nginx (ISPConfig) selbst und überschreibt dabei einen vom
+ * Client mitgeschickten Wert – live geprüft am 05.11.2026: 7 Anfragen mit 7 verschiedenen gefälschten
+ * X-Real-IP/X-Forwarded-For-Werten → ab der 6. kam 429. Ändert sich der Proxy, das hier neu prüfen.
+ * Fallback: letzter X-Forwarded-For-Eintrag (den hängt der Proxy an, alle davor setzt der Client).
  */
 export function absenderIp(headers: Headers): string {
   const real = headers.get("x-real-ip")?.trim();

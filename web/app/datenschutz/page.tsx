@@ -235,8 +235,9 @@ export default function DatenschutzSeite() {
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) bzw. lit. f (berechtigtes Interesse an
         einem vollständigen Veranstaltungskalender). Ein hochgeladenes Bild wird auf unserem Server neu
         gespeichert; dabei werden eingebettete Metadaten (z.B. Kameradaten, GPS-Position) entfernt. Die Meldung
-        selbst – mit Kontaktdaten, Anmerkung und Original-Bild – löschen wir automatisch spätestens sechs Monate
-        nach dem (letzten) Event-Tag, unabhängig davon, ob sie veröffentlicht oder abgelehnt wurde. Ein
+        selbst – mit Kontaktdaten, Anmerkung und Original-Bild – löschen wir automatisch sechs Monate nach dem
+        (letzten) Event-Tag (die Löschung läuft alle paar Tage), unabhängig davon, ob sie veröffentlicht oder
+        abgelehnt wurde. Ein
         veröffentlichtes Event bleibt ohne Ihre Kontaktdaten in unserem Kalender. Eine frühere Löschung können
         Sie jederzeit per E-Mail an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> verlangen.
       </p>

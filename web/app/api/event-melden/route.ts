@@ -47,6 +47,12 @@ export async function POST(request: Request) {
   if (zuGross(request, MAX_ANFRAGE)) {
     return antwort(413, { fehler: "Die Meldung ist zu groß. Bitte verwende ein kleineres Bild." });
   }
+  // Grobes Bremslimit VOR dem Einlesen: jede Anfrage zählt (auch Honeypot-Treffer und fehlerhafte).
+  // Großzügig, damit Tippfehler-Korrekturen niemanden aussperren; gültige Meldungen zählt das 2. Limit.
+  const ip = absenderIp(request.headers);
+  if (zuVieleAnfragen("event-melden-anfragen", ip, 20, 60 * 60 * 1000)) {
+    return antwort(429, { fehler: "Zu viele Anfragen in kurzer Zeit. Bitte versuch es später noch einmal." });
+  }
   let form: FormData;
   try {
     form = await request.formData();
@@ -56,10 +62,6 @@ export async function POST(request: Request) {
 
   // Honeypot: Bots füllen das unsichtbare Feld → still „erfolgreich“ verwerfen
   if (text(form.get("website"), 200)) return antwort(200, { ok: true });
-
-  if (zuVieleAnfragen("event-melden", absenderIp(request.headers), 5, 60 * 60 * 1000)) {
-    return antwort(429, { fehler: "Zu viele Meldungen in kurzer Zeit. Bitte versuch es später noch einmal." });
-  }
 
   const felder: Record<string, string> = {};
   const heute = heuteBerlin(new Date());
@@ -131,6 +133,9 @@ export async function POST(request: Request) {
   if (Object.keys(felder).length) {
     return antwort(400, { fehler: "Bitte prüfe die markierten Felder.", felder });
   }
+  if (zuVieleAnfragen("event-melden", ip, 5, 60 * 60 * 1000)) {
+    return antwort(429, { fehler: "Zu viele Meldungen in kurzer Zeit. Bitte versuch es später noch einmal." });
+  }
 
   const db = schreibClient();
   if (!db) return antwort(503, { fehler: "Das Melden ist gerade nicht möglich. Bitte versuch es später." });
@@ -169,7 +174,13 @@ export async function POST(request: Request) {
   if (error) {
     console.error(`Event-Meldung fehlgeschlagen: ${error.code} ${error.message}`);
     // Kein verwaistes Bild zurücklassen
-    if (bildPfad) await db.storage.from("event-meldungen").remove([bildPfad]).catch(() => {});
+    if (bildPfad) {
+      const aufraeumen = await db.storage.from("event-meldungen").remove([bildPfad])
+        .catch((e: unknown) => ({ error: e instanceof Error ? e : new Error(String(e)) }));
+      if (aufraeumen.error) {
+        console.error(`Event-Meldung: verwaistes Bild ${bildPfad} nicht gelöscht – bitte im Storage entfernen: ${aufraeumen.error.message}`);
+      }
+    }
     return antwort(500, { fehler: "Das hat leider nicht geklappt. Bitte versuch es später noch einmal." });
   }
   return antwort(200, { ok: true });
