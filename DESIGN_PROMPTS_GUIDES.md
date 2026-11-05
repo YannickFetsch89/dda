@@ -42,7 +42,7 @@ Desktop-Header (1344px max-width):
 - Rechts: Zwei Dropdown-Links "Events" und "Guides", danach Theme-Toggle, Merkliste-Icon, Button "Event melden" (Gold)
 
 Dropdown "Events" enthält: Heute, Dieses Wochenende, Alle Events, Kategorien, Stadtteile & Karte
-Dropdown "Guides" enthält: Restaurants & Cafés, Kneipen & Bars, Clubs, Spielplätze, Ausflüge, Wochenendtipps
+Dropdown "Guides" enthält: Restaurants & Cafés, Kneipen & Bars, Clubs, Spielplätze, Ausflüge, Wochenend-Trips
 
 Dropdown-Stil: Weißes Panel mit Schatten, Links untereinander, Hover zeigt Gold-Akzent.
 
@@ -113,7 +113,7 @@ Die 6 Kacheln sind:
 3. "Clubs" – Club-Atmosphäre – "Düsseldorfs Nachtleben von Techno bis Hip-Hop" – 18 Tipps
 4. "Spielplätze" – Kinder spielen – "Der perfekte Spielplatz für jedes Alter" – 230 Plätze
 5. "Ausflüge" – Landschaft – "Raus aus der Stadt – unter einer Stunde erreichbar" – 30 Ziele
-6. "Wochenendtipps" – Reise – "Ein Wochenende weg – unter 4 Stunden Anfahrt" – 20 Trips
+6. "Wochenend-Trips" – Reise – "Ein Wochenende weg – unter 4 Stunden Anfahrt" – 20 Trips
 
 Zeige Desktop (1344px) und Mobile (375px).
 ```
@@ -633,10 +633,10 @@ Zeige Desktop (1344px, zentrierter Content) und Mobile (375px).
 
 ---
 
-## 14. `/wochenendtipps` – Übersichtsseite
+## 14. `/wochenend-trips` – Übersichtsseite
 
 ```
-Erstelle das Layout für eine Wochenendtipp-Übersichtsseite einer Stadtguide-Website.
+Erstelle das Layout für eine Wochenend-Trip-Übersichtsseite einer Stadtguide-Website.
 
 Marke: dies.das.düsseldorf
 Farben: Navy #1b2540, Gold #c9a84c, Hintergrund #f7f8fa, Surface #ffffff
@@ -649,7 +649,7 @@ und einem Editorial-Grid darunter.
 Aufbau:
 
 1. Hero-Bereich:
-   - Headline: "Wochenendtrips ab Düsseldorf" (DM Serif Display, weiß, groß)
+   - Headline: "Wochenend-Trips ab Düsseldorf" (DM Serif Display, weiß, groß)
    - Subline: "Ein Wochenende raus – 20 Ziele unter 4 Stunden Anfahrt"
    - Hintergrund: Stimmungsvolles Reisebild (z.B. Brügge, Amsterdam, Moseltal)
    - Höhe: ca. 400px (der größte Hero aller Hubs – Reise-Magazin-Feeling)
@@ -688,10 +688,10 @@ Zeige Desktop (1344px) und Mobile (375px).
 
 ---
 
-## 15. `/wochenendtipps/[slug]` – Wochenendtipp-Detailseite
+## 15. `/wochenend-trips/[slug]` – Wochenend-Trip-Detailseite
 
 ```
-Erstelle das Layout für eine Wochenendtipp-Detailseite einer Stadtguide-Website.
+Erstelle das Layout für eine Wochenend-Trip-Detailseite einer Stadtguide-Website.
 
 Marke: dies.das.düsseldorf
 Farben: Navy #1b2540, Gold #c9a84c, Hintergrund #f7f8fa, Surface #ffffff

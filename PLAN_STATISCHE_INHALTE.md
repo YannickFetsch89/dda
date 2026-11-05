@@ -15,7 +15,7 @@ Erweiterung der Website um permanente, KI-recherchierte Inhalte als Mehrwert geg
 | C | Spielplatz-Guide | `/spielplaetze` | Kartenansicht, Ausstattung, Altersgruppen, Schatten |
 | C | Kneipenguide | `/kneipen` | Kuratierte Bar-Empfehlungen |
 | C | Clubguide | `/clubs` | Clubbing-Empfehlungen mit Musikrichtung |
-| D | Wochenendtipps | `/wochenendtipps` | Trips bis max. 4 Stunden ab Düsseldorf |
+| D | Wochenend-Trips | `/wochenend-trips` | Trips bis max. 4 Stunden ab Düsseldorf |
 | A/B | AI-Chatbot | `/chat` | "Was machen wir heute?" – personalisierte Tipps |
 
 ---
@@ -86,10 +86,10 @@ CREATE INDEX idx_orte_aktiv ON orte (aktiv) WHERE aktiv = true;
 - Liefert: Koordinaten, Ausstattungs-Tags (sandbox, swing, slide, etc.)
 - Erwartetes Ergebnis: ~200-300 Spielplätze
 
-**Ausflüge/Wochenendtipps** – Claude-Recherche:
+**Ausflüge/Wochenend-Trips** – Claude-Recherche:
 - Claude erstellt kuratierte Liste basierend auf Wissen + Web-Recherche
 - Google Places API für Details + Fotos zu jedem Ziel
-- Erwartetes Ergebnis: ~30 Ausflüge (< 1h), ~20 Wochenendtipps (< 4h)
+- Erwartetes Ergebnis: ~30 Ausflüge (< 1h), ~20 Wochenend-Trips (< 4h)
 
 ### Stufe 2: Enrichment
 
@@ -133,7 +133,7 @@ Erweiterung des Streamlit-Dashboards:
 | Clubs | Google Places API + Resident Advisor | Google Places Photos | RA-Fotos |
 | Spielplätze | OpenStreetMap Overpass API | Google Places Photos + Street View | Düsseldorf Open Data |
 | Ausflüge | Claude-Recherche + Google Places | Wikimedia Commons + Google Places | Tourismus-Portale NRW |
-| Wochenendtipps | Claude-Recherche + Google Places | Wikimedia Commons + Google Places | Tourismus-Portale |
+| Wochenend-Trips | Claude-Recherche + Google Places | Wikimedia Commons + Google Places | Tourismus-Portale |
 
 ---
 
@@ -160,8 +160,8 @@ Erweiterung des Streamlit-Dashboards:
 /kneipen/[slug]                 ← Detail-Seite
 /clubs                          ← Clubguide
 /clubs/[slug]                   ← Detail-Seite
-/wochenendtipps                 ← Wochenendtipps (< 4h)
-/wochenendtipps/[slug]          ← Detail-Seite
+/wochenend-trips                 ← Wochenend-Trips (< 4h)
+/wochenend-trips/[slug]          ← Detail-Seite
 /chat                           ← AI-Chatbot
 ```
 

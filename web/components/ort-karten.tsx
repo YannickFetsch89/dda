@@ -21,7 +21,7 @@ export function ortRoute(typ: string): string {
     case "ausflug":
       return "/guides/ausfluege";
     case "wochenendtipp":
-      return "/guides/wochenendtipps";
+      return "/guides/wochenend-trips";
     default:
       return "/guides/restaurants-cafes";
   }
@@ -54,7 +54,7 @@ export function typLabel(typ: string): string {
     case "club": return "Club";
     case "spielplatz": return "Spielplatz";
     case "ausflug": return "Ausflug";
-    case "wochenendtipp": return "Wochenendtipp";
+    case "wochenendtipp": return "Wochenend-Trip";
     default: return typ;
   }
 }

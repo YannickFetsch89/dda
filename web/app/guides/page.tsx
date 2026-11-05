@@ -31,7 +31,7 @@ const HUBS: Hub[] = [
   { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: false },
   { slug: "spielplaetze", label: "Spielplätze", icon: "toys", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: false },
   { slug: "ausfluege", label: "Ausflüge", icon: "hiking", teaser: "Raus aus der Stadt – unter einer Stunde erreichbar", einheit: "Ziele", fertig: false },
-  { slug: "wochenendtipps", label: "Wochenendtipps", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
+  { slug: "wochenend-trips", label: "Wochenend-Trips", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
 ];
 
 function HubKachel({ hub, anzahl, oben }: { hub: Hub; anzahl: number | null; oben: boolean }) {

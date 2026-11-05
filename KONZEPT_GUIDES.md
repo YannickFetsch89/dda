@@ -32,7 +32,7 @@ Header:
   ├── Alle Events                   ├── Clubs
   ├── Kategorien                    ├── Spielplätze
   └── Stadtteile & Karte            ├── Ausflüge (< 1h)
-                                    └── Wochenendtipps
+                                    └── Wochenend-Trips
 ```
 
 ---
@@ -204,12 +204,12 @@ Header:
 
 ---
 
-## Hub 6: `/wochenendtipps` – Wochenendtrips (< 4 Stunden)
+## Hub 6: `/wochenend-trips` – Wochenend-Trips (< 4 Stunden)
 
 ### Übersichtsseite
 
 **Hero-Bereich**
-- Headline: "Wochenendtrips ab Düsseldorf"
+- Headline: "Wochenend-Trips ab Düsseldorf"
 - Subline: "Ein Wochenende raus – unter 4 Stunden Anfahrt"
 - Reise-Magazin-Feeling, großes Bild
 
@@ -224,7 +224,7 @@ Header:
 - Anreise: Auto, Bahn
 - Budget: Günstig, Mittel, Gehoben
 
-### Detailseite `/wochenendtipps/[slug]`
+### Detailseite `/wochenend-trips/[slug]`
 
 - Großes Hero-Bild
 - Name, Entfernung, Anreise, Dauer
