@@ -247,7 +247,7 @@ export default async function OrtDetail(props: Props) {
               <Icon name="photo_camera" />Instagram<span className="gd-knopf__zusatz muted">@{ort.instagram.replace(/^@/, "")}</span>
             </a>
           )}
-          <a href={mapsUrl} target="_blank" rel="noopener" className="gd-knopf">
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="gd-knopf">
             <Icon name="map" />Google Maps
           </a>
         </aside>

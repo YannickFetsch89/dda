@@ -24,6 +24,9 @@ const TIMEOUT_MS = 10_000;
 const MAX_WEITERLEITUNGEN = 4;
 const CACHE_TAGE = 30;
 const CACHE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+// Geschätzte Cache-Größe: beim ersten Schreiben nach dem Start und bei jedem Aufräumen genau gezählt,
+// dazwischen je geschriebenem Bild erhöht – überschreitet sie die Grenze, wird sofort aufgeräumt
+let cacheGroesse: number | null = null;
 // Laufzeit-Verzeichnis, nicht Teil des Bundles (turbopackIgnore verhindert das Verfolgen des ganzen Projekts)
 const CACHE_DIR = process.env.BILD_CACHE_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), ".cache", "bilder");
 const USER_AGENT = "diesdas.events Bildvorschau (+https://diesdas.events/impressum)";
@@ -51,7 +54,7 @@ for (const [netz, praefix] of [
 ] as const) GESPERRT_V4.addSubnet(netz, praefix, "ipv4");
 const GESPERRT_V6 = new net.BlockList();
 for (const [netz, praefix] of [
-  ["::", 128], ["::1", 128], ["64:ff9b::", 96], ["100::", 64], ["2001::", 23], ["2001:db8::", 32],
+  ["::", 96] /* ::, ::1 und altes IPv4-kompatibles ::a.b.c.d */, ["64:ff9b::", 96], ["64:ff9b:1::", 48], ["100::", 64], ["2001::", 23], ["2001:db8::", 32],
   ["2002::", 16], ["fc00::", 7], ["fe80::", 10], ["fec0::", 10], ["ff00::", 8],
 ] as const) GESPERRT_V6.addSubnet(netz, praefix, "ipv6");
 
@@ -142,9 +145,15 @@ function einmalHolen(url: URL, signal: AbortSignal): Promise<RohAntwort> {
         const teile: Buffer[] = [];
         let groesse = 0;
         antwort.on("data", (teil: Buffer) => {
+          if (groesse > MAX_BYTES) return;
           groesse += teil.length;
-          if (groesse > MAX_BYTES) anfrage.destroy(new Error("Bild größer als 8 MB"));
-          else teile.push(teil);
+          if (groesse <= MAX_BYTES) return void teile.push(teil);
+          // Zu groß: Verbindung ohne Fehlerobjekt schließen; späte Socket-Fehler abfangen, damit
+          // kein unbehandeltes "error"-Event den Prozess beenden kann
+          teile.length = 0;
+          antwort.socket?.on("error", () => {});
+          antwort.destroy();
+          resolve({ status: 413 });
         });
         antwort.on("end", () => resolve({ status, bild: { bytes: new Uint8Array(Buffer.concat(teile)), typ } }));
         antwort.on("error", reject);
@@ -193,14 +202,22 @@ async function inCacheSchreiben(schluessel: string, bild: Bild): Promise<void> {
     const tmp = path.join(CACHE_DIR, `${schluessel}.${process.pid}.${Date.now()}.tmp`);
     await writeFile(tmp, Buffer.concat([Buffer.from(`${bild.typ}\n`, "utf8"), bild.bytes]));
     await rename(tmp, path.join(CACHE_DIR, `${schluessel}.bild`));
+    if (cacheGroesse !== null) cacheGroesse += bild.bytes.byteLength;
   } catch (err) {
     console.warn(`Bild-Cache nicht beschreibbar: ${err instanceof Error ? err.message : err}`);
   }
 }
 
-/** Gelegentlich (ca. jeder 200. Schreibvorgang) Abgelaufenes löschen und den Cache unter 2 GB halten. */
+let raeumtAuf = false;
+
+/**
+ * Abgelaufenes löschen und den Cache unter 2 GB halten. Läuft beim ersten Schreiben nach dem Start,
+ * sobald die geschätzte Größe die Grenze überschreitet, und sonst ca. bei jedem 200. Schreibvorgang.
+ */
 async function aufraeumen(): Promise<void> {
-  if (Math.random() > 0.005) return;
+  const noetig = cacheGroesse === null || cacheGroesse > CACHE_MAX_BYTES || Math.random() < 0.005;
+  if (!noetig || raeumtAuf) return;
+  raeumtAuf = true;
   try {
     const grenze = Date.now() - CACHE_TAGE * 86_400_000;
     const dateien: { datei: string; zeit: number; groesse: number }[] = [];
@@ -212,14 +229,19 @@ async function aufraeumen(): Promise<void> {
       else dateien.push({ datei, zeit: info.mtimeMs, groesse: info.size });
     }
     let summe = dateien.reduce((s, d) => s + d.groesse, 0);
-    if (summe <= CACHE_MAX_BYTES) return;
-    for (const d of dateien.sort((a, b) => a.zeit - b.zeit)) {
-      if (summe <= CACHE_MAX_BYTES * 0.8) break;
-      await unlink(d.datei).catch(() => {});
-      summe -= d.groesse;
+    if (summe > CACHE_MAX_BYTES) {
+      for (const d of dateien.sort((a, b) => a.zeit - b.zeit)) {
+        if (summe <= CACHE_MAX_BYTES * 0.8) break;
+        await unlink(d.datei).catch(() => {});
+        summe -= d.groesse;
+      }
     }
+    cacheGroesse = summe;
   } catch {
-    // Aufräumen ist optional
+    // Aufräumen ist optional (z.B. Ordner existiert noch nicht)
+    cacheGroesse = 0;
+  } finally {
+    raeumtAuf = false;
   }
 }
 
@@ -267,11 +289,14 @@ export async function bildHolen(adresse: string, zwischenspeichern: boolean): Pr
 
 /**
  * HTTP-Antwort für ein Bild (oder 404, wenn keins da ist).
- * @param privat true = nur der Browser darf cachen, keine geteilten Caches/CDNs (für Google-Fotos)
+ * @param privat true = nur der Browser darf cachen, keine geteilten Caches/CDNs (für Google-Fotos, auch deren 404)
  */
 export function bildAntwort(bild: Bild | null, browserCacheSekunden: number, privat = false): Response {
   if (!bild) {
-    return new Response("Bild nicht verfügbar", { status: 404, headers: { "Cache-Control": "public, max-age=300" } });
+    return new Response("Bild nicht verfügbar", {
+      status: 404,
+      headers: { "Cache-Control": `${privat ? "private" : "public"}, max-age=300` },
+    });
   }
   return new Response(bild.bytes as BodyInit, {
     headers: {

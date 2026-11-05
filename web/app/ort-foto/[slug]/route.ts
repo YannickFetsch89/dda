@@ -91,7 +91,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]
   // Google-Fotos nur durchreichen (nicht auf der Platte speichern), eigene Bilder cachen
   if (!slug || !quelle?.adresse) return bildAntwort(null, TAG);
   const { bild, status } = await bildHolen(quelle.adresse, !quelle.google);
-  if (!bild && quelle.google && (status === 403 || status === 404 || status === 410)) adresseVerwerfen(slug);
+  // 400/403/404/410 von Google = Bildadresse abgelaufen oder ungültig → beim nächsten Aufruf neu abfragen
+  if (!bild && quelle.google && status !== undefined && [400, 403, 404, 410].includes(status)) adresseVerwerfen(slug);
   // Google-Fotos: nur der Browser darf cachen (keine geteilten Caches)
   return bildAntwort(bild, TAG, quelle.google);
 }

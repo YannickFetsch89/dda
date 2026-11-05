@@ -70,20 +70,25 @@ function HubKachel({ hub, anzahl, oben }: { hub: Hub; anzahl: number | null; obe
       </div>
     </>
   );
-  return hub.fertig ? (
-    <Link href={`/guides/${hub.slug}`} className="gd-hub" role="listitem">{inhalt}</Link>
-  ) : (
-    <div className="gd-hub gd-hub--bald" role="listitem">{inhalt}</div>
+  // Echte Liste (ul/li), der Link behält seine Rolle
+  return (
+    <li>
+      {hub.fertig ? (
+        <Link href={`/guides/${hub.slug}`} className="gd-hub">{inhalt}</Link>
+      ) : (
+        <div className="gd-hub gd-hub--bald">{inhalt}</div>
+      )}
+    </li>
   );
 }
 
 function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
   return (
-    <div className="gd-hubs" role="list">
+    <ul className="gd-hubs">
       {HUBS.map((hub, i) => (
         <HubKachel key={hub.slug} hub={hub} anzahl={anzahl[hub.slug] ?? null} oben={i < 2} />
       ))}
-    </div>
+    </ul>
   );
 }
 

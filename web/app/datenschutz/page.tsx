@@ -111,7 +111,10 @@ export default function DatenschutzSeite() {
         <li>Speicherung Ihrer Merkliste (favorisierte Events)</li>
         <li>Speicherung Ihrer Theme-Einstellung (hell/dunkel)</li>
         <li>Speicherung Ihrer Cookie-Consent-Entscheidung</li>
-        <li>Speicherung Ihrer Entscheidung, Google-Maps-Karten auf Event-Seiten anzuzeigen (siehe Abschnitt 9)</li>
+        <li>
+          Speicherung Ihrer Entscheidung, Google-Maps-Karten auf Event-Seiten dauerhaft anzuzeigen – nur wenn Sie
+          „Karte anzeigen“ wählen; bei „Nur dieses Mal“ wird nichts gespeichert (siehe Abschnitt 9)
+        </li>
       </ul>
       <p>
         Diese Daten werden ausschließlich lokal in Ihrem Browser gespeichert und nicht an uns oder Dritte
@@ -172,7 +175,8 @@ export default function DatenschutzSeite() {
           Cafés werden über unseren eigenen Server ausgeliefert; Ihr Browser verbindet sich dabei nicht mit den
           Servern der Veranstalter oder von Google. Die Kartenansicht der Guides nutzt Kartendaten von
           OpenStreetMap (© OpenStreetMap-Mitwirkende, ODbL), die ebenfalls vollständig auf unserem Server
-          liegen – es werden keine Daten an Kartendienste übermittelt.
+          liegen – beim Anzeigen der Karte werden keine Daten an Kartendienste übermittelt. Erst wenn Sie auf die
+          Quellenangabe „© OpenStreetMap-Mitwirkende“ klicken, öffnet sich die Website openstreetmap.org.
         </li>
         <li>
           <b>Google Maps (nur nach Klick):</b> Auf Event-Seiten können Sie einen Kartenausschnitt von Google Maps
@@ -180,7 +184,9 @@ export default function DatenschutzSeite() {
           geladen, wenn Sie auf „Karte anzeigen“ oder „Nur dieses Mal“ klicken; erst dann werden Daten (u.a. Ihre
           IP-Adresse) an Google übermittelt, ggf. auch in die USA. Bei „Karte anzeigen“ speichern wir Ihre
           Entscheidung lokal in Ihrem Browser (siehe Abschnitt 7); Sie können sie dort jederzeit löschen. Links
-          zur Routenplanung öffnen Google Maps erst, wenn Sie sie anklicken. Rechtsgrundlage: Ihre Einwilligung
+          zur Routenplanung auf Event-Seiten und der Knopf „Google Maps“ auf den Seiten der Restaurant- und
+          Café-Guides öffnen Google Maps erst, wenn Sie sie anklicken; dabei übermitteln wir nicht, von welcher
+          unserer Seiten Sie kommen. Rechtsgrundlage: Ihre Einwilligung
           (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).{" "}
           <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">
             Datenschutzerklärung von Google

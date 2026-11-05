@@ -37,7 +37,7 @@ function kartenStil(dunkel: boolean): maplibregl.StyleSpecification {
       protomaps: {
         type: "vector",
         url: `pmtiles://${basis}/karte/region.pmtiles`,
-        attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-Mitwirkende</a>',
+        attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a>',
       },
     },
     layers: layers("protomaps", namedFlavor(dunkel ? "dark" : "light"), { lang: "de" }),
@@ -159,9 +159,20 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
     map.on("dragend", () => setBewegt(true));
     // Nur vom Nutzer ausgelöstes Zoomen zählt (nicht fitBounds/flyTo aus dem Code)
     map.on("zoomend", (e: { originalEvent?: unknown }) => { if (e.originalEvent) setBewegt(true); });
-    // Kartendaten fehlen (z.B. region.pmtiles nicht auf dem Server) → Hinweis statt leerer Fläche
+    // Kartendaten fehlen (z.B. region.pmtiles nicht auf dem Server) → Hinweis statt leerer Fläche.
+    // Nur ein Fehler, bevor die Kartenquelle je Daten geliefert hat, zählt – einzelne abgebrochene
+    // Kachel-Abrufe danach (Zoomen, Abbau im Strict Mode) lösen den Hinweis nicht aus.
+    let aktiv = true;
+    let quelleErreichbar = false;
+    // "visibility" kommt schon vor dem ersten Abruf – erst Metadaten oder eine Kachel beweisen, dass die Datei da ist
+    map.on("sourcedata", (e: { sourceId?: string; sourceDataType?: string; tile?: unknown }) => {
+      if (!aktiv || e.sourceId !== "protomaps" || (e.sourceDataType !== "metadata" && !e.tile)) return;
+      quelleErreichbar = true;
+      setFehler(false);
+    });
     map.on("error", (e: { sourceId?: string; error?: { message?: string } }) => {
-      if (e.sourceId === "protomaps" || /pmtiles|region.pmtiles/i.test(e.error?.message ?? "")) setFehler(true);
+      if (!aktiv || quelleErreichbar) return;
+      if (e.sourceId === "protomaps" || /pmtiles/i.test(e.error?.message ?? "")) setFehler(true);
     });
     mapRef.current = map;
 
@@ -175,6 +186,7 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
 
     const marker = markerRef.current;
     return () => {
+      aktiv = false;
       beobachter.disconnect();
       themen.disconnect();
       map.remove();
@@ -276,7 +288,7 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
         {fehler && (
           <div className="gd-karte-fehler" role="status">
             <span className="icon" aria-hidden>map</span>
-            Die Karte konnte gerade nicht geladen werden. Die Liste links funktioniert weiterhin.
+            Die Karte konnte gerade nicht geladen werden. Die Liste funktioniert weiterhin.
           </div>
         )}
         {bewegt && (

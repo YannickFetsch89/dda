@@ -1116,6 +1116,9 @@ body:has(.gd-seite) .katleiste { position: relative; }
 }
 .gd-hubs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 768px) { .gd-hubs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; } }
+.gd-hubs { list-style: none; margin: 0; padding: 0; }
+.gd-hubs > li { display: flex; min-width: 0; }
+.gd-hubs > li > .gd-hub { flex: 1; min-width: 0; }
 .gd-hub { display: flex; flex-direction: column; background: var(--ddd-surface); border-radius: var(--r-card); overflow: hidden; box-shadow: var(--sh-m); transition: box-shadow 0.3s ease; color: inherit; }
 a.gd-hub:hover { box-shadow: var(--gd-sh-hover); color: inherit; }
 .gd-hub__bild { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-card) var(--r-card) 0 0; }
