@@ -16,9 +16,24 @@ export function eventSlugAusPfad(pfad: string): string | null {
   }
 }
 
-/** Nur interne Ziele, nie die Startseite und nie eine fremde Domain. */
+/**
+ * Nur interne Ziele, nie die Startseite und nie eine fremde Domain. Browser und URL-Parser entfernen
+ * Tab/Zeilenumbruch und lesen „\“ wie „/“ – „/\t/evil.com“ würde so zu „//evil.com“. Deshalb sind
+ * Steuerzeichen, Leerraum und Backslash im Ziel ganz verboten (gleiche Regel als CHECK in der DB).
+ */
 export function zielErlaubt(ziel: string): boolean {
-  return /^\/[^/\\]/.test(ziel) && !/[\r\n]/.test(ziel);
+  return /^\/[^/]/.test(ziel) && !/[\u0000- \u007f\\]/.test(ziel);
+}
+
+/** Letzte Sicherung: das aufgelöste Ziel muss auf derselben Domain bleiben. */
+export function zielAufloesen(ziel: string, basis: string): URL | null {
+  if (!zielErlaubt(ziel)) return null;
+  try {
+    const url = new URL(ziel, basis);
+    return url.origin === new URL(basis).origin && url.pathname !== "/" ? url : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Was soll für diesen Pfad passieren? null = normal ausliefern. */

@@ -16,37 +16,61 @@ export function istAbgelaufen(e: Pick<DddEvent, "datum" | "datum_bis">, heute: s
 // Ortsangaben ohne Aussagekraft – darüber werden keine Events als „gleicher Ort“ verknüpft
 const ALLGEMEINE_ORTE = new Set(["düsseldorf", "duesseldorf", "online", "diverse orte", "verschiedene orte", "tba", "n/a"]);
 
-/** Vergleichsschlüssel für den Ort (null, wenn der Ort zu allgemein ist). */
+/**
+ * Vergleichsschlüssel für den Ort: normalisiert, „Düsseldorf“ als Wort entfernt (aus „ZAKK Düsseldorf“
+ * wird „zakk“). null, wenn danach nichts Aussagekräftiges übrig bleibt.
+ * Gleiche Regeln wie pipeline/reihen_zuordnen.py (_ort_schluessel).
+ */
 export function ortSchluessel(ort: string): string | null {
-  const s = norm(ort);
+  const s = norm(ort.replace(/­/g, ""))
+    .replace(/(^|\s)(düsseldorf|duesseldorf)(?=\s|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return s.length < 3 || ALLGEMEINE_ORTE.has(s) ? null : s;
 }
 
-/**
- * Teile einer Ortsangabe: Scraper schreiben denselben Ort unterschiedlich, z.B. „zakk – Halle“,
- * „zakk – Club“ und „zakk - Zentrum für Aktion, Kultur und Kommunikation“. Geteilt wird an
- * Gedankenstrichen und Klammern; jeder Teil zählt einzeln (allgemeine Teile wie „Düsseldorf“ nicht).
- */
-export function ortTeile(ort: string): Set<string> {
-  const teile = [ort, ...ort.split(/\s+[–—-]\s+|[()]/)]
+/** Teile einer Ortsangabe, getrennt an Gedankenstrichen, „ / “ und Klammern (Bindestriche im Namen bleiben). */
+function ortSegmente(ort: string): string[] {
+  return ort
+    .split(/\s+[–—\-/]\s+|[()]/)
     .map((t) => ortSchluessel(t))
     .filter((t): t is string => !!t);
-  return new Set(teile);
 }
 
-/** Gleicher Ort, wenn die beiden Ortsangaben mindestens einen Teil gemeinsam haben. */
+/** Der eigentliche Ort = erstes aussagekräftiges Segment („zakk – Halle“ → „zakk“). */
+export function ortBasis(ort: string): string | null {
+  return ortSegmente(ort)[0] ?? null;
+}
+
+/**
+ * Gleicher Ort, wenn
+ *  - der eigentliche Ort übereinstimmt („zakk – Halle“ / „zakk – Club“, „ZAKK Düsseldorf“ / „ZAKK“), oder
+ *  - der ganze Name der einen Angabe ein Segment der anderen ist
+ *    („Zentrum für Aktion, Kultur und Kommunikation“ / „zakk - Zentrum für Aktion, …“).
+ * Nur nachrangige Teile wie Raum oder Viertel („Brauhaus (Altstadt)“ / „Kneipe – Altstadt“) reichen nicht.
+ */
 export function gleicherOrt(a: string, b: string): boolean {
-  const ta = ortTeile(a);
-  for (const t of ortTeile(b)) if (ta.has(t)) return true;
-  return false;
+  const basisA = ortBasis(a);
+  if (basisA && basisA === ortBasis(b)) return true;
+  const vollA = ortSchluessel(a);
+  const vollB = ortSchluessel(b);
+  return (!!vollA && ortSegmente(b).includes(vollA)) || (!!vollB && ortSegmente(a).includes(vollB));
 }
 
-/** Wie eng ist ein Kandidat mit dem Event verwandt? 3 = Reihe, 2 = Ort, 1 = Kategorie, 0 = nichts. */
+/** Titel für den Reihen-Vergleich: ohne Uhrzeit, Bindestriche wie Leerzeichen („Jazz-Schmiede“ = „Jazz Schmiede“). */
+function titelSchluessel(titel: string): string {
+  return norm(basisTitel(titel).replace(/­/g, "").replace(/-/g, " "));
+}
+
+/**
+ * Wie eng ist ein Kandidat mit dem Event verwandt?
+ * 4 = echte Reihe, 3 = gleicher Titel am gleichen Ort, 2 = gleicher Ort, 1 = gleiche Kategorie, 0 = nichts.
+ */
 export function verwandtschaft(e: DddEvent, x: DddEvent): number {
-  if (e.reihe && e.reihe.slug === x.reihe?.slug) return 3;
+  if (e.reihe && e.reihe.slug === x.reihe?.slug) return 4;
   const ort = gleicherOrt(e.ort, x.ort);
-  // Gleiche Reihe: gleicher bereinigter Titel am gleichen Ort (bis es eine echte Reihen-Zuordnung gibt)
-  if (ort && norm(basisTitel(e.titel)) === norm(basisTitel(x.titel))) return 3;
+  // Gleicher Titel am gleichen Ort – auch ohne (oder vor der) Reihen-Zuordnung durch die Pipeline
+  if (ort && titelSchluessel(e.titel) === titelSchluessel(x.titel)) return 3;
   if (ort) return 2;
   if (e.kategorie === x.kategorie) return 1;
   return 0;

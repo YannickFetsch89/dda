@@ -73,24 +73,3 @@ export async function reiheLaden(slug: string): Promise<ReiheDaten | null> {
     return null;
   }
 }
-
-/** Alle Reihen-Slugs (für die Sitemap). Fehlt die Tabelle noch, gibt es einfach keine. */
-export async function reihenSlugs(): Promise<string[]> {
-  "use cache";
-  cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
-
-  const client = supabaseClient();
-  if (!client) return [];
-  const slugs: string[] = [];
-  try {
-    for (let seite = 0; seite < 20; seite++) {
-      const { data, error } = await client.from("reihen").select("slug").order("slug").range(seite * 1000, seite * 1000 + 999);
-      if (error) break;
-      slugs.push(...(data ?? []).map((z) => String(z.slug)));
-      if (!data || data.length < 1000) break;
-    }
-  } catch {
-    return [];
-  }
-  return slugs;
-}

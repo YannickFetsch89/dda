@@ -117,7 +117,8 @@ def tab_seo_aufraeumen(db: Client) -> None:
     st.subheader("SEO-Aufräumen: lange abgelaufene Events")
     st.caption("Abgelaufene Eventseiten bleiben grundsätzlich online. Hier stehen nur Events, die seit mehr als "
                "12 Monaten vorbei sind. Entscheide anhand der Search-Console-Daten – nichts passiert automatisch. "
-               "Weiterleitungen gehen nie auf die Startseite.")
+               "Weiterleitungen gehen nie auf die Startseite. 301 und 410 sind für Google dauerhafte Signale – "
+               "nur wählen, wenn es dabei bleiben soll.")
     try:
         events = kandidaten_laden(db, date.today())
         entscheidungen = {z["event_id"]: z for z in (db.table("event_seo_entscheidungen")
@@ -134,6 +135,9 @@ def tab_seo_aufraeumen(db: Client) -> None:
     if not events:
         st.info("Noch keine Events, die seit mehr als 12 Monaten vorbei sind.")
         return
+    if len(events) >= MAX_KANDIDATEN:
+        st.warning(f"Es werden nur die ältesten {MAX_KANDIDATEN} Events gezeigt. Erst diese entscheiden – "
+                   "danach erscheinen die nächsten.")
 
     st.download_button("CSV für den Abgleich mit der Search Console", _csv(events, entscheidungen),
                        file_name=f"seo-kandidaten-{date.today().isoformat()}.csv", mime="text/csv")
@@ -151,7 +155,9 @@ def tab_seo_aufraeumen(db: Client) -> None:
         "Entscheidung": (entscheidungen.get(e["id"]) or {}).get("aktion", ""),
         "URL": event_url(e),
     } for e in liste]
-    bearbeitet = st.data_editor(tabelle, hide_index=True, use_container_width=True, key="seo_tabelle",
+    # Key hängt an den Schaltern: sonst behält die Tabelle alte Häkchen, wenn „Alle auswählen“ wechselt
+    bearbeitet = st.data_editor(tabelle, hide_index=True, use_container_width=True,
+                                key=f"seo_tabelle_{int(alle)}_{int(nur_offen)}",
                                 disabled=["Datum", "Titel", "Ort", "Kategorie", "Reihe", "Entscheidung", "URL"],
                                 column_config={"URL": st.column_config.LinkColumn("URL")})
     ausgewaehlt = [e for e, zeile in zip(liste, bearbeitet) if zeile.get("Auswahl")]
@@ -163,7 +169,9 @@ def tab_seo_aufraeumen(db: Client) -> None:
         try:
             for i in range(0, len(zeilen), 500):
                 db.table("event_seo_entscheidungen").upsert(zeilen[i:i + 500], on_conflict="event_id").execute()
-            st.success(f"{len(zeilen)} Entscheidung(en) gespeichert. Die Website übernimmt sie innerhalb von 10 Minuten.")
+            st.success(f"{len(zeilen)} Entscheidung(en) gespeichert. Die Website übernimmt sie innerhalb von 10 Minuten. "
+                       "Hinweis: Google wertet eine 301 als dauerhaft – Zurücknehmen wirkt für Besucher sofort, "
+                       "bei Google erst nach dem nächsten Crawl.")
             if uebersprungen:
                 st.warning(f"{len(uebersprungen)} Event(s) ohne passendes Ziel übersprungen (z.B. keine Reihe).")
         except Exception as e:
@@ -173,6 +181,7 @@ def tab_seo_aufraeumen(db: Client) -> None:
             ids = [e["id"] for e in ausgewaehlt]
             for i in range(0, len(ids), 200):
                 db.table("event_seo_entscheidungen").delete().in_("event_id", ids[i:i + 200]).execute()
-            st.success("Zurückgenommen – die Seiten sind wieder normal erreichbar (nach spätestens 10 Minuten).")
+            st.success("Zurückgenommen – für Besucher sind die Seiten nach spätestens 10 Minuten wieder normal "
+                       "erreichbar. Google übernimmt das erst beim nächsten Crawl (eine 301 kann länger nachwirken).")
         except Exception as e:
             st.error(f"Zurücknehmen fehlgeschlagen: {e}")

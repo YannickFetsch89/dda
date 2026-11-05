@@ -6,15 +6,27 @@ import { symbolbild } from "./symbolbild";
 import { basisTitel } from "./termine";
 import type { DddEvent } from "./typen";
 
-/** UTC-Versatz von Europe/Berlin an einem Tag/Uhrzeit, z.B. "+01:00" (Winter) oder "+02:00" (Sommer). */
-export function berlinVersatz(datum: string, uhrzeit = "12:00"): string {
-  // Erst grob als UTC annehmen, dann den in Berlin gültigen Versatz ablesen
-  const probe = new Date(`${datum}T${uhrzeit}:00Z`);
+/** Versatz von Europe/Berlin zu einem UTC-Zeitpunkt in Minuten (60 = Winter, 120 = Sommer). */
+function versatzMinuten(zeitpunkt: Date): number {
   const teil = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Berlin", timeZoneName: "longOffset" })
-    .formatToParts(probe)
+    .formatToParts(zeitpunkt)
     .find((t) => t.type === "timeZoneName")?.value;
-  const m = teil?.match(/GMT([+-]\d{2}):?(\d{2})?/);
-  return m ? `${m[1]}:${m[2] ?? "00"}` : "+01:00";
+  const m = teil?.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  return m ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] ?? 0)) : 60;
+}
+
+/**
+ * UTC-Versatz der Berliner ORTSZEIT datum+uhrzeit, z.B. "+01:00" (Winter) oder "+02:00" (Sommer).
+ * Zweistufig, damit auch die Umstellungssonntage stimmen: erst die Ortszeit grob als UTC deuten,
+ * den dort gültigen Versatz abziehen und am so ermittelten echten Zeitpunkt erneut nachsehen.
+ * Doppelte Stunde im Herbst (02:00–02:59) → Winterzeit.
+ */
+export function berlinVersatz(datum: string, uhrzeit = "12:00"): string {
+  const alsUtc = new Date(`${datum}T${uhrzeit}:00Z`).getTime();
+  const erster = versatzMinuten(new Date(alsUtc));
+  const minuten = versatzMinuten(new Date(alsUtc - erster * 60_000));
+  const v = Math.abs(minuten);
+  return `${minuten < 0 ? "-" : "+"}${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
 }
 
 /** Startzeitpunkt im ISO-Format: mit Uhrzeit und Zeitzone, sonst nur das Datum. */

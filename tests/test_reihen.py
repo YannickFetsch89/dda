@@ -21,6 +21,19 @@ class ReihenTest(unittest.TestCase):
         self.assertIsNone(reihen_schluessel("Stadtführung", "Düsseldorf"))
         self.assertIsNone(reihen_schluessel("Webinar", "Online"))
 
+    def test_generische_titel_bilden_keine_reihe(self):
+        self.assertIsNone(reihen_schluessel("Konzert", "zakk"))
+        self.assertIsNone(reihen_schluessel("PARTY!", "Stahlwerk"))
+        self.assertIsNotNone(reihen_schluessel("Yoga", "zakk"))
+
+    def test_bindestrich_und_ortsvarianten(self):
+        self.assertEqual(reihen_schluessel("Jazz-Schmiede Session", "zakk – Halle"),
+                         reihen_schluessel("Jazz Schmiede Session", "zakk – Club"))
+        self.assertEqual(reihen_schluessel("Comedy", "ZAKK Düsseldorf"), reihen_schluessel("Comedy", "zakk"))
+        self.assertNotEqual(reihen_schluessel("Kneipentour", "Brauhaus (Altstadt)"),
+                            reihen_schluessel("Kneipentour", "Kneipe – Altstadt"))
+        self.assertEqual(reihen_schluessel("Das NEIN­horn", "Central"), reihen_schluessel("Das NEINhorn", "Central"))
+
     def test_reihe_braucht_zwei_verschiedene_tage(self):
         events = [
             ev("1", "Führung", "Kunstpalast", "2026-11-01"),

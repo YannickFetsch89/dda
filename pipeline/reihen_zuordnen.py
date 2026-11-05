@@ -3,6 +3,8 @@ reihen_zuordnen.py – DiesDasDüsseldorf
 Erkennt Reihen (wiederkehrende Events) und ordnet Events ihnen zu (Tabelle reihen, Spalte events.reihe_id).
 
 Eine Reihe = gleicher bereinigter Titel am gleichen Ort an mindestens zwei verschiedenen Tagen.
+„Gleicher Ort“ heißt: gleicher eigentlicher Ort (erstes Segment, z.B. „zakk – Halle“ → „zakk“) – dieselben
+Regeln wie web/lib/abgelaufen.ts. Rein generische Titel („Konzert“, „Party“) bilden keine Reihe.
 Jede Reihe bekommt beim Anlegen einen festen Slug – die URL /reihe/<slug> bleibt dauerhaft gleich,
 auch wenn später neue Termine dazukommen oder alte ablaufen. Bestehende Zuordnungen werden nie
 geändert, nur fehlende ergänzt.
@@ -28,6 +30,13 @@ STAPEL = 200
 _ZEIT_IM_TITEL = re.compile(r"\s*[(\[]\s*\d{1,2}[:.]\d{2}\s*(?:Uhr)?\s*[)\]]\s*$", re.IGNORECASE)
 # Ortsangaben ohne Aussagekraft – darüber entsteht keine Reihe (wie web/lib/abgelaufen.ts)
 _ALLGEMEINE_ORTE = {"düsseldorf", "duesseldorf", "online", "diverse orte", "verschiedene orte", "tba", "n/a"}
+# Titel, die allein nichts über das Event sagen – verschiedene Abende wären sonst eine „Reihe“
+_GENERISCHE_TITEL = {
+    "konzert", "konzerte", "party", "live", "livemusik", "live musik", "dj set", "dj", "disco", "show",
+    "event", "veranstaltung", "programm", "vortrag", "lesung", "workshop", "ausstellung", "tba", "n/a",
+    "geschlossene gesellschaft", "sonderveranstaltung", "gastspiel", "premiere",
+}
+_ORT_TRENNER = re.compile(r"\s+[–—\-/]\s+|[()]")
 
 
 def basis_titel(titel: str) -> str:
@@ -37,15 +46,36 @@ def basis_titel(titel: str) -> str:
 
 def _norm(text: str) -> str:
     """Kleinschreibung, ohne Satzzeichen, einfache Leerzeichen (wie norm() in web/lib/termine.ts)."""
-    text = re.sub(r"[^\w\s-]", "", (text or "").lower()).replace("_", "")
+    text = re.sub(r"[^\w\s-]", "", (text or "").replace("\u00ad", "").lower()).replace("_", "")
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _ort_schluessel(ort: str) -> str | None:
+    """Ort normalisiert, Wort „Düsseldorf“ entfernt; None wenn nichts Aussagekräftiges bleibt."""
+    s = re.sub(r"(^|\s)(düsseldorf|duesseldorf)(?=\s|$)", " ", _norm(ort))
+    s = re.sub(r"\s+", " ", s).strip()
+    return None if len(s) < 3 or s in _ALLGEMEINE_ORTE else s
+
+
+def ort_basis(ort: str) -> str | None:
+    """Eigentlicher Ort = erstes aussagekräftiges Segment („zakk – Halle“ → „zakk“)."""
+    for teil in _ORT_TRENNER.split(ort or ""):
+        s = _ort_schluessel(teil)
+        if s:
+            return s
+    return None
+
+
+def titel_schluessel(titel: str) -> str:
+    """Titel ohne Uhrzeit, Bindestriche wie Leerzeichen („Jazz-Schmiede“ = „Jazz Schmiede“)."""
+    return re.sub(r"\s+", " ", _norm(basis_titel(titel or "")).replace("-", " ")).strip()
 
 
 def reihen_schluessel(titel: str, ort: str) -> str | None:
     """Schlüssel „titel|ort“ – None, wenn Titel oder Ort zu allgemein/kurz sind."""
-    o = _norm(ort)
-    t = _norm(basis_titel(titel or ""))
-    if len(o) < 3 or o in _ALLGEMEINE_ORTE or len(t) < 3:
+    o = ort_basis(ort)
+    t = titel_schluessel(titel)
+    if not o or len(t) < 3 or t in _GENERISCHE_TITEL:
         return None
     return f"{t}|{o}"
 
@@ -110,10 +140,17 @@ def reihen_zuordnen() -> int:
         })
     for i in range(0, len(neue), STAPEL):
         try:
-            angelegt = db.table("reihen").insert(neue[i:i + STAPEL]).execute().data or []
-            nach_schluessel.update({r["schluessel"]: r["id"] for r in angelegt})
+            # Schon vorhandene Schlüssel (z.B. paralleler Lauf) überspringen statt den Stapel zu verwerfen
+            (db.table("reihen").upsert(neue[i:i + STAPEL], on_conflict="schluessel", ignore_duplicates=True)
+             .execute())
         except Exception as e:
             logger.error("Reihen: Anlegen fehlgeschlagen: %s", e)
+    if neue:
+        try:
+            reihen = _alle_laden(lambda: db.table("reihen").select("id, slug, schluessel").order("id"))
+            nach_schluessel = {r["schluessel"]: r["id"] for r in reihen}
+        except Exception as e:
+            logger.error("Reihen: Neu laden fehlgeschlagen: %s", e)
 
     # 2) Events ohne Reihe zuordnen (bestehende Zuordnungen bleiben unangetastet)
     zugeordnet = 0

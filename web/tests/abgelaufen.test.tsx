@@ -42,7 +42,8 @@ describe("Hinweis auf der Eventseite", () => {
 describe("ortSchluessel", () => {
   it("vereinheitlicht Schreibweisen", () => {
     expect(ortSchluessel("ZAKK")).toBe(ortSchluessel("zakk"));
-    expect(ortSchluessel("Tonhalle  Düsseldorf!")).toBe("tonhalle düsseldorf");
+    expect(ortSchluessel("Tonhalle  Düsseldorf!")).toBe("tonhalle");
+    expect(ortSchluessel("Düsseldorfer Schauspielhaus")).toBe("düsseldorfer schauspielhaus");
   });
   it("ignoriert zu allgemeine Orte", () => {
     expect(ortSchluessel("Düsseldorf")).toBeNull();
@@ -59,6 +60,15 @@ describe("gleicherOrt", () => {
   it("verknüpft nicht über allgemeine Teile oder Bindestriche im Namen", () => {
     expect(gleicherOrt("Düsseldorf – Altstadt", "Düsseldorf – Flingern")).toBe(false);
     expect(gleicherOrt("Mendelssohn-Saal", "Robert-Schumann-Saal")).toBe(false);
+  });
+  it("Raum- oder Viertelangaben allein machen keinen gleichen Ort", () => {
+    expect(gleicherOrt("Brauhaus (Altstadt)", "Kneipe – Altstadt")).toBe(false);
+    expect(gleicherOrt("FFT – Halle", "zakk – Halle")).toBe(false);
+  });
+  it("Zusatz „Düsseldorf“ und Häuser desselben Theaters", () => {
+    expect(gleicherOrt("ZAKK Düsseldorf", "zakk")).toBe(true);
+    expect(gleicherOrt("Düsseldorfer Schauspielhaus - D’haus", "Düsseldorfer Schauspielhaus – Großes Haus")).toBe(true);
+    expect(gleicherOrt("K20 Grabbeplatz / Kunstsammlung NRW", "Kunstsammlung NRW")).toBe(true);
   });
 });
 
@@ -85,6 +95,15 @@ describe("kommendeEmpfehlungen", () => {
       ev({ id: "reihe", titel: "Comedy Night – Special", ort: "zakk – Halle", datum: "2026-12-01", reihe }),
     ];
     expect(kommendeEmpfehlungen(mitReihe, kandidaten, HEUTE).map((e) => e.id)).toEqual(["reihe", "ort"]);
+  });
+
+  it("echte Reihe steht vor Events mit gleichem Titel am gleichen Ort", () => {
+    const reihe = { slug: "comedy-night-zakk", titel: "Comedy Night" };
+    const gleicherTitel = Array.from({ length: 6 }, (_, i) =>
+      ev({ id: `t${i}`, titel: "Comedy Night", ort: "zakk", datum: "2026-11-06" }));
+    const spaeter = ev({ id: "reihe", titel: "Comedy Night – Special", ort: "zakk", datum: "2027-01-10", reihe });
+    const ids = kommendeEmpfehlungen({ ...alt, reihe }, [...gleicherTitel, spaeter], HEUTE).map((e) => e.id);
+    expect(ids[0]).toBe("reihe");
   });
 
   it("lässt abgesagte Events und das Event selbst weg", () => {

@@ -9,6 +9,14 @@ describe("Zeitzone und Startdatum", () => {
     expect(berlinVersatz("2026-01-15")).toBe("+01:00");
     expect(berlinVersatz("2026-07-15")).toBe("+02:00");
   });
+  it("Umstellungssonntage (29.03. und 25.10.2026)", () => {
+    expect(berlinVersatz("2026-03-29", "00:30")).toBe("+01:00");
+    expect(berlinVersatz("2026-03-29", "01:30")).toBe("+01:00");
+    expect(berlinVersatz("2026-03-29", "03:30")).toBe("+02:00");
+    expect(berlinVersatz("2026-10-25", "00:30")).toBe("+02:00");
+    expect(berlinVersatz("2026-10-25", "01:30")).toBe("+02:00");
+    expect(berlinVersatz("2026-10-25", "03:30")).toBe("+01:00");
+  });
   it("Startdatum mit Uhrzeit trägt den Versatz, ohne Uhrzeit nur das Datum", () => {
     expect(startDatum({ datum: "2026-11-10", uhrzeit: "20:00" })).toBe("2026-11-10T20:00:00+01:00");
     expect(startDatum({ datum: "2026-06-10", uhrzeit: "19:30" })).toBe("2026-06-10T19:30:00+02:00");
