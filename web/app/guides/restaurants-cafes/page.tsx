@@ -194,7 +194,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
                   ))}
                 </div>
             </details>
-            <ScrollReihe className="gd-zeile__chips" label="Filter">
+            <ScrollReihe className="gd-zeile__chips" label="Filter" aktivZeigen={false}>
               <span className="gd-trenner gd-trenner--hoch gd-nur-breit" aria-hidden />
               {[1, 2, 3].map((p) => (
                 <Chip key={p} href={href({ preise: umschalten(f.preise, p) })} aktiv={f.preise.includes(p)}>{preisZeichen(p)}</Chip>

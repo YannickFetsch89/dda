@@ -51,7 +51,17 @@ def einteilen(ausfuehren: bool) -> dict:
 
     geschrieben = fehler = 0
     for o, neu, grund in aenderungen:
-        extras = dict(o.get("extras") or {})
+        # extras unmittelbar vor dem Schreiben frisch lesen – parallel laufende Skripte
+        # (z.B. google_places --aktualisieren) schreiben dasselbe JSON-Feld; nur imbiss_grund ändern
+        try:
+            frisch = db.table("orte").select("extras").eq("id", o["id"]).limit(1).execute().data
+            extras = dict((frisch[0].get("extras") if frisch else o.get("extras")) or {})
+        except Exception as e:
+            fehler += 1
+            logger.error("Ort '%s' nicht gelesen: %s", o["name"], e)
+            continue
+        if extras.get("typ_fest"):
+            continue  # inzwischen von Hand festgelegt
         if grund:
             extras["imbiss_grund"] = grund
         else:

@@ -3,39 +3,61 @@
 // samt weicher Ausblendung, dass es weitergeht; ein Klick blättert um gut eine halbe Breite.
 // Auf Touch-Geräten kann zusätzlich gewischt werden; Styles: .gd-scroll in globals.css.
 // Ein aktiver Chip (z.B. ausgewählter Stadtteil) wird beim Laden in Sicht gerückt.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-export function ScrollReihe({ className, label, children }: { className: string; label: string; children: ReactNode }) {
+export function ScrollReihe({
+  className,
+  label,
+  aktivZeigen = true,
+  children,
+}: {
+  className: string;
+  label: string;
+  /** Aktiven Chip in Sicht rücken – nur für Reihen mit Einfachauswahl (Typ, Stadtteil) sinnvoll */
+  aktivZeigen?: boolean;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [links, setLinks] = useState(false);
   const [rechts, setRechts] = useState(false);
 
+  const pruefen = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setLinks(el.scrollLeft > 4);
+    setRechts(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  // Einmal: Scrollen und Größenänderungen (Fenster, nachgeladene Schrift) beobachten
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const pruefen = () => {
-      setLinks(el.scrollLeft > 4);
-      setRechts(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-    };
-    // Aktiven Chip sichtbar machen, ohne die Seite vertikal zu bewegen
-    const aktiv = el.querySelector<HTMLElement>(".gd-chip--an, [aria-current]");
-    if (aktiv) {
-      const a = aktiv.getBoundingClientRect();
-      const r = el.getBoundingClientRect();
-      if (a.right > r.right || a.left < r.left) el.scrollLeft += a.left - r.left - 48;
-    }
     el.addEventListener("scroll", pruefen, { passive: true });
-    // Größenänderungen (Fenster, nachgeladene Schrift) – plus einmal direkt nach dem Einbinden,
-    // falls der Browser den ersten ResizeObserver-Aufruf verzögert (z.B. Hintergrund-Tab)
     const beobachter = new ResizeObserver(pruefen);
     beobachter.observe(el);
-    const start = window.setTimeout(pruefen, 0);
     return () => {
-      window.clearTimeout(start);
       el.removeEventListener("scroll", pruefen);
       beobachter.disconnect();
     };
-  }, []);
+  }, [pruefen]);
+
+  // Bei jedem neuen Inhalt (auch nach Filterwechsel per Client-Navigation, die Komponente bleibt
+  // gemountet): aktiven Chip in Sicht rücken und Pfeile neu bestimmen – die Breite der Leiste ändert
+  // sich dabei oft nicht, der ResizeObserver allein meldet sich dann nicht
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (aktivZeigen) {
+      const aktiv = el.querySelector<HTMLElement>(".gd-chip--an, [aria-current]");
+      if (aktiv) {
+        const a = aktiv.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        if (a.right > r.right || a.left < r.left) el.scrollLeft += a.left - r.left - 48;
+      }
+    }
+    const t = window.setTimeout(pruefen, 0);
+    return () => window.clearTimeout(t);
+  }, [children, aktivZeigen, pruefen]);
 
   const blaettern = (richtung: 1 | -1) => {
     const el = ref.current;

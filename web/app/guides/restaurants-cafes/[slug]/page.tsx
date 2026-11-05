@@ -127,7 +127,11 @@ async function EventsInDerNaehe({ ort }: { ort: DddOrt }) {
 
 async function Aehnliche({ ort }: { ort: DddOrt }) {
   const k = kueche(ort)?.slug;
-  const alle = sortieren(await orteLaden(["restaurant", "imbiss", "cafe"]), "empfohlen").filter((o) => o.id !== ort.id);
+  // Eigener Typ zuerst (Imbiss-Seite → andere Imbisse), innerhalb bleibt die Empfohlen-Reihenfolge (stabile Sortierung)
+  const eigenerTypZuerst = (o: DddOrt) => (o.typ === ort.typ ? 0 : 1);
+  const alle = sortieren(await orteLaden(["restaurant", "imbiss", "cafe"]), "empfohlen")
+    .filter((o) => o.id !== ort.id)
+    .sort((a, b) => eigenerTypZuerst(a) - eigenerTypZuerst(b));
   // Erst gleiche Küche im selben Stadtteil, dann gleiche Küche, dann gleicher Stadtteil und Typ
   const passend = [
     ...alle.filter((o) => k && kueche(o)?.slug === k && o.stadtteil === ort.stadtteil),

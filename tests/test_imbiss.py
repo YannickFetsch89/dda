@@ -32,6 +32,14 @@ FAELLE = [
     ("Ghirloni Eismanufaktur", "korean_restaurant", "€", NUR_TAKEOUT, False),
     ("Takumi", "ramen_restaurant", "€€", NUR_TAKEOUT, False),
     ("Saray Restaurant", "turkish_restaurant", "€€", RES, False),
+    # Review 2026-11-05: Takeaway ohne Reservierungsangabe ist kein Beweis
+    ("Trattoria Roma", "italian_restaurant", "€", NUR_TAKEOUT, False),          # nur Preis „€“ zählt dann nicht
+    ("DHABA - Indian Food", "indian_restaurant", "€", OHNE, True),              # ausdrücklich nicht reservierbar
+    ("Bob & Mary", "hamburger_restaurant", "€€", {"takeout": True, "servesCocktails": True}, False),
+    ("Imbisskultur Bistro", "restaurant", "€€", RES, False),                    # „Imbiss“ nur als ganzes Wort
+    ("Mr. Nguyen Asia Schnellimbiss", "vietnamese_restaurant", "€€", RES, True),
+    ("Grillhähnchen Halal", "restaurant", "€", NUR_TAKEOUT, True),
+    ("Butzis Fried Chicken", "chicken_restaurant", "€€", NUR_TAKEOUT, True),
 ]
 
 
