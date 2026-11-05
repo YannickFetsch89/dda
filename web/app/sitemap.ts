@@ -41,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       : [];
 
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
-  const orte = await orteLaden(["restaurant", "cafe"]);
+  const orte = await orteLaden(["restaurant", "imbiss", "cafe"]);
   const guides: MetadataRoute.Sitemap = orte.length
     ? [
         { url: `${SITE_URL}/guides`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },

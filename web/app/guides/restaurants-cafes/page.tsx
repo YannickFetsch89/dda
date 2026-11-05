@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BildImg } from "@/components/client";
 import { GuideSticky, type StickyLink } from "@/components/guide-sticky";
+import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import type { KartenOrt } from "@/components/guide-karte";
@@ -17,7 +18,8 @@ import { orteLaden, ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
-const TYPEN = ["restaurant", "cafe"] as const;
+const TYPEN = ["restaurant", "imbiss", "cafe"] as const;
+const TYP_NAME: Record<(typeof TYPEN)[number], string> = { restaurant: "Restaurants", imbiss: "Schnellimbiss", cafe: "Cafés" };
 
 export const metadata: Metadata = {
   title: "Restaurants & Cafés in Düsseldorf",
@@ -96,6 +98,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
     { label: "Alle", wert: null, icon: undefined, anzahl: fuerTyp.length },
     { label: "Restaurants", wert: "restaurant" as const, icon: "restaurant", anzahl: fuerTyp.filter((o) => o.typ === "restaurant").length },
     { label: "Cafés", wert: "cafe" as const, icon: "local_cafe", anzahl: fuerTyp.filter((o) => o.typ === "cafe").length },
+    { label: "Schnellimbiss", wert: "imbiss" as const, icon: "lunch_dining", anzahl: fuerTyp.filter((o) => o.typ === "imbiss").length },
   ];
 
   // Aktive Filter (Status-Zeile und Sticky-Leiste)
@@ -108,7 +111,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const hatFilter = !!f.typ || aktiv.length > 0;
   const status = [
     `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${f.stadtteil ? ` in ${stadtteilName}` : ""}`,
-    ...(f.typ ? [f.typ === "cafe" ? "Cafés" : "Restaurants"] : []),
+    ...(f.typ ? [TYP_NAME[f.typ]] : []),
     ...aktiv.filter((a) => a.label !== stadtteilName).map((a) => a.label),
   ].join(" · ");
   const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
@@ -153,7 +156,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
 
       <div className="gd-filter" id="gd-filter" tabIndex={-1}>
         <div className="container gd-filter__innen">
-          <div className="gd-typen">
+          <ScrollReihe className="gd-typen" label="Art">
             {typTabs.map((t) => (
               <Link key={t.label} href={href({ typ: t.wert })} scroll={false} className={`gd-typ-tab ${f.typ === t.wert ? "gd-chip--an" : ""}`} aria-current={f.typ === t.wert || undefined}>
                 {t.icon && <Icon name={t.icon} />}
@@ -161,18 +164,18 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
                 <span className="gd-chip__zahl">{zahl(t.anzahl)}</span>
               </Link>
             ))}
-          </div>
+          </ScrollReihe>
 
           <div className="gd-zeile">
             <span className="gd-zeile__label">Stadtteil</span>
-            <div className="gd-zeile__chips">
+            <ScrollReihe className="gd-zeile__chips" label="Stadtteile">
               <Chip href={href({ stadtteil: null })} aktiv={!f.stadtteil}>Alle</Chip>
               {stadtteile.map((s) => (
                 <Chip key={s.slug} href={href({ stadtteil: f.stadtteil === s.slug ? null : s.slug })} aktiv={f.stadtteil === s.slug}>
                   {s.name}<span className="gd-chip__zahl">{s.anzahl}</span>
                 </Chip>
               ))}
-            </div>
+            </ScrollReihe>
           </div>
 
           <div className="gd-zeile">
@@ -191,7 +194,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
                   ))}
                 </div>
             </details>
-            <div className="gd-zeile__chips">
+            <ScrollReihe className="gd-zeile__chips" label="Filter">
               <span className="gd-trenner gd-trenner--hoch gd-nur-breit" aria-hidden />
               {[1, 2, 3].map((p) => (
                 <Chip key={p} href={href({ preise: umschalten(f.preise, p) })} aktiv={f.preise.includes(p)}>{preisZeichen(p)}</Chip>
@@ -201,7 +204,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
                 const s = slugify(t);
                 return <Chip key={s} href={href({ tags: umschalten(f.tags, s) })} aktiv={f.tags.includes(s)}>{t}</Chip>;
               })}
-            </div>
+            </ScrollReihe>
           </div>
 
           <div className="gd-filter__fuss">

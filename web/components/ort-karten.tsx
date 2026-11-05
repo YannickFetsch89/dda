@@ -10,6 +10,7 @@ import type { DddOrt } from "@/lib/typen";
 export function ortRoute(typ: string): string {
   switch (typ) {
     case "restaurant":
+    case "imbiss":
     case "cafe":
       return "/guides/restaurants-cafes";
     case "kneipe":
@@ -34,6 +35,7 @@ export function ortPfad(o: DddOrt): string {
 
 const TYP_ICON: Record<string, string> = {
   restaurant: "restaurant",
+  imbiss: "lunch_dining",
   cafe: "local_cafe",
   kneipe: "sports_bar",
   club: "nightlife",
@@ -49,6 +51,7 @@ export function typIcon(typ: string): string {
 export function typLabel(typ: string): string {
   switch (typ) {
     case "restaurant": return "Restaurant";
+    case "imbiss": return "Schnellimbiss";
     case "cafe": return "Café";
     case "kneipe": return "Kneipe";
     case "club": return "Club";

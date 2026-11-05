@@ -41,7 +41,7 @@ export interface DddEvent {
 }
 
 /** Typ eines Ortes in der `orte`-Tabelle. */
-export type OrtTyp = "restaurant" | "cafe" | "kneipe" | "club" | "spielplatz" | "ausflug" | "wochenendtipp";
+export type OrtTyp = "restaurant" | "imbiss" | "cafe" | "kneipe" | "club" | "spielplatz" | "ausflug" | "wochenendtipp";
 
 /** Preisniveau eines Ortes. */
 export type PreisNiveau = "€" | "€€" | "€€€";

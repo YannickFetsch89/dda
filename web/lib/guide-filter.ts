@@ -21,7 +21,7 @@ export const FILTER_TAGS = [
 ];
 
 export interface GuideFilter {
-  typ: "restaurant" | "cafe" | null;
+  typ: "restaurant" | "imbiss" | "cafe" | null;
   stadtteil: string | null; // Slug
   kueche: string | null; // Slug
   preise: number[]; // 1–3
@@ -46,7 +46,7 @@ export function filterLesen(sp: SP): GuideFilter {
   const sort = eins(sp.sort);
   const anzahl = Number.parseInt(eins(sp.anzahl) ?? "", 10);
   return {
-    typ: typ === "restaurant" || typ === "cafe" ? typ : null,
+    typ: typ === "restaurant" || typ === "imbiss" || typ === "cafe" ? typ : null,
     stadtteil: eins(sp.stadtteil) || null,
     kueche: eins(sp.kueche) || null,
     preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 3))],
@@ -111,7 +111,10 @@ export function sortieren(orte: DddOrt[], sort: SortWert): DddOrt[] {
   } else if (sort === "neu") {
     kopie.sort((a, b) => (b.erstellt_am ?? "").localeCompare(a.erstellt_am ?? ""));
   } else {
-    kopie.sort((a, b) => b.sortierung - a.sortierung || (b.qualitaets_score ?? 0) - (a.qualitaets_score ?? 0) || vorabScore(b) - vorabScore(a));
+    // Schnellimbisse (viele Bewertungen, z.B. Dönerläden) stehen bei „Empfohlen“ hinter Restaurants und Cafés;
+    // im Tab „Schnellimbiss“ wirkt das nicht, dort haben alle denselben Typ
+    const imbiss = (o: DddOrt) => (o.typ === "imbiss" ? 1 : 0);
+    kopie.sort((a, b) => b.sortierung - a.sortierung || imbiss(a) - imbiss(b) || (b.qualitaets_score ?? 0) - (a.qualitaets_score ?? 0) || vorabScore(b) - vorabScore(a));
   }
   return kopie;
 }

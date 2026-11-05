@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS orte (
     name                      TEXT NOT NULL,
     slug                      TEXT UNIQUE NOT NULL,
     typ                       TEXT NOT NULL CHECK (typ IN (
-                                  'restaurant', 'cafe', 'kneipe', 'club',
+                                  'restaurant', 'imbiss', 'cafe', 'kneipe', 'club',
                                   'spielplatz', 'ausflug', 'wochenendtipp'
                               )),
     untertitel                TEXT,

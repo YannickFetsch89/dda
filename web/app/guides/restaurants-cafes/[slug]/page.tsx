@@ -127,7 +127,7 @@ async function EventsInDerNaehe({ ort }: { ort: DddOrt }) {
 
 async function Aehnliche({ ort }: { ort: DddOrt }) {
   const k = kueche(ort)?.slug;
-  const alle = sortieren(await orteLaden(["restaurant", "cafe"]), "empfohlen").filter((o) => o.id !== ort.id);
+  const alle = sortieren(await orteLaden(["restaurant", "imbiss", "cafe"]), "empfohlen").filter((o) => o.id !== ort.id);
   // Erst gleiche Küche im selben Stadtteil, dann gleiche Küche, dann gleicher Stadtteil und Typ
   const passend = [
     ...alle.filter((o) => k && kueche(o)?.slug === k && o.stadtteil === ort.stadtteil),
@@ -153,7 +153,7 @@ async function Aehnliche({ ort }: { ort: DddOrt }) {
 export default async function OrtDetail(props: Props) {
   const slug = slugDekodieren((await props.params).slug);
   const ort = slug ? await ortLaden(slug) : null;
-  if (!ort || !["restaurant", "cafe"].includes(ort.typ)) notFound();
+  if (!ort || !["restaurant", "imbiss", "cafe"].includes(ort.typ)) notFound();
 
   const bild = ortBildUrl(ort);
   const autorUrl = ortBildAutorUrl(ort);

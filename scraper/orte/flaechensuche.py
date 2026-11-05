@@ -46,6 +46,7 @@ from config import (  # noqa: E402
     GOOGLE_PLACES_MIN_RATING,
 )
 from pipeline.slug_generator import slug_mit_suffix  # noqa: E402
+from scraper.orte.imbiss import typ_verfeinern  # noqa: E402
 from scraper.orte.google_places import (  # noqa: E402
     API_BASE,
     _AUSSCHLUSS_TYPEN,
@@ -593,6 +594,8 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
                 "google_primaertyp": p.get("primaryType"),
                 "quelle": "flaechensuche",
             }
+            # Restaurant oder Schnellimbiss? (Regeln in imbiss.py, braucht Primärtyp + Ausstattung)
+            ort["typ"] = typ_verfeinern(ort)
             db.table("orte").insert(ort).execute()
             vergebene_slugs.add(ort["slug"])
             gespeichert += 1

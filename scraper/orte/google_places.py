@@ -47,6 +47,7 @@ from config import (
 from database.client import get_supabase_client
 from pipeline.slug_generator import _slugify
 from pipeline.stadtteil_mapper import stadtteil_ermitteln
+from scraper.orte.imbiss import typ_verfeinern
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -300,6 +301,8 @@ def ort_aus_place(place: dict, gewuenschter_typ: str) -> dict | None:
         "aktiv": False,  # Wird erst nach Kuration aktiviert
     }
     ort.update(_detail_felder(place))
+    # Restaurant oder Schnellimbiss? (Regeln in imbiss.py)
+    ort["typ"] = typ_verfeinern({**ort, "extras": {**ort.get("extras", {}), "google_primaertyp": place.get("primaryType")}})
     return ort
 
 

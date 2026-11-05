@@ -94,7 +94,7 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
 
 /** Kacheln mit echten Zahlen (Daten gecached über orteLaden). */
 async function Kacheln() {
-  const restaurants = await orteLaden(["restaurant", "cafe"]);
+  const restaurants = await orteLaden(["restaurant", "imbiss", "cafe"]);
   return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length }} />;
 }
 

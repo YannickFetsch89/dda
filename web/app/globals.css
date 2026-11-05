@@ -861,7 +861,9 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 /* Filterleiste */
 .gd-filter { background: var(--ddd-surface); border-bottom: 1px solid var(--ddd-border); }
 .gd-filter__innen { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; padding-bottom: 12px; }
-.gd-typen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.gd-typen { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; margin: 0 calc(-1 * var(--rand)); padding: 0 var(--rand); }
+.gd-typen::-webkit-scrollbar { display: none; }
+.gd-typen .gd-typ-tab { flex-shrink: 0; padding: 0 16px; }
 .gd-typ-tab {
   display: flex; align-items: center; justify-content: center; gap: 5px; height: 44px; border-radius: var(--r-pill);
   background: var(--gd-chip-bg); color: var(--gd-chip-fg); font-size: 14px; font-weight: 600; white-space: nowrap;
@@ -877,14 +879,32 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   margin: 0 calc(-1 * var(--rand)); padding: 0 var(--rand);
 }
 .gd-zeile__chips::-webkit-scrollbar { display: none; }
+/* Scrollreihe mit Pfeilen (components/scroll-reihe.tsx) */
+/* Mobil läuft die ganze Reihe (samt Pfeilen und Ausblendung) bis an den Bildschirmrand */
+.gd-scroll { position: relative; display: flex; flex: 1 1 auto; min-width: 0; margin: 0 calc(-1 * var(--rand)); }
+.gd-scroll > .gd-zeile__chips, .gd-scroll > .gd-typen { flex: 1 1 auto; margin: 0; padding: 0 var(--rand); }
+.gd-dropdown + .gd-scroll { margin-left: 0; }
+.gd-dropdown + .gd-scroll > .gd-zeile__chips { padding-left: 0; }
+.gd-scroll::before, .gd-scroll::after { content: ""; position: absolute; top: 0; bottom: 0; width: 56px; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+.gd-scroll::before { left: 0; background: linear-gradient(to left, transparent, var(--ddd-surface) 70%); }
+.gd-scroll::after { right: 0; background: linear-gradient(to right, transparent, var(--ddd-surface) 70%); }
+.gd-scroll--links::before, .gd-scroll--rechts::after { opacity: 1; }
+.gd-scroll__pfeil { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--ddd-surface); color: var(--ddd-text); border: 1px solid var(--ddd-border); box-shadow: 0 2px 8px rgba(27, 37, 64, 0.16); cursor: pointer; }
+.gd-scroll__pfeil:hover { border-color: var(--ddd-text-muted); }
+.gd-scroll__pfeil .icon { font-size: 22px; }
+.gd-scroll__pfeil--links { left: 2px; }
+.gd-scroll__pfeil--rechts { right: 2px; }
+.gd-scroll__pfeil[hidden] { display: none; }
 .gd-filter__fuss { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--ddd-border); }
 @media (min-width: 768px) {
   .gd-filter__innen { gap: 14px; padding-top: 20px; padding-bottom: 14px; }
-  .gd-typen { display: flex; gap: 8px; }
+  .gd-typen { display: flex; gap: 8px; margin: 0; padding: 0; }
   .gd-typ-tab { padding: 0 20px; font-size: 15px; gap: 8px; }
   .gd-typ-tab .icon { font-size: 20px; }
   .gd-zeile__label { display: block; }
   .gd-zeile__chips { margin: 0; padding: 0; }
+  .gd-scroll { margin: 0; }
+  .gd-scroll > .gd-zeile__chips, .gd-scroll > .gd-typen { padding: 0; }
   .gd-filter__fuss { padding-top: 12px; }
 }
 
@@ -968,7 +988,9 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 }
 .gd-sticky--an { transform: none; visibility: visible; }
 .gd-sticky__innen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-top: 10px; padding-bottom: 10px; }
-.gd-sticky__typen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; flex: 1 0 100%; }
+.gd-sticky__typen { display: flex; gap: 6px; flex: 1 0 100%; overflow-x: auto; scrollbar-width: none; }
+.gd-sticky__typen::-webkit-scrollbar { display: none; }
+.gd-sticky__typen .gd-chip { flex-shrink: 0; }
 .gd-sticky__typen .gd-chip { justify-content: center; }
 .gd-sticky__chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; flex: 1; order: 3; }
 .gd-sticky__chips::-webkit-scrollbar { display: none; }
