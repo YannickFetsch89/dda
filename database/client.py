@@ -111,7 +111,10 @@ def _slug_pruefen(db: Client, basis: str, uhrzeit: Optional[str]) -> tuple[Optio
         antwort = (
             db.table("events")
             .select("id,slug,uhrzeit," + ",".join(f for f in _ANREICHERBARE_FELDER if f != "uhrzeit"))
-            .like("slug", f"{basis}%")
+            # PostgREST-Platzhalter "*" statt "%": ein "%" am Ende wird nicht URL-kodiert und lässt die
+            # Anfrage beim Supabase-Gateway scheitern (Cloudflare 1101) – dann fehlte der Abgleich und jede
+            # weitere Vorstellung am selben Tag scheiterte am eindeutigen Slug (bis 2026-11-05)
+            .like("slug", f"{basis}*")
             .execute()
         )
     except Exception as e:
