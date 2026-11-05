@@ -59,6 +59,8 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   // Weitere Uhrzeiten desselben Events am selben Tag (je Uhrzeit eine eigene Event-Seite)
   const termine = termineAmTag(pool.alle, e);
   const titel = basisTitel(e.titel);
+  // „Zum Termin um …“ nur, wenn dieser Termin einen eigenen Link hat (sonst führen alle Uhrzeiten zur selben Seite)
+  const eigenerTerminLink = termine.length > 0 && !!e.quelle_url && termine.filter((t) => t.quelle_url === e.quelle_url).length === 1;
   const eigenerSchluessel = terminSchluessel(e);
   const aehnliche = filtern(pool.events, { von: plusTage(e.datum, -7) < heute ? heute : plusTage(e.datum, -7), bis: plusTage(e.datum, 7), kategorie: e.kategorie })
     .filter((x) => x.id !== e.id && terminSchluessel(x) !== eigenerSchluessel)
@@ -175,7 +177,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           <aside className="detail-seite" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {e.quelle_url && (
               <a className="btn btn--gold btn--gross btn--block" href={e.quelle_url} target="_blank" rel="noopener">
-                {termine.length > 0 && e.uhrzeit ? `Zum Termin um ${e.uhrzeit} Uhr` : "Zur Veranstalter-Seite"}
+                {eigenerTerminLink && e.uhrzeit ? `Zum Termin um ${e.uhrzeit} Uhr` : "Zur Veranstalter-Seite"}
                 <Icon name="open_in_new" />
               </a>
             )}

@@ -27,6 +27,9 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Wiederholbar: neue Regel vorher entfernen, falls das Skript schon einmal gelaufen ist
+ALTER TABLE public.events DROP CONSTRAINT IF EXISTS events_titel_datum_ort_uhrzeit_key;
+
 ALTER TABLE public.events
   ADD CONSTRAINT events_titel_datum_ort_uhrzeit_key UNIQUE NULLS NOT DISTINCT (titel, datum, ort, uhrzeit);
 

@@ -5,8 +5,8 @@ import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, SkeletonKarten, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
-import { filtern, istKostenlos, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
-import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, uhrzeitMinuten, metaZeile } from "@/lib/datum";
+import { filtern, istKostenlos, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
+import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddEvent } from "@/lib/typen";
@@ -72,7 +72,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   const beliebt = auffuellen(beliebtSortiert, wocheBeliebt, 5);
 
   // Infoboxen
-  const abend = imZeitraum.filter((e) => (uhrzeitMinuten(e) ?? 0) >= 17 * 60).sort(nachZeit).slice(0, 8);
+  const abend = imZeitraum.filter((e) => uhrzeitenVon(e).some((z) => z >= "17:00")).sort(nachZeit).slice(0, 8);
   const frisch = (neu.length ? neu : [...pool.events].sort(nachNeu)).slice(0, 6);
   const stadtteile = stadtteileZaehlen(imZeitraum.length >= 10 ? imZeitraum : woche).slice(0, 10);
 

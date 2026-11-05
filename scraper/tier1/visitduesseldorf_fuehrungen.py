@@ -52,15 +52,20 @@ KANDIDAT_MUSTER = re.compile(
 FUEHRUNG_KATEGORIEN = {"führung", "stadtführung", "stadtrundgang", "stadtrundfahrt", "rundfahrt", "themenführung"}
 AUSSCHLUSS_KATEGORIEN = {"museumsführung", "konzert"}
 
-# Selbstgeführte Smartphone-Rallyes stehen täglich im Kalender, sind aber keine Führung
-AUSSCHLUSS_TITEL = re.compile(r"stadtrallye|rallye|escape", re.I)
+# Selbstgeführte Smartphone-Rallyes stehen täglich im Kalender, sind aber keine Führung;
+# Führungen durch Museen/Ausstellungen gehören zu kultur (liefern die Museums-Scraper)
+AUSSCHLUSS_TITEL = re.compile(r"stadtrallye|rallye|escape|museum|ausstellung|kurator", re.I)
 
-# Straße + Hausnummer: entweder ein Wort mit Straßen-Endung („Rheinstraße 3“, „Heinrich-Heine-Allee 16A“)
-# oder zwei Wörter („Apollo Platz 1“); danach optional „, 40213 Düsseldorf“
+# Straße + Hausnummer, danach optional „, 40213 Düsseldorf“. Straßenformen:
+#   „Am Marktplatz 12“, „Auf der Bolker 3“ (Präfix + Name) · „Rheinstraße 3-5“, „Heinrich-Heine-Allee 16A“
+#   (ein Wort mit Straßen-Endung) · „Apollo Platz 1“ (zwei Wörter) · „Markt 5“ (nur das Grundwort)
 ADRESSE_MUSTER = re.compile(
-    r"((?:[A-ZÄÖÜ][\wäöüß\-]*(?i:straße|strasse|str\.|platz|allee|weg|ufer|gasse|markt|ring|damm|wall)"
-    r"|[A-ZÄÖÜ][\wäöüß\-]*\s(?:Platz|Straße|Allee|Weg|Ufer|Markt))\s*\d+\s?[a-zA-Z]?)\b"
-    r"(?:\s*,?\s*(\d{5})(?:\s+([A-ZÄÖÜ][\wäöüß\-]+))?)?"
+    r"((?:(?:Am|An der|An den|Auf der|Auf dem|Im|In der|Zum|Zur|Unter den)\s[A-ZÄÖÜ][\wäöüß\-]*"
+    r"|[A-ZÄÖÜ][\wäöüß\-]*(?i:straße|strasse|str\.|platz|allee|weg|ufer|gasse|markt|ring|damm|wall)"
+    r"|[A-ZÄÖÜ][\wäöüß\-]*\s(?:Platz|Straße|Allee|Weg|Ufer|Markt)"
+    r"|Markt|Wall|Ring)"
+    r"\s*\d+(?:\s?-\s?\d+|\s?[a-zA-Z]\b)?)"
+    r"(?:\s*,?\s*(\d{5})(?:\s+([A-ZÄÖÜ][\wäöüß\-]+(?:\s[A-ZÄÖÜ][\wäöüß\-]+)?))?)?"
 )
 
 
@@ -275,14 +280,17 @@ async def scrape() -> list[dict]:
 
     cache = _cache_laden()
     neu_geladen = 0
+    sitemap_ok = False
     try:
         async with httpx.AsyncClient(headers=STANDARD_HEADERS, timeout=60, follow_redirects=True) as client:
             sitemap = await _abrufen(client, SITEMAP_URL)
-            if not sitemap:
-                logger.error("%s: Sitemap nicht abrufbar – nutze nur den Zwischenspeicher", QUELLE_NAME)
-                kandidaten = {url: eintrag.get("lastmod", "") for url, eintrag in cache.items()}
-            else:
-                kandidaten = _kandidaten(sitemap)
+            kandidaten = _kandidaten(sitemap) if sitemap else {}
+            # Nur einer vollständigen Sitemap trauen (Fehlerseite mit Status 200 oder abgeschnittene
+            # Antwort würde sonst den Zwischenspeicher leeren)
+            sitemap_ok = bool(sitemap) and "</urlset>" in sitemap and bool(kandidaten)
+            if not sitemap_ok:
+                logger.error("%s: Sitemap fehlt oder ist unvollständig – nutze den Zwischenspeicher", QUELLE_NAME)
+                kandidaten = {**{url: e.get("lastmod", "") for url, e in cache.items()}, **kandidaten}
             logger.info("%s: %d Kandidaten in der Sitemap", QUELLE_NAME, len(kandidaten))
 
             for url, lastmod in kandidaten.items():
@@ -292,16 +300,22 @@ async def scrape() -> list[dict]:
                 seite = await _abrufen(client, url)
                 if seite is None:
                     continue  # alten Stand behalten
-                cache[url] = {"lastmod": lastmod, "roh": _event_lesen(seite, url)}
+                roh = _event_lesen(seite, url)
+                if roh is None:
+                    # Seite ohne lesbares Event-JSON: alten Stand behalten und nicht als „gelesen“
+                    # merken (lastmod bleibt alt) – beim nächsten Lauf wird die Seite erneut versucht
+                    continue
+                cache[url] = {"lastmod": lastmod, "roh": roh}
                 neu_geladen += 1
                 if neu_geladen % 10 == 0:
                     _cache_speichern(cache)
     except Exception as fehler:
         logger.error("%s: Abruf abgebrochen (%s) – nutze Zwischenspeicher", QUELLE_NAME, fehler)
-        kandidaten = {url: eintrag.get("lastmod", "") for url, eintrag in cache.items()}
+        sitemap_ok = False
 
-    # Seiten, die nicht mehr in der Sitemap stehen, vergessen
-    cache = {url: eintrag for url, eintrag in cache.items() if url in kandidaten}
+    # Seiten, die nicht mehr in der (vollständigen) Sitemap stehen, vergessen
+    if sitemap_ok:
+        cache = {url: eintrag for url, eintrag in cache.items() if url in kandidaten}
     _cache_speichern(cache)
 
     # Termine im Zeitfenster sammeln

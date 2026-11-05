@@ -49,8 +49,18 @@ KATEGORIE = "stadtfuehrung"
 
 
 def _in_duesseldorf(adresse: Optional[str]) -> bool:
-    """Treffpunkt liegt in Düsseldorf (PLZ 40xxx und Ortsname)."""
-    return bool(adresse) and "düsseldorf" in adresse.lower() and re.search(r"\b40\d{3}\b", adresse) is not None
+    """
+    Treffpunkt liegt in Düsseldorf: Ortsname (auch „Duesseldorf“) muss vorkommen; steht eine PLZ dabei,
+    muss sie eine Düsseldorfer PLZ (40xxx) sein. Nachbarstädte (Ratingen 40878, Neuss …) fallen über
+    den Ortsnamen heraus – die Website deckt bei Events nur Düsseldorf ab.
+    """
+    if not adresse:
+        return False
+    text = adresse.lower().replace("ü", "ue")
+    if "duesseldorf" not in text:
+        return False
+    plz = re.search(r"\b(\d{5})\b", text)
+    return plz is None or plz.group(1).startswith("40")
 
 
 def _adresse_kuerzen(adresse: str) -> str:

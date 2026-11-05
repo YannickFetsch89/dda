@@ -50,6 +50,16 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     return bool(_RAUSGEGANGEN_MUSTER.search(bild_url))
 
 
+# Eine spezifischere Kategorie aus einer Fach-Quelle ersetzt eine allgemeine aus einem Kalender
+# (z.B. Visit-Düsseldorf-Kalender: "kultur" → Führungs-Scraper: "stadtfuehrung")
+_SPEZIFISCHE_KATEGORIEN = {"stadtfuehrung": {"kultur", "sonstiges", "outdoor", "food", "nightlife"}}
+
+
+def kategorie_ersetzen(bisher: Optional[str], neu: Optional[str]) -> bool:
+    """True, wenn die neue Kategorie die bisherige ersetzen soll (statt nur leere Felder zu füllen)."""
+    return bool(neu) and bisher != neu and bisher in _SPEZIFISCHE_KATEGORIEN.get(neu, set())
+
+
 def _uhrzeit(event: dict) -> Optional[str]:
     """Uhrzeit als HH:MM ("20:00:00" → "20:00"), leer → None."""
     wert = event.get("uhrzeit")
@@ -108,6 +118,8 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
                 )
             elif not basis_wert and dupli_wert:
                 merged["bild_url"] = dupli_wert
+        elif feld == "kategorie" and kategorie_ersetzen(basis_wert, dupli_wert):
+            merged["kategorie"] = dupli_wert
         else:
             # Feld ergänzen wenn leer
             if not basis_wert and dupli_wert:

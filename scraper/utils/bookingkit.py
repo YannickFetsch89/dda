@@ -52,15 +52,23 @@ class BookingkitTermin:
 
 
 def _jsonp_html(text: str) -> Optional[str]:
-    """Holt das HTML aus einer JSONP-Antwort „BookingKitApp.insertBkContent({...})“."""
-    anfang = text.find("{")
-    ende = text.rfind("}")
-    while anfang != -1 and ende > anfang:
+    """
+    Holt das HTML aus einer JSONP-Antwort „BookingKitApp.insertBkContent({...})“.
+    Bevorzugt das Argument von insertBkContent; sonst das erste parsebare Objekt mit "html".
+    """
+    aufruf = text.find("insertBkContent(")
+    anfaenge = [aufruf + len("insertBkContent(")] if aufruf != -1 else []
+    anfaenge += [i for i, z in enumerate(text) if z == "{"][:20]
+    decoder = json.JSONDecoder()
+    for anfang in anfaenge:
+        if anfang >= len(text) or text[anfang] != "{":
+            continue
         try:
-            daten = json.loads(text[anfang:ende + 1])
-            return daten.get("html") if isinstance(daten, dict) else None
+            daten, _ende = decoder.raw_decode(text, anfang)
         except json.JSONDecodeError:
-            ende = text.rfind("}", anfang, ende)
+            continue
+        if isinstance(daten, dict) and isinstance(daten.get("html"), str):
+            return daten["html"]
     return None
 
 
@@ -140,10 +148,16 @@ class BookingkitClient:
         if not html:
             return []
         objekte = _json_ld(BeautifulSoup(html, "html.parser"))
-        adressen = {
-            o.get("@id"): (o.get("address") or {}).get("streetAddress")
-            for o in objekte if o.get("@type") != "Event"
-        }
+        # Adresse kann ein Objekt (PostalAddress) oder schon ein Text sein
+        adressen: dict = {}
+        for o in objekte:
+            if o.get("@type") == "Event":
+                continue
+            adresse = o.get("address")
+            if isinstance(adresse, dict):
+                adressen[o.get("@id")] = adresse.get("streetAddress")
+            elif isinstance(adresse, str):
+                adressen[o.get("@id")] = adresse
         termine: list[BookingkitTermin] = []
         for o in objekte:
             if o.get("@type") != "Event" or not o.get("startDate"):

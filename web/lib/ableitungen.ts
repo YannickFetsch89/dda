@@ -3,7 +3,7 @@
 // wochenend_slot), werden hier heuristisch berechnet.
 import { KATEGORIEN } from "./kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, bezirkVon } from "./stadtteile";
-import { findetStatt, istLanglaeufer, plusTage, uhrzeitMinuten, wochenende } from "./datum";
+import { findetStatt, istLanglaeufer, plusTage, wochenende } from "./datum";
 import type { DddEvent, EventPool, KategorieSlug } from "./typen";
 
 // ---------- Einzel-Eigenschaften ----------
@@ -54,13 +54,33 @@ export const TAGESZEITEN: { key: Tageszeit; name: string; bereich: string; icon:
   { key: "nachts", name: "Nachts", bereich: "ab 23 Uhr", icon: "bedtime" },
 ];
 
-export function tageszeit(e: DddEvent): Tageszeit | null {
-  const m = uhrzeitMinuten(e);
-  if (m === null) return null;
+function tageszeitVon(uhrzeit: string): Tageszeit {
+  const [h, min] = uhrzeit.split(":").map(Number);
+  const m = h * 60 + min;
   if (m >= 23 * 60 || m < 6 * 60) return "nachts";
   if (m >= 18 * 60) return "abends";
   if (m >= 12 * 60) return "nachmittags";
   return "morgens";
+}
+
+/** Alle Uhrzeiten eines Eintrags (gebündelte Termine haben mehrere, siehe lib/termine.ts). */
+export function uhrzeitenVon(e: Pick<DddEvent, "uhrzeit" | "uhrzeiten">): string[] {
+  return e.uhrzeiten ?? (e.uhrzeit ? [e.uhrzeit] : []);
+}
+
+/** Tageszeit der (ersten) Uhrzeit. */
+export function tageszeit(e: DddEvent): Tageszeit | null {
+  return e.uhrzeit ? tageszeitVon(e.uhrzeit) : null;
+}
+
+/** Alle Tageszeiten, in denen der Eintrag stattfindet (Bündel 11:00/19:00 → morgens + abends). */
+export function tageszeiten(e: DddEvent): Tageszeit[] {
+  return [...new Set(uhrzeitenVon(e).map(tageszeitVon))];
+}
+
+/** Früheste Uhrzeit des Eintrags innerhalb einer Tageszeit (für Sortierung je Abschnitt). */
+export function ersteUhrzeitIn(e: DddEvent, t: Tageszeit): string | null {
+  return uhrzeitenVon(e).find((z) => tageszeitVon(z) === t) ?? null;
 }
 
 // ---------- Sortierung ----------
@@ -137,7 +157,7 @@ export function filtern(events: DddEvent[], f: Filter): DddEvent[] {
     if (f.bezirk && bezirkVon(e.stadtteil)?.nr !== f.bezirk) return false;
     if (f.preis === "kostenlos" && !istKostenlos(e)) return false;
     if (f.preis === "bezahlt" && istKostenlos(e)) return false;
-    if (f.tageszeit && tageszeit(e) !== f.tageszeit) return false;
+    if (f.tageszeit && !tageszeiten(e).includes(f.tageszeit)) return false;
     if (thema && !themaPasst(e, thema.muster)) return false;
     if (suche) {
       const heuhaufen = `${e.titel} ${e.ort} ${e.stadtteil ?? ""} ${e.beschreibung ?? ""}`.toLowerCase();

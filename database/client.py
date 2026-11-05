@@ -12,6 +12,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
+from pipeline.deduplication import kategorie_ersetzen
 from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
@@ -77,6 +78,9 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict) -> dict:
                 update[feld] = neu_wert
             elif not db_wert and neu_wert:
                 update[feld] = neu_wert
+        elif feld == "kategorie" and kategorie_ersetzen(db_wert, neu_wert):
+            # z.B. Kalender lieferte "kultur", Führungs-Scraper weiß: "stadtfuehrung"
+            update[feld] = neu_wert
         else:
             if not db_wert and neu_wert:
                 update[feld] = neu_wert

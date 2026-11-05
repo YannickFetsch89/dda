@@ -35,8 +35,10 @@ KATEGORIE_MAP = {
     "lesung": "kultur",
     "film": "kultur",
     "kino": "kultur",
+    # Stadtführung vor "führung" prüfen (Teilwort); Museumsführungen bleiben kultur
+    "stadtführung": "stadtfuehrung",
+    "stadtrundgang": "stadtfuehrung",
     "führung": "kultur",
-    "stadtführung": "kultur",
     "workshop": "community",
     "messe": "community",
     "markt": "food",

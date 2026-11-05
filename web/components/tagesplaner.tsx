@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Icon, Leer } from "./karten";
 import { Zeitleiste, type Abschnitt } from "./zeitleiste";
 import { eventPoolLaden } from "@/lib/daten";
-import { TAGESZEITEN, filtern, nachZeit, tageszeit } from "@/lib/ableitungen";
+import { TAGESZEITEN, ersteUhrzeitIn, filtern, nachZeit, tageszeiten } from "@/lib/ableitungen";
 import { WT_LANG, plusTage, tagMonat, wochentag } from "@/lib/datum";
 
 const GRENZEN: Record<string, [number, number]> = {
@@ -33,10 +33,11 @@ export async function Tagesplaner({ tag }: { tag?: string }) {
     icon: t.icon,
     von: GRENZEN[t.key][0],
     bis: GRENZEN[t.key][1],
-    // Events nach Mitternacht (vor 6 Uhr) laufen unter "Nachts" ans Ende
-    events: events.filter((e) => tageszeit(e) === t.key).sort((a, b) => {
+    // Events nach Mitternacht (vor 6 Uhr) laufen unter "Nachts" ans Ende.
+    // Gebündelte Termine (z.B. 11 und 19 Uhr) erscheinen in jedem passenden Abschnitt.
+    events: events.filter((e) => tageszeiten(e).includes(t.key)).sort((a, b) => {
       const n = (x: string | null) => (x && x < "06:00" ? `3${x}` : `1${x}`);
-      return n(a.uhrzeit).localeCompare(n(b.uhrzeit));
+      return n(ersteUhrzeitIn(a, t.key)).localeCompare(n(ersteUhrzeitIn(b, t.key)));
     }),
   }));
   if (ganztags.length) abschnitte.unshift({ name: "Ganztägig", bereich: "ohne feste Uhrzeit", icon: "calendar_today", von: -1, bis: -1, events: ganztags });

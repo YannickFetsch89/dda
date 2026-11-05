@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Beispiel-Events (Fallback ohne Supabase) gehören nicht in die Sitemap
   const events: MetadataRoute.Sitemap =
     pool.quelle === "supabase"
-      ? pool.events
+      ? pool.alle // jede Uhrzeit hat eine eigene Seite (Listen zeigen sie gebündelt)
           .filter((e) => e.slug)
           .map((e) => ({
             url: `${SITE_URL}/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug!)}`,
