@@ -61,6 +61,9 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
         },
   };
   if (e.datum_bis && e.datum_bis !== e.datum) daten.endDate = e.datum_bis;
+  if (e.reihe) {
+    daten.superEvent = { "@type": "EventSeries", name: e.reihe.titel, url: `${siteUrl}/reihe/${encodeURIComponent(e.reihe.slug)}` };
+  }
   if (e.beschreibung) daten.description = e.beschreibung;
   if (bild) daten.image = [absolut(bild, siteUrl)];
   if (e.quelle_url) {

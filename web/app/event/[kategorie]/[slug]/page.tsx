@@ -153,6 +153,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                   </div>
                 </div>
               </div>
+              {e.reihe && (
+                <Link className="link reihen-link" href={`/reihe/${encodeURIComponent(e.reihe.slug)}`}>
+                  <Icon name="event_repeat" /> Alle Termine dieser Reihe <Icon name="arrow_forward" />
+                </Link>
+              )}
               {termine.length > 0 && (
                 <div className="uhrzeit-wahl" role="group" aria-labelledby="uhrzeit-wahl-label">
                   <span className="uhrzeit-wahl__label" id="uhrzeit-wahl-label">Uhrzeit wählen</span>

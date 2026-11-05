@@ -77,6 +77,16 @@ describe("kommendeEmpfehlungen", () => {
     expect(ids).not.toContain("vergangen");
   });
 
+  it("echte Reihen-Zuordnung zählt auch bei abweichendem Titel/Ort als Reihe", () => {
+    const reihe = { slug: "comedy-night-zakk", titel: "Comedy Night" };
+    const mitReihe = { ...alt, reihe };
+    const kandidaten = [
+      ev({ id: "ort", titel: "Konzert", ort: "zakk", datum: "2026-11-06" }),
+      ev({ id: "reihe", titel: "Comedy Night – Special", ort: "zakk – Halle", datum: "2026-12-01", reihe }),
+    ];
+    expect(kommendeEmpfehlungen(mitReihe, kandidaten, HEUTE).map((e) => e.id)).toEqual(["reihe", "ort"]);
+  });
+
   it("lässt abgesagte Events und das Event selbst weg", () => {
     const kandidaten = [
       ev({ id: "abgesagt", titel: "Comedy Night", ort: "zakk", datum: "2026-12-01", abgesagt: true }),

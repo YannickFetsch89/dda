@@ -22,6 +22,7 @@ export function ev(teil: Partial<DddEvent> & { id: string }): DddEvent {
     top_event_des_monats: false,
     slug: `slug-${teil.id}`,
     abgesagt: false,
+    reihe: null,
     uhrzeiten: null,
     ...teil,
   };

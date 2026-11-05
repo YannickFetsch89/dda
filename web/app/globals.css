@@ -1226,3 +1226,12 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 }
 .abgelaufen-hinweis .icon { font-size: 22px; opacity: 0.75; }
 .abgelaufen-hinweis .link { display: inline; white-space: normal; font-size: inherit; }
+
+/* ---------- Reihen-Seite ---------- */
+.reihe h1 { margin: 10px 0 6px; }
+.reihe__unterzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--ddd-text-muted); font-size: 14px; }
+.reihe__unterzeile .icon { font-size: 18px; }
+.reihe__abschnitt { margin-top: 28px; }
+.reihe__abschnitt h2 { margin-bottom: 12px; }
+.reihe__termine .zeile__zeit { width: 72px; }
+.reihen-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-weight: 600; }

@@ -36,6 +36,8 @@ export interface DddEvent {
   slug: string | null;
   /** Bleibt im Kalender sichtbar (markiert), fällt aber aus allen Hervorhebungen und der Startseite */
   abgesagt: boolean;
+  /** Reihe (wiederkehrendes Event) mit dauerhafter Seite /reihe/<slug>, sonst null */
+  reihe: { slug: string; titel: string } | null;
   /** Nur bei gebündelten Listeneinträgen (lib/termine.ts): alle Uhrzeiten des Tages, sonst null */
   uhrzeiten: string[] | null;
 }

@@ -43,6 +43,7 @@ export function gleicherOrt(a: string, b: string): boolean {
 
 /** Wie eng ist ein Kandidat mit dem Event verwandt? 3 = Reihe, 2 = Ort, 1 = Kategorie, 0 = nichts. */
 export function verwandtschaft(e: DddEvent, x: DddEvent): number {
+  if (e.reihe && e.reihe.slug === x.reihe?.slug) return 3;
   const ort = gleicherOrt(e.ort, x.ort);
   // Gleiche Reihe: gleicher bereinigter Titel am gleichen Ort (bis es eine echte Reihen-Zuordnung gibt)
   if (ort && norm(basisTitel(e.titel)) === norm(basisTitel(x.titel))) return 3;

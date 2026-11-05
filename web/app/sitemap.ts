@@ -5,6 +5,7 @@ import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
 import { plusTage } from "@/lib/datum";
 import { orteLaden } from "@/lib/orte";
+import { reihenSlugs } from "@/lib/reihen";
 import { ortPfad } from "@/components/ort-karten";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
@@ -58,5 +59,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ]
     : [];
 
-  return [...feste, ...tage, ...events, ...guides];
+  // Reihen: dauerhafte Seiten, bleiben in der Sitemap (auch wenn gerade kein Termin ansteht)
+  const reihen: MetadataRoute.Sitemap =
+    pool.quelle === "supabase"
+      ? (await reihenSlugs()).map((slug) => ({
+          url: `${SITE_URL}/reihe/${encodeURIComponent(slug)}`,
+          lastModified: jetzt,
+          changeFrequency: "weekly" as const,
+          priority: 0.6,
+        }))
+      : [];
+
+  return [...feste, ...tage, ...events, ...reihen, ...guides];
 }

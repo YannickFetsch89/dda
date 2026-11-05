@@ -16,6 +16,7 @@ vi.mock("@/lib/daten", () => ({
 }));
 vi.mock("@/lib/orte", () => ({ orteLaden: async () => [] }));
 vi.mock("@/components/ort-karten", () => ({ ortPfad: () => "/guides/x" }));
+vi.mock("@/lib/reihen", () => ({ reihenSlugs: async () => ["comedy-zakk"] }));
 
 describe("Sitemap", () => {
   it("enthält kommende und laufende Events, aber keine abgelaufenen", async () => {
@@ -25,5 +26,11 @@ describe("Sitemap", () => {
     expect(urls.some((u) => u.endsWith("/ausstellung-2026-10-01"))).toBe(true);
     expect(urls.some((u) => u.endsWith("/gestern-2026-11-04"))).toBe(false);
     expect(urls.some((u) => u.endsWith("/vorbei-2026-10-01"))).toBe(false);
+  });
+
+  it("enthält die Reihenseiten", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain("https://diesdas.events/reihe/comedy-zakk");
   });
 });

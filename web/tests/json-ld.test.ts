@@ -73,6 +73,12 @@ describe("eventJsonLd", () => {
     expect(d.image).toEqual([`${SITE}/bild/event/${basis.id}`]);
   });
 
+  it("Einzeltermin einer Reihe verweist per superEvent auf die Reihenseite", () => {
+    const d = eventJsonLd({ ...basis, reihe: { slug: "jazz-am-abend-jazz-schmiede", titel: "Jazz am Abend" } }, SITE, SITE);
+    expect(d.superEvent).toEqual({ "@type": "EventSeries", name: "Jazz am Abend", url: `${SITE}/reihe/jazz-am-abend-jazz-schmiede` });
+    expect(eventJsonLd(basis, SITE, SITE).superEvent).toBeUndefined();
+  });
+
   it("jsonLdText maskiert </script>", () => {
     const text = jsonLdText({ name: "</script><script>alert(1)</script>" });
     expect(text).not.toContain("</script>");

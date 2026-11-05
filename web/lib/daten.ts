@@ -10,8 +10,12 @@ import type { DddEvent, EventPool } from "./typen";
 
 const SPALTEN_BASIS =
   "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
-// Spalte "abgesagt" ist neu; fehlt sie in der DB noch, wird ohne sie geladen (siehe spaltenFehlt)
-const SPALTEN = `${SPALTEN_BASIS}, abgesagt`;
+// Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
+const SPALTEN_VARIANTEN = [
+  `${SPALTEN_BASIS}, abgesagt, reihe:reihen(slug, titel)`,
+  `${SPALTEN_BASIS}, abgesagt`,
+  SPALTEN_BASIS,
+];
 
 // Absage im Text erkennen (auch für Altdaten, z.B. PRINZ-Ort "© EventimAbgesagt")
 const ABSAGE = /abgesagt|entfällt|fällt aus|cancell?ed/i;
@@ -22,7 +26,7 @@ const KEIN_ORT = /^(©|quelle:)/i;
 const TAGE_VORAUS = 60;
 const SEITENGROESSE = 1000;
 
-type Zeile = Record<string, unknown>;
+export type Zeile = Record<string, unknown>;
 
 function text(wert: unknown): string | null {
   if (typeof wert !== "string") return null;
@@ -30,7 +34,7 @@ function text(wert: unknown): string | null {
   return t.length ? t : null;
 }
 
-function normalisieren(z: Zeile): DddEvent {
+export function normalisieren(z: Zeile): DddEvent {
   const titel = text(z.titel) ?? "Ohne Titel";
   const ortRoh = text(z.ort);
   const ortUngueltig = !!ortRoh && KEIN_ORT.test(ortRoh);
@@ -55,16 +59,33 @@ function normalisieren(z: Zeile): DddEvent {
     highlight_der_woche: z.highlight_der_woche === true,
     top_event_des_monats: z.top_event_des_monats === true,
     abgesagt: z.abgesagt === true || ABSAGE.test(titel) || (ortUngueltig && ABSAGE.test(ortRoh ?? "")),
+    reihe: reiheAus(z.reihe),
     uhrzeiten: null,
   };
 }
 
-/** Supabase meldet eine unbekannte Spalte "abgesagt" (Migration noch nicht ausgeführt). */
-function spaltenFehlt(meldung: string | undefined): boolean {
-  return !!meldung && /abgesagt/.test(meldung);
+function reiheAus(wert: unknown): DddEvent["reihe"] {
+  const r = (Array.isArray(wert) ? wert[0] : wert) as { slug?: unknown; titel?: unknown } | null | undefined;
+  return r && typeof r.slug === "string" && typeof r.titel === "string" ? { slug: r.slug, titel: r.titel } : null;
 }
 
-function supabaseClient() {
+/** Supabase meldet eine unbekannte Spalte/Beziehung (Migration noch nicht ausgeführt). */
+function spaltenFehlt(meldung: string | undefined): boolean {
+  return !!meldung && /abgesagt|reihe/.test(meldung);
+}
+
+/** Events laden mit der neuesten Spaltenvariante, die die DB schon kennt. */
+export async function mitSpalten<T>(
+  laden: (spalten: string) => PromiseLike<{ data: T | null; error: { message: string } | null }>,
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  let ergebnis = await laden(SPALTEN_VARIANTEN[0]);
+  for (let i = 1; i < SPALTEN_VARIANTEN.length && ergebnis.error && spaltenFehlt(ergebnis.error.message); i++) {
+    ergebnis = await laden(SPALTEN_VARIANTEN[i]);
+  }
+  return ergebnis;
+}
+
+export function supabaseClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_KEY;
   if (!url || !key) return null;
@@ -77,20 +98,20 @@ async function ausSupabaseLaden(heute: string): Promise<DddEvent[]> {
 
   const bis = plusTage(heute, TAGE_VORAUS);
   const events: DddEvent[] = [];
-  let spalten = SPALTEN;
+  let variante = 0;
   for (let seite = 0; seite < 20; seite++) {
     const { data, error } = await client
       .from("events")
-      .select(spalten)
+      .select(SPALTEN_VARIANTEN[variante])
       .eq("abgelehnt", false)
       .or(`datum.gte.${heute},datum_bis.gte.${heute}`)
       .lte("datum", bis)
       .order("datum", { ascending: true })
       .order("id", { ascending: true })
       .range(seite * SEITENGROESSE, (seite + 1) * SEITENGROESSE - 1);
-    if (error && spalten !== SPALTEN_BASIS && spaltenFehlt(error.message)) {
-      console.warn("Spalte 'abgesagt' fehlt in Supabase – lade ohne sie (Migration in schema.sql ausführen)");
-      spalten = SPALTEN_BASIS;
+    if (error && variante < SPALTEN_VARIANTEN.length - 1 && spaltenFehlt(error.message)) {
+      console.warn(`Neue Spalte fehlt in Supabase (${error.message}) – lade ohne sie (SQL in database/ ausführen)`);
+      variante += 1;
       seite -= 1;
       continue;
     }
@@ -170,8 +191,7 @@ export async function eventLaden(kennung: string): Promise<DddEvent | null> {
       const query = client.from("events").select(spalten).eq("abgelehnt", false);
       return istUuid ? query.eq("id", kennung).maybeSingle() : query.eq("slug", kennung).maybeSingle();
     };
-    let { data, error } = await laden(SPALTEN);
-    if (error && spaltenFehlt(error.message)) ({ data, error } = await laden(SPALTEN_BASIS));
+    const { data, error } = await mitSpalten(laden);
     if (error || !data) return null;
     return normalisieren(data as unknown as Zeile);
   } catch (err) {
