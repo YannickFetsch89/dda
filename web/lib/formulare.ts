@@ -1,15 +1,20 @@
 // Gemeinsame Server-Helfer für die Website-Formulare (Newsletter, Event melden).
-// Der Browser schickt nur an unseren eigenen Server (Route-Handler) – Supabase wird ausschließlich
-// serverseitig mit dem anon-Key angesprochen. Per RLS darf dieser nur NEUE Einträge anlegen
-// (database/meldungen_newsletter_2026-11-05.sql), nichts lesen.
+// Der Browser schickt nur an unseren eigenen Server (Route-Handler). Geschrieben wird serverseitig mit
+// dem Service-Key – der anon-Key (gilt als öffentlich) hat auf diese Tabellen und den Upload-Bucket
+// KEINE Rechte (database/meldungen_haertung_2026-11-05.sql). So führt der einzige Weg in die Tabellen
+// über diese Routen mit Prüfung, Honeypot und Bremslimit. Der Service-Key bleibt auf dem Server
+// ("server-only"), er steht in web/.env.local (vom Deploy aus dem GitHub-Secret geschrieben).
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 export function schreibClient() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) {
+    console.error("SUPABASE_URL / SUPABASE_SERVICE_KEY fehlen – Formulare können nicht speichern");
+    return null;
+  }
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -17,24 +22,60 @@ export function emailGueltig(wert: string): boolean {
   return wert.length <= 254 && EMAIL.test(wert);
 }
 
-/** Text säubern: trimmen, Steuerzeichen raus, auf Höchstlänge kürzen; leer → null. */
+const STEUERZEICHEN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+/** Mehrzeiliger Text: trimmen, Steuerzeichen raus (Zeilenumbrüche bleiben), kürzen; leer → null. */
 export function text(wert: FormDataEntryValue | unknown, max: number): string | null {
   if (typeof wert !== "string") return null;
-  const t = wert.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim();
+  const t = wert.replace(STEUERZEICHEN, "").trim();
   return t ? t.slice(0, max) : null;
 }
 
-/** IP des Absenders (hinter dem Reverse-Proxy des Servers aus X-Forwarded-For). */
+/** Einzeiliger Text: wie text(), aber jeder Leerraum (auch Tab/Zeilenumbruch) wird zu einem Leerzeichen. */
+export function zeile(wert: FormDataEntryValue | unknown, max: number): string | null {
+  if (typeof wert !== "string") return null;
+  const t = wert.replace(STEUERZEICHEN, " ").replace(/\s+/g, " ").trim();
+  return t ? t.slice(0, max) : null;
+}
+
+/** Echtes Kalenderdatum im Format YYYY-MM-DD (lehnt z.B. 2026-02-31 ab). */
+export function kalenderdatum(wert: string | null): boolean {
+  if (!wert || !/^\d{4}-\d{2}-\d{2}$/.test(wert)) return false;
+  const d = new Date(`${wert}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === wert;
+}
+
+/**
+ * IP des Absenders. Unser Reverse-Proxy HÄNGT die echte Client-Adresse an X-Forwarded-For an – der
+ * letzte Eintrag stammt also vom Proxy, alle davor kann der Client selbst setzen. X-Real-IP (vom Proxy
+ * gesetzt, falls vorhanden) hat Vorrang.
+ */
 export function absenderIp(headers: Headers): string {
-  return headers.get("x-forwarded-for")?.split(",")[0].trim() || headers.get("x-real-ip") || "unbekannt";
+  const real = headers.get("x-real-ip")?.trim();
+  if (real) return real;
+  const kette = headers.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  return kette.at(-1) || "unbekannt";
+}
+
+/** Anfrage größer als erlaubt (laut Content-Length)? Ohne Angabe gilt sie als zu groß. */
+export function zuGross(request: Request, maxBytes: number): boolean {
+  const laenge = Number(request.headers.get("content-length"));
+  return !Number.isFinite(laenge) || laenge <= 0 || laenge > maxBytes;
 }
 
 // Einfaches Bremslimit im Speicher des Server-Prozesses (pro Formular und IP). Reicht für einen
-// einzelnen Next-Prozess; bei Neustart beginnt es von vorn.
+// einzelnen Next-Prozess; bei Neustart beginnt es von vorn. Die Zahl der Schlüssel ist hart begrenzt.
 const zugriffe = new Map<string, number[]>();
+const MAX_SCHLUESSEL = 10_000;
+let letzteBereinigung = 0;
 
 export function zuVieleAnfragen(formular: string, ip: string, max: number, fensterMs: number): boolean {
   const jetzt = Date.now();
+  // Höchstens einmal pro Minute: abgelaufene Einträge (IP-Adressen) aus dem Speicher werfen
+  if (jetzt - letzteBereinigung > 60_000) {
+    letzteBereinigung = jetzt;
+    for (const [k, v] of zugriffe) if (!v.some((t) => jetzt - t < fensterMs)) zugriffe.delete(k);
+  }
   const schluessel = `${formular}|${ip}`;
   const liste = (zugriffe.get(schluessel) ?? []).filter((t) => jetzt - t < fensterMs);
   if (liste.length >= max) {
@@ -42,10 +83,15 @@ export function zuVieleAnfragen(formular: string, ip: string, max: number, fenst
     return true;
   }
   liste.push(jetzt);
+  zugriffe.delete(schluessel); // neu einfügen → steht in der Map-Reihenfolge hinten (zuletzt genutzt)
   zugriffe.set(schluessel, liste);
-  // Speicher klein halten
-  if (zugriffe.size > 5000) {
+  if (zugriffe.size > MAX_SCHLUESSEL) {
+    // Erst Abgelaufene entfernen, dann notfalls die am längsten nicht genutzten
     for (const [k, v] of zugriffe) if (!v.some((t) => jetzt - t < fensterMs)) zugriffe.delete(k);
+    for (const k of zugriffe.keys()) {
+      if (zugriffe.size <= MAX_SCHLUESSEL * 0.8) break;
+      zugriffe.delete(k);
+    }
   }
   return false;
 }

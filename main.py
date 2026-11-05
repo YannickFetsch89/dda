@@ -200,6 +200,14 @@ async def _schritte_ausfuehren(report: LaufReport):
     )
     report.neu_pro_quelle_setzen(stats.get("neu_pro_quelle") or {})
 
+    # Schritt 2b: Löschfrist „Event melden“ (vor den KI-Schritten, damit ein späterer Abbruch sie nicht verhindert)
+    logger.info("--- Schritt 2b: Alte Event-Meldungen löschen ---")
+    try:
+        from pipeline.meldungen_aufraeumen import meldungen_aufraeumen
+        meldungen_aufraeumen()
+    except Exception as e:
+        logger.error("Meldungen-Aufräumen fehlgeschlagen: %s", e)
+
     # Schritt 3: Kategorisierung
     logger.info("--- Schritt 3: Kategorisierung ---")
     from pipeline import categorizer

@@ -2,7 +2,7 @@
 // Formular „Event melden“ – sendet an /api/event-melden (multipart). Bilder werden vorher im Browser
 // verkleinert (max. 1600 px, JPEG), damit der Upload klein bleibt und kein Server-Limit reißt.
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface KategorieOption {
   wert: string; // DB-Wert (z.B. "family")
@@ -13,14 +13,39 @@ type Felder = Record<string, string>;
 
 const MAX_KANTE = 1600;
 const ZIEL_BYTES = 1.5 * 1024 * 1024;
+const MAX_PIXEL = 50_000_000; // wie auf dem Server – größere Bilder würden beim Dekodieren den Speicher sprengen
+
+/** Abmessungen lesen, ohne das ganze Bild zu dekodieren (der Browser liest dafür nur den Dateikopf). */
+function bildMasse(datei: File): Promise<{ breite: number; hoehe: number }> {
+  return new Promise((fertig, fehler) => {
+    const url = URL.createObjectURL(datei);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      fertig({ breite: img.naturalWidth, hoehe: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      fehler(new Error("Bild nicht lesbar"));
+    };
+    img.src = url;
+  });
+}
 
 /** Bild im Browser verkleinern und als JPEG neu kodieren (weißer Hintergrund für Transparenz). */
 async function bildVerkleinern(datei: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(datei);
-  const faktor = Math.min(1, MAX_KANTE / Math.max(bitmap.width, bitmap.height));
+  const { breite, hoehe } = await bildMasse(datei);
+  if (!breite || !hoehe || breite * hoehe > MAX_PIXEL) throw new Error("Bild zu groß");
+  const faktor = Math.min(1, MAX_KANTE / Math.max(breite, hoehe));
+  // Schon beim Dekodieren verkleinern (wo der Browser es kann) – spart Speicher bei großen Fotos
+  const bitmap = await createImageBitmap(datei, {
+    resizeWidth: Math.max(1, Math.round(breite * faktor)),
+    resizeHeight: Math.max(1, Math.round(hoehe * faktor)),
+    resizeQuality: "high",
+  });
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * faktor);
-  canvas.height = Math.round(bitmap.height * faktor);
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Bild konnte nicht verarbeitet werden.");
   ctx.fillStyle = "#ffffff";
@@ -56,13 +81,20 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
   const [bildInfo, setBildInfo] = useState<string | null>(null);
   const [kostenlos, setKostenlos] = useState(false);
   const [mehrtaegig, setMehrtaegig] = useState(false);
+  const auswahlNr = useRef(0); // nur das Ergebnis der letzten Bildauswahl übernehmen
+
+  // Vorschau-URL freigeben, wenn sie ersetzt wird oder das Formular verschwindet
+  useEffect(() => {
+    if (!bild) return;
+    return () => URL.revokeObjectURL(bild.vorschau);
+  }, [bild]);
 
   const fehlerAttr = (name: string) =>
     felder[name] ? { "aria-invalid": true as const, "aria-describedby": `fehler-${name}` } : {};
 
   async function bildGewaehlt(datei: File | undefined) {
     setFelder((f) => Object.fromEntries(Object.entries(f).filter(([k]) => k !== "bild")));
-    if (bild) URL.revokeObjectURL(bild.vorschau);
+    const nr = ++auswahlNr.current;
     setBild(null);
     setBildInfo(null);
     if (!datei) return;
@@ -77,11 +109,19 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
     try {
       setBildInfo("Bild wird vorbereitet…");
       const blob = await bildVerkleinern(datei);
+      if (nr !== auswahlNr.current) return; // inzwischen wurde ein anderes Bild gewählt
       setBild({ blob, vorschau: URL.createObjectURL(blob) });
       setBildInfo(`${Math.round(blob.size / 1024)} KB, bereit zum Hochladen`);
-    } catch {
+    } catch (err) {
+      if (nr !== auswahlNr.current) return;
       setBildInfo(null);
-      setFelder((f) => ({ ...f, bild: "Das Bild konnte nicht gelesen werden. Bitte versuch ein anderes." }));
+      const zuGross = err instanceof Error && err.message === "Bild zu groß";
+      setFelder((f) => ({
+        ...f,
+        bild: zuGross
+          ? "Das Bild hat zu viele Pixel (max. 50 Megapixel). Bitte verkleinere es vorher."
+          : "Das Bild konnte nicht gelesen werden. Bitte versuch ein anderes.",
+      }));
     }
   }
 
@@ -108,8 +148,7 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
         });
         return;
       }
-      if (bild) URL.revokeObjectURL(bild.vorschau);
-      setBild(null);
+      setBild(null); // gibt die Vorschau-URL frei (useEffect oben)
       setZustand("fertig");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {

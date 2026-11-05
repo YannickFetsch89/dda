@@ -16,7 +16,7 @@ import csv
 import io
 import logging
 import re
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import streamlit as st
 from supabase import Client
@@ -42,6 +42,21 @@ def _kuerzen(text: str, laenge: int = 300) -> str:
     if ende >= laenge // 2:
         return stueck[: ende + 1]
     return stueck[: stueck.rfind(" ")].rstrip(" ,;:–-") + "…"
+
+
+_MARKDOWN_ZEICHEN = re.compile(r"([\\`*_{}\[\]()#+\-.!|<>~])")
+
+
+def _klartext(text: str) -> str:
+    """Nutzerangaben für Streamlit-Beschriftungen (die Markdown rendern) entschärfen."""
+    return _MARKDOWN_ZEICHEN.sub(r"\\\1", re.sub(r"\s+", " ", text or ""))
+
+
+def _csv_zelle(wert):
+    """CSV-Injection verhindern: Zellen, die Excel als Formel liest, mit Apostroph beginnen."""
+    if isinstance(wert, str) and wert[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + wert
+    return wert
 
 
 def _admin_id(db: Client) -> str | None:
@@ -70,83 +85,163 @@ def _bild_vorschau(db: Client, pfad: str | None) -> None:
         st.caption(f"Bild nicht abrufbar ({e}).")
 
 
-def _bild_veroeffentlichen(db: Client, meldung: dict) -> str | None:
-    """Kopiert das Meldungsbild in den öffentlichen Bucket und gibt die öffentliche URL zurück."""
+class FreigabeFehler(Exception):
+    """Freigabe nicht möglich – Text ist für den Admin gedacht."""
+
+
+SPERRE_MINUTEN = 10  # so lange gilt eine angefangene Bearbeitung als „in Arbeit“
+
+
+def _reservieren(db: Client, meldung_id: str) -> None:
+    """
+    Meldung für diese Bearbeitung reservieren (nur wenn noch 'neu' und nicht gerade in Arbeit).
+    Verhindert doppelte Freigaben bei Doppelklick oder zwei Admins gleichzeitig.
+    """
+    grenze = (datetime.now(timezone.utc) - timedelta(minutes=SPERRE_MINUTEN)).isoformat()
+    zeilen = (db.table("event_meldungen").update({"bearbeitet_am": _jetzt(), "bearbeitet_von": _admin_id(db)})
+              .eq("id", meldung_id).eq("status", "neu")
+              .or_(f"bearbeitet_am.is.null,bearbeitet_am.lt.{grenze}")
+              .execute().data)
+    if not zeilen:
+        raise FreigabeFehler("Diese Meldung wird gerade bearbeitet oder ist schon erledigt – bitte Seite neu laden.")
+
+
+def _reservierung_loesen(db: Client, meldung_id: str) -> None:
+    try:
+        (db.table("event_meldungen").update({"bearbeitet_am": None, "bearbeitet_von": None})
+         .eq("id", meldung_id).eq("status", "neu").execute())
+    except Exception as e:
+        logger.warning("Reservierung nicht gelöst: %s", e)
+
+
+def _bild_veroeffentlichen(db: Client, meldung: dict) -> tuple[str | None, str | None]:
+    """
+    Kopiert das Meldungsbild in den öffentlichen Bucket.
+    Returns: (öffentliche URL, Pfad im öffentlichen Bucket) – beides None ohne Bild.
+    """
     pfad = meldung.get("bild_pfad")
     if not pfad or not meldung.get("bild_rechte"):
-        return None
+        return None, None
     endung = pfad.rsplit(".", 1)[-1].lower()
     typ = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(endung, "image/jpeg")
     daten = db.storage.from_("event-meldungen").download(pfad)
     ziel = f"meldungen/{meldung['id']}.{endung}"
+    # Reste eines abgebrochenen früheren Versuchs entfernen (upsert ist für Admins nicht erlaubt)
+    try:
+        db.storage.from_("event-bilder").remove([ziel])
+    except Exception:
+        pass
     db.storage.from_("event-bilder").upload(ziel, daten, {"content-type": typ, "upsert": "false"})
-    return db.storage.from_("event-bilder").get_public_url(ziel)
+    return db.storage.from_("event-bilder").get_public_url(ziel), ziel
+
+
+def _event_einfuegen(db: Client, event: dict) -> str:
+    """Event anlegen; bei Slug-Kollision (gleichzeitige Freigabe) einmal mit neuem Slug wiederholen."""
+    for versuch in range(2):
+        basis = slug_fuer_event(event)
+        vergeben = {z["slug"] for z in (db.table("events").select("slug").like("slug", f"{basis}*").execute().data or [])}
+        event["slug"] = slug_mit_suffix(basis, vergeben)
+        try:
+            neu = db.table("events").insert(event).execute().data
+            return neu[0]["id"]
+        except Exception as e:
+            text = str(e)
+            if "23505" in text and "slug" in text and versuch == 0:
+                continue
+            if "23505" in text:
+                raise FreigabeFehler("Ein Event mit gleichem Titel, Datum, Ort und Uhrzeit gibt es schon.") from e
+            raise
+    raise FreigabeFehler("Slug konnte nicht vergeben werden – bitte erneut versuchen.")
 
 
 def _freigeben(db: Client, meldung: dict, werte: dict) -> str:
-    """Legt das Event an und markiert die Meldung als freigegeben. Gibt die Event-ID zurück."""
-    bild_url = _bild_veroeffentlichen(db, meldung)
-    event = {
-        "titel": werte["titel"],
-        "datum": werte["datum"].isoformat(),
-        "datum_bis": werte["datum_bis"].isoformat() if werte["datum_bis"] else None,
-        "uhrzeit": werte["uhrzeit"].strftime("%H:%M") if werte["uhrzeit"] else None,
-        "ort": werte["ort"],
-        "adresse": werte["adresse"] or None,
-        "kategorie": werte["kategorie"],
-        "beschreibung": _kuerzen(werte["beschreibung"]),
-        "preis": werte["preis"] or None,
-        "quelle_name": QUELLE_NAME,
-        "quelle_url": werte["link"] or QUELLE_STANDARD_URL,
-        "bild_url": bild_url,
-        "bild_generiert": False,
-        "post_typ": "feed",
-        "status": "neu",
-    }
-    event = stadtteil_batch_zuordnen([event])[0]
-    basis = slug_fuer_event(event)
-    vergeben = {z["slug"] for z in (db.table("events").select("slug").like("slug", f"{basis}*").execute().data or [])}
-    event["slug"] = slug_mit_suffix(basis, vergeben)
+    """
+    Legt das Event an und markiert die Meldung als freigegeben. Gibt die Event-ID zurück.
+    Ablauf mit Rückabwicklung: reservieren → Bild veröffentlichen → Event anlegen → Meldung abschließen
+    → privates Original löschen. Scheitert ein Schritt, werden öffentliches Bild und Reservierung entfernt.
+    """
+    _reservieren(db, meldung["id"])
+    bild_ziel = None
+    try:
+        bild_url, bild_ziel = _bild_veroeffentlichen(db, meldung)
+        event = {
+            "titel": werte["titel"],
+            "datum": werte["datum"].isoformat(),
+            "datum_bis": werte["datum_bis"].isoformat() if werte["datum_bis"] else None,
+            "uhrzeit": werte["uhrzeit"].strftime("%H:%M") if werte["uhrzeit"] else None,
+            "ort": werte["ort"],
+            "adresse": werte["adresse"] or None,
+            "kategorie": werte["kategorie"],
+            "beschreibung": _kuerzen(werte["beschreibung"]),
+            "preis": werte["preis"] or None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": werte["link"] or QUELLE_STANDARD_URL,
+            "bild_url": bild_url,
+            "bild_generiert": False,
+            "post_typ": "feed",
+            "status": "neu",
+        }
+        event = stadtteil_batch_zuordnen([event])[0]
+        event_id = _event_einfuegen(db, event)
+    except Exception:
+        # Rückabwicklung: öffentliches Bild entfernen, Reservierung lösen
+        if bild_ziel:
+            try:
+                db.storage.from_("event-bilder").remove([bild_ziel])
+            except Exception as e:
+                logger.warning("Öffentliches Bild nach Fehler nicht entfernt: %s", e)
+        _reservierung_loesen(db, meldung["id"])
+        raise
 
-    neu = db.table("events").insert(event).execute().data
-    event_id = neu[0]["id"] if neu else None
     db.table("event_meldungen").update({
         "status": "freigegeben",
         "event_id": event_id,
         "bearbeitet_am": _jetzt(),
         "bearbeitet_von": _admin_id(db),
-    }).eq("id", meldung["id"]).execute()
+    }).eq("id", meldung["id"]).eq("status", "neu").execute()
+    # Privates Original wird nicht mehr gebraucht (öffentliche Kopie liegt in event-bilder)
+    if meldung.get("bild_pfad"):
+        try:
+            db.storage.from_("event-meldungen").remove([meldung["bild_pfad"]])
+        except Exception as e:
+            logger.warning("Privates Original nicht gelöscht: %s", e)
     return event_id
 
 
-def _ablehnen(db: Client, meldung: dict, grund: str) -> None:
-    db.table("event_meldungen").update({
+def _ablehnen(db: Client, meldung: dict, grund: str) -> str | None:
+    """Meldung ablehnen und das private Bild löschen. Gibt eine Warnung zurück, falls etwas offen blieb."""
+    zeilen = (db.table("event_meldungen").update({
         "status": "abgelehnt",
         "ablehngrund": grund or None,
         "bearbeitet_am": _jetzt(),
         "bearbeitet_von": _admin_id(db),
-    }).eq("id", meldung["id"]).execute()
+    }).eq("id", meldung["id"]).eq("status", "neu").execute().data)
+    if not zeilen:
+        raise FreigabeFehler("Diese Meldung ist schon erledigt – bitte Seite neu laden.")
     if meldung.get("bild_pfad"):
         try:
             db.storage.from_("event-meldungen").remove([meldung["bild_pfad"]])
         except Exception as e:
             logger.warning("Bild der abgelehnten Meldung nicht gelöscht: %s", e)
+            return f"Abgelehnt, aber das Bild konnte nicht gelöscht werden ({meldung['bild_pfad']}) – bitte im Supabase-Storage entfernen."
+    return None
 
 
 def _meldung_karte(db: Client, m: dict) -> None:
     rolle = "Veranstalter" if m.get("kontakt_rolle") == "veranstalter" else "Tipp von Besucher"
-    kopf = f"{m['datum']} · {m['titel']}  —  eingereicht {m['erstellt_am'][:16].replace('T', ' ')}"
+    kopf = _klartext(f"{m['datum']} · {m['titel']}  —  eingereicht {m['erstellt_am'][:16].replace('T', ' ')}")
     with st.expander(kopf, expanded=False):
         links, rechts = st.columns([3, 2])
         with rechts:
             _bild_vorschau(db, m.get("bild_pfad"))
             if m.get("bild_pfad"):
                 st.caption("✅ Bildrechte bestätigt" if m.get("bild_rechte") else "⚠️ Bildrechte NICHT bestätigt – Bild wird nicht übernommen")
-            st.markdown(f"**Kontakt:** {m.get('kontakt_name') or '–'} · {m['kontakt_email']} · {rolle}")
+            # Nutzerangaben nur als reiner Text (st.text rendert kein Markdown/HTML)
+            st.text(f"Kontakt: {m.get('kontakt_name') or '–'} · {m['kontakt_email']} · {rolle}")
             if m.get("anmerkung"):
-                st.markdown(f"**Anmerkung:** {m['anmerkung']}")
+                st.text(f"Anmerkung: {m['anmerkung']}")
             if m.get("link"):
-                st.markdown(f"**Link:** {m['link']}")
+                st.text(f"Link: {m['link']}")
         with links, st.form(f"meldung_{m['id']}"):
             titel = st.text_input("Titel", m["titel"], max_chars=150)
             kat_index = KATEGORIEN.index(m["kategorie"]) if m["kategorie"] in KATEGORIEN else len(KATEGORIEN) - 1
@@ -160,7 +255,7 @@ def _meldung_karte(db: Client, m: dict) -> None:
             preis = st.text_input("Preis", m.get("preis") or "", max_chars=80)
             link = st.text_input("Link", m.get("link") or "", max_chars=500)
             beschreibung = st.text_area("Beschreibung (wird auf 300 Zeichen gekürzt)", m["beschreibung"], height=160)
-            st.caption(f"Vorschau gekürzt: {_kuerzen(beschreibung)}")
+            st.text(f"Vorschau gekürzt: {_kuerzen(beschreibung)}")
             grund = st.text_input("Ablehngrund (nur intern)", "")
             b1, b2 = st.columns(2)
             freigeben = b1.form_submit_button("✅ Freigeben & veröffentlichen", type="primary", use_container_width=True)
@@ -178,14 +273,21 @@ def _meldung_karte(db: Client, m: dict) -> None:
                 })
                 st.success(f"Freigegeben – Event angelegt ({event_id}).")
                 st.rerun()
+            except FreigabeFehler as e:
+                st.warning(str(e))
             except Exception as e:
                 logger.error("Freigabe fehlgeschlagen: %s", e)
                 st.error(f"Freigabe fehlgeschlagen: {e}")
         if ablehnen:
             try:
-                _ablehnen(db, m, grund.strip())
-                st.info("Meldung abgelehnt.")
-                st.rerun()
+                warnung = _ablehnen(db, m, grund.strip())
+                if warnung:
+                    st.warning(warnung)
+                else:
+                    st.info("Meldung abgelehnt.")
+                    st.rerun()
+            except FreigabeFehler as e:
+                st.warning(str(e))
             except Exception as e:
                 st.error(f"Ablehnen fehlgeschlagen: {e}")
 
@@ -231,7 +333,7 @@ def tab_newsletter(db: Client) -> None:
         puffer = io.StringIO()
         schreiber = csv.DictWriter(puffer, fieldnames=list(anmeldungen[0].keys()), delimiter=";")
         schreiber.writeheader()
-        schreiber.writerows(anmeldungen)
+        schreiber.writerows({k: _csv_zelle(v) for k, v in a.items()} for a in anmeldungen)
         st.download_button("CSV herunterladen", puffer.getvalue().encode("utf-8-sig"),
                            file_name=f"newsletter_{date.today().isoformat()}.csv", mime="text/csv")
         st.dataframe(anmeldungen[:200], use_container_width=True, hide_index=True)

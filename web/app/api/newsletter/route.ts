@@ -1,8 +1,9 @@
 // Newsletter-Anmeldung: speichert die E-Mail-Adresse in Supabase (newsletter_anmeldungen).
 // Vorerst ohne Double-Opt-in – es geht nur darum, keine Anmeldung zu verlieren.
-import { absenderIp, antwort, emailGueltig, schreibClient, text, zuVieleAnfragen } from "@/lib/formulare";
+import { absenderIp, antwort, emailGueltig, schreibClient, text, zuGross, zuVieleAnfragen } from "@/lib/formulare";
 
 export async function POST(request: Request) {
+  if (zuGross(request, 4 * 1024)) return antwort(413, { fehler: "Ungültige Anfrage." });
   let daten: Record<string, unknown>;
   try {
     daten = await request.json();

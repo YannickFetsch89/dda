@@ -216,11 +216,13 @@ export default function DatenschutzSeite() {
       <h2 id="newsletter">11. Newsletter</h2>
       <p>
         Wenn Sie unseren Newsletter abonnieren, speichern wir Ihre E-Mail-Adresse und den Zeitpunkt der
-        Anmeldung für den regelmäßigen Versand (Supabase, siehe Abschnitt 9). Der Versand startet in Kürze; vor
-        der ersten Ausgabe bitten wir Sie per E-Mail, Ihre Anmeldung zu bestätigen. Rechtsgrundlage ist
-        Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Sie können den Newsletter jederzeit über den Abmeldelink in
-        jeder E-Mail oder per E-Mail an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>{" "}
-        abbestellen. Nach Abmeldung wird Ihre E-Mail-Adresse unverzüglich gelöscht.
+        Anmeldung für den künftigen Versand (Supabase, siehe Abschnitt 9). Derzeit verschicken wir noch keine
+        Newsletter. Bevor die erste Ausgabe verschickt wird, bitten wir Sie per E-Mail, Ihre Anmeldung zu
+        bestätigen; ohne Bestätigung erhalten Sie keinen Newsletter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a
+        DSGVO (Einwilligung). Sie können Ihre Anmeldung jederzeit per E-Mail an{" "}
+        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> widerrufen – dann löschen wir Ihre
+        E-Mail-Adresse unverzüglich. Sobald der Versand startet, enthält zusätzlich jede Ausgabe einen
+        Abmeldelink.
       </p>
 
       <h2 id="event-melden">12. Event melden</h2>
@@ -231,9 +233,18 @@ export default function DatenschutzSeite() {
         Rückfragen zu Ihrer Meldung; sie werden nicht veröffentlicht. Veröffentlicht werden nach unserer
         Prüfung nur die Angaben zum Event und – wenn Sie die Rechte daran bestätigt haben – das Bild.
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) bzw. lit. f (berechtigtes Interesse an
-        einem vollständigen Veranstaltungskalender). Abgelehnte Meldungen und Kontaktdaten löschen wir
-        spätestens sechs Monate nach dem Event-Datum; eine frühere Löschung können Sie jederzeit per E-Mail an{" "}
-        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> verlangen.
+        einem vollständigen Veranstaltungskalender). Ein hochgeladenes Bild wird auf unserem Server neu
+        gespeichert; dabei werden eingebettete Metadaten (z.B. Kameradaten, GPS-Position) entfernt. Die Meldung
+        selbst – mit Kontaktdaten, Anmerkung und Original-Bild – löschen wir automatisch spätestens sechs Monate
+        nach dem (letzten) Event-Tag, unabhängig davon, ob sie veröffentlicht oder abgelehnt wurde. Ein
+        veröffentlichtes Event bleibt ohne Ihre Kontaktdaten in unserem Kalender. Eine frühere Löschung können
+        Sie jederzeit per E-Mail an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> verlangen.
+      </p>
+      <p>
+        Zum Schutz vor Missbrauch (Spam, automatisierte Massen-Einträge) verarbeitet unser Server bei beiden
+        Formularen kurzzeitig Ihre IP-Adresse, um die Zahl der Anfragen zu begrenzen. Sie wird nur im
+        Arbeitsspeicher gehalten (rund eine Stunde), nicht dauerhaft gespeichert und nicht weitergegeben
+        (Art. 6 Abs. 1 lit. f DSGVO).
       </p>
 
       <h2>13. Kontaktaufnahme</h2>

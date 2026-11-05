@@ -43,6 +43,18 @@ jobs:
               echo "Google-Places-Key in web/.env.local gesetzt"
             fi
 
+            # SUPABASE_SERVICE_KEY für die Website-Formulare (Newsletter, Event melden) in web/.env.local –
+            # nur serverseitig genutzt (web/lib/formulare.ts), der anon-Key darf dort nicht mehr schreiben
+            if [ -n "$SUPABASE_SERVICE_KEY" ]; then
+              touch web/.env.local
+              if grep -q "^SUPABASE_SERVICE_KEY=" web/.env.local; then
+                sed -i "s|^SUPABASE_SERVICE_KEY=.*|SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY|" web/.env.local
+              else
+                echo "SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY" >> web/.env.local
+              fi
+              echo "Service Key in web/.env.local gesetzt"
+            fi
+
             # Umgebungsvariablen für uv/Python
             export LD_LIBRARY_PATH="/home/dies_das_duesseldorfadmin/.local/lib:$LD_LIBRARY_PATH"
             export PATH="/home/dies_das_duesseldorfadmin/.local/bin:$PATH"

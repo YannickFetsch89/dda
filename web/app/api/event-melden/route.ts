@@ -1,14 +1,18 @@
 // „Event melden“: nimmt das Formular (multipart, optional mit Bild) entgegen, prüft alles serverseitig,
-// lädt das Bild in den privaten Bucket „event-meldungen“ und legt eine Meldung mit status = 'neu' an.
+// kodiert das Bild neu (sharp: entfernt EXIF/GPS, zerstört Polyglot-Dateien), lädt es in den privaten
+// Bucket „event-meldungen“ und legt eine Meldung mit status = 'neu' an.
 // Veröffentlicht wird erst, wenn ein Admin die Meldung im Dashboard freigibt.
 import { heuteBerlin, plusTage } from "@/lib/datum";
-import { absenderIp, antwort, emailGueltig, schreibClient, text, zuVieleAnfragen } from "@/lib/formulare";
+import {
+  absenderIp, antwort, emailGueltig, kalenderdatum, schreibClient, text, zeile, zuGross, zuVieleAnfragen,
+} from "@/lib/formulare";
 
 const KATEGORIEN = new Set([
   "kultur", "musik", "food", "sport", "outdoor", "stadtfuehrung", "community", "nightlife", "family", "dating", "sonstiges",
 ]);
-const MAX_BILD = 2 * 1024 * 1024; // = Grenze des Buckets
-const BILD_TYPEN: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const MAX_BILD = 2 * 1024 * 1024; // = Grenze des Buckets (der Browser schickt ein verkleinertes JPEG)
+const MAX_ANFRAGE = 3 * 1024 * 1024; // Bild + Textfelder; größere Anfragen werden gar nicht erst eingelesen
+const MAX_KANTE = 1600;
 
 /** Dateityp an den ersten Bytes erkennen (nicht der Angabe des Browsers vertrauen). */
 function bildTyp(b: Uint8Array): string | null {
@@ -18,10 +22,31 @@ function bildTyp(b: Uint8Array): string | null {
   return null;
 }
 
-const DATUM = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Bild neu kodieren: Ausrichtung übernehmen, auf max. 1600 px verkleinern, als JPEG ohne Metadaten
+ * speichern. Gibt null zurück, wenn sharp fehlt oder das Bild kaputt ist.
+ */
+async function bildNeuKodieren(bytes: Uint8Array): Promise<Buffer | null> {
+  try {
+    const { default: sharp } = await import("sharp");
+    return await sharp(bytes, { limitInputPixels: 50_000_000, failOn: "error" })
+      .rotate()
+      .resize({ width: MAX_KANTE, height: MAX_KANTE, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer();
+  } catch (err) {
+    console.error(`Event-Meldung: Bild nicht verarbeitbar: ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
+}
+
 const UHRZEIT = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function POST(request: Request) {
+  if (zuGross(request, MAX_ANFRAGE)) {
+    return antwort(413, { fehler: "Die Meldung ist zu groß. Bitte verwende ein kleineres Bild." });
+  }
   let form: FormData;
   try {
     form = await request.formData();
@@ -39,64 +64,68 @@ export async function POST(request: Request) {
   const felder: Record<string, string> = {};
   const heute = heuteBerlin(new Date());
 
-  const titel = text(form.get("titel"), 150);
+  const titel = zeile(form.get("titel"), 150);
   if (!titel || titel.length < 3) felder.titel = "Bitte gib einen Titel an (mind. 3 Zeichen).";
 
-  const kategorie = text(form.get("kategorie"), 30);
+  const kategorie = zeile(form.get("kategorie"), 30);
   if (!kategorie || !KATEGORIEN.has(kategorie)) felder.kategorie = "Bitte wähle eine Kategorie.";
 
-  const datum = text(form.get("datum"), 10);
-  if (!datum || !DATUM.test(datum)) felder.datum = "Bitte gib ein Datum an.";
-  else if (datum < heute) felder.datum = "Das Datum liegt in der Vergangenheit.";
-  else if (datum > plusTage(heute, 400)) felder.datum = "Bitte melde nur Events in den nächsten 13 Monaten.";
+  const datum = zeile(form.get("datum"), 10);
+  if (!kalenderdatum(datum)) felder.datum = "Bitte gib ein gültiges Datum an.";
+  else if (datum! < heute) felder.datum = "Das Datum liegt in der Vergangenheit.";
+  else if (datum! > plusTage(heute, 400)) felder.datum = "Bitte melde nur Events in den nächsten 13 Monaten.";
 
-  const datumBis = text(form.get("datum_bis"), 10);
-  if (datumBis && (!DATUM.test(datumBis) || (datum && datumBis < datum))) felder.datum_bis = "Das Enddatum muss nach dem Startdatum liegen.";
-  else if (datumBis && datum && datumBis > plusTage(datum, 366)) felder.datum_bis = "Der Zeitraum darf höchstens ein Jahr lang sein.";
+  const datumBis = zeile(form.get("datum_bis"), 10);
+  if (datumBis && (!kalenderdatum(datumBis) || (datum && datumBis < datum))) felder.datum_bis = "Das Enddatum muss ein gültiges Datum nach dem Startdatum sein.";
+  else if (datumBis && datum && kalenderdatum(datum) && datumBis > plusTage(datum, 366)) felder.datum_bis = "Der Zeitraum darf höchstens ein Jahr lang sein.";
 
-  const uhrzeit = text(form.get("uhrzeit"), 5);
+  const uhrzeit = zeile(form.get("uhrzeit"), 5);
   if (uhrzeit && !UHRZEIT.test(uhrzeit)) felder.uhrzeit = "Bitte gib die Uhrzeit als HH:MM an.";
 
-  const ort = text(form.get("ort"), 150);
+  const ort = zeile(form.get("ort"), 150);
   if (!ort || ort.length < 2) felder.ort = "Bitte gib den Veranstaltungsort an.";
 
-  const adresse = text(form.get("adresse"), 200);
-  const preis = form.get("kostenlos") === "ja" ? "kostenlos" : text(form.get("preis"), 80);
+  const adresse = zeile(form.get("adresse"), 200);
+  const preis = form.get("kostenlos") === "ja" ? "kostenlos" : zeile(form.get("preis"), 80);
 
   const beschreibung = text(form.get("beschreibung"), 2000);
   if (!beschreibung || beschreibung.length < 20) felder.beschreibung = "Bitte beschreibe das Event in ein paar Sätzen (mind. 20 Zeichen).";
 
-  let link = text(form.get("link"), 500);
-  if (link) {
-    if (!/^https?:\/\//i.test(link)) link = `https://${link}`;
+  // Link: normalisiert speichern (u.href) – keine Zeilenumbrüche, kein Markdown, nur http(s)
+  let link: string | null = null;
+  const linkRoh = zeile(form.get("link"), 500);
+  if (linkRoh) {
     try {
-      const u = new URL(link);
-      if (!["http:", "https:"].includes(u.protocol) || !u.hostname.includes(".")) throw new Error();
+      const u = new URL(/^https?:\/\//i.test(linkRoh) ? linkRoh : `https://${linkRoh}`);
+      if (!["http:", "https:"].includes(u.protocol) || !u.hostname.includes(".") || u.username || u.password) throw new Error();
+      link = u.href.slice(0, 500);
     } catch {
       felder.link = "Bitte gib einen gültigen Link an (z.B. https://…).";
     }
   }
 
-  const kontaktName = text(form.get("kontakt_name"), 100);
-  const kontaktEmail = text(form.get("kontakt_email"), 254)?.toLowerCase() ?? "";
+  const kontaktName = zeile(form.get("kontakt_name"), 100);
+  const kontaktEmail = zeile(form.get("kontakt_email"), 254)?.toLowerCase() ?? "";
   if (!emailGueltig(kontaktEmail)) felder.kontakt_email = "Bitte gib eine gültige E-Mail-Adresse an (für Rückfragen).";
   const kontaktRolle = form.get("kontakt_rolle") === "besucher" ? "besucher" : "veranstalter";
   const anmerkung = text(form.get("anmerkung"), 1000);
 
   if (form.get("datenschutz") !== "ja") felder.datenschutz = "Bitte bestätige die Datenschutzhinweise.";
 
-  // Bild (optional)
+  // Bild (optional): Größe und Signatur prüfen, dann auf dem Server neu kodieren
   const bild = form.get("bild");
-  let bildDaten: { bytes: Uint8Array; typ: string } | null = null;
+  let bildJpeg: Buffer | null = null;
   if (bild instanceof File && bild.size > 0) {
+    if (form.get("bild_rechte") !== "ja") felder.bild_rechte = "Bitte bestätige, dass du das Bild verwenden darfst.";
     if (bild.size > MAX_BILD) felder.bild = "Das Bild ist zu groß (max. 2 MB).";
     else {
       const bytes = new Uint8Array(await bild.arrayBuffer());
-      const typ = bildTyp(bytes);
-      if (!typ) felder.bild = "Bitte lade ein JPG-, PNG- oder WebP-Bild hoch.";
-      else bildDaten = { bytes, typ };
+      if (!bildTyp(bytes)) felder.bild = "Bitte lade ein JPG-, PNG- oder WebP-Bild hoch.";
+      else if (!felder.bild_rechte) {
+        bildJpeg = await bildNeuKodieren(bytes);
+        if (!bildJpeg) felder.bild = "Das Bild konnte nicht verarbeitet werden. Bitte versuch ein anderes oder melde ohne Bild.";
+      }
     }
-    if (form.get("bild_rechte") !== "ja") felder.bild_rechte = "Bitte bestätige, dass du das Bild verwenden darfst.";
   }
 
   if (Object.keys(felder).length) {
@@ -107,10 +136,10 @@ export async function POST(request: Request) {
   if (!db) return antwort(503, { fehler: "Das Melden ist gerade nicht möglich. Bitte versuch es später." });
 
   let bildPfad: string | null = null;
-  if (bildDaten) {
-    bildPfad = `meldungen/${crypto.randomUUID()}.${BILD_TYPEN[bildDaten.typ]}`;
-    const { error } = await db.storage.from("event-meldungen").upload(bildPfad, bildDaten.bytes, {
-      contentType: bildDaten.typ,
+  if (bildJpeg) {
+    bildPfad = `meldungen/${crypto.randomUUID()}.jpg`;
+    const { error } = await db.storage.from("event-meldungen").upload(bildPfad, bildJpeg, {
+      contentType: "image/jpeg",
       upsert: false,
     });
     if (error) {
@@ -129,9 +158,9 @@ export async function POST(request: Request) {
     adresse,
     preis,
     beschreibung,
-    link: link || null,
+    link,
     bild_pfad: bildPfad,
-    bild_rechte: bildDaten ? true : false,
+    bild_rechte: !!bildPfad,
     kontakt_name: kontaktName,
     kontakt_email: kontaktEmail,
     kontakt_rolle: kontaktRolle,
@@ -139,6 +168,8 @@ export async function POST(request: Request) {
   });
   if (error) {
     console.error(`Event-Meldung fehlgeschlagen: ${error.code} ${error.message}`);
+    // Kein verwaistes Bild zurücklassen
+    if (bildPfad) await db.storage.from("event-meldungen").remove([bildPfad]).catch(() => {});
     return antwort(500, { fehler: "Das hat leider nicht geklappt. Bitte versuch es später noch einmal." });
   }
   return antwort(200, { ok: true });
