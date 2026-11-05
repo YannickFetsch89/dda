@@ -131,6 +131,11 @@ export async function POST(request: Request) {
   if (Object.keys(felder).length) {
     return antwort(400, { fehler: "Bitte prüfe die markierten Felder.", felder });
   }
+  // Auslastung VOR dem 5er-Limit prüfen: ein 503 ohne Verarbeitung soll kein Kontingent verbrauchen.
+  // Zwischen dieser Prüfung und bildInArbeit++ unten steht kein await → der Zähler bleibt exakt.
+  if (bildBytes && bildInArbeit >= MAX_GLEICHZEITIG) {
+    return antwort(503, { fehler: "Gerade ist viel los. Bitte versuch es in einer Minute noch einmal." });
+  }
   if (zuVieleAnfragen("event-melden", ip, 5, 60 * 60 * 1000)) {
     return antwort(429, { fehler: "Zu viele Meldungen in kurzer Zeit. Bitte versuch es später noch einmal." });
   }
@@ -139,9 +144,6 @@ export async function POST(request: Request) {
   // MAX_GLEICHZEITIG Bilder auf einmal – schützt den Speicher des einen Node-Prozesses
   let bildJpeg: Buffer | null = null;
   if (bildBytes) {
-    if (bildInArbeit >= MAX_GLEICHZEITIG) {
-      return antwort(503, { fehler: "Gerade ist viel los. Bitte versuch es in einer Minute noch einmal." });
-    }
     bildInArbeit++;
     try {
       bildJpeg = await bildNeuKodieren(bildBytes);
