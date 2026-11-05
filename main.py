@@ -63,6 +63,7 @@ from scraper.tier3 import (
     ihk,
     startupdorf,
     street_food_thursday,
+    auf_ins_viertel,
 )
 
 # Logging konfigurieren
@@ -126,6 +127,7 @@ QUELLEN = [
     ("IHK Düsseldorf", 3, ihk.scrape),
     ("StartupDorf Meetup", 3, startupdorf.scrape),
     ("Street Food Thursday", 3, street_food_thursday.scrape),
+    ("Auf ins Viertel", 3, auf_ins_viertel.scrape),  # kulinarische Stadtführungen (bookingkit)
 ]
 
 

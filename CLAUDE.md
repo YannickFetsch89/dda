@@ -155,6 +155,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | IHK Düsseldorf | Business-Events | duesseldorf.ihk.de/veranstaltungen |
 | StartupDorf (Meetup) | Startup-Community | meetup.com/startupdorf |
 | Street Food Thursday | Food-Event, 1. Do. im Monat, März–Okt. | streetfood-duesseldorf.de/termine + berechneter Fallback |
+| Auf ins Viertel | Kulinarische Stadtführungen (nur Düsseldorfer Touren) | bookingkit-Kalender (JSON-LD), Baustein scraper/utils/bookingkit.py |
 
 ---
 
