@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
 
 from dashboard.auth import abmelden_button, admin_client  # noqa: E402
+from dashboard.meldungen import tab_meldungen, tab_newsletter  # noqa: E402
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
@@ -683,11 +684,13 @@ def main():
 
     st.title("🎭 DiesDasDüsseldorf – Event-Planer")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📅 Tagesplaner",
         "📋 Event-Liste",
         "⭐ Featured Events",
         "📊 Scraper-Report",
+        "📨 Meldungen",
+        "✉️ Newsletter",
     ])
 
     with tab1:
@@ -701,6 +704,12 @@ def main():
 
     with tab4:
         tab_scraper_report()
+
+    with tab5:
+        tab_meldungen(get_db())
+
+    with tab6:
+        tab_newsletter(get_db())
 
 
 if __name__ == "__main__":

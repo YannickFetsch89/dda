@@ -195,8 +195,10 @@ export default function DatenschutzSeite() {
         <li>
           <b>Supabase:</b> Wir nutzen Supabase als Datenbank-Backend für die Speicherung von Event-Daten.
           Supabase wird von Supabase, Inc., 970 Toa Payoh North #07-04, Singapore 318992 betrieben.
-          Event-Daten werden auf Supabase-Servern (AWS, Region EU) gespeichert. Es werden keine
-          personenbezogenen Daten von Nutzern in Supabase gespeichert.{" "}
+          Die Daten liegen auf Supabase-Servern (AWS, Region EU, Frankfurt). Neben Event-Daten speichern wir dort
+          Newsletter-Anmeldungen (Abschnitt 11) sowie über „Event melden“ eingereichte Angaben und Bilder
+          (Abschnitt 12). Ihr Browser verbindet sich dabei nicht direkt mit Supabase – die Formulare werden an
+          unseren Server gesendet, der die Daten weiterleitet.{" "}
           <a href="https://supabase.com/privacy" target="_blank" rel="noopener">
             Datenschutzerklärung von Supabase
           </a>
@@ -211,16 +213,30 @@ export default function DatenschutzSeite() {
         öffentlich verfügbare Event-Informationen verarbeitet, keine personenbezogenen Daten von Nutzern.
       </p>
 
-      <h2>11. Newsletter</h2>
+      <h2 id="newsletter">11. Newsletter</h2>
       <p>
-        Wenn Sie unseren Newsletter abonnieren, wird Ihre E-Mail-Adresse für den regelmäßigen Versand
-        gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Sie können den Newsletter
-        jederzeit über den Abmeldelink in jeder E-Mail oder per E-Mail an{" "}
-        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> abbestellen. Nach Abmeldung wird Ihre
-        E-Mail-Adresse unverzüglich gelöscht.
+        Wenn Sie unseren Newsletter abonnieren, speichern wir Ihre E-Mail-Adresse und den Zeitpunkt der
+        Anmeldung für den regelmäßigen Versand (Supabase, siehe Abschnitt 9). Der Versand startet in Kürze; vor
+        der ersten Ausgabe bitten wir Sie per E-Mail, Ihre Anmeldung zu bestätigen. Rechtsgrundlage ist
+        Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Sie können den Newsletter jederzeit über den Abmeldelink in
+        jeder E-Mail oder per E-Mail an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>{" "}
+        abbestellen. Nach Abmeldung wird Ihre E-Mail-Adresse unverzüglich gelöscht.
       </p>
 
-      <h2>12. Kontaktaufnahme</h2>
+      <h2 id="event-melden">12. Event melden</h2>
+      <p>
+        Über das Formular „Event melden“ können Sie uns Veranstaltungen vorschlagen. Wir speichern dazu die
+        Angaben zum Event, ein optional hochgeladenes Bild sowie Ihre Kontaktdaten (E-Mail-Adresse, optional
+        Name) und eine eventuelle Anmerkung (Supabase, siehe Abschnitt 9). Die Kontaktdaten nutzen wir nur für
+        Rückfragen zu Ihrer Meldung; sie werden nicht veröffentlicht. Veröffentlicht werden nach unserer
+        Prüfung nur die Angaben zum Event und – wenn Sie die Rechte daran bestätigt haben – das Bild.
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) bzw. lit. f (berechtigtes Interesse an
+        einem vollständigen Veranstaltungskalender). Abgelehnte Meldungen und Kontaktdaten löschen wir
+        spätestens sechs Monate nach dem Event-Datum; eine frühere Löschung können Sie jederzeit per E-Mail an{" "}
+        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> verlangen.
+      </p>
+
+      <h2>13. Kontaktaufnahme</h2>
       <p>
         Wenn Sie uns per E-Mail kontaktieren, werden Ihre Angaben einschließlich der von Ihnen angegebenen
         Kontaktdaten zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert.
@@ -229,7 +245,7 @@ export default function DatenschutzSeite() {
         Interesse).
       </p>
 
-      <h2>13. Ihre Rechte</h2>
+      <h2>14. Ihre Rechte</h2>
       <p>Sie haben jederzeit das Recht auf:</p>
       <ul>
         <li><b>Auskunft</b> über Ihre bei uns gespeicherten personenbezogenen Daten (Art. 15 DSGVO)</li>
@@ -249,7 +265,7 @@ export default function DatenschutzSeite() {
         personenbezogenen Daten zu beschweren.
       </p>
 
-      <h2>14. Keine Weitergabe an Dritte</h2>
+      <h2>15. Keine Weitergabe an Dritte</h2>
       <p>
         Eine Übermittlung Ihrer persönlichen Daten an Dritte zu anderen als den im Folgenden aufgeführten
         Zwecken findet nicht statt. Wir geben Ihre persönlichen Daten nur an Dritte weiter, wenn Sie Ihre
@@ -257,7 +273,7 @@ export default function DatenschutzSeite() {
         erforderlich ist oder eine gesetzliche Verpflichtung besteht.
       </p>
 
-      <h2>15. Widerspruch gegen Werbe-Mails</h2>
+      <h2>16. Widerspruch gegen Werbe-Mails</h2>
       <p>
         Der Nutzung von im Rahmen der Impressumspflicht veröffentlichten Kontaktdaten zur Übersendung von
         nicht ausdrücklich angeforderter Werbung und Informationsmaterialien wird hiermit widersprochen. Der
@@ -265,7 +281,7 @@ export default function DatenschutzSeite() {
         von Werbeinformationen vor.
       </p>
 
-      <h2>16. Aktualität und Änderung dieser Datenschutzerklärung</h2>
+      <h2>17. Aktualität und Änderung dieser Datenschutzerklärung</h2>
       <p>
         Diese Datenschutzerklärung ist aktuell gültig und hat den Stand Oktober 2026. Durch die
         Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben

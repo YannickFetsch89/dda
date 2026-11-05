@@ -391,26 +391,47 @@ export function DetailsVerhalten() {
   return null;
 }
 
-// ---------- Newsletter (noch ohne Backend) ----------
+// ---------- Newsletter (speichert in Supabase über /api/newsletter, vorerst ohne Double-Opt-in) ----------
 
 export function NewsletterForm() {
-  const [gesendet, setGesendet] = useState(false);
-  if (gesendet) return <p style={{ fontWeight: 700 }}>Danke! Der Newsletter startet in Kürze, wir melden uns.</p>;
+  const [zustand, setZustand] = useState<"bereit" | "sendet" | "fertig">("bereit");
+  const [fehler, setFehler] = useState<string | null>(null);
+  if (zustand === "fertig") return <p style={{ fontWeight: 700 }} role="status">Danke! Du bist dabei – der Newsletter startet in Kürze.</p>;
   return (
+    <div className="newsletter__form">
     <form
-      onSubmit={(ev) => {
+      onSubmit={async (ev) => {
         ev.preventDefault();
-        setGesendet(true);
+        const form = new FormData(ev.currentTarget);
+        setZustand("sendet");
+        setFehler(null);
+        try {
+          const r = await fetch("/api/newsletter", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: form.get("email"), website: form.get("website") }),
+          });
+          const daten = (await r.json().catch(() => ({}))) as { fehler?: string };
+          if (!r.ok) throw new Error(daten.fehler ?? "Das hat leider nicht geklappt.");
+          setZustand("fertig");
+        } catch (e) {
+          setFehler(e instanceof Error ? e.message : "Das hat leider nicht geklappt.");
+          setZustand("bereit");
+        }
       }}
     >
       <label className="sr-only" htmlFor="newsletter-mail">
         E-Mail-Adresse
       </label>
-      <input id="newsletter-mail" type="email" required placeholder="deine@email.de" autoComplete="email" />
-      <button type="submit" className="btn btn--navy">
-        Abonnieren
+      <input id="newsletter-mail" name="email" type="email" required maxLength={254} placeholder="deine@email.de" autoComplete="email" />
+      {/* Honeypot gegen Bots – für Menschen unsichtbar */}
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="honigtopf" />
+      <button type="submit" className="btn btn--navy" disabled={zustand === "sendet"}>
+        {zustand === "sendet" ? "Wird gesendet…" : "Abonnieren"}
       </button>
     </form>
+    {fehler && <p className="newsletter__fehler" role="alert">{fehler}</p>}
+    </div>
   );
 }
 

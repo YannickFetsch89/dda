@@ -44,9 +44,9 @@ export function Kopf() {
           <Link href="/merkliste" className="icon-btn nur-desktop" aria-label="Merkliste">
             <Icon name="favorite" />
           </Link>
-          <a href={`mailto:${KONTAKT_MAIL}?subject=Event%20melden`} className="btn btn--gold nur-desktop">
+          <Link href="/event-melden" className="btn btn--gold nur-desktop">
             Event melden
-          </a>
+          </Link>
           <details className="menue nur-mobil">
             <summary className="icon-btn" aria-label="Menü">
               <Icon name="menu" />
@@ -58,7 +58,7 @@ export function Kopf() {
               <Link href="/restaurants">Restaurants & Cafés</Link>
               <Link href="/stadtteile">Stadtteile &amp; Karte</Link>
               <Link href="/merkliste">Merkliste</Link>
-              <a href={`mailto:${KONTAKT_MAIL}?subject=Event%20melden`}>Event melden</a>
+              <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>
                 Dunkler Modus <ThemeToggle />
               </div>
@@ -146,7 +146,7 @@ export async function Fuss() {
         </div>
         <div className="fuss__spalte">
           <b>Service</b>
-          <a href={`mailto:${KONTAKT_MAIL}?subject=Event%20melden`}>Event melden</a>
+          <Link href="/event-melden">Event melden</Link>
           <a href={`mailto:${KONTAKT_MAIL}?subject=Veranstalter`}>Für Veranstalter</a>
           <Link href="/#newsletter">Newsletter</Link>
           <Link href="/merkliste">Merkliste</Link>
