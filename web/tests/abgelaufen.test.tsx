@@ -65,6 +65,12 @@ describe("gleicherOrt", () => {
     expect(gleicherOrt("Brauhaus (Altstadt)", "Kneipe – Altstadt")).toBe(false);
     expect(gleicherOrt("FFT – Halle", "zakk – Halle")).toBe(false);
   });
+  it("Bindestrich im Ortsnamen und Gegenden als erstes Segment", () => {
+    expect(gleicherOrt("NRW-Forum", "NRW Forum")).toBe(true);
+    expect(gleicherOrt("Rheinufer – Tonhallenufer", "Rheinufer – Paradiesstrand")).toBe(false);
+    expect(gleicherOrt("Medienhafen – Hyatt", "Hyatt Regency")).toBe(false);
+    expect(gleicherOrt("Altstadt", "Altstadt")).toBe(true);
+  });
   it("Zusatz „Düsseldorf“ und Häuser desselben Theaters", () => {
     expect(gleicherOrt("ZAKK Düsseldorf", "zakk")).toBe(true);
     expect(gleicherOrt("Düsseldorfer Schauspielhaus - D’haus", "Düsseldorfer Schauspielhaus – Großes Haus")).toBe(true);

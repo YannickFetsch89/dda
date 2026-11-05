@@ -34,6 +34,11 @@ class ReihenTest(unittest.TestCase):
                             reihen_schluessel("Kneipentour", "Kneipe – Altstadt"))
         self.assertEqual(reihen_schluessel("Das NEIN­horn", "Central"), reihen_schluessel("Das NEINhorn", "Central"))
 
+    def test_ort_bindestrich_und_gegenden(self):
+        self.assertEqual(reihen_schluessel("Lesung am Abend", "NRW-Forum"), reihen_schluessel("Lesung am Abend", "NRW Forum"))
+        self.assertNotEqual(reihen_schluessel("Sommerkino", "Rheinufer – Tonhallenufer"),
+                            reihen_schluessel("Sommerkino", "Rheinufer – Paradiesstrand"))
+
     def test_reihe_braucht_zwei_verschiedene_tage(self):
         events = [
             ev("1", "Führung", "Kunstpalast", "2026-11-01"),

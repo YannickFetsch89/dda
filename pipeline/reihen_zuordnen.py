@@ -50,20 +50,24 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+# Gegenden statt Orte: als erstes Segment („Rheinufer – Tonhallenufer“) taugen sie nicht als Basis
+_GEGENDEN = {"rheinufer", "rheinuferpromenade", "hafen", "medienhafen", "altstadt", "carlstadt", "innenstadt", "stadtmitte"}
+
+
 def _ort_schluessel(ort: str) -> str | None:
-    """Ort normalisiert, Wort „Düsseldorf“ entfernt; None wenn nichts Aussagekräftiges bleibt."""
-    s = re.sub(r"(^|\s)(düsseldorf|duesseldorf)(?=\s|$)", " ", _norm(ort))
+    """Ort normalisiert (Bindestrich = Leerzeichen), Wort „Düsseldorf“ entfernt; None wenn nichts bleibt."""
+    s = re.sub(r"(^|\s)(düsseldorf|duesseldorf)(?=\s|$)", " ", _norm((ort or "").replace("-", " ")))
     s = re.sub(r"\s+", " ", s).strip()
     return None if len(s) < 3 or s in _ALLGEMEINE_ORTE else s
 
 
 def ort_basis(ort: str) -> str | None:
-    """Eigentlicher Ort = erstes aussagekräftiges Segment („zakk – Halle“ → „zakk“)."""
-    for teil in _ORT_TRENNER.split(ort or ""):
-        s = _ort_schluessel(teil)
-        if s:
-            return s
-    return None
+    """
+    Eigentlicher Ort = erstes aussagekräftiges Segment („zakk – Halle“ → „zakk“). Ist das eine Gegend
+    („Rheinufer – Tonhallenufer“), zählt das nächste; besteht die Angabe nur aus einer Gegend, diese.
+    """
+    segmente = [s for s in (_ort_schluessel(t) for t in _ORT_TRENNER.split(ort or "")) if s]
+    return next((s for s in segmente if s not in _GEGENDEN), segmente[0] if segmente else None)
 
 
 def titel_schluessel(titel: str) -> str:
@@ -144,7 +148,13 @@ def reihen_zuordnen() -> int:
             (db.table("reihen").upsert(neue[i:i + STAPEL], on_conflict="schluessel", ignore_duplicates=True)
              .execute())
         except Exception as e:
-            logger.error("Reihen: Anlegen fehlgeschlagen: %s", e)
+            # Z.B. Slug-Konflikt mit einem parallelen Lauf: einzeln nachziehen, nur die betroffene Reihe fehlt
+            logger.warning("Reihen: Stapel fehlgeschlagen (%s) – lege einzeln an", e)
+            for zeile in neue[i:i + STAPEL]:
+                try:
+                    db.table("reihen").upsert(zeile, on_conflict="schluessel", ignore_duplicates=True).execute()
+                except Exception as e2:
+                    logger.error("Reihen: %s nicht angelegt: %s", zeile["slug"], e2)
     if neue:
         try:
             reihen = _alle_laden(lambda: db.table("reihen").select("id, slug, schluessel").order("id"))

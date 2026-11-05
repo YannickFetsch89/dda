@@ -41,9 +41,19 @@ describe("SEO-Entscheidungen (301/410 für lange abgelaufene Events)", () => {
     expect(new URL("/\t/evil.com", "https://diesdas.events").origin).toBe("https://evil.com"); // warum das nötig ist
   });
 
+  it("Punkt-Segmente und kodierte Zeichen führen nicht zu //evil.com", () => {
+    for (const boese of ["/.//evil.com", "/foo/..//evil.com", "/%2e%2e//evil.com", "/%2E%2E/%2Fevil.com", "/a//evil.com", "/%5cevil.com", "/./x"]) {
+      expect(zielErlaubt(boese)).toBe(false);
+      expect(zielAufloesen(boese, "https://diesdas.events/event/a/b")).toBeNull();
+    }
+    // Query darf Punkte und Schrägstriche enthalten (Ortssuche)
+    expect(zielErlaubt("/entdecken?q=K20%20Grabbeplatz%20/%20Kunstsammlung%20NRW&datum=alle")).toBe(true);
+    expect(zielErlaubt("/entdecken?q=St.%20Lambertus&datum=alle")).toBe(true);
+  });
+
   it("zielAufloesen bleibt auf derselben Domain und nie auf der Startseite", () => {
     expect(zielAufloesen("/reihe/jazz", "https://diesdas.events/event/a/b")?.href).toBe("https://diesdas.events/reihe/jazz");
     expect(zielAufloesen("/?x=1", "https://diesdas.events/event/a/b")).toBeNull();
-    expect(zielAufloesen("/%2F%2Fevil.com", "https://diesdas.events/event/a/b")?.origin).toBe("https://diesdas.events");
+    expect(zielAufloesen("/%2F%2Fevil.com", "https://diesdas.events/event/a/b")).toBeNull();
   });
 });

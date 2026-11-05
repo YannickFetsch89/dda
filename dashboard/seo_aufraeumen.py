@@ -6,6 +6,7 @@ Gespeichert wird in event_seo_entscheidungen; die Website (web/proxy.ts) liefert
 Nichts passiert automatisch – Grundlage sind die Search-Console-Daten.
 """
 import csv
+import hashlib
 import io
 import logging
 from datetime import date, datetime, timedelta, timezone
@@ -82,20 +83,46 @@ def entscheidungen_bauen(events: list[dict], art: str, admin_id: str | None) -> 
     return zeilen, uebersprungen
 
 
-def kandidaten_laden(db: Client, heute: date) -> list[dict]:
-    """Events, deren letzter Tag mehr als 12 Monate zurückliegt (älteste zuerst)."""
+def _abgelaufen_filter(heute: date) -> str:
     grenze = (heute - timedelta(days=ABGELAUFEN_SEIT_TAGE)).isoformat()
+    return f"datum_bis.lt.{grenze},and(datum_bis.is.null,datum.lt.{grenze})"
+
+
+def kandidaten_laden(db: Client, heute: date, ohne: set[str] | None = None,
+                     max_anzahl: int = MAX_KANDIDATEN) -> tuple[list[dict], bool]:
+    """
+    Events, deren letzter Tag mehr als 12 Monate zurückliegt (älteste zuerst), ohne die IDs in `ohne`
+    (z.B. schon entschiedene). Blättert weiter, bis max_anzahl beisammen sind.
+    Returns: (events, es_gibt_noch_mehr)
+    """
+    ohne = ohne or set()
     events: list[dict] = []
-    for seite in range(MAX_KANDIDATEN // SEITE):
+    for seite in range(500):  # bis 500.000 Zeilen
         daten = (db.table("events").select("id, titel, datum, datum_bis, ort, kategorie, slug, reihe:reihen(slug)")
-                 .eq("abgelehnt", False).not_.is_("slug", "null")
-                 .or_(f"datum_bis.lt.{grenze},and(datum_bis.is.null,datum.lt.{grenze})")
+                 .eq("abgelehnt", False).not_.is_("slug", "null").or_(_abgelaufen_filter(heute))
                  .order("datum").order("id").range(seite * SEITE, (seite + 1) * SEITE - 1)
                  .execute().data or [])
-        events.extend(daten)
+        for e in daten:
+            if e["id"] in ohne:
+                continue
+            if len(events) >= max_anzahl:
+                return events, True
+            events.append(e)
         if len(daten) < SEITE:
             break
-    return events
+    return events, False
+
+
+def kandidaten_zaehlen(db: Client, heute: date) -> int:
+    antwort = (db.table("events").select("id", count="exact").eq("abgelehnt", False).not_.is_("slug", "null")
+               .or_(_abgelaufen_filter(heute)).limit(1).execute())
+    return antwort.count or 0
+
+
+def tabellen_schluessel(ids: list[str], alle: bool) -> str:
+    """Key des data_editor: ändert sich mit den angezeigten Zeilen – sonst blieben Häkchen nach dem
+    Speichern an denselben Zeilennummern hängen und träfen die nachgerückten Events."""
+    return f"seo_tabelle_{int(alle)}_" + hashlib.sha1("|".join(ids).encode()).hexdigest()[:16]
 
 
 def _csv(events: list[dict], entscheidungen: dict) -> bytes:
@@ -119,31 +146,33 @@ def tab_seo_aufraeumen(db: Client) -> None:
                "12 Monaten vorbei sind. Entscheide anhand der Search-Console-Daten – nichts passiert automatisch. "
                "Weiterleitungen gehen nie auf die Startseite. 301 und 410 sind für Google dauerhafte Signale – "
                "nur wählen, wenn es dabei bleiben soll.")
+    nur_offen = st.checkbox("Nur noch nicht entschiedene zeigen", value=True)
+    heute = date.today()
     try:
-        events = kandidaten_laden(db, date.today())
         entscheidungen = {z["event_id"]: z for z in (db.table("event_seo_entscheidungen")
                                                        .select("event_id, aktion, ziel").execute().data or [])}
+        gesamt = kandidaten_zaehlen(db, heute)
+        # Grenze gilt für die ANGEZEIGTEN Events – bei „nur offene“ also für noch nicht entschiedene
+        liste, mehr = kandidaten_laden(db, heute, set(entscheidungen) if nur_offen else None)
     except Exception as e:
         st.error(f"Daten konnten nicht geladen werden (SQL database/event_seo_2026-11-05.sql ausgeführt?): {e}")
         return
 
-    offen = [e for e in events if e["id"] not in entscheidungen]
     a, b, c = st.columns(3)
-    a.metric("Seit > 12 Monaten vorbei", len(events))
-    b.metric("Noch offen", len(offen))
-    c.metric("Entschieden", len(events) - len(offen))
-    if not events:
+    a.metric("Seit > 12 Monaten vorbei", gesamt)
+    b.metric("Entschieden", len(entscheidungen))
+    c.metric("Noch offen", max(gesamt - len(entscheidungen), 0))
+    if not gesamt:
         st.info("Noch keine Events, die seit mehr als 12 Monaten vorbei sind.")
         return
-    if len(events) >= MAX_KANDIDATEN:
-        st.warning(f"Es werden nur die ältesten {MAX_KANDIDATEN} Events gezeigt. Erst diese entscheiden – "
-                   "danach erscheinen die nächsten.")
+    if mehr:
+        st.warning(f"Es werden die ältesten {MAX_KANDIDATEN} {'offenen ' if nur_offen else ''}Events gezeigt. "
+                   "Nach dem Entscheiden rücken die nächsten nach.")
 
-    st.download_button("CSV für den Abgleich mit der Search Console", _csv(events, entscheidungen),
-                       file_name=f"seo-kandidaten-{date.today().isoformat()}.csv", mime="text/csv")
+    st.download_button("CSV der angezeigten Events (für den Abgleich mit der Search Console)",
+                       _csv(liste, entscheidungen),
+                       file_name=f"seo-kandidaten-{heute.isoformat()}.csv", mime="text/csv")
 
-    nur_offen = st.checkbox("Nur noch nicht entschiedene zeigen", value=True)
-    liste = offen if nur_offen else events
     alle = st.checkbox(f"Alle {len(liste)} angezeigten auswählen", value=False)
     tabelle = [{
         "Auswahl": alle,
@@ -155,9 +184,8 @@ def tab_seo_aufraeumen(db: Client) -> None:
         "Entscheidung": (entscheidungen.get(e["id"]) or {}).get("aktion", ""),
         "URL": event_url(e),
     } for e in liste]
-    # Key hängt an den Schaltern: sonst behält die Tabelle alte Häkchen, wenn „Alle auswählen“ wechselt
     bearbeitet = st.data_editor(tabelle, hide_index=True, use_container_width=True,
-                                key=f"seo_tabelle_{int(alle)}_{int(nur_offen)}",
+                                key=tabellen_schluessel([e["id"] for e in liste], alle),
                                 disabled=["Datum", "Titel", "Ort", "Kategorie", "Reihe", "Entscheidung", "URL"],
                                 column_config={"URL": st.column_config.LinkColumn("URL")})
     ausgewaehlt = [e for e, zeile in zip(liste, bearbeitet) if zeile.get("Auswahl")]
@@ -170,8 +198,8 @@ def tab_seo_aufraeumen(db: Client) -> None:
             for i in range(0, len(zeilen), 500):
                 db.table("event_seo_entscheidungen").upsert(zeilen[i:i + 500], on_conflict="event_id").execute()
             st.success(f"{len(zeilen)} Entscheidung(en) gespeichert. Die Website übernimmt sie innerhalb von 10 Minuten. "
-                       "Hinweis: Google wertet eine 301 als dauerhaft – Zurücknehmen wirkt für Besucher sofort, "
-                       "bei Google erst nach dem nächsten Crawl.")
+                       "Hinweis: Google wertet eine 301 als dauerhaft – Zurücknehmen wirkt für Besucher nach "
+                       "spätestens 10 Minuten, bei Google erst nach dem nächsten Crawl.")
             if uebersprungen:
                 st.warning(f"{len(uebersprungen)} Event(s) ohne passendes Ziel übersprungen (z.B. keine Reihe).")
         except Exception as e:

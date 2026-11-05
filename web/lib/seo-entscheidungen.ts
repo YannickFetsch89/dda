@@ -19,18 +19,26 @@ export function eventSlugAusPfad(pfad: string): string | null {
 /**
  * Nur interne Ziele, nie die Startseite und nie eine fremde Domain. Browser und URL-Parser entfernen
  * Tab/Zeilenumbruch und lesen „\“ wie „/“ – „/\t/evil.com“ würde so zu „//evil.com“. Deshalb sind
- * Steuerzeichen, Leerraum und Backslash im Ziel ganz verboten (gleiche Regel als CHECK in der DB).
+ * Steuerzeichen, Leerraum und Backslash im Ziel ganz verboten. Im Pfad (vor „?“) außerdem „//“,
+ * Punkt-Segmente („/.“, „/..“) und kodierte Punkte/Schrägstriche – „/.//evil.com“ löst sich sonst
+ * zu „//evil.com“ auf. Gleiche Regel als CHECK in der DB (database/event_seo_ziel_2026-11-05.sql).
  */
 export function zielErlaubt(ziel: string): boolean {
-  return /^\/[^/]/.test(ziel) && !/[\u0000- \u007f\\]/.test(ziel);
+  const pfad = ziel.split("?")[0];
+  return (
+    /^\/[^/]/.test(ziel) &&
+    !/[\u0000- \u007f\\]/.test(ziel) &&
+    !/\/\/|\/\.|%2e|%2f|%5c/i.test(pfad)
+  );
 }
 
-/** Letzte Sicherung: das aufgelöste Ziel muss auf derselben Domain bleiben. */
+/** Letzte Sicherung: das aufgelöste Ziel muss auf derselben Domain bleiben und darf nicht mit „//“ beginnen. */
 export function zielAufloesen(ziel: string, basis: string): URL | null {
   if (!zielErlaubt(ziel)) return null;
   try {
     const url = new URL(ziel, basis);
-    return url.origin === new URL(basis).origin && url.pathname !== "/" ? url : null;
+    const ok = url.origin === new URL(basis).origin && url.pathname !== "/" && !url.pathname.startsWith("//");
+    return ok ? url : null;
   } catch {
     return null;
   }

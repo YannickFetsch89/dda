@@ -32,5 +32,36 @@ class SeoAufraeumenTest(unittest.TestCase):
             self.assertEqual((zeilen[0]["aktion"], zeilen[0]["ziel"], zeilen[0]["entschieden_von"]), (aktion, None, "admin"))
 
 
+class KandidatenTest(unittest.TestCase):
+    def _db(self, ids):
+        from unittest import mock
+        db = mock.MagicMock()
+        kette = db.table.return_value.select.return_value.eq.return_value.not_.is_.return_value.or_.return_value
+        def seite(lo, hi):
+            return mock.Mock(execute=lambda: mock.Mock(data=[{"id": i} for i in ids[lo:hi + 1]]))
+        kette.order.return_value.order.return_value.range.side_effect = seite
+        return db
+
+    def test_grenze_gilt_fuer_offene_und_blaettert_weiter(self):
+        from unittest import mock
+        from datetime import date
+        import dashboard.seo_aufraeumen as S
+        ids = [f"e{i:05d}" for i in range(2500)]
+        entschieden = set(ids[:1200])  # die ältesten sind schon entschieden
+        with mock.patch.object(S, "SEITE", 1000):
+            events, mehr = S.kandidaten_laden(self._db(ids), date(2027, 6, 1), entschieden, max_anzahl=1000)
+        self.assertEqual(len(events), 1000)
+        self.assertEqual(events[0]["id"], "e01200")  # erste noch offene
+        self.assertTrue(mehr)
+        with mock.patch.object(S, "SEITE", 1000):
+            events, mehr = S.kandidaten_laden(self._db(ids), date(2027, 6, 1), entschieden, max_anzahl=5000)
+        self.assertEqual((len(events), mehr), (1300, False))
+
+    def test_tabellen_schluessel_haengt_an_den_zeilen(self):
+        from dashboard.seo_aufraeumen import tabellen_schluessel
+        self.assertNotEqual(tabellen_schluessel(["a", "b"], False), tabellen_schluessel(["b", "c"], False))
+        self.assertNotEqual(tabellen_schluessel(["a"], False), tabellen_schluessel(["a"], True))
+
+
 if __name__ == "__main__":
     unittest.main()

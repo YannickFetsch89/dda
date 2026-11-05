@@ -22,7 +22,7 @@ const ALLGEMEINE_ORTE = new Set(["düsseldorf", "duesseldorf", "online", "divers
  * Gleiche Regeln wie pipeline/reihen_zuordnen.py (_ort_schluessel).
  */
 export function ortSchluessel(ort: string): string | null {
-  const s = norm(ort.replace(/­/g, ""))
+  const s = norm(ort.replace(/­/g, "").replace(/-/g, " "))
     .replace(/(^|\s)(düsseldorf|duesseldorf)(?=\s|$)/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -37,9 +37,16 @@ function ortSegmente(ort: string): string[] {
     .filter((t): t is string => !!t);
 }
 
-/** Der eigentliche Ort = erstes aussagekräftiges Segment („zakk – Halle“ → „zakk“). */
+// Gegenden statt Orte: als erstes Segment („Rheinufer – Tonhallenufer“) taugen sie nicht als Basis
+const GEGENDEN = new Set(["rheinufer", "rheinuferpromenade", "hafen", "medienhafen", "altstadt", "carlstadt", "innenstadt", "stadtmitte"]);
+
+/**
+ * Der eigentliche Ort = erstes aussagekräftiges Segment („zakk – Halle“ → „zakk“). Ist das eine Gegend
+ * („Rheinufer – Tonhallenufer“), zählt das nächste Segment; besteht die Angabe nur aus einer Gegend, diese.
+ */
 export function ortBasis(ort: string): string | null {
-  return ortSegmente(ort)[0] ?? null;
+  const segmente = ortSegmente(ort);
+  return segmente.find((s) => !GEGENDEN.has(s)) ?? segmente[0] ?? null;
 }
 
 /**
