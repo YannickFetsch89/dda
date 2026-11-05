@@ -12,7 +12,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from pipeline.deduplication import kategorie_ersetzen
+from pipeline.deduplication import KATEGORIE_FEST_FELD, kategorie_ersetzen
 from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
@@ -50,7 +50,7 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     return bool(bild_url and _RAUSGEGANGEN_MUSTER.search(bild_url))
 
 
-def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, neue_quelle: Optional[str] = None) -> dict:
+def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bool = False) -> dict:
     """
     Berechnet welche Felder eines bestehenden DB-Eintrags angereichert werden sollen.
 
@@ -78,7 +78,7 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, neue_quelle: Optio
                 update[feld] = neu_wert
             elif not db_wert and neu_wert:
                 update[feld] = neu_wert
-        elif feld == "kategorie" and kategorie_ersetzen(db_wert, neu_wert, neue_quelle):
+        elif feld == "kategorie" and kategorie_ersetzen(db_wert, neu_wert, kategorie_fest):
             # z.B. Kalender lieferte "kultur", Führungs-Scraper weiß: "stadtfuehrung"
             update[feld] = neu_wert
         else:
@@ -262,7 +262,7 @@ def events_speichern(events: list[dict]) -> dict:
                 # Duplikat: Anreicherung prüfen
                 duplikate += 1
                 update = _anreicherungs_update_bauen(
-                    bestehendes, datensatz, event.get("_scraper") or event.get("quelle_name")
+                    bestehendes, datensatz, bool(event.get(KATEGORIE_FEST_FELD))
                 )
 
                 if update:

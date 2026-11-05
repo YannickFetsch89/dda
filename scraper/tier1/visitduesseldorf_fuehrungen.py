@@ -55,24 +55,37 @@ AUSSCHLUSS_KATEGORIEN = {"museumsführung", "konzert"}
 # Selbstgeführte Smartphone-Rallyes stehen täglich im Kalender, sind aber keine Führung.
 # Führungen DURCH ein Museum/eine Ausstellung gehören zu kultur (liefern die Museums-Scraper) –
 # ein Museum als Wegpunkt („Rundgang vom Museum zum Rhein“) bleibt eine Stadtführung.
+# „Führung/Rundgang im|ins|in der|durch das … Museum/Ausstellung“ mit höchstens drei Wörtern dazwischen –
+# so bleibt „Führung im Park und später ins Museum“ eine Stadtführung.
+_IN_MUSEUM = (
+    r"(?:f(?:ü|ue)hrung|rundgang)\s+(?:im|ins|in\s+(?:der|dem|das)|durch\s+(?:das|die|den))\s"
+    r"(?:[^\s,:]+\s){0,3}?[^\s,:]*(?:museum|ausstellung)"
+)
 AUSSCHLUSS_TITEL = re.compile(
     r"rallye|escape"
-    r"|museumsf(?:ü|ue)hrung|ausstellungsf(?:ü|ue)hrung|kurator\*?(?:innen)?f(?:ü|ue)hrung"
-    r"|f(?:ü|ue)hrung\s+(?:im|in\s+der|durch\s+(?:das|die|den))\s[^,:]*?(?:museum|ausstellung)",
+    r"|museumsf(?:ü|ue)hrung|ausstellungsf(?:ü|ue)hrung|kurator(?:\*?innen|en)?f(?:ü|ue)hrung"
+    rf"|{_IN_MUSEUM}",
     re.I,
 )
 
-# Straße + Hausnummer, danach optional „, 40213 Düsseldorf“ (Ortsteil nur mit Bindestrich,
-# damit kein folgendes Wort wie „Treffpunkt“ als Ort gilt). Straßenformen:
+# Wörter nach „Am/Im/Zum …“, die keine Straße sind („Im Jahr 2024“, „Im Anschluss 3 …“, „Am Sonntag 5 …“)
+_KEINE_STRASSE = (
+    r"Jahr|Jahre|Anschluss|Anschluß|Rahmen|Laufe|Moment|Vorfeld|Sommer|Winter|Frühling|Herbst"
+    r"|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag|Wochenende"
+    r"|Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember"
+)
+# Straße + Hausnummer (1–3 Ziffern), danach optional „, 40213 Düsseldorf“. Ortsteil nur mit Bindestrich
+# oder als „Bad …“, damit kein folgendes Wort wie „Treffpunkt“ als Ort gilt. Straßenformen:
 #   „Am Marktplatz 12“, „Zum Goldenen Ring 1“ (Präfix + ein/zwei Wörter) · „Rheinstraße 3-5“,
 #   „Heinrich-Heine-Allee 16A“ (ein Wort mit Straßen-Endung) · „Apollo Platz 1“ · „Markt 5“
 ADRESSE_MUSTER = re.compile(
-    r"((?:(?:Am|An der|An den|Auf der|Auf dem|Im|In der|Zum|Zur|Unter den)\s[A-ZÄÖÜ][\wäöüß\-]*(?:\s[A-ZÄÖÜ][\wäöüß\-]*)?"
+    rf"((?:(?:Am|An der|An den|Auf der|Auf dem|Im|In der|Zum|Zur|Unter den)\s(?!(?:{_KEINE_STRASSE})\b)"
+    r"[A-ZÄÖÜ][\wäöüß\-]*(?:\s[A-ZÄÖÜ][\wäöüß\-]*)?"
     r"|[A-ZÄÖÜ][\wäöüß\-]*(?i:straße|strasse|str\.|platz|allee|weg|ufer|gasse|markt|ring|damm|wall)"
     r"|[A-ZÄÖÜ][\wäöüß\-]*\s(?:Platz|Straße|Allee|Weg|Ufer|Markt)"
     r"|Markt|Wall|Ring)"
-    r"\s*\d+(?:\s?-\s?\d+|\s?[a-zA-Z]\b)?)"
-    r"(?:\s*,?\s*(\d{5})(?:\s+([A-ZÄÖÜ][\wäöüß]+(?:-[A-ZÄÖÜ][\wäöüß]+)*))?)?"
+    r"\s*\d{1,3}(?:\s?-\s?\d{1,3}|\s?[a-zA-Z]\b)?)(?!\d)"
+    r"(?:\s*,?\s*(\d{5})(?:\s+((?:Bad\s)?[A-ZÄÖÜ][\wäöüß]+(?:-[A-ZÄÖÜ][\wäöüß]+)*))?)?"
 )
 
 
@@ -82,6 +95,7 @@ ADRESSE_MUSTER = re.compile(
 
 # Bei Änderung des gespeicherten Rohformats erhöhen → alle Seiten werden einmal neu geladen
 CACHE_VERSION = 3
+MAX_FEHLVERSUCHE = 2  # unlesbare Seite: so oft je Seitenstand (lastmod) versuchen
 
 
 def _cache_laden() -> dict:
@@ -302,16 +316,24 @@ async def scrape() -> list[dict]:
 
             for url, lastmod in kandidaten.items():
                 alt = cache.get(url)
-                if alt and lastmod in (alt.get("lastmod"), alt.get("fehl_lastmod")):
-                    continue  # unverändert bzw. dieser Seitenstand war schon unlesbar
+                if alt and alt.get("lastmod") == lastmod:
+                    continue  # unverändert
+                if alt and alt.get("fehl_lastmod") == lastmod and alt.get("fehlversuche", 0) >= MAX_FEHLVERSUCHE:
+                    continue  # dieser Seitenstand war mehrfach unlesbar → erst bei neuem lastmod wieder
                 seite = await _abrufen(client, url)
                 if seite is None:
                     continue  # Netzfehler: alten Stand behalten, nächster Lauf versucht erneut
                 roh = _event_lesen(seite, url)
                 if roh is None:
-                    # Seite ohne lesbares Event-JSON: alten Stand (roh) behalten, diesen Seitenstand
-                    # aber merken – erst bei neuem lastmod wird die 1,8-MB-Seite erneut geladen
-                    cache[url] = {**(alt or {"lastmod": "", "roh": None}), "fehl_lastmod": lastmod}
+                    # Seite ohne lesbares Event-JSON: alten Stand (roh) behalten und den Fehlversuch
+                    # zählen – ein kurzer Ausfall wird beim nächsten Lauf nachgeholt, eine dauerhaft
+                    # kaputte 1,8-MB-Seite aber nicht bei jedem Lauf erneut geladen
+                    gleich = bool(alt) and alt.get("fehl_lastmod") == lastmod
+                    cache[url] = {
+                        **(alt or {"lastmod": "", "roh": None}),
+                        "fehl_lastmod": lastmod,
+                        "fehlversuche": (alt.get("fehlversuche", 0) if gleich else 0) + 1,
+                    }
                     continue
                 cache[url] = {"lastmod": lastmod, "roh": roh}
                 neu_geladen += 1
@@ -358,6 +380,7 @@ async def scrape() -> list[dict]:
             "ort": event["ort"],
             "adresse": event["adresse"],
             "kategorie": KATEGORIE,
+            "_kategorie_fest": True,  # reine Führungsquelle (siehe pipeline/deduplication.py)
             "beschreibung": event["beschreibung"],
             "preis": event["preis"],
             "quelle_name": QUELLE_NAME,

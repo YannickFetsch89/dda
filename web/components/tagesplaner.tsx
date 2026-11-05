@@ -6,11 +6,13 @@ import { eventPoolLaden } from "@/lib/daten";
 import { TAGESZEITEN, ersteUhrzeitIn, filtern, nachZeit, tageszeiten } from "@/lib/ableitungen";
 import { WT_LANG, plusTage, tagMonat, wochentag } from "@/lib/datum";
 
+// In „Tagesminuten“ wie die Zuordnung in lib/ableitungen.ts (tageszeitVon): Zeiten vor 6 Uhr gehören
+// zur Nacht und zählen als 24:00 + Uhrzeit (00:30 → 1470), siehe tagesminuten() in zeitleiste.tsx
 const GRENZEN: Record<string, [number, number]> = {
-  morgens: [0, 12 * 60],
+  morgens: [6 * 60, 12 * 60],
   nachmittags: [12 * 60, 18 * 60],
   abends: [18 * 60, 23 * 60],
-  nachts: [23 * 60, 24 * 60],
+  nachts: [23 * 60, 30 * 60],
 };
 
 function tagHref(tag: string, heute: string) {

@@ -52,20 +52,21 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
 
 # "stadtfuehrung" ersetzt beim Zusammenführen eine allgemeine Kategorie aus einem Kalender
 # (z.B. Visit-Düsseldorf-Kalender "kultur" → Führungs-Scraper "stadtfuehrung").
-# Eine thematische Kategorie (food, nightlife, outdoor) nur, wenn die neue Quelle ausschließlich
-# Führungen liefert – sonst bliebe z.B. ein Food-Event mit gleichem Titel fälschlich Stadtführung.
-FUEHRUNGS_QUELLEN = {"VisitDüsseldorf Führungen", "Auf ins Viertel"}  # Anzeigenamen aus main.QUELLEN
+# Eine thematische Kategorie (food, nightlife, outdoor) nur, wenn die Kategorie von einer Quelle
+# stammt, die ausschließlich Führungen liefert. Solche Scraper setzen dafür im Event das interne
+# Feld KATEGORIE_FEST_FELD = True (wird nicht gespeichert) – keine Kopplung über Quellennamen.
+KATEGORIE_FEST_FELD = "_kategorie_fest"
 _ALLGEMEINE_KATEGORIEN = {"kultur", "sonstiges"}
 _THEMEN_KATEGORIEN = {"food", "nightlife", "outdoor"}
 
 
-def kategorie_ersetzen(bisher: Optional[str], neu: Optional[str], neue_quelle: Optional[str] = None) -> bool:
+def kategorie_ersetzen(bisher: Optional[str], neu: Optional[str], neu_fest: bool = False) -> bool:
     """True, wenn die neue Kategorie die bisherige ersetzen soll (statt nur leere Felder zu füllen)."""
     if neu != "stadtfuehrung" or not bisher or bisher == neu:
         return False
     if bisher in _ALLGEMEINE_KATEGORIEN:
         return True
-    return bisher in _THEMEN_KATEGORIEN and neue_quelle in FUEHRUNGS_QUELLEN
+    return bisher in _THEMEN_KATEGORIEN and neu_fest
 
 
 def _uhrzeit(event: dict) -> Optional[str]:
@@ -127,9 +128,11 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
             elif not basis_wert and dupli_wert:
                 merged["bild_url"] = dupli_wert
         elif feld == "kategorie" and kategorie_ersetzen(
-            basis_wert, dupli_wert, duplikat.get("_scraper") or duplikat.get("quelle_name")
+            basis_wert, dupli_wert, bool(duplikat.get(KATEGORIE_FEST_FELD))
         ):
             merged["kategorie"] = dupli_wert
+            # Herkunft der Kategorie mitnehmen – entscheidet später auch beim Abgleich mit der DB
+            merged[KATEGORIE_FEST_FELD] = bool(duplikat.get(KATEGORIE_FEST_FELD))
         else:
             # Feld ergänzen wenn leer
             if not basis_wert and dupli_wert:

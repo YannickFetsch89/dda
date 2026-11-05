@@ -108,6 +108,7 @@ def _events_bauen(termine: list[BookingkitTermin], beschreibungen: dict[str, Opt
             "ort": f"Auf ins Viertel – Treffpunkt {adresse.split(',')[0]}",
             "adresse": adresse,
             "kategorie": KATEGORIE,
+            "_kategorie_fest": True,  # reine Führungsquelle (siehe pipeline/deduplication.py)
             "beschreibung": _beschreibung_kuerzen(beschreibungen.get(t.event_id)),
             "preis": _preis(t.preis),
             "quelle_name": QUELLE_NAME,

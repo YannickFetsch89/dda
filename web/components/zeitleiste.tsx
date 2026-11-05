@@ -19,9 +19,14 @@ export interface Abschnitt {
   events: DddEvent[];
 }
 
+/** Minuten eines Tages ab 6 Uhr gerechnet: Zeiten vor 6 Uhr gehören zur Nacht davor (00:30 → 24:30 = 1470). */
+export function tagesminuten(minuten: number): number {
+  return minuten < 6 * 60 ? minuten + 24 * 60 : minuten;
+}
+
 function zuMinuten(z: string): number {
   const [h, m] = z.split(":").map(Number);
-  return h * 60 + m;
+  return tagesminuten(h * 60 + m);
 }
 
 /**
@@ -97,14 +102,16 @@ export function Zeitleiste({ abschnitte, istHeute }: { abschnitte: Abschnitt[]; 
   }, [istHeute]);
 
   const jetztText = jetzt === null ? "" : `${String(Math.floor(jetzt / 60)).padStart(2, "0")}:${String(jetzt % 60).padStart(2, "0")}`;
+  // Für Vergleiche mit den Abschnitten ebenfalls in Tagesminuten (01:00 nachts → 25:00)
+  const jetztTag = jetzt === null ? null : tagesminuten(jetzt);
 
   return (
     <>
       {abschnitte.map((a) => {
-        const markerHier = jetzt !== null && jetzt >= a.von && jetzt < a.bis;
+        const markerHier = jetztTag !== null && jetztTag >= a.von && jetztTag < a.bis;
         if (!a.events.length && !markerHier) return null;
-        const vorher = markerHier ? a.events.filter((e) => minuten(e, a) <= jetzt!) : a.events;
-        const nachher = markerHier ? a.events.filter((e) => minuten(e, a) > jetzt!) : [];
+        const vorher = markerHier ? a.events.filter((e) => minuten(e, a) <= jetztTag!) : a.events;
+        const nachher = markerHier ? a.events.filter((e) => minuten(e, a) > jetztTag!) : [];
         return (
           <section key={a.name} className="tagesabschnitt">
             <div className="tagesabschnitt__kopf">
