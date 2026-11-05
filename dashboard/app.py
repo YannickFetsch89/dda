@@ -22,6 +22,7 @@ load_dotenv()
 
 from dashboard.auth import abmelden_button, admin_client  # noqa: E402
 from dashboard.meldungen import tab_meldungen, tab_newsletter  # noqa: E402
+from dashboard.seo_aufraeumen import tab_seo_aufraeumen  # noqa: E402
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
@@ -684,13 +685,14 @@ def main():
 
     st.title("🎭 DiesDasDüsseldorf – Event-Planer")
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📅 Tagesplaner",
         "📋 Event-Liste",
         "⭐ Featured Events",
         "📊 Scraper-Report",
         "📨 Meldungen",
         "✉️ Newsletter",
+        "🧹 SEO-Aufräumen",
     ])
 
     with tab1:
@@ -710,6 +712,9 @@ def main():
 
     with tab6:
         tab_newsletter(get_db())
+
+    with tab7:
+        tab_seo_aufraeumen(get_db())
 
 
 if __name__ == "__main__":
