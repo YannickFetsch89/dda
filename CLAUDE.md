@@ -222,6 +222,19 @@ diesdasduesseldorf/
 
 ## Globale Regeln für alle Agents
 
+### Supabase-CLI (nur über den Wrapper)
+- DDA = Supabase-Projekt `dqckcszxoyaxiwwcgxxk` (eu-central-1), im selben Konto wie Ein.Blick.
+- Die CLI läuft **ausschließlich** über `tools/supabase-cli` (dort `npm run sb -- <Argumente>`,
+  `npm run db:list`, `npm run db:push`, `npm run db:push:dry`; Einrichtung einmalig `npm ci`).
+  Der Wrapper liest ein eigenes Token aus `secrets/supabase.env` (gitignored, Vorlage
+  `secrets/supabase.env.example`) und gibt es nur an den CLI-Prozess weiter.
+- **Nie** nacktes `npx supabase …` (lädt ggf. ungepinnt v3) und **nie** `supabase login` für dieses
+  Projekt – der Login gilt für den ganzen Windows-Benutzer und hat am 05.11.2026 Ein.Blick ausgesperrt.
+- Die CLI-Version ist in `tools/supabase-cli/package.json` gepinnt (2.117.0). Keine `package.json`/
+  kein Lockfile im Projekt-Hauptordner anlegen: Next.js (web/) würde sonst den Projekt-Stamm falsch erkennen.
+- SQL-Änderungen führt weiterhin der Auftraggeber im Supabase-SQL-Editor aus (database/*.sql);
+  `db push` gilt nur für Migrationen in `supabase/migrations/`, die es bisher nicht gibt.
+
 ### Code-Qualität
 - Alle Kommentare und Docstrings auf **Deutsch**
 - Alle Log-Ausgaben auf **Deutsch**

@@ -22,3 +22,8 @@ playwright/.auth/
 
 # Kartendaten (OpenStreetMap-Ausschnitt, ~50 MB) – wird separat auf den Server gebracht, nicht über Git
 web/public/karte/*.pmtiles
+
+# Supabase-CLI (tools/supabase-cli): Token-Datei und lokaler Link-Zustand nie ins Repo
+secrets/*.env
+supabase/.temp/
+tools/supabase-cli/node_modules/

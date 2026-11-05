@@ -1,0 +1,16 @@
+{
+  "name": "dda-supabase-cli",
+  "private": true,
+  "description": "Supabase-CLI für DDA mit eigenem Token (secrets/supabase.env) – unabhängig vom globalen supabase login",
+  "type": "module",
+  "scripts": {
+    "sb": "node supabase-cli.mjs",
+    "db:list": "node supabase-cli.mjs migration list --linked",
+    "db:push": "node supabase-cli.mjs db push --linked",
+    "db:push:dry": "node supabase-cli.mjs db push --linked --dry-run",
+    "test": "node --test supabase-cli.test.mjs"
+  },
+  "devDependencies": {
+    "supabase": "2.117.0"
+  }
+}
