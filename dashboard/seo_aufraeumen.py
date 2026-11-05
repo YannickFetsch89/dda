@@ -113,10 +113,36 @@ def kandidaten_laden(db: Client, heute: date, ohne: set[str] | None = None,
     return events, False
 
 
-def kandidaten_zaehlen(db: Client, heute: date) -> int:
-    antwort = (db.table("events").select("id", count="exact").eq("abgelehnt", False).not_.is_("slug", "null")
-               .or_(_abgelaufen_filter(heute)).limit(1).execute())
-    return antwort.count or 0
+def kandidaten_ids(db: Client, heute: date) -> set[str]:
+    """IDs aller aktuellen Kandidaten (nur die Spalte id, seitenweise) – Grundlage der Kennzahlen."""
+    ids: set[str] = set()
+    for seite in range(500):
+        daten = (db.table("events").select("id").eq("abgelehnt", False).not_.is_("slug", "null")
+                 .or_(_abgelaufen_filter(heute)).order("id").range(seite * SEITE, (seite + 1) * SEITE - 1)
+                 .execute().data or [])
+        ids.update(z["id"] for z in daten)
+        if len(daten) < SEITE:
+            break
+    return ids
+
+
+def entscheidungen_laden(db: Client) -> dict[str, dict]:
+    """Alle Entscheidungen, seitenweise (PostgREST liefert höchstens 1.000 Zeilen pro Abfrage)."""
+    ergebnis: dict[str, dict] = {}
+    for seite in range(500):
+        daten = (db.table("event_seo_entscheidungen").select("event_id, aktion, ziel").order("event_id")
+                 .range(seite * SEITE, (seite + 1) * SEITE - 1).execute().data or [])
+        ergebnis.update({z["event_id"]: z for z in daten})
+        if len(daten) < SEITE:
+            break
+    return ergebnis
+
+
+def kennzahlen(kandidaten: set[str], entscheidungen: dict) -> tuple[int, int, int]:
+    """(gesamt, entschieden, offen) – nur über aktuelle Kandidaten. Entscheidungen zu Events, die keine
+    Kandidaten mehr sind (z.B. inzwischen abgelehnt), zählen nicht mit."""
+    entschieden = len(kandidaten & set(entscheidungen))
+    return len(kandidaten), entschieden, len(kandidaten) - entschieden
 
 
 def tabellen_schluessel(ids: list[str], alle: bool) -> str:
@@ -149,9 +175,8 @@ def tab_seo_aufraeumen(db: Client) -> None:
     nur_offen = st.checkbox("Nur noch nicht entschiedene zeigen", value=True)
     heute = date.today()
     try:
-        entscheidungen = {z["event_id"]: z for z in (db.table("event_seo_entscheidungen")
-                                                       .select("event_id, aktion, ziel").execute().data or [])}
-        gesamt = kandidaten_zaehlen(db, heute)
+        entscheidungen = entscheidungen_laden(db)
+        gesamt, entschieden, offen = kennzahlen(kandidaten_ids(db, heute), entscheidungen)
         # Grenze gilt für die ANGEZEIGTEN Events – bei „nur offene“ also für noch nicht entschiedene
         liste, mehr = kandidaten_laden(db, heute, set(entscheidungen) if nur_offen else None)
     except Exception as e:
@@ -160,8 +185,8 @@ def tab_seo_aufraeumen(db: Client) -> None:
 
     a, b, c = st.columns(3)
     a.metric("Seit > 12 Monaten vorbei", gesamt)
-    b.metric("Entschieden", len(entscheidungen))
-    c.metric("Noch offen", max(gesamt - len(entscheidungen), 0))
+    b.metric("Entschieden", entschieden)
+    c.metric("Noch offen", offen)
     if not gesamt:
         st.info("Noch keine Events, die seit mehr als 12 Monaten vorbei sind.")
         return

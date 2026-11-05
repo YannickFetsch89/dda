@@ -57,6 +57,21 @@ class KandidatenTest(unittest.TestCase):
             events, mehr = S.kandidaten_laden(self._db(ids), date(2027, 6, 1), entschieden, max_anzahl=5000)
         self.assertEqual((len(events), mehr), (1300, False))
 
+    def test_kennzahlen_nur_ueber_aktuelle_kandidaten(self):
+        from dashboard.seo_aufraeumen import kennzahlen
+        kandidaten = {"a", "b", "c"}
+        entscheidungen = {"a": {}, "x": {}, "y": {}}  # x, y sind inzwischen keine Kandidaten mehr
+        self.assertEqual(kennzahlen(kandidaten, entscheidungen), (3, 1, 2))
+
+    def test_entscheidungen_seitenweise(self):
+        from unittest import mock
+        import dashboard.seo_aufraeumen as S
+        zeilen = [{"event_id": f"e{i:04d}", "aktion": "gone", "ziel": None} for i in range(2300)]
+        db = mock.MagicMock()
+        kette = db.table.return_value.select.return_value.order.return_value
+        kette.range.side_effect = lambda lo, hi: mock.Mock(execute=lambda: mock.Mock(data=zeilen[lo:hi + 1]))
+        self.assertEqual(len(S.entscheidungen_laden(db)), 2300)
+
     def test_tabellen_schluessel_haengt_an_den_zeilen(self):
         from dashboard.seo_aufraeumen import tabellen_schluessel
         self.assertNotEqual(tabellen_schluessel(["a", "b"], False), tabellen_schluessel(["b", "c"], False))
