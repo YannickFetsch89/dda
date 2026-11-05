@@ -68,6 +68,7 @@ KATEGORIEN = [
     "food",
     "sport",
     "outdoor",
+    "stadtfuehrung",
     "community",
     "nightlife",
     "family",

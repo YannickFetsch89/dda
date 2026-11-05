@@ -78,6 +78,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 |---|---|---|
 | Rausgegangen | rausgegangen.de/duesseldorf | Playwright Scraper |
 | visitduesseldorf.de | visitduesseldorf.de/erleben/veranstaltungen | Playwright Scraper |
+| visitduesseldorf.de – Führungen | Event-Seiten aus sitemap.xml (JSON im Attribut data-tb-detail-event), Kategorie stadtfuehrung | httpx, Zwischenspeicher data/visitduesseldorf/ |
 | Kulturportal Düsseldorf | kulturportal-duesseldorf.de | Playwright Scraper |
 | meinestadt.de | veranstaltungen.meinestadt.de/duesseldorf | Playwright Scraper |
 | eventfinder.de | eventfinder.de/veranstaltungen-duesseldorf | Playwright Scraper |

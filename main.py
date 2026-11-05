@@ -15,6 +15,7 @@ from scraper.tier1 import (
     ticketmaster,
     kulturportal,
     visitduesseldorf,
+    visitduesseldorf_fuehrungen,
     meetup,
     resident_advisor,
     prinz,
@@ -86,6 +87,7 @@ QUELLEN = [
     ("Ticketmaster", 1, ticketmaster.scrape),
     ("Kulturportal Düsseldorf", 1, kulturportal.scrape),
     ("VisitDüsseldorf", 1, visitduesseldorf.scrape),
+    ("VisitDüsseldorf Führungen", 1, visitduesseldorf_fuehrungen.scrape),  # Stadtführungen aus den Event-Seiten
     ("Meetup.com", 1, meetup.scrape),
     ("Resident Advisor", 1, resident_advisor.scrape),
     ("PRINZ.de Düsseldorf", 1, prinz.scrape),

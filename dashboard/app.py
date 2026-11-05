@@ -37,6 +37,7 @@ KATEGORIE_EMOJI = {
     "food":      "🍔",
     "sport":     "⚽",
     "outdoor":   "🌿",
+    "stadtfuehrung": "🚶",
     "community": "🤝",
     "nightlife": "🌙",
     "family":    "👨‍👩‍👧",

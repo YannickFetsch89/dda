@@ -6,6 +6,7 @@ export type KategorieSlug =
   | "food"
   | "sport"
   | "outdoor"
+  | "stadtfuehrung"
   | "community"
   | "nightlife"
   | "familie"

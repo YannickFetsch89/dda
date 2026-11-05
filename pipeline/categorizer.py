@@ -20,9 +20,13 @@ logger = logging.getLogger(__name__)
 
 # Gültige Kategorien laut Datenschema
 GUELTIGE_KATEGORIEN = {
-    "kultur", "musik", "food", "sport", "outdoor",
+    "kultur", "musik", "food", "sport", "outdoor", "stadtfuehrung",
     "community", "nightlife", "family", "dating", "sonstiges"
 }
+
+# Kategorien, die eine Quelle bewusst setzt und die die KI nicht überschreiben soll
+# (Stadtführungs-Anbieter liefern ausschließlich Führungen)
+FESTE_KATEGORIEN = {"stadtfuehrung"}
 
 # Wartezeit zwischen Claude API Aufrufen (Rate Limiting)
 API_WARTEZEIT_SEKUNDEN = 1
@@ -81,7 +85,9 @@ Event-Daten:
 - Aktuelle Kategorie: {aktuelle_kategorie}
 
 Aufgabe:
-1. Bestimme die beste Kategorie aus dieser Liste: kultur, musik, food, sport, outdoor, community, nightlife, family, dating, sonstiges
+1. Bestimme die beste Kategorie aus dieser Liste: kultur, musik, food, sport, outdoor, stadtfuehrung, community, nightlife, family, dating, sonstiges
+   (stadtfuehrung = geführte Stadt-, Viertel-, kulinarische und Kneipentouren, Stadtrundgänge und -rundfahrten;
+   Führungen durch eine Ausstellung im Museum bleiben kultur)
 2. Schreibe eine kurze, einladende Beschreibung auf Deutsch (max. 300 Zeichen)
 3. Ist das ein wiederkehrendes oder langfristiges Event? (z.B. Ausstellung, Dauerveranstaltung, Konzertreihe, wöchentlicher Markt → ja | Einzelkonzert, einmaliges Event → nein)
 
@@ -126,7 +132,7 @@ WIEDERKEHREND: ja/nein"""
                 wiederkehrend_text = zeile.replace("WIEDERKEHREND:", "").strip().lower()
                 ist_wiederkehrend = wiederkehrend_text in ("ja", "yes", "true", "1")
 
-        if not kategorie:
+        if not kategorie or aktuelle_kategorie in FESTE_KATEGORIEN:
             kategorie = aktuelle_kategorie
         if not beschreibung:
             logger.warning("Keine Beschreibung von KI erhalten für Event: %s", titel)

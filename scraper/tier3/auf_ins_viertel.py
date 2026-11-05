@@ -11,7 +11,7 @@ Hintergrund (Stand 2026-11):
   robots.txt: aufinsviertel.de erlaubt alles außer /wp-admin/, bookingkit erlaubt /onPage/.
 
 Es werden nur Touren in Düsseldorf übernommen (Treffpunkt-Adresse), ausgebuchte Termine
-werden übersprungen. Haben zwei Termine derselben Tour denselben Tag, bekommt der Titel die
+werden übersprungen. Kategorie aller Touren: stadtfuehrung. Haben zwei Termine derselben Tour denselben Tag, bekommt der Titel die
 Uhrzeit angehängt – die Datenbank erkennt Duplikate an Titel + Datum + Ort.
 
 Quelle (Link für Besucher): die Tour-Seite auf aufinsviertel.de mit Buchungs-Widget.
@@ -45,13 +45,8 @@ TOUR_SEITEN = {
     "539208519843707a79f3cbbb660e8b97": "/duesseldorf-stadtfuehrungen/benrath/",
 }
 
-# Kneipentouren sind Nachtleben, alle anderen Touren kulinarische Rundgänge
-NIGHTLIFE_MUSTER = re.compile(r"pub\s*crawl|drinks|kneipe|bar(s)?\b", re.I)
-
-
-def _kategorie(titel: str) -> str:
-    """Kategorie einer Tour: Kneipentouren → nightlife, sonst food (kulinarische Führung)."""
-    return "nightlife" if NIGHTLIFE_MUSTER.search(titel) else "food"
+# Alle Touren (kulinarisch und Pub Crawl) sind geführte Rundgänge → eigene Kategorie
+KATEGORIE = "stadtfuehrung"
 
 
 def _in_duesseldorf(adresse: Optional[str]) -> bool:
@@ -105,7 +100,7 @@ def _events_bauen(termine: list[BookingkitTermin], beschreibungen: dict[str, Opt
             "uhrzeit": uhrzeit,
             "ort": f"Auf ins Viertel – Treffpunkt {adresse.split(',')[0]}",
             "adresse": adresse,
-            "kategorie": _kategorie(t.titel),
+            "kategorie": KATEGORIE,
             "beschreibung": _beschreibung_kuerzen(beschreibungen.get(t.event_id)),
             "preis": _preis(t.preis),
             "quelle_name": QUELLE_NAME,

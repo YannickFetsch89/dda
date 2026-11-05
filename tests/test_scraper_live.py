@@ -22,7 +22,7 @@ logging.basicConfig(
 
 PFLICHTFELDER = ["titel", "datum", "ort", "kategorie", "quelle_name", "quelle_url", "status"]
 GUELTIGE_KATEGORIEN = {
-    "kultur", "musik", "food", "sport", "outdoor",
+    "kultur", "musik", "food", "sport", "outdoor", "stadtfuehrung",
     "community", "nightlife", "family", "dating", "sonstiges",
 }
 GUELTIGE_STATUS = {"neu", "aufbereitet", "gepostet", "fehler"}

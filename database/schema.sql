@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS events (
     adresse         TEXT,
     kategorie       TEXT NOT NULL CHECK (kategorie IN (
                         'kultur', 'musik', 'food', 'sport',
-                        'outdoor', 'community', 'nightlife',
+                        'outdoor', 'stadtfuehrung', 'community', 'nightlife',
                         'family', 'dating', 'sonstiges'
                     )),
     beschreibung    TEXT CHECK (char_length(beschreibung) <= 300),
