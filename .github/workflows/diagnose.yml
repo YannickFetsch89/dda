@@ -1,0 +1,29 @@
+name: Server-Diagnose (Website)
+
+# Nur lesen – startet nichts neu. Manuell auslösen: GitHub → Actions → „Server-Diagnose“ → Run workflow
+# (oder: gh workflow run diagnose.yml). Zeigt Zustand der Website, Wächter-Herzschlag und Log-Ende.
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Zustand auf dem Server lesen
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/dies_das_duesseldorfadmin/dda
+            echo "--- Antwort auf 127.0.0.1:3847:"; curl -s -o /dev/null -m 10 -w "HTTP %{http_code}\n" http://127.0.0.1:3847/robots.txt || echo "keine Antwort"
+            echo "--- Next-Prozess lebt?"; kill -0 "$(cat logs/website.pid 2>/dev/null)" 2>/dev/null && echo "ja" || echo "nein"
+            echo "--- Wächter-Schleife lebt?"; kill -0 "$(cat logs/website-schleife.pid 2>/dev/null)" 2>/dev/null && echo "ja" || echo "nein"
+            echo "--- node-pfad:"; cat /home/dies_das_duesseldorfadmin/bin/node-pfad 2>/dev/null || echo "fehlt"
+            echo "--- Herzschlag des Cron-Wächters (letzte 15):"; tail -15 logs/waechter.txt 2>/dev/null || echo "noch keiner"
+            echo "--- Herzschlag-Fallback /tmp:"; tail -5 /tmp/dda-waechter.txt 2>/dev/null || echo "keiner"
+            echo "--- Starts/Abstürze laut Log:"; grep -n "wird gestartet\|beendet (Code\|Wächter:" logs/website.log 2>/dev/null | tail -10 || true
+            echo "--- Speicher-Fehler im Log:"; grep -c "heap out of memory" logs/website.log logs/website.log.1 2>/dev/null || true
+            echo "--- Größe Logs:"; du -sh logs 2>/dev/null || true
+            echo "--- Letzte 30 Zeilen website.log:"; tail -30 logs/website.log 2>/dev/null || echo "Log fehlt"

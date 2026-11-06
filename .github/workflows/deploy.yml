@@ -32,6 +32,9 @@ jobs:
             echo "--- Arbeitsspeicher:"; free -m 2>/dev/null || cat /proc/meminfo 2>/dev/null | head -3 || echo "nicht verfügbar (Jail)"
             echo "--- Uptime:"; uptime 2>/dev/null || true
             echo "--- Crontab (Wächter):"; crontab -l 2>/dev/null || echo "crontab nicht lesbar"
+            echo "--- Wächter-Schleife lebt?"; kill -0 "$(cat logs/website-schleife.pid 2>/dev/null)" 2>/dev/null && echo "ja" || echo "nein"
+            echo "--- Herzschlag des Cron-Wächters (letzte 10):"; tail -10 logs/waechter.txt 2>/dev/null || echo "noch keiner"
+            echo "--- Herzschlag-Fallback /tmp:"; tail -5 /tmp/dda-waechter.txt 2>/dev/null || echo "keiner"
             echo "--- Letzte Starts laut Log:"; grep -n "Website wird gestartet" logs/website.log 2>/dev/null | tail -5 || true
             echo "--- Letzte 80 Zeilen website.log:"; tail -80 logs/website.log 2>/dev/null || echo "Log fehlt"
             echo "===== DIAGNOSE ENDE ====="
@@ -94,6 +97,9 @@ jobs:
             mkdir -p /home/dies_das_duesseldorfadmin/bin
             cp web/deploy/website.sh web/deploy/jail-shim.cjs /home/dies_das_duesseldorfadmin/bin/
             chmod +x /home/dies_das_duesseldorfadmin/bin/website.sh
+            # Verzeichnis von node für den Cron-Wächter merken (Cron hat einen kargen PATH)
+            dirname "$(command -v node)" > /home/dies_das_duesseldorfadmin/bin/node-pfad
+            echo "node für den Wächter: $(cat /home/dies_das_duesseldorfadmin/bin/node-pfad) ($(node -v))"
             cd web
             export NODE_OPTIONS="--require /home/dies_das_duesseldorfadmin/bin/jail-shim.cjs"
             export NEXT_TELEMETRY_DISABLED=1
