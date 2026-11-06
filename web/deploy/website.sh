@@ -57,9 +57,11 @@ laeuft() {
 NOHUP=$(command -v nohup || true)
 lebt() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 
+# Kopieren und KÜRZEN statt umbenennen: Next hält die Datei offen (>> = Anhängen). Nach einem mv würde
+# Next unbegrenzt in website.log.1 weiterschreiben; nach dem Kürzen schreibt es in die geleerte Datei.
 log_rotieren() {
   if [ -f "$LOG" ] && [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt "$LOG_MAX_BYTES" ]; then
-    mv -f "$LOG" "$LOG.1"
+    cp -f "$LOG" "$LOG.1" && : > "$LOG"
   fi
 }
 
