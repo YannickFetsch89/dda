@@ -10,6 +10,7 @@
 #                         Website (antwortet nicht), wird der Next-Prozess beendet und von der Schleife neu gestartet
 #   website.sh neustart   nach Deploy: Schleife und Next-Prozess beenden, neu starten
 #   website.sh stopp      alles beenden
+#   website.sh _schleife  intern: die Wächter-Schleife selbst (startet starten() im Hintergrund)
 PORT=3847
 DIR=/home/dies_das_duesseldorfadmin/dda/web
 LOGDIR=/home/dies_das_duesseldorfadmin/dda/logs
@@ -59,9 +60,17 @@ lebt() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 
 # Kopieren und KÜRZEN statt umbenennen: Next hält die Datei offen (>> = Anhängen). Nach einem mv würde
 # Next unbegrenzt in website.log.1 weiterschreiben; nach dem Kürzen schreibt es in die geleerte Datei.
+# Scheitert die Kopie (z.B. Quota voll), wird die halbe Kopie entfernt und trotzdem gekürzt –
+# lieber den alten Verlauf verlieren als eine volle Platte.
 log_rotieren() {
   if [ -f "$LOG" ] && [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt "$LOG_MAX_BYTES" ]; then
-    cp -f "$LOG" "$LOG.1" && : > "$LOG"
+    if cp -f "$LOG" "$LOG.1" 2>/dev/null; then
+      : > "$LOG"
+    else
+      rm -f "$LOG.1"
+      : > "$LOG"
+      echo "$(date "+%F %T") Log gekürzt ohne Kopie (Kopieren fehlgeschlagen – Platz voll?)" >> "$LOG"
+    fi
   fi
 }
 
@@ -76,26 +85,39 @@ stoppen() {
   rm -f "$SCHLEIFE_PID"
 }
 
+# Die Wächter-Schleife selbst (Aufruf: website.sh _schleife – nur intern über starten()).
+# Startet Next, wartet auf sein Ende, startet nach 3 s neu. Daneben prüft ein Hintergrundjob alle
+# 5 Minuten die Loggröße – so gilt die Grenze auch ohne funktionierenden Cron. SIGTERM (stoppen)
+# beendet den Hintergrundjob mit, damit kein Waisenprozess übrig bleibt.
+schleife() {
+  cd "$DIR" || exit 1
+  ( while true; do sleep "${ROTATION_SEK:-300}"; log_rotieren; done ) &
+  local rotpid=$!
+  trap 'kill "$rotpid" 2>/dev/null; exit 0' TERM INT
+  while true; do
+    echo "$(date "+%F %T") Website wird gestartet" >> "$LOG"
+    ./node_modules/.bin/next start -H 127.0.0.1 -p "$PORT" >> "$LOG" 2>&1 < /dev/null &
+    echo $! > "$PIDDATEI"
+    wait $!
+    local code=$?
+    echo "$(date "+%F %T") Website beendet (Code $code) – Neustart in 3 s" >> "$LOG"
+    sleep 3
+  done
+}
+
 starten() {
   cd "$DIR" || exit 1
   log_rotieren
-  # Schleife im Hintergrund: Next starten, auf Ende warten, neu starten
-  $NOHUP bash -c '
-    while true; do
-      echo "$(date "+%F %T") Website wird gestartet" >> "'"$LOG"'"
-      ./node_modules/.bin/next start -H 127.0.0.1 -p '"$PORT"' >> "'"$LOG"'" 2>&1 < /dev/null &
-      echo $! > "'"$PIDDATEI"'"
-      wait $!
-      code=$?
-      echo "$(date "+%F %T") Website beendet (Code $code) – Neustart in 3 s" >> "'"$LOG"'"
-      sleep 3
-    done
-  ' > /dev/null 2>&1 < /dev/null &
+  # Schleife im Hintergrund (eigener Prozess dieses Skripts), von der Sitzung gelöst
+  $NOHUP bash "$0" _schleife > /dev/null 2>&1 < /dev/null &
   echo $! > "$SCHLEIFE_PID"
   disown
 }
 
 case "$1" in
+  _schleife)
+    schleife
+    ;;
   neustart)
     stoppen
     starten
