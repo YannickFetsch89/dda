@@ -20,8 +20,23 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY
           script: |
-            set -e
             cd /home/dies_das_duesseldorfadmin/dda
+
+            # --- Diagnose VOR dem Neustart (Zustand der Website, falls sie ausgefallen war) ---
+            echo "===== DIAGNOSE: Website-Zustand vor dem Deploy ====="
+            echo "--- Antwort auf 127.0.0.1:3847:"; curl -s -o /dev/null -m 5 -w "HTTP %{http_code}\n" http://127.0.0.1:3847/robots.txt || echo "keine Antwort"
+            echo "--- PID-Datei:"; cat logs/website.pid 2>/dev/null || echo "fehlt"
+            echo "--- Prozess zur PID lebt?"; kill -0 "$(cat logs/website.pid 2>/dev/null)" 2>/dev/null && echo "ja" || echo "nein"
+            echo "--- Speicherplatz:"; df -h . 2>/dev/null || true
+            echo "--- Größe Logs/.next:"; du -sh logs web/.next 2>/dev/null || true
+            echo "--- Arbeitsspeicher:"; free -m 2>/dev/null || cat /proc/meminfo 2>/dev/null | head -3 || echo "nicht verfügbar (Jail)"
+            echo "--- Uptime:"; uptime 2>/dev/null || true
+            echo "--- Crontab (Wächter):"; crontab -l 2>/dev/null || echo "crontab nicht lesbar"
+            echo "--- Letzte Starts laut Log:"; grep -n "Website wird gestartet" logs/website.log 2>/dev/null | tail -5 || true
+            echo "--- Letzte 80 Zeilen website.log:"; tail -80 logs/website.log 2>/dev/null || echo "Log fehlt"
+            echo "===== DIAGNOSE ENDE ====="
+
+            set -e
 
             # SUPABASE_SERVICE_KEY in .env eintragen (falls noch nicht vorhanden)
             if ! grep -q "^SUPABASE_SERVICE_KEY=" .env 2>/dev/null; then
