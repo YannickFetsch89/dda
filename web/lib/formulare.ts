@@ -5,16 +5,13 @@
 // über diese Routen mit Prüfung, Honeypot und Bremslimit. Der Service-Key bleibt auf dem Server
 // ("server-only"), er steht in web/.env.local (vom Deploy aus dem GitHub-Secret geschrieben).
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
+import { dienstClient } from "./supabase-server";
 
+/** Gemeinsamer Schreib-Client mit Service-Key (einer pro Prozess, siehe lib/supabase-server.ts). */
 export function schreibClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) {
-    console.error("SUPABASE_URL / SUPABASE_SERVICE_KEY fehlen – Formulare können nicht speichern");
-    return null;
-  }
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const client = dienstClient();
+  if (!client) console.error("SUPABASE_URL / SUPABASE_SERVICE_KEY fehlen – Formulare können nicht speichern");
+  return client;
 }
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;

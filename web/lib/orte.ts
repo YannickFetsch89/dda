@@ -1,7 +1,7 @@
 // Datenzugriff für Orte (Restaurants, Cafés etc.)
 // Analog zu daten.ts – cached per "use cache" und cacheLife.
 import { cacheLife } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import { leseClient } from "./supabase-server";
 import type { DddOrt, OrtTyp } from "./typen";
 
 const SPALTEN = [
@@ -31,11 +31,9 @@ type Zeile = Record<string, unknown>;
 export const MIN_QUALITAETS_SCORE = 7;
 const SEITENGROESSE = 1000;
 
+/** Gemeinsamer Lese-Client (einer pro Prozess, siehe lib/supabase-server.ts). */
 function supabaseClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  return leseClient();
 }
 
 function text(wert: unknown): string | null {

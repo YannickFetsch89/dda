@@ -2,7 +2,7 @@
 // Nur Bilder, die zu einem Event in unserer Datenbank gehören – kein offener Proxy für beliebige Adressen.
 import { cacheLife } from "next/cache";
 import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { leseClient } from "@/lib/supabase-server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -10,13 +10,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Original-Bildadresse eines Events (1 Tag gecached; nach Fehlern nur kurz). */
 async function bildQuelle(id: string): Promise<string | null> {
   "use cache";
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) {
+  const client = leseClient(); // ein Client pro Prozess – nicht pro Bild (Speicherleck, siehe supabase-server.ts)
+  if (!client) {
     cacheLife({ stale: 30, revalidate: 60, expire: 120 });
     return null;
   }
-  const { data, error } = await createClient(url, key, { auth: { persistSession: false } })
+  const { data, error } = await client
     .from("events")
     .select("bild_url")
     .eq("id", id)

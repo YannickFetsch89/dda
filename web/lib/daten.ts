@@ -1,7 +1,7 @@
 // Datenzugriff: lädt alle relevanten Events einmal aus Supabase und cached sie 10 Minuten.
 // Alle Ansichten leiten ihre Listen aus diesem Pool ab (siehe lib/ableitungen.ts).
 import { cacheLife } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import { leseClient } from "./supabase-server";
 import beispiel from "./beispiel-events.json";
 import { kategorieAusDb } from "./kategorien";
 import { heuteBerlin, plusTage, tageZwischen } from "./datum";
@@ -85,11 +85,9 @@ export async function mitSpalten<T>(
   return ergebnis;
 }
 
+/** Gemeinsamer Lese-Client (einer pro Prozess, siehe lib/supabase-server.ts). */
 export function supabaseClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  return leseClient();
 }
 
 async function ausSupabaseLaden(heute: string): Promise<DddEvent[]> {
