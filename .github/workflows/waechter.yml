@@ -1,0 +1,41 @@
+name: Website-Wächter
+
+# Ersetzt den Server-Cron (der unter ISPConfig nicht ausgeführt wird): ruft alle 15 Minuten per SSH
+# ~/bin/website.sh auf – im selben Jail wie der Deploy. Das Skript startet die Website, falls sie nicht
+# läuft (z.B. nach einem Server-Neustart), und schreibt einen Herzschlag nach logs/waechter.txt.
+# Ist die Website danach von außen nicht erreichbar, schlägt der Lauf fehl → GitHub schickt eine E-Mail.
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"  # alle 15 Minuten, versetzt zur vollen Stunde (dann ist GitHub ausgelastet)
+  workflow_dispatch:
+
+# Nie gleichzeitig mit einem Deploy (der startet die Website selbst neu)
+concurrency:
+  group: website-server
+  cancel-in-progress: false
+
+jobs:
+  waechter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wächter auf dem Server ausführen
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            /home/dies_das_duesseldorfadmin/bin/website.sh
+            echo "Letzter Herzschlag: $(tail -1 /home/dies_das_duesseldorfadmin/dda/logs/waechter.txt 2>/dev/null || echo keiner)"
+
+      - name: Website von außen prüfen
+        run: |
+          for versuch in 1 2 3; do
+            code=$(curl -s -o /dev/null -m 20 -w "%{http_code}" https://diesdas.events/robots.txt || true)
+            echo "Versuch $versuch: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "::error::diesdas.events ist nicht erreichbar (HTTP $code)"
+          exit 1

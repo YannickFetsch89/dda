@@ -5,6 +5,11 @@ on:
     branches:
       - claude/setup-project-structure-5QNOf
 
+# Nie gleichzeitig mit dem Website-Wächter (waechter.yml) – beide starten die Website ggf. neu
+concurrency:
+  group: website-server
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
