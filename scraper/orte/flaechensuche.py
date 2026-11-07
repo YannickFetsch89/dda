@@ -49,12 +49,14 @@ from pipeline.slug_generator import slug_mit_suffix  # noqa: E402
 from scraper.orte.imbiss import typ_verfeinern  # noqa: E402
 from scraper.orte.google_places import (  # noqa: E402
     API_BASE,
+    BAR_DETAIL_FELDER,
     _AUSSCHLUSS_TYPEN,
     _slug_erzeugen,
     alle_zeilen,
     ort_aus_place,
     place_details,
 )
+from scraper.orte import bars  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -85,7 +87,42 @@ SUCH_FELDER = ",".join(f"places.{f}" for f in (
 PREIS_SUCHE = 35.0
 PREIS_DETAILS = 25.0
 
-ZWISCHENSPEICHER = Path(__file__).resolve().parents[2] / "data" / "orte" / "flaechensuche.json"
+_DATEN = Path(__file__).resolve().parents[2] / "data" / "orte"
+
+# Hubs: je eigener Zwischenspeicher (die Zellenschlüssel enthalten keinen Hub – eine gemeinsame Datei
+# würde erledigte Restaurant-Zellen auch für Bars als fertig werten), eigene Suchtypen und Nachzüge.
+# „restaurants“ ist der Standard und verhält sich exakt wie vor der Einführung der Hubs.
+HUBS = {
+    "restaurants": {
+        "datei": _DATEN / "flaechensuche.json",
+        "such_typen": ["restaurant", "cafe", "coffee_shop"],
+        "nachzug": [["restaurant"], ["cafe", "coffee_shop"]],
+        "import": True,
+    },
+    "bars": {
+        "datei": _DATEN / "flaechensuche_bars.json",
+        "such_typen": bars.SUCH_TYPEN_BARS,
+        "nachzug": bars.NACHZUG_BARS,
+        "import": True,
+    },
+    # Club-Hub (E4): nur suchen und zwischenspeichern – Import erst mit eigenem Hub
+    "clubs": {
+        "datei": _DATEN / "flaechensuche_clubs.json",
+        "such_typen": bars.SUCH_TYPEN_CLUBS,
+        "nachzug": [],
+        "import": False,
+    },
+}
+HUB = "restaurants"
+ZWISCHENSPEICHER = HUBS[HUB]["datei"]
+
+
+def hub_setzen(name: str) -> None:
+    """Aktiven Hub setzen (vor jedem Zugriff auf den Zwischenspeicher)."""
+    global HUB, ZWISCHENSPEICHER, SUCH_TYPEN
+    HUB = name
+    ZWISCHENSPEICHER = HUBS[name]["datei"]
+    SUCH_TYPEN = HUBS[name]["such_typen"]
 
 # Primärtypen, die als Café gelten; Restaurants: "restaurant" oder "*_restaurant" und einige Sonderfälle
 CAFE_TYPEN = {
@@ -225,11 +262,12 @@ def _viertel(zelle: dict) -> list[dict]:
 
 def _typ_nachzuege(zelle: dict) -> list[dict]:
     """
-    Volle Kleinstzelle getrennt nach Restaurants und Cafés erneut abfragen: In einer gemeinsamen
-    Anfrage (Limit 20) verdrängen bekannte Restaurants sonst die Cafés.
+    Volle Kleinstzelle getrennt nach Typgruppen des Hubs erneut abfragen: In einer gemeinsamen
+    Anfrage (Limit 20) verdrängen bekannte Orte sonst die selteneren Typen
+    (Restaurants: Restaurants | Cafés; Bars: Kneipen | Bars | Biergärten).
     """
     stufe, i, j = _gitter_von(zelle)
-    return [_gitter_zelle(stufe, i, j, ["restaurant"]), _gitter_zelle(stufe, i, j, ["cafe", "coffee_shop"])]
+    return [_gitter_zelle(stufe, i, j, gruppe) for gruppe in HUBS[HUB]["nachzug"]]
 
 
 def _speicher_normalisieren(daten: dict) -> None:
@@ -292,7 +330,11 @@ def _nachverfeinern(daten: dict, je_typ: bool = False) -> int:
 
 
 def ort_typ(place: dict) -> str | None:
-    """Ordnet den Google-Primärtyp unserem Typ zu (None = weder Restaurant noch Café)."""
+    """Ordnet den Google-Primärtyp unserem Typ zu – je nach Hub (None = gehört nicht in diesen Hub)."""
+    if HUB == "bars":
+        return "kneipe" if bars.ist_bar_ort(place) else None
+    if HUB == "clubs":
+        return "club" if bars.ist_club(place) else None
     primaer = place.get("primaryType") or ""
     if primaer in CAFE_TYPEN:
         return "cafe"
@@ -307,10 +349,16 @@ def ist_kandidat(place: dict) -> tuple[bool, str]:
         return False, "geschlossen"
     if not stadt_von(place):
         return False, "außerhalb"
-    if set(place.get("types") or []) & _AUSSCHLUSS_TYPEN:
+    if HUB == "bars" and bars.ist_shisha(place):
+        return False, "Shisha-Bar"
+    if HUB in ("bars", "clubs"):
+        # Hotelbars zulassen (E3), nur Hotels ohne Bar-Primärtyp ausschließen
+        if bars.ist_hotel_ohne_bar(place) or set(place.get("types") or []) & (_AUSSCHLUSS_TYPEN - bars.HOTEL_TYPEN):
+            return False, "Ausschlusstyp"
+    elif set(place.get("types") or []) & _AUSSCHLUSS_TYPEN:
         return False, "Ausschlusstyp"
     if not ort_typ(place):
-        return False, "kein Restaurant/Café"
+        return False, {"bars": "keine Kneipe/Bar", "clubs": "kein Club"}.get(HUB, "kein Restaurant/Café")
     if (place.get("rating") or 0) < GOOGLE_PLACES_MIN_RATING:
         return False, "Bewertung zu niedrig"
     if (place.get("userRatingCount") or 0) < GOOGLE_PLACES_MIN_BEWERTUNGEN:
@@ -523,8 +571,11 @@ def auswertung() -> None:
     print(f"Treffer gesamt: {len(daten['orte'])}")
     for grund, n in gruende.most_common():
         print(f"  {grund:24s} {n:5d}")
-    print(f"\nKandidaten: {len(liste)}  (Restaurants: {sum(p['_typ'] == 'restaurant' for p in liste)}, "
-          f"Cafés: {sum(p['_typ'] == 'cafe' for p in liste)}, davon Ketten: {sum(p['_kette'] for p in liste)})")
+    typen = Counter(p["_typ"] for p in liste)
+    print(f"\nKandidaten ({HUB}): {len(liste)}  {dict(typen)}, davon Ketten: {sum(p['_kette'] for p in liste)}")
+    if HUB == "bars":
+        print("Unterart:", dict(Counter(bars.unterart(p) for p in liste)),
+              "| Primärtypen:", dict(Counter(p.get("primaryType") for p in liste).most_common(12)))
     print("Vorab-Score:", dict(sorted(Counter(p["_score"] for p in liste).items(), reverse=True)))
     print("Städte:", dict(Counter(stadt_von(p) for p in liste)), "| davon Score ≥ 7:", sum(p["_score"] >= 7 for p in liste))
     stadtteile = Counter(
@@ -549,6 +600,9 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
     """Lädt Details für die besten neuen Kandidaten und speichert sie inaktiv in `orte`."""
     from database.client import get_supabase_client
 
+    if not HUBS[HUB]["import"]:
+        logger.error("Hub '%s' wird nur gesucht und zwischengespeichert – Import erst mit eigenem Hub.", HUB)
+        return {}
     daten = speicher_laden()
     if not daten:
         logger.error("Kein Zwischenspeicher – zuerst 'suchen' ausführen.")
@@ -561,7 +615,19 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
     bekannte_ids = {o["google_place_id"] for o in bestehend if o.get("google_place_id")}
     vergebene_slugs = {o["slug"] for o in bestehend}
 
-    neu = [p for p in kandidaten(daten) if p["id"] not in bekannte_ids and p["_score"] >= min_score]
+    alle_kandidaten = kandidaten(daten)
+    if HUB == "bars":
+        # E1-Liste: schon vorhandene Orte (z.B. Brauhäuser im Restaurant-Hub) nicht still überspringen
+        bestand = {o["google_place_id"]: o for o in alle_zeilen(db, "orte", "google_place_id, name, typ, qualitaets_score")
+                   if o.get("google_place_id")}
+        schon_da = [p for p in alle_kandidaten if p["id"] in bestand]
+        if schon_da:
+            print(f"\nE1 – schon in der DB ({len(schon_da)}), werden nicht neu angelegt:")
+            for p in schon_da:
+                o = bestand[p["id"]]
+                print(f"  {o['name'][:45]:45s} heute: {o['typ']:10s} Google: {p.get('primaryType')} "
+                      f"Score {o.get('qualitaets_score')}")
+    neu = [p for p in alle_kandidaten if p["id"] not in bekannte_ids and p["_score"] >= min_score]
     auswahl = neu[:max_anzahl]
     logger.info(
         "%d neue Kandidaten (Score ≥ %d), importiere %d → Details ca. %.2f $ (ohne Freikontingent)%s",
@@ -578,8 +644,12 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
     for i, p in enumerate(auswahl, 1):
         name = p["displayName"]["text"]
         try:
-            place = {**p, **place_details(p["id"])}
-            ort = ort_aus_place(place, p["_typ"])
+            if HUB == "bars":
+                place = {**p, **place_details(p["id"], BAR_DETAIL_FELDER)}
+                ort = ort_aus_place(place, p["_typ"], hotel_erlaubt=bars.hotel_erlaubt(p))
+            else:
+                place = {**p, **place_details(p["id"])}
+                ort = ort_aus_place(place, p["_typ"])
             if not ort:
                 continue
             ort["typ"] = p["_typ"]
@@ -593,6 +663,7 @@ def importieren(max_anzahl: int, min_score: int, dry_run: bool) -> dict:
                 "kette": p["_kette"],
                 "google_primaertyp": p.get("primaryType"),
                 "quelle": "flaechensuche",
+                **({"unterart": bars.unterart(p), "hub": "bars"} if HUB == "bars" else {}),
             }
             # Restaurant oder Schnellimbiss? (Regeln in imbiss.py, braucht Primärtyp + Ausstattung)
             ort["typ"] = typ_verfeinern(ort)
@@ -672,7 +743,9 @@ def neu_bewerten(dry_run: bool) -> list[dict]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Flächendeckende Restaurant-/Café-Suche für Düsseldorf")
+    parser = argparse.ArgumentParser(description="Flächendeckende Orte-Suche für Düsseldorf (Restaurants, Bars, Clubs)")
+    parser.add_argument("--hub", choices=list(HUBS), default="restaurants",
+                        help="Welcher Hub (eigener Zwischenspeicher je Hub; Standard: restaurants)")
     befehle = parser.add_subparsers(dest="befehl", required=True)
 
     p_suchen = befehle.add_parser("suchen", help="Flächensuche ausführen/fortsetzen")
@@ -692,6 +765,7 @@ def main():
     p_import.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts abrufen oder speichern")
 
     args = parser.parse_args()
+    hub_setzen(args.hub)
     if args.befehl in ("suchen", "importieren") and not GOOGLE_PLACES_API_KEY:
         logger.error("GOOGLE_PLACES_API_KEY fehlt in .env")
         sys.exit(1)

@@ -166,20 +166,26 @@ _DETAIL_FELDER_VOLL = _DETAIL_FELDER_BASIS + "," + ",".join(_AUSSTATTUNG_TAGS)
 _MAX_BEWERTUNGEN = 5
 
 
-def place_details(place_id: str) -> dict:
+# Zusätzliche boolesche Felder für Kneipen & Bars (gleiche SKU-Stufe wie die Ausstattungsfelder)
+BAR_DETAIL_FELDER = ("servesBeer", "servesWine", "servesCocktails", "goodForWatchingSports", "liveMusic", "goodForGroups")
+
+
+def place_details(place_id: str, zusatz_felder: tuple[str, ...] = ()) -> dict:
     """
     Place Details (New) – lädt vollständige Infos zu einem Ort (auf Deutsch).
 
+    zusatz_felder: weitere Felder (z.B. BAR_DETAIL_FELDER), nur im vollen Abruf.
     Lehnt die API die Ausstattungsfelder ab (HTTP 400), wird mit den Basisfeldern wiederholt.
     """
     url = f"{API_BASE}/places/{place_id}"
     params = {"languageCode": "de", "regionCode": "DE"}
+    voll = _DETAIL_FELDER_VOLL + "".join(f",{f}" for f in zusatz_felder if f not in _DETAIL_FELDER_VOLL.split(","))
 
     with httpx.Client(timeout=30) as client:
-        for field_mask in (_DETAIL_FELDER_VOLL, _DETAIL_FELDER_BASIS):
+        for field_mask in (voll, _DETAIL_FELDER_BASIS):
             time.sleep(0.5)  # Rate Limiting
             resp = client.get(url, params=params, headers=_headers(field_mask))
-            if resp.status_code == 400 and field_mask is _DETAIL_FELDER_VOLL:
+            if resp.status_code == 400 and field_mask is voll:
                 logger.warning("Details mit Ausstattungsfeldern abgelehnt, versuche Basisfelder: %s", resp.text[:300])
                 continue
             resp.raise_for_status()
@@ -252,15 +258,24 @@ _AUSSCHLUSS_TYPEN = {
 }
 
 
-def ort_aus_place(place: dict, gewuenschter_typ: str) -> dict | None:
-    """Konvertiert ein Google Place zu unserem Ort-Dict."""
+_HOTEL_TYPEN = {"hotel", "motel", "lodging", "resort_hotel", "extended_stay_hotel"}
+
+
+def ort_aus_place(place: dict, gewuenschter_typ: str, hotel_erlaubt: bool = False) -> dict | None:
+    """
+    Konvertiert ein Google Place zu unserem Ort-Dict.
+
+    hotel_erlaubt=True: Hotel-Typen schließen nicht aus (Hotelbars im Kneipen-Hub). Die übrigen
+    Ausschlüsse (Einkaufszentren, Tankstellen …) gelten weiter.
+    """
     name = place.get("displayName", {}).get("text", "")
     if not name:
         return None
 
     # Hotels, Einkaufszentren etc. rausfiltern
     typen = set(place.get("types", []))
-    if typen & _AUSSCHLUSS_TYPEN:
+    ausschluss = _AUSSCHLUSS_TYPEN - _HOTEL_TYPEN if hotel_erlaubt else _AUSSCHLUSS_TYPEN
+    if typen & ausschluss:
         return None
 
     rating = place.get("rating")
@@ -339,6 +354,16 @@ def _detail_felder(place: dict) -> dict:
 
     if place.get("googleMapsUri"):
         extras["google_maps_url"] = place["googleMapsUri"]
+
+    # Öffnungszeiten strukturiert (für schema.org OpeningHoursSpecification), zusätzlich zum Text
+    perioden = (place.get("regularOpeningHours") or {}).get("periods")
+    if perioden:
+        extras["oeffnungszeiten_perioden"] = perioden
+
+    # Bar-Merkmale (nur vorhanden, wenn mit BAR_DETAIL_FELDER abgerufen)
+    bar = {f: place[f] for f in BAR_DETAIL_FELDER if isinstance(place.get(f), bool)}
+    if bar:
+        extras["google_bar"] = bar
 
     # Bewertungstexte als Material für die spätere KI-Beschreibung (werden nicht angezeigt)
     bewertungen = []

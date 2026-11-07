@@ -90,6 +90,6 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
 }
 
 /** JSON für ein <script type="application/ld+json"> – „<“ maskiert, damit kein </script> ausbricht. */
-export function jsonLdText(daten: Record<string, unknown>): string {
+export function jsonLdText(daten: unknown): string {
   return JSON.stringify(daten).replace(/</g, "\\u003c");
 }

@@ -1243,3 +1243,33 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 .filter-dd .popover--kalender { max-height: 85vh; }
 @media (min-width: 768px) { .filter-dd .popover--kalender { max-height: 600px; width: 300px; } }
 .filter-kalender { flex-basis: 100%; }
+
+/* ---------- Guide-Hub Kneipen & Bars: abendlicher Ton (kein Dark Mode) ---------- */
+.gd-hero--abend { background: repeating-linear-gradient(135deg, #222a40 0 14px, #1a2134 14px 28px); }
+.gd-hero--abend .gd-hero__verlauf {
+  background:
+    radial-gradient(120% 80% at 85% 10%, rgba(201, 168, 76, 0.28), transparent 60%),
+    linear-gradient(0deg, rgba(14, 19, 34, 0.96) 0%, rgba(14, 19, 34, 0.72) 60%, rgba(14, 19, 34, 0.5) 100%);
+}
+@media (min-width: 768px) {
+  .gd-hero--abend .gd-hero__verlauf {
+    background:
+      radial-gradient(90% 120% at 90% 0%, rgba(201, 168, 76, 0.3), transparent 60%),
+      linear-gradient(90deg, rgba(14, 19, 34, 0.96) 0%, rgba(14, 19, 34, 0.72) 60%, rgba(14, 19, 34, 0.5) 100%);
+  }
+}
+.gd-karte--abend { border: 1px solid #d9dee7; }
+.gd-typ--abend { color: #9c8346; }
+.gd-karte--abend .gd-bewertung .icon, .gd-seite--abend .gd-info .icon { color: #9c8346; }
+.gd-karte__spez { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--ddd-text-body); }
+.gd-karte__spez .icon { font-size: 16px; color: #9c8346; }
+.gd-hh {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--r-pill);
+  background: #f5eedb; border: 1px solid #e6d8ae; color: #6e5a22; font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.gd-hh .icon { font-size: 14px; }
+.gd-schalter { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 767px) { .gd-schalter .gd-chip { flex: 1 1 100%; justify-content: center; } }
+:root[data-theme="dark"] .gd-karte--abend { border-color: var(--ddd-border); }
+:root[data-theme="dark"] .gd-hh { background: #3a3220; border-color: #5a4a26; color: #f0dca0; }
+:root[data-theme="dark"] .gd-typ--abend, :root[data-theme="dark"] .gd-karte__spez .icon { color: #c9a84c; }

@@ -19,6 +19,10 @@ const SPALTEN = [
 const EXTRAS_FELDER = [
   "google_foto", "google_primaertyp", "google_maps_url", "vorab_score",
   "kueche", "highlight_gericht", "reservierung_url", "terrasse",
+  // Kneipen & Bars (lib/kneipen.ts) und Hub-Überschneidungen (Brauhäuser in beiden Guides)
+  "unterart", "spezialitaeten", "vibes", "happy_hour", "raucher", "auch_restaurant", "auch_kneipe",
+  // strukturierte Öffnungszeiten für schema.org (JSON-LD)
+  "oeffnungszeiten_perioden",
 ];
 const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 

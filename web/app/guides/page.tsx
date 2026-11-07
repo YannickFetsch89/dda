@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { Icon } from "@/components/karten";
 import { zahl } from "@/lib/guide-filter";
 import { orteLaden } from "@/lib/orte";
+import { kneipenLaden } from "@/lib/kneipen-daten";
 
 export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
@@ -27,7 +28,7 @@ interface Hub {
 // Reihenfolge und Texte laut data/guides.json im Design-Handoff
 const HUBS: Hub[] = [
   { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
-  { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: false },
+  { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },
   { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: false },
   { slug: "spielplaetze", label: "Spielplätze", icon: "toys", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: false },
   { slug: "ausfluege", label: "Ausflüge", icon: "hiking", teaser: "Raus aus der Stadt – unter einer Stunde erreichbar", einheit: "Ziele", fertig: false },
@@ -94,8 +95,9 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
 
 /** Kacheln mit echten Zahlen (Daten gecached über orteLaden). */
 async function Kacheln() {
-  const restaurants = await orteLaden(["restaurant", "imbiss", "cafe"]);
-  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length }} />;
+  // Jeder Hub zählt seine eigenen Orte (Kneipen nicht in die Restaurant-Zahl mischen)
+  const [restaurants, kneipen] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe"]), kneipenLaden()]);
+  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length, "kneipen-bars": kneipen.length }} />;
 }
 
 export default function GuidesUebersicht() {

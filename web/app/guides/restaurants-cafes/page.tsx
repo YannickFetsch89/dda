@@ -15,6 +15,7 @@ import {
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
 import { orteLaden, ortBildUrl } from "@/lib/orte";
+import { brauhaeuserFuerRestaurants } from "@/lib/kneipen-daten";
 import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
@@ -78,7 +79,9 @@ function Ansicht({ ansichten }: { ansichten: { label: string; icon: string; href
 
 async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   // Orte einmal laden (gecached) und an Hero und Liste weitergeben
-  const [sp, alle] = await Promise.all([searchParams, orteLaden([...TYPEN])]);
+  // Brauhäuser aus dem Kneipen-Hub erscheinen zusätzlich hier (E1) – ihr Link bleibt die Kneipen-URL
+  const [sp, eigene, brauhaeuser] = await Promise.all([searchParams, orteLaden([...TYPEN]), brauhaeuserFuerRestaurants()]);
+  const alle = [...eigene, ...brauhaeuser];
   const f = filterLesen(sp);
   const href = (a: Partial<GuideFilter>) => filterHref(BASIS, f, a);
 

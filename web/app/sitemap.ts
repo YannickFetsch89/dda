@@ -44,11 +44,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       : [];
 
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
-  const orte = await orteLaden(["restaurant", "imbiss", "cafe"]);
+  // Jeder Ort genau einmal (URL nach typ über ortPfad) – auch Brauhäuser, die in zwei Hubs erscheinen
+  const orte = await orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]);
+  const hatKneipen = orte.some((o) => o.typ === "kneipe");
   const guides: MetadataRoute.Sitemap = orte.length
     ? [
         { url: `${SITE_URL}/guides`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
         { url: `${SITE_URL}/guides/restaurants-cafes`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
+        ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, lastModified: jetzt, changeFrequency: "weekly" as const, priority: 0.7 }] : []),
         ...orte.map((o) => ({
           url: `${SITE_URL}${ortPfad(o)}`,
           lastModified: o.aktualisiert_am ? new Date(o.aktualisiert_am) : jetzt,
