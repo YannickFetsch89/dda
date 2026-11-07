@@ -1235,3 +1235,11 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 .reihe__abschnitt h2 { margin-bottom: 12px; }
 .reihe__termine .zeile__zeit { width: 72px; }
 .reihen-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-weight: 600; }
+
+/* ---------- Entdecken: Kalender im Datumsfilter ---------- */
+.kalender__tag--gewaehlt { background: var(--ddd-navy); color: #fff; font-weight: 700; }
+.kalender__tag--gewaehlt:hover:not(:disabled) { background: var(--ddd-navy); color: #fff; }
+.popover__titel { display: block; padding: 10px 12px 2px; margin-top: 4px; border-top: 1px solid var(--ddd-border); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ddd-text-muted); }
+.filter-dd .popover--kalender { max-height: 85vh; }
+@media (min-width: 768px) { .filter-dd .popover--kalender { max-height: 600px; width: 300px; } }
+.filter-kalender { flex-basis: 100%; }

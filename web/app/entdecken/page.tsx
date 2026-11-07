@@ -6,6 +6,7 @@ import { Bild, EventKarte, Icon, KatBadge, Leer, SkeletonKarten, eventPfad } fro
 import { eventPoolLaden } from "@/lib/daten";
 import { TAGESZEITEN, filtern, highlights, kategorieZaehlen, nachBeliebtheit, nachNeu, nachZeit, stadtteileZaehlen, type Tageszeit } from "@/lib/ableitungen";
 import { ZEITRAUM_OPTIONEN, metaZeile, zeitraumAuflösen } from "@/lib/datum";
+import { DatumWaehler } from "@/components/datum-waehler";
 import { KATEGORIEN, kategorie } from "@/lib/kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
 
@@ -88,6 +89,10 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   const { highlight, top } = highlights(pool);
   const zeigeHighlights = ohneFilter && seite === 1;
 
+  // Für den Kalender: alle aktiven Filter außer Datum und Seite behalten; exakt gewähltes Datum markieren
+  const ohneDatum = Object.fromEntries(Object.entries(p).filter(([k, v]) => v && k !== "datum" && k !== "seite")) as Record<string, string>;
+  const exaktesDatum = /^\d{4}-\d{2}-\d{2}$/.test(z.key) ? z.key : undefined;
+
   const aktiv = {
     datum: z.label,
     kategorie: p.kategorie ? kategorie(p.kategorie).name : null,
@@ -132,6 +137,9 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
                   {o.label}
                 </Link>
               ))}
+              <div className="filter-kalender">
+                <DatumWaehler heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} />
+              </div>
             </FilterGruppe>
             <FilterGruppe titel="Kategorie">
               {KATEGORIEN.map((k) => (
@@ -169,12 +177,14 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
           </div>
         </details>
 
-        <Dropdown label={aktiv.datum} aktiv={z.key !== "woche"}>
+        <Dropdown label={aktiv.datum} aktiv={z.key !== "woche"} breit>
           {ZEITRAUM_OPTIONEN.map((o) => (
             <Link key={o.key} href={url(p, { datum: o.key })} aria-current={z.key === o.key ? "true" : undefined}>
               {o.label}
             </Link>
           ))}
+          <span className="popover__titel">Datum wählen</span>
+          <DatumWaehler heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} />
         </Dropdown>
         <Dropdown label={aktiv.kategorie ?? "Kategorie"} aktiv={!!aktiv.kategorie}>
           <Link href={url(p, { kategorie: undefined })}>Alle Kategorien</Link>
@@ -224,20 +234,13 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
         )}
       </div>
 
-      <div className="sortierzeile">
-        <nav className="segment" aria-label="Sortierung">
-          {SORTIERUNGEN.map((s) => (
-            <Link key={s.key} href={url(p, { sort: s.key === "beliebt" ? undefined : s.key })} aria-current={sort === s.key ? "true" : undefined} scroll={false}>
-              {s.label}
-            </Link>
-          ))}
-        </nav>
-        {!ohneFilter && (
+      {!ohneFilter && (
+        <div className="sortierzeile">
           <Link href="/entdecken" className="link">
             Filter zurücksetzen
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       {zeigeHighlights && highlight && (
         <article className="sektion highlight" style={{ marginTop: 20 }}>
@@ -322,14 +325,14 @@ function FilterGruppe({ titel, children }: { titel: string; children: React.Reac
   );
 }
 
-function Dropdown({ label, aktiv, children }: { label: string; aktiv: boolean; children: React.ReactNode }) {
+function Dropdown({ label, aktiv, breit = false, children }: { label: string; aktiv: boolean; breit?: boolean; children: React.ReactNode }) {
   return (
     <details className="filter-dd">
       <summary className={aktiv ? "chip chip--aktiv" : "chip"}>
         {label}
         <Icon name="expand_more" />
       </summary>
-      <div className="popover">{children}</div>
+      <div className={breit ? "popover popover--kalender" : "popover"}>{children}</div>
     </details>
   );
 }

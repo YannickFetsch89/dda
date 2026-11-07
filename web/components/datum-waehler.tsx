@@ -17,16 +17,21 @@ interface Props {
   heute: string;
   ziel?: string;
   onWahl?: () => void;
+  /** Weitere URL-Parameter, die beim Wählen erhalten bleiben (z.B. aktive Filter auf /entdecken) */
+  parameter?: Record<string, string>;
+  /** Aktuell gewähltes Datum (YYYY-MM-DD) – wird markiert, der Kalender öffnet in seinem Monat */
+  gewaehlt?: string;
 }
 
-export function DatumWaehler({ heute, ziel = "/entdecken", onWahl }: Props) {
+export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, gewaehlt }: Props) {
   const router = useRouter();
   const heuteDate = new Date(heute + "T00:00:00");
   const maxDate = new Date(heuteDate);
   maxDate.setDate(maxDate.getDate() + 59);
+  const start = gewaehlt && /^\d{4}-\d{2}-\d{2}$/.test(gewaehlt) ? new Date(gewaehlt + "T00:00:00") : heuteDate;
 
-  const [monat, setMonat] = useState(heuteDate.getMonth());
-  const [jahr, setJahr] = useState(heuteDate.getFullYear());
+  const [monat, setMonat] = useState(start.getMonth());
+  const [jahr, setJahr] = useState(start.getFullYear());
 
   const ersterTag = new Date(jahr, monat, 1);
   const wochentagErster = (ersterTag.getDay() + 6) % 7;
@@ -44,10 +49,13 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl }: Props) {
   const kannZurueck = !(jahr === heuteDate.getFullYear() && monat === heuteDate.getMonth());
   const kannVor = !(jahr === maxDate.getFullYear() && monat > maxDate.getMonth());
 
-  function tagKlick(tag: number) {
+  function tagKlick(tag: number, ereignis: React.MouseEvent<HTMLButtonElement>) {
     const d = new Date(jahr, monat, tag);
-    const str = tagStr(d);
-    router.push(`${ziel}?datum=${str}`);
+    const qs = new URLSearchParams(parameter);
+    qs.set("datum", tagStr(d));
+    // Steckt der Kalender in einem aufklappbaren Menü (<details>), dieses schließen
+    ereignis.currentTarget.closest("details")?.removeAttribute("open");
+    router.push(`${ziel}?${qs.toString()}`);
     onWahl?.();
   }
 
@@ -77,13 +85,15 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl }: Props) {
           const vergangen = str < heute;
           const zuWeit = d > maxDate;
           const istHeute = str === heute;
+          const istGewaehlt = str === gewaehlt;
           return (
             <button
               key={tag}
               type="button"
-              className={`kalender__tag ${istHeute ? "kalender__tag--heute" : ""}`}
+              className={`kalender__tag ${istHeute ? "kalender__tag--heute" : ""} ${istGewaehlt ? "kalender__tag--gewaehlt" : ""}`}
               disabled={vergangen || zuWeit}
-              onClick={() => tagKlick(tag)}
+              aria-pressed={istGewaehlt || undefined}
+              onClick={(e) => tagKlick(tag, e)}
             >
               {tag}
             </button>
