@@ -4,6 +4,7 @@ import type { MetadataRoute } from "next";
 import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
 import { plusTage } from "@/lib/datum";
+import { kneipenLaden } from "@/lib/kneipen-daten";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 
@@ -45,8 +46,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
   // Jeder Ort genau einmal (URL nach typ über ortPfad) – auch Brauhäuser, die in zwei Hubs erscheinen
-  const orte = await orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]);
-  const hatKneipen = orte.some((o) => o.typ === "kneipe");
+  const [orte, kneipen] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden()]);
+  // Hub-URL, sobald der Kneipen-Hub etwas zeigt – auch wenn es nur Restaurants mit auch_kneipe sind
+  const hatKneipen = kneipen.length > 0;
   const guides: MetadataRoute.Sitemap = orte.length
     ? [
         { url: `${SITE_URL}/guides`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },

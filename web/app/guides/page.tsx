@@ -7,7 +7,7 @@ import { Suspense } from "react";
 import { Icon } from "@/components/karten";
 import { zahl } from "@/lib/guide-filter";
 import { orteLaden } from "@/lib/orte";
-import { kneipenLaden } from "@/lib/kneipen-daten";
+import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 
 export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
@@ -95,9 +95,12 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
 
 /** Kacheln mit echten Zahlen (Daten gecached über orteLaden). */
 async function Kacheln() {
-  // Jeder Hub zählt seine eigenen Orte (Kneipen nicht in die Restaurant-Zahl mischen)
-  const [restaurants, kneipen] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe"]), kneipenLaden()]);
-  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length, "kneipen-bars": kneipen.length }} />;
+  // Jede Kachel zählt genau das, was ihr Hub zeigt (Restaurant-Hub inkl. Brauhäuser, Kneipen-Hub
+  // inkl. Restaurants mit auch_kneipe)
+  const [restaurants, brauhaeuser, kneipen] = await Promise.all([
+    orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(),
+  ]);
+  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length }} />;
 }
 
 export default function GuidesUebersicht() {

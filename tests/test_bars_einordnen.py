@@ -48,6 +48,17 @@ class RegelnTest(unittest.TestCase):
     def test_hausbrauerei_altbier(self):
         spez, _ = regeln({**ORT, "name": "Brauerei Schumacher"})
         self.assertIn("Altbier", spez)
+        self.assertIn("Altbier", regeln({**ORT, "name": "Uerige"})[0])
+
+    def test_andere_brauerei_ist_kein_altbier(self):
+        self.assertNotIn("Altbier", regeln({**ORT, "name": "Kölner Brauerei"})[0])
+
+    def test_brauerei_als_nebentyp_ist_kein_brauhaus(self):
+        # Google hängt „brewery“ auch an Fischrestaurants (Juttas Forelle) – nur Primärtyp/Name zählen
+        ort = {**ORT, "name": "Juttas Forelle",
+               "extras": {**ORT["extras"], "google_primaertyp": "restaurant", "google_typen": ["restaurant", "brewery"]}}
+        extras, _, _ = zusammenfuehren(ort, None)
+        self.assertNotEqual(extras.get("unterart"), "brauhaus")
 
 
 class ZusammenfuehrenTest(unittest.TestCase):
@@ -83,6 +94,53 @@ class ZusammenfuehrenTest(unittest.TestCase):
         ))
         self.assertNotIn("Karaoke", extras["spezialitaeten"] + extras["vibes"])
         self.assertEqual(spalten, {})
+
+    def test_beschreibung_auch_ohne_brauhaus(self):
+        text = "Urige Kneipe in der Altstadt mit Biergarten, in der man bei einem Bier schnell ins Gespräch kommt."
+        _, spalten, _ = zusammenfuehren(ORT, self.ki(beschreibung=text, highlight="Biergarten mitten in der Altstadt"))
+        self.assertEqual(spalten["beschreibung"], text)
+        self.assertEqual(spalten["highlight"], "Biergarten mitten in der Altstadt")
+
+    def test_brauhaus_ohne_ki(self):
+        extras, spalten, _ = zusammenfuehren({**ORT, "name": "Brauhaus Test"}, None)
+        self.assertEqual(extras["unterart"], "brauhaus")
+        self.assertEqual(spalten, {})
+
+    def test_raucher_und_happy_hour_brauchen_stichwort(self):
+        ort = {**ORT, "extras": {**ORT["extras"], "google_bewertungen": [
+            {"text": "Ich bin seit 17 Jahren Stammgast hier."},
+            {"text": "Wunderbare Kneipe mit toller Terrasse am Rhein."},
+        ]}}
+        extras, _, verworfen = zusammenfuehren(ort, self.ki(
+            happy_hour_zeit="17 Uhr", happy_hour_zitat="seit 17 Jahren Stammgast",
+            raucher="aussen", raucher_zitat="mit toller Terrasse am Rhein",
+        ))
+        self.assertNotIn("happy_hour", extras)
+        self.assertNotIn("raucher", extras)
+        self.assertEqual(len(verworfen), 2)
+
+    def test_raucherbereich_mit_stichwort(self):
+        ort = {**ORT, "extras": {**ORT["extras"], "google_bewertungen": [{"text": "Toiletten sauber, Raucherbereich draußen."}]}}
+        extras, _, _ = zusammenfuehren(ort, self.ki(raucher="aussen", raucher_zitat="Raucherbereich draußen"))
+        self.assertEqual(extras["raucher"]["wert"], "aussen")
+
+    def test_restaurant_behaelt_eigenen_text(self):
+        text = "Urige Kneipe in der Altstadt mit Biergarten, in der man bei einem Bier schnell ins Gespräch kommt."
+        restaurant = {**ORT, "typ": "restaurant", "beschreibung": "Bayerische Küche mit Biergarten.", "highlight": None}
+        _, spalten, _ = zusammenfuehren(restaurant, self.ki(beschreibung=text, highlight="Biergarten mitten in der Altstadt"))
+        self.assertNotIn("beschreibung", spalten)                       # vorhandener Text bleibt
+        self.assertEqual(spalten["highlight"], "Biergarten mitten in der Altstadt")  # leeres Feld darf gefüllt werden
+
+    def test_allgemeines_lob_belegt_kein_merkmal(self):
+        # Zitat steht wörtlich im Text, sagt aber nichts über „gesellig“ – verwerfen
+        extras, _, verworfen = zusammenfuehren(ORT, self.ki(
+            merkmale=[{"wert": "Gesellig", "zitat": "Sehr gemütlich, tolle Whisky-Auswahl"},
+                      {"wert": "Gemütlich", "zitat": "Sehr gemütlich, tolle Whisky-Auswahl"}],
+        ))
+        self.assertNotIn("Gesellig", extras["vibes"])
+        self.assertIn("Gemütlich", extras["vibes"])
+        self.assertEqual(extras["merkmal_belege"], {"Gemütlich": "Sehr gemütlich, tolle Whisky-Auswahl"})
+        self.assertEqual(verworfen, ["Gesellig (Zitat passt nicht zum Merkmal)"])
 
 
 if __name__ == "__main__":

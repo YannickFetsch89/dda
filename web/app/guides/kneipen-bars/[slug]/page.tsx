@@ -41,7 +41,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description: beschreibung,
     alternates: { canonical: pfad },
     openGraph: { title: titel, description: beschreibung, url: pfad, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", ...(bild ? { images: [{ url: bild }] } : {}) },
-    twitter: { card: bild ? "summary_large_image" : "summary" },
+    twitter: { card: bild ? "summary_large_image" : "summary", title: titel, description: beschreibung, ...(bild ? { images: [bild] } : {}) },
   };
 }
 

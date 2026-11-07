@@ -37,11 +37,15 @@ MODELL = "claude-haiku-5-5"
 
 SPEZIALITAETEN = ["Craft Beer", "Cocktails", "Altbier", "Wein", "Whisky"]
 VIBES = ["Gemütlich", "Gesellig", "Draußen sitzen", "Sportsbar"]
-# Diese Angaben darf die KI nur mit Textbeleg setzen (die übrigen kommen sicher aus Google-Signalen)
-KI_MIT_BELEG = {"Craft Beer", "Altbier", "Whisky", "Wein", "Cocktails", "Gemütlich", "Gesellig", "Sportsbar", "Draußen sitzen"}
 
-# Düsseldorfer Hausbrauereien (Altbier) – feste Regel über den Namen
-HAUSBRAUEREIEN = re.compile(r"\b(uerige|f[üu]chschen|schumacher|schl[üu]ssel|k[üu]rzer|brauerei|hausbrauerei)\b", re.IGNORECASE)
+# Düsseldorfer Altbier-Hausbrauereien – feste Regel über den Hausnamen. Bewusst NICHT das Wort
+# „Brauerei“: sonst würde jede Brauerei (auch Kölsch oder Craft) zur Altbier-Adresse.
+HAUSBRAUEREIEN = re.compile(r"\b(uerige|f[üu]chschen|schumacher|schl[üu]ssel|k[üu]rzer)\b", re.IGNORECASE)
+
+# Happy Hour und Raucher brauchen wie die Merkmale ein passendes Stichwort im Zitat – sonst würde
+# „seit 17 Jahren“ eine Happy Hour „17 Uhr“ oder „tolle Terrasse“ einen Raucherbereich belegen.
+HAPPY_HOUR_STICHWORT = r"happy ?-?hour|halbe[nmr]? preis|zum halben|2 ?f[üu]r ?1|zwei f[üu]r eins|two for one"
+RAUCHER_STICHWORT = r"rauch|zigarette|aschenbecher|qualm|smok|kippe"
 
 
 # ── Regeln aus Google-Signalen ────────────────────────────────────────────────
@@ -90,6 +94,26 @@ def belegt(zitat: str | None, quelltext: str, min_laenge: int = 8) -> bool:
     z = _norm(zitat or "")
     return len(z) >= min_laenge and z in _norm(quelltext)
 
+
+# Ein KI-Merkmal zählt nur, wenn sein Zitat ein passendes Stichwort enthält. Sonst reicht allgemeines
+# Lob („tolle Stimmung“) als Beleg – und fast jede Bar wäre „gesellig“ oder „gemütlich“.
+STICHWORTE = {
+    "Craft Beer": r"craft|ipa|pale ale|stout|zapfh[äa]hn|biersorten|bierauswahl|auswahl an bier|selbst ?gebraut|hausgebraut",
+    "Cocktails": r"cocktail|mixolog|longdrink|gin ?tonic|aperol|negroni|mojito|spritz",
+    "Altbier": r"\balt\b|altbier|\balts\b|k[öo]bes",
+    "Wein": r"wein|riesling|rotwein|winzer|vino|wine",
+    "Whisky": r"whisk",
+    "Gemütlich": r"gem[üu]tlich|urig|heimelig|kuschelig|wohnzimmer|kamin|kerzen",
+    "Gesellig": r"gesellig|stammtisch|live ?-?musik|livemusik|\bband\b|konzert|karaoke|quiz|kicker|\bdart|billard|tanzen|\bparty|ins gespr[äa]ch|kennenlernen|schunkel",
+    "Draußen sitzen": r"drau(ß|ss)en|terrasse|biergarten|garten|au(ß|ss)enbereich|im freien|sonne",
+    "Sportsbar": r"fu(ß|ss)ball|bundesliga|sportbar|sportsbar|\bsport|leinwand|beamer|fernseher|\btv\b|übertrag|fortuna|\bdeg\b|champions",
+}
+
+
+def stichwort_passt(wert: str, zitat: str | None) -> bool:
+    """Enthält das Zitat ein Stichwort, das zum Merkmal passt?"""
+    muster = STICHWORTE.get(wert)
+    return bool(muster and re.search(muster, _norm(zitat or "")))
 
 def quelltext(ort: dict) -> str:
     """Alles, worauf sich die KI stützen darf: Google-Zusammenfassung und Bewertungstexte."""
@@ -181,6 +205,7 @@ def zusammenfuehren(ort: dict, ki: dict | None) -> tuple[dict, dict, list[str]]:
     verworfen: list[str] = []
     extras: dict = {}
     spalten: dict = {}
+    belege: dict = {}
 
     if ki:
         for m in ki.get("merkmale") or []:
@@ -190,37 +215,50 @@ def zusammenfuehren(ort: dict, ki: dict | None) -> tuple[dict, dict, list[str]]:
             if not belegt(m.get("zitat"), quelle):
                 verworfen.append(f"{wert} (Zitat nicht im Text)")
                 continue
+            if not stichwort_passt(wert, m.get("zitat")):
+                verworfen.append(f"{wert} (Zitat passt nicht zum Merkmal)")
+                continue
             (spez if wert in SPEZIALITAETEN else vibes).add(wert)
+            belege[wert] = m["zitat"].strip()
 
         zeit, zitat = (ki.get("happy_hour_zeit") or "").strip(), ki.get("happy_hour_zitat") or ""
         if zeit:
             ziffern = re.findall(r"\d{1,2}", zeit)
-            if belegt(zitat, quelle) and ziffern and all(z in _norm(zitat) for z in ziffern):
+            if (belegt(zitat, quelle) and ziffern and all(z in _norm(zitat) for z in ziffern)
+                    and re.search(HAPPY_HOUR_STICHWORT, _norm(zitat))):
                 extras["happy_hour"] = {"text": zeit, "beleg": zitat.strip(), "quelle": "ki"}
             else:
                 verworfen.append(f"Happy Hour {zeit} (kein Beleg)")
 
         raucher, r_zitat = ki.get("raucher"), ki.get("raucher_zitat") or ""
         if raucher in ("innen", "aussen"):
-            if belegt(r_zitat, quelle):
+            # „Nichtraucherkneipe“ belegt das Gegenteil von „drinnen rauchen“
+            nichtraucher = raucher == "innen" and "nichtraucher" in _norm(r_zitat)
+            if belegt(r_zitat, quelle) and re.search(RAUCHER_STICHWORT, _norm(r_zitat)) and not nichtraucher:
                 extras["raucher"] = {"wert": raucher, "beleg": r_zitat.strip(), "quelle": "ki"}
             else:
                 verworfen.append(f"Raucher {raucher} (kein Beleg)")
 
         if ki.get("unterart") in ("kneipe", "bar"):
             extras["unterart"] = ki["unterart"]
-    # Brauhaus ist eine feste Regel (Primärtyp/Name) und hat Vorrang vor der KI
-    if ist_brauhaus((ort.get("extras") or {}).get("google_primaertyp"), ort.get("name")):
-        extras["unterart"] = "brauhaus"
         beschreibung = (ki.get("beschreibung") or "").strip()
         if 60 <= len(beschreibung) <= 400:
             spalten["beschreibung"] = beschreibung
         highlight = (ki.get("highlight") or "").strip()
         if 10 <= len(highlight) <= 160:
             spalten["highlight"] = highlight
+    # Brauhaus ist eine feste Regel (Primärtyp/Name) und hat Vorrang vor der KI
+    if ist_brauhaus((ort.get("extras") or {}).get("google_primaertyp"), ort.get("name")):
+        extras["unterart"] = "brauhaus"
+    # Restaurants, die zusätzlich im Kneipen-Hub stehen, behalten ihre Texte (Restaurant-Guide);
+    # KI-Texte nur dort, wo noch keiner steht
+    if ort.get("typ") != "kneipe":
+        spalten = {k: v for k, v in spalten.items() if not (ort.get(k) or "").strip()}
 
     extras["spezialitaeten"] = [s for s in SPEZIALITAETEN if s in spez]
     extras["vibes"] = [v for v in VIBES if v in vibes]
+    # Zitate aufheben: spätere Regeländerungen lassen sich dann ohne neuen KI-Lauf nachprüfen
+    extras["merkmal_belege"] = belege
     return extras, spalten, verworfen
 
 
@@ -233,7 +271,7 @@ def einordnen(max_anzahl: int, dry_run: bool, neu: bool) -> dict:
 
     db = get_supabase_client()
     # Kneipen und Restaurants, die zusätzlich im Kneipen-Hub stehen (Brauhäuser, Gastropubs – E1)
-    orte = [o for o in alle_zeilen(db, "orte", "id, name, typ, stadtteil, extras")
+    orte = [o for o in alle_zeilen(db, "orte", "id, name, typ, stadtteil, beschreibung, highlight, extras")
             if o["typ"] == "kneipe" or (o.get("extras") or {}).get("auch_kneipe")]
     offen = [o for o in orte if neu or not (o.get("extras") or {}).get("ki_einordnung")][:max_anzahl]
     logger.info("%d Kneipen/Bars, davon %d einzuordnen%s", len(orte), len(offen), " [Dry-Run]" if dry_run else "")

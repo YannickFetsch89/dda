@@ -83,6 +83,12 @@ describe("JSON-LD BarOrPub", () => {
     expect(oeffnungszeitenSpec("Mo 18–2")).toEqual([]);
     expect(oeffnungszeitenSpec([{ close: { day: 1, hour: 2 } }])).toEqual([]);
   });
+  it("rund um die Uhr geöffnet ergibt alle sieben Tage", () => {
+    const spec = oeffnungszeitenSpec([{ open: { day: 0, hour: 0, minute: 0 } }]);
+    expect(spec).toHaveLength(7);
+    expect(spec.every((s) => s.opens === "00:00" && s.closes === "23:59")).toBe(true);
+    expect(new Set(spec.map((s) => s.dayOfWeek)).size).toBe(7);
+  });
   it("Restaurant mit auch_kneipe behält seine Restaurant-URL", () => {
     const d = barOrPubJsonLd(ort({ id: "9", typ: "restaurant", extras: { auch_kneipe: true } }), "https://diesdas.events");
     expect(d.url).toBe("https://diesdas.events/guides/restaurants-cafes/test-9");

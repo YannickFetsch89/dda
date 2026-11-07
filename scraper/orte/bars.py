@@ -81,7 +81,11 @@ BRAUHAUS_NAME = re.compile(r"brauhaus|brauerei|hausbrauerei|brauereiausschank", 
 
 
 def ist_brauhaus(primaertyp: str | None, name: str | None) -> bool:
-    """Brauhaus/Hausbrauerei: Google-Primärtyp Brauerei/Brewpub oder eindeutiger Name."""
+    """Brauhaus/Hausbrauerei: Google-Primärtyp Brauerei/Brewpub oder eindeutiger Name.
+
+    Bewusst NICHT über Nebentypen: Google hängt „brewery“/„brewpub“ auch an Fischrestaurants und
+    Chicken-Läden (geprüft 07.11.2026: Juttas Forelle, Hitchcoq, Tonhalle Kaiserswerth).
+    """
     return (primaertyp or "") in BRAUHAUS_PRIMAER or bool(BRAUHAUS_NAME.search(name or ""))
 
 

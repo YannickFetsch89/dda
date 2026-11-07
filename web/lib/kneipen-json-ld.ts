@@ -16,6 +16,13 @@ const zeit = (p?: Punkt) =>
 /** Google-Öffnungsperioden (regularOpeningHours.periods) → schema.org OpeningHoursSpecification. */
 export function oeffnungszeitenSpec(perioden: unknown): Record<string, unknown>[] {
   if (!Array.isArray(perioden)) return [];
+  // Rund um die Uhr: Google liefert genau eine Periode „open Tag 0, 00:00“ ohne close → alle sieben Tage
+  const [erste] = perioden as Periode[];
+  if (perioden.length === 1 && erste?.open && !erste.close && (erste.open.hour ?? 0) === 0 && (erste.open.minute ?? 0) === 0) {
+    return TAGE.map((t) => ({ "@type": "OpeningHoursSpecification", dayOfWeek: `https://schema.org/${t}`, opens: "00:00", closes: "23:59" }));
+  }
+  // Über Mitternacht (Fr 18:00 – Sa 02:00) bleibt eine Angabe am Öffnungstag mit closes < opens –
+  // so beschreibt schema.org/Google Öffnungszeiten nach Mitternacht.
   return (perioden as Periode[]).flatMap((p) => {
     const von = zeit(p.open);
     if (typeof p.open?.day !== "number" || !von) return [];

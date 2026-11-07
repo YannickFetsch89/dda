@@ -8,7 +8,7 @@ export async function kneipenLaden(): Promise<DddOrt[]> {
   return [...kneipen, ...restaurants.filter((o) => o.extras.auch_kneipe === true)];
 }
 
-/** Kneipen, die zusätzlich im Restaurant-Hub erscheinen (Brauhäuser mit Küche). */
+/** Kneipen, die zusätzlich im Restaurant-Hub erscheinen (Brauhäuser und Gastropubs – beide mit Küche). */
 export async function brauhaeuserFuerRestaurants(): Promise<DddOrt[]> {
   return (await orteLaden(["kneipe"])).filter((o) => o.extras.auch_restaurant === true);
 }

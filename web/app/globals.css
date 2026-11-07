@@ -1259,7 +1259,7 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
   }
 }
 .gd-karte--abend { border: 1px solid #d9dee7; }
-.gd-typ--abend { color: #9c8346; }
+.gd-typ--abend { color: #6e5a22; } /* 12px fett auf Weiß: ≥ 4,5:1 (WCAG AA) */
 .gd-karte--abend .gd-bewertung .icon, .gd-seite--abend .gd-info .icon { color: #9c8346; }
 .gd-karte__spez { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--ddd-text-body); }
 .gd-karte__spez .icon { font-size: 16px; color: #9c8346; }

@@ -22,7 +22,7 @@ class BarRegelnTest(unittest.TestCase):
     def test_unterart(self):
         self.assertEqual(bars.unterart(place("cocktail_bar")), "bar")
         self.assertEqual(bars.unterart(place("pub")), "kneipe")
-        self.assertEqual(bars.unterart(place("german_restaurant", ["german_restaurant", "brewery"])), "kneipe")
+        self.assertEqual(bars.unterart(place("german_restaurant", ["german_restaurant", "brewery"])), "kneipe")  # Nebentyp zählt bewusst nicht
         self.assertEqual(bars.unterart(place("brewery")), "brauhaus")
         self.assertEqual(bars.unterart({**place("restaurant"), "displayName": {"text": "Brauhaus zum Weißen Bären"}}), "brauhaus")
 
