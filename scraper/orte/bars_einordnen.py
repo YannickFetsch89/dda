@@ -40,12 +40,19 @@ VIBES = ["Gemütlich", "Gesellig", "Draußen sitzen", "Sportsbar"]
 
 # Düsseldorfer Altbier-Hausbrauereien – feste Regel über den Hausnamen. Bewusst NICHT das Wort
 # „Brauerei“: sonst würde jede Brauerei (auch Kölsch oder Craft) zur Altbier-Adresse.
+# Die fünf Häuser sind vollständig (Schlösser, Frankenheim sind Marken). Filialen wie „Schumacher
+# Gerresheim“ zählen mit; fremde Betriebe mit gleichem Namen (Café, Hotel …) nicht.
 HAUSBRAUEREIEN = re.compile(r"\b(uerige|f[üu]chschen|schumacher|schl[üu]ssel|k[üu]rzer)\b", re.IGNORECASE)
+KEINE_BRAUEREI = re.compile(r"caf[eé]|hotel|b[äa]ckerei|konditorei|metzgerei|eiscaf|eisdiele|friseur|apotheke", re.IGNORECASE)
 
 # Happy Hour und Raucher brauchen wie die Merkmale ein passendes Stichwort im Zitat – sonst würde
 # „seit 17 Jahren“ eine Happy Hour „17 Uhr“ oder „tolle Terrasse“ einen Raucherbereich belegen.
-HAPPY_HOUR_STICHWORT = r"happy ?-?hour|halbe[nmr]? preis|zum halben|2 ?f[üu]r ?1|zwei f[üu]r eins|two for one"
-RAUCHER_STICHWORT = r"rauch|zigarette|aschenbecher|qualm|smok|kippe"
+# Nicht „zum halben (Preis)“: trifft auch „zum halben Liter“ und „nicht zum halben Preis“.
+HAPPY_HOUR_STICHWORT = r"happy ?-?hour|2 ?f[üu]r ?1|zwei f[üu]r eins|two for one"
+# Nur Formen, die das Rauchen selbst meinen – nicht Rauchbier, rauchfrei, Rauchverbot
+RAUCHER_STICHWORT = r"raucher|rauchen|geraucht|zigarette|zigarre|aschenbecher|qualm|smoker|smoking"
+# Belegt das Gegenteil (geprüft nach Entfernen der Bindestriche: „Nicht-Raucher“ = „nichtraucher“)
+RAUCHER_GEGENTEIL = r"nichtraucher|rauchfrei|rauchverbot|nicht geraucht|kein raucher|keine raucher"
 
 
 # ── Regeln aus Google-Signalen ────────────────────────────────────────────────
@@ -65,7 +72,8 @@ def regeln(ort: dict) -> tuple[set[str], set[str]]:
         spez.add("Wein")
     if p == "brewpub":
         spez.add("Craft Beer")
-    if HAUSBRAUEREIEN.search(ort.get("name") or "") and ort.get("stadtteil") not in ("Neuss", "Ratingen"):
+    name = ort.get("name") or ""
+    if HAUSBRAUEREIEN.search(name) and not KEINE_BRAUEREI.search(name) and ort.get("stadtteil") not in ("Neuss", "Ratingen"):
         spez.add("Altbier")
     if _signal(ex, "outdoorSeating") or p == "beer_garden":
         vibes.add("Draußen sitzen")
@@ -98,15 +106,21 @@ def belegt(zitat: str | None, quelltext: str, min_laenge: int = 8) -> bool:
 # Ein KI-Merkmal zählt nur, wenn sein Zitat ein passendes Stichwort enthält. Sonst reicht allgemeines
 # Lob („tolle Stimmung“) als Beleg – und fast jede Bar wäre „gesellig“ oder „gemütlich“.
 STICHWORTE = {
-    "Craft Beer": r"craft|ipa|pale ale|stout|zapfh[äa]hn|biersorten|bierauswahl|auswahl an bier|selbst ?gebraut|hausgebraut",
+    # Wortgrenzen, wo ein Stichwort sonst in anderen Wörtern steckt („principal“, „Schweinshaxe“,
+    # „Kindergarten“, „besonnen“, „sportlich“, „traurig“). Nicht das bloße Wort „alt“ („sehr alt“).
+    "Craft Beer": r"craft|\bipa\b|pale ale|stout|zapfh[äa]hn|biersorten|bierauswahl|auswahl an bier|selbst ?gebraut|hausgebraut",
     "Cocktails": r"cocktail|mixolog|longdrink|gin ?tonic|aperol|negroni|mojito|spritz",
-    "Altbier": r"\balt\b|altbier|\balts\b|k[öo]bes",
-    "Wein": r"wein|riesling|rotwein|winzer|vino|wine",
+    # „Alt“ nur als Bier: nach Artikel, Marke, Bier-Adjektiv oder Menge („Schumacher Alt“, „das Alt war
+    # lecker“, „0,2 Alt“) – nicht „sehr alt“
+    "Altbier": (r"altbier|\balts\b|k[öo]bes|\balt vom fass|\b(das|ein|dem|den|sein|ihr|mein|frisch\w*|lecker\w*"
+                r"|gezapft\w*|gebraut\w*|gek[üu]hlt\w*|k[üu]hl\w*|gut\w*|herb\w*|schumacher|schuhmacher|f[üu]chschen|f[üu]chsen"
+                r"|frankenheim\w*|uerige|schl[üu]ssel|k[üu]rzer|bolten|dom|\d[\d,]*)[- ]alt\b"),
+    "Wein": r"(?<!sch)wein|riesling|winzer|\bvino\b|\bwine\b",
     "Whisky": r"whisk",
-    "Gemütlich": r"gem[üu]tlich|urig|heimelig|kuschelig|wohnzimmer|kamin|kerzen",
+    "Gemütlich": r"gem[üu]tlich|\burig|heimelig|kuschelig|wohnzimmer|kamin|kerzen",
     "Gesellig": r"gesellig|stammtisch|live ?-?musik|livemusik|\bband\b|konzert|karaoke|quiz|kicker|\bdart|billard|tanzen|\bparty|ins gespr[äa]ch|kennenlernen|schunkel",
-    "Draußen sitzen": r"drau(ß|ss)en|terrasse|biergarten|garten|au(ß|ss)enbereich|im freien|sonne",
-    "Sportsbar": r"fu(ß|ss)ball|bundesliga|sportbar|sportsbar|\bsport|leinwand|beamer|fernseher|\btv\b|übertrag|fortuna|\bdeg\b|champions",
+    "Draußen sitzen": r"drau(ß|ss)en|terrasse|biergarten|\bgarten\b|au(ß|ss)enbereich|im freien|\bsonne\b",
+    "Sportsbar": r"fu(ß|ss)ball|bundesliga|sportbar|sportsbar|\bsport(?!lich)|leinwand|beamer|fernseher|\btv\b|übertrag|fortuna|\bdeg\b|champions",
 }
 
 
@@ -114,6 +128,21 @@ def stichwort_passt(wert: str, zitat: str | None) -> bool:
     """Enthält das Zitat ein Stichwort, das zum Merkmal passt?"""
     muster = STICHWORTE.get(wert)
     return bool(muster and re.search(muster, _norm(zitat or "")))
+
+
+def happy_hour_belegt(zeit: str, zitat: str | None, quelle: str) -> bool:
+    """Zitat steht im Text, nennt „Happy Hour“ (o. ä.) und enthält alle Zahlen der Zeitangabe."""
+    z = _norm(zitat or "")
+    ziffern = re.findall(r"\d{1,2}", zeit or "")
+    return (belegt(zitat, quelle) and bool(ziffern) and all(d in z for d in ziffern)
+            and bool(re.search(HAPPY_HOUR_STICHWORT, z)))
+
+
+def raucher_belegt(zitat: str | None, quelle: str) -> bool:
+    """Zitat steht im Text, spricht vom Rauchen und nicht vom Gegenteil (Nicht-Raucher, rauchfrei …)."""
+    z = _norm(zitat or "").replace("-", "")
+    return (belegt(zitat, quelle) and bool(re.search(RAUCHER_STICHWORT, z))
+            and not re.search(RAUCHER_GEGENTEIL, z))
 
 def quelltext(ort: dict) -> str:
     """Alles, worauf sich die KI stützen darf: Google-Zusammenfassung und Bewertungstexte."""
@@ -223,18 +252,14 @@ def zusammenfuehren(ort: dict, ki: dict | None) -> tuple[dict, dict, list[str]]:
 
         zeit, zitat = (ki.get("happy_hour_zeit") or "").strip(), ki.get("happy_hour_zitat") or ""
         if zeit:
-            ziffern = re.findall(r"\d{1,2}", zeit)
-            if (belegt(zitat, quelle) and ziffern and all(z in _norm(zitat) for z in ziffern)
-                    and re.search(HAPPY_HOUR_STICHWORT, _norm(zitat))):
+            if happy_hour_belegt(zeit, zitat, quelle):
                 extras["happy_hour"] = {"text": zeit, "beleg": zitat.strip(), "quelle": "ki"}
             else:
                 verworfen.append(f"Happy Hour {zeit} (kein Beleg)")
 
         raucher, r_zitat = ki.get("raucher"), ki.get("raucher_zitat") or ""
         if raucher in ("innen", "aussen"):
-            # „Nichtraucherkneipe“ belegt das Gegenteil von „drinnen rauchen“
-            nichtraucher = raucher == "innen" and "nichtraucher" in _norm(r_zitat)
-            if belegt(r_zitat, quelle) and re.search(RAUCHER_STICHWORT, _norm(r_zitat)) and not nichtraucher:
+            if raucher_belegt(r_zitat, quelle):
                 extras["raucher"] = {"wert": raucher, "beleg": r_zitat.strip(), "quelle": "ki"}
             else:
                 verworfen.append(f"Raucher {raucher} (kein Beleg)")

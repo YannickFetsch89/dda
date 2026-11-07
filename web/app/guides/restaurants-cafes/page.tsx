@@ -8,7 +8,7 @@ import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import type { KartenOrt } from "@/components/guide-karte";
-import { OrtKartenGrid, ortPfad, typIcon, typLabel } from "@/components/ort-karten";
+import { OrtKartenGrid, ortPfad, ortTypIcon, ortTypLabel } from "@/components/ort-karten";
 import {
   FILTER_TAGS, SEITE, SORTIERUNGEN, filterHref, filterLesen, filtern, kueche, preisZeichen,
   sortieren, sterne, umschalten, zaehlen, zahl, type GuideFilter,
@@ -132,8 +132,8 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
           .map((o) => ({
             id: o.id,
             name: o.name,
-            typLabel: typLabel(o.typ),
-            icon: typIcon(o.typ),
+            typLabel: ortTypLabel(o),
+            icon: ortTypIcon(o),
             stadtteil: o.stadtteil,
             preis: o.preis_niveau,
             rating: o.google_rating != null ? sterne(o.google_rating) : null,

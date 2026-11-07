@@ -6,7 +6,10 @@ Entscheidung E1: Brauhäuser (und Gastropubs) erscheinen in BEIDEN Guides, haben
     extras.auch_kneipe = true (+ unterart) → zusätzlich im Kneipen-Hub, Link bleibt die Restaurant-URL.
   - Neu importierte Kneipen, die Brauhäuser (Brauerei/Brewpub als Primärtyp, „Brauhaus“/„Brauerei“ im Namen)
     oder Gastropubs sind: extras.auch_restaurant = true → zusätzlich im Restaurant-Hub, Link bleibt die Kneipen-URL.
-  - extras.war_live merkt sich, dass ein Ort schon auf der Website stand: dessen typ (= URL) bleibt.
+  - Der typ (= URL) eines bestehenden Orts wird nie geändert.
+
+Der Lauf ersetzt extras zeilenweise mit dem Stand vom Lesezeitpunkt: nicht gleichzeitig mit einem
+anderen Skript ausführen, das extras schreibt (flaechensuche, bars_einordnen).
 
 Nutzung:
   python -m scraper.orte.bars_e1 [--dry-run]
@@ -50,39 +53,38 @@ def ist_auch_restaurant(extras: dict, name: str) -> bool:
 
 
 def live(o: dict) -> bool:
-    """Steht der Ort auf der Website? Dann darf sich seine URL (= typ) nicht mehr ändern."""
+    """Steht der Ort auf der Website? (nur für die Ausgabe)"""
     return bool(o.get("aktiv")) and (o.get("qualitaets_score") or 0) >= MIN_SCORE_WEBSITE
 
 
-def aenderung(o: dict, p: dict | None) -> tuple[str, dict]:
+def aenderung(o: dict, p: dict | None) -> dict:
     """
-    Soll-Zustand (typ, extras) eines Orts nach E1. Idempotent: ein zweiter Lauf auf denselben
-    Daten ergibt denselben Zustand.
+    Soll-extras eines Orts nach E1. Idempotent: ein zweiter Lauf auf denselben
+    Daten ergibt denselben Zustand. Der typ (= URL) wird NIE geändert.
 
-    Umgetypt (Restaurant → Kneipe) wird nur ein Brauhaus, das NIE live war (extras.war_live) und
-    noch nicht als „auch_kneipe“ verarbeitet ist – sonst würde eine einmal veröffentlichte
-    Restaurant-URL zum 404.
+    Bestehende Restaurant-Zeilen werden nur markiert (auch_kneipe), nicht umgetypt: ob eine
+    Restaurant-URL früher schon öffentlich war, lässt sich nachträglich nicht sicher feststellen –
+    ein Umtypen könnte sie zum 404 machen. (Die 13 am 07.11.2026 umgetypten Brauhäuser waren
+    nachweislich nie live: Score 4–6.)
     """
     ex = o.get("extras") or {}
     neu = dict(ex)
-    typ = o["typ"]
+    typ = o["typ"]  # bleibt unverändert
     if p and p.get("types"):
         neu["google_typen"] = list(p["types"])
-    if live(o):
-        neu["war_live"] = True
     if typ == "restaurant" and p and ist_auch_kneipe(p, o["name"]):
-        brauhaus = bars.ist_brauhaus(p.get("primaryType"), o["name"])
-        if brauhaus and not neu.get("war_live") and not ex.get("auch_kneipe"):
-            typ = "kneipe"
-            neu.update(auch_restaurant=True, auch_kneipe=False, unterart="brauhaus", hub="bars")
-        else:
-            neu.update(auch_kneipe=True, unterart=bars.unterart(p))
+        neu["auch_kneipe"] = True
+        if bars.ist_brauhaus(p.get("primaryType"), o["name"]):
+            neu["unterart"] = "brauhaus"  # feste Regel, hat Vorrang
+        elif not neu.get("unterart"):
+            # Eine von der Einordnung (KI) gesetzte Unterart nicht bei jedem Lauf zurücksetzen
+            neu["unterart"] = bars.unterart(p)
     elif typ == "kneipe":
         if ist_auch_restaurant(neu, o["name"]):
             neu["auch_restaurant"] = True
         if bars.ist_brauhaus(neu.get("google_primaertyp"), o["name"]):
             neu["unterart"] = "brauhaus"
-    return typ, neu
+    return neu
 
 
 def ausfuehren(dry_run: bool) -> None:
@@ -94,33 +96,30 @@ def ausfuehren(dry_run: bool) -> None:
     kandidaten = {p["id"]: p for p in fs.kandidaten(daten)}
     orte = alle_zeilen(db, "orte", "id, name, typ, aktiv, qualitaets_score, google_place_id, extras")
 
-    umtypen, auch_kneipe, auch_restaurant, sonst = [], [], [], []
+    auch_kneipe, auch_restaurant, sonst = [], [], []
     for o in orte:
         ex = o.get("extras") or {}
-        typ, neu = aenderung(o, kandidaten.get(o.get("google_place_id")))
-        if typ == o["typ"] and neu == ex:
+        neu = aenderung(o, kandidaten.get(o.get("google_place_id")))
+        if neu == ex:
             continue
-        update = {"extras": neu, **({"typ": typ} if typ != o["typ"] else {})}
-        if typ != o["typ"]:
-            umtypen.append((o, update))
-        elif neu.get("auch_kneipe") and not ex.get("auch_kneipe"):
+        update = {"extras": neu}
+        if neu.get("auch_kneipe") and not ex.get("auch_kneipe"):
             auch_kneipe.append((o, update))
         elif neu.get("auch_restaurant") and not ex.get("auch_restaurant"):
             auch_restaurant.append((o, update))
         else:
             sonst.append((o, update))
 
-    print(f"Umtypen Restaurant → Kneipe, nie live ({len(umtypen)}):", ", ".join(o["name"][:30] for o, _ in umtypen))
     print(f"\nAuch im Kneipen-Hub, bleiben Restaurant ({len(auch_kneipe)}):",
           ", ".join(f"{o['name'][:28]}{' [live]' if live(o) else ''}" for o, _ in auch_kneipe))
     print(f"\nAuch im Restaurant-Hub ({len(auch_restaurant)}):", ", ".join(o["name"][:30] for o, _ in auch_restaurant))
-    print(f"\nNur Typen/Unterart/war_live aktualisiert: {len(sonst)}")
+    print(f"\nNur Google-Typen/Unterart aktualisiert: {len(sonst)}")
     if dry_run:
         return
-    for o, update in umtypen + auch_kneipe + auch_restaurant + sonst:
+    for o, update in auch_kneipe + auch_restaurant + sonst:
         db.table("orte").update(update).eq("id", o["id"]).execute()
-    logger.info("E1 gesetzt: %d umgetypt, %d auch_kneipe, %d auch_restaurant, %d sonst",
-                len(umtypen), len(auch_kneipe), len(auch_restaurant), len(sonst))
+    logger.info("E1 gesetzt: %d auch_kneipe, %d auch_restaurant, %d sonst",
+                len(auch_kneipe), len(auch_restaurant), len(sonst))
 
 
 def main():

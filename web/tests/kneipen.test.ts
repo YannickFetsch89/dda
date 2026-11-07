@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { filterHref, filterLesen, filtern, happyHour, hatParameter, raucher, spezialitaeten, unterart, vibes } from "@/lib/kneipen";
 import { barOrPubJsonLd, oeffnungszeitenSpec } from "@/lib/kneipen-json-ld";
+import { ortTypLabel } from "@/components/ort-karten";
 import type { DddOrt } from "@/lib/typen";
 
 function ort(teil: Partial<DddOrt> & { id: string }): DddOrt {
@@ -92,5 +93,13 @@ describe("JSON-LD BarOrPub", () => {
   it("Restaurant mit auch_kneipe behält seine Restaurant-URL", () => {
     const d = barOrPubJsonLd(ort({ id: "9", typ: "restaurant", extras: { auch_kneipe: true } }), "https://diesdas.events");
     expect(d.url).toBe("https://diesdas.events/guides/restaurants-cafes/test-9");
+  });
+});
+
+describe("Typ-Label auf Karten", () => {
+  it("Kneipen zeigen ihre Unterart, Restaurants ihren Typ", () => {
+    expect(ortTypLabel(ort({ id: "b1", extras: { unterart: "brauhaus" } }))).toBe("Brauhaus");
+    expect(ortTypLabel(ort({ id: "b2", extras: { unterart: "bar" } }))).toBe("Bar");
+    expect(ortTypLabel(ort({ id: "b3", typ: "restaurant", extras: { auch_kneipe: true, unterart: "brauhaus" } }))).toBe("Restaurant");
   });
 });

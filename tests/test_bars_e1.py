@@ -14,40 +14,38 @@ def restaurant(**teile) -> dict:
 
 
 class E1Test(unittest.TestCase):
-    def test_live_brauhaus_bleibt_restaurant(self):
-        typ, extras = aenderung(restaurant(qualitaets_score=8), BRAUHAUS_PLACE)
-        self.assertEqual(typ, "restaurant")
-        self.assertTrue(extras["auch_kneipe"])
-        self.assertTrue(extras["war_live"])
-
-    def test_nie_live_wird_kneipe(self):
-        typ, extras = aenderung(restaurant(), BRAUHAUS_PLACE)
-        self.assertEqual(typ, "kneipe")
-        self.assertTrue(extras["auch_restaurant"])
-        self.assertEqual(extras["unterart"], "brauhaus")
+    def test_restaurant_brauhaus_wird_nur_markiert(self):
+        # Ob live, nie live oder früher live ohne Merker: die Restaurant-URL bleibt immer
+        for o in (restaurant(qualitaets_score=8), restaurant(), restaurant(aktiv=False, qualitaets_score=8)):
+            extras = aenderung(o, BRAUHAUS_PLACE)
+            self.assertTrue(extras["auch_kneipe"])
+            self.assertEqual(extras["unterart"], "brauhaus")
+            self.assertNotIn("auch_restaurant", extras)
 
     def test_zweiter_lauf_aendert_nichts(self):
-        typ, extras = aenderung(restaurant(), BRAUHAUS_PLACE)
-        typ2, extras2 = aenderung(restaurant(typ=typ, extras=extras), BRAUHAUS_PLACE)
-        self.assertEqual((typ2, extras2), (typ, extras))
-        live_typ, live_extras = aenderung(restaurant(qualitaets_score=8), BRAUHAUS_PLACE)
-        self.assertEqual(aenderung(restaurant(qualitaets_score=8, extras=live_extras), BRAUHAUS_PLACE),
-                         (live_typ, live_extras))
+        extras = aenderung(restaurant(), BRAUHAUS_PLACE)
+        self.assertEqual(aenderung(restaurant(extras=extras), BRAUHAUS_PLACE), extras)
 
-    def test_frueher_live_wird_nicht_umgetypt(self):
-        # War live (war_live gemerkt), ist jetzt deaktiviert → Restaurant-URL bleibt
-        typ, _ = aenderung(restaurant(aktiv=False, extras={"war_live": True, "auch_kneipe": True}), BRAUHAUS_PLACE)
-        self.assertEqual(typ, "restaurant")
-        # Auch ohne war_live: schon als auch_kneipe verarbeitet → nicht nachträglich umtypen
-        typ, _ = aenderung(restaurant(aktiv=False, extras={"auch_kneipe": True}), BRAUHAUS_PLACE)
-        self.assertEqual(typ, "restaurant")
+    def test_ki_unterart_bleibt(self):
+        gastropub = {"id": "p3", "primaryType": "gastropub", "types": ["gastropub", "bar"]}
+        o = restaurant(name="Zum Anker", google_place_id="p3", extras={"unterart": "bar"})
+        self.assertEqual(aenderung(o, gastropub)["unterart"], "bar")
+        # ohne vorhandene Unterart setzt die Regel eine
+        self.assertEqual(aenderung(restaurant(name="Zum Anker", google_place_id="p3"), gastropub)["unterart"], "kneipe")
 
     def test_neuer_gastropub_auch_im_restaurant_hub(self):
         kneipe = {"id": "o2", "name": "The Pub", "typ": "kneipe", "aktiv": True, "qualitaets_score": 8,
                   "google_place_id": "p2", "extras": {"google_primaertyp": "gastropub"}}
-        _, extras = aenderung(kneipe, {"id": "p2", "primaryType": "gastropub", "types": ["gastropub", "bar"]})
+        extras = aenderung(kneipe, {"id": "p2", "primaryType": "gastropub", "types": ["gastropub", "bar"]})
         self.assertTrue(extras["auch_restaurant"])
         self.assertNotEqual(extras.get("unterart"), "brauhaus")
+
+    def test_kneipen_brauhaus(self):
+        kneipe = {"id": "o4", "name": "Brauerei im Füchschen", "typ": "kneipe", "aktiv": True, "qualitaets_score": 5,
+                  "google_place_id": "p4", "extras": {"google_primaertyp": "brewery"}}
+        extras = aenderung(kneipe, {"id": "p4", "primaryType": "brewery", "types": ["brewery"]})
+        self.assertTrue(extras["auch_restaurant"])
+        self.assertEqual(extras["unterart"], "brauhaus")
 
 
 if __name__ == "__main__":

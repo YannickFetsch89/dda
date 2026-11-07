@@ -1,7 +1,7 @@
 """Tests für die Einordnung von Kneipen & Bars (python -m unittest tests.test_bars_einordnen)."""
 import unittest
 
-from scraper.orte.bars_einordnen import belegt, regeln, zusammenfuehren
+from scraper.orte.bars_einordnen import belegt, happy_hour_belegt, raucher_belegt, regeln, stichwort_passt, zusammenfuehren
 
 ORT = {
     "name": "Zum Test",
@@ -52,6 +52,9 @@ class RegelnTest(unittest.TestCase):
 
     def test_andere_brauerei_ist_kein_altbier(self):
         self.assertNotIn("Altbier", regeln({**ORT, "name": "Kölner Brauerei"})[0])
+        self.assertNotIn("Altbier", regeln({**ORT, "name": "Café Schlüssel"})[0])
+        self.assertNotIn("Altbier", regeln({**ORT, "name": "Hotel Schumacher"})[0])
+        self.assertIn("Altbier", regeln({**ORT, "name": "Schumacher Gerresheim"})[0])  # Filiale zählt
 
     def test_brauerei_als_nebentyp_ist_kein_brauhaus(self):
         # Google hängt „brewery“ auch an Fischrestaurants (Juttas Forelle) – nur Primärtyp/Name zählen
@@ -130,6 +133,41 @@ class ZusammenfuehrenTest(unittest.TestCase):
         _, spalten, _ = zusammenfuehren(restaurant, self.ki(beschreibung=text, highlight="Biergarten mitten in der Altstadt"))
         self.assertNotIn("beschreibung", spalten)                       # vorhandener Text bleibt
         self.assertEqual(spalten["highlight"], "Biergarten mitten in der Altstadt")  # leeres Feld darf gefüllt werden
+
+    def test_stichworte_ohne_fehltreffer(self):
+        nein = {
+            "Altbier": "Die Kneipe ist schon sehr alt",
+            "Wein": "Die Schweinshaxe war super",
+            "Draußen sitzen": "Der Wirt ist sehr besonnen",
+            "Sportsbar": "Das Personal ist sportlich gekleidet",
+            "Craft Beer": "The principal reason we came",
+            "Gemütlich": "Leider war ich etwas traurig",
+        }
+        for wert, zitat in nein.items():
+            self.assertFalse(stichwort_passt(wert, zitat), (wert, zitat))
+        ja = {
+            "Altbier": "Ein Alt vom Fass für 2,50", "Wein": "Guter Rotwein und Weinschorle",
+            "Draußen sitzen": "Schöner Biergarten in der Sonne", "Sportsbar": "Sportübertragung auf großer Leinwand",
+            "Craft Beer": "Leckeres IPA vom Hahn",
+        }
+        for zitat in ("lecker Schumacher Alt getrunken", "Das Alt war lecker", "Anstelle von 0,2 Alt",
+                      "zum selbst gebrauten Alt", "Leckeres Schlüssel-Alt vom Fass"):
+            self.assertTrue(stichwort_passt("Altbier", zitat), zitat)
+        for wert, zitat in ja.items():
+            self.assertTrue(stichwort_passt(wert, zitat), (wert, zitat))
+
+    def test_raucher_gegenteil_und_rauchbier(self):
+        q = "Hier gibt es Rauchbier. Reine Nichtraucherkneipe. Absolute Nicht-Raucher Bar. Seit Jahren rauchfrei. Raucherbereich im Hof."
+        self.assertFalse(raucher_belegt("Hier gibt es Rauchbier.", q))
+        self.assertFalse(raucher_belegt("Reine Nichtraucherkneipe.", q))
+        self.assertFalse(raucher_belegt("Absolute Nicht-Raucher Bar.", q))
+        self.assertFalse(raucher_belegt("Seit Jahren rauchfrei.", q))
+        self.assertTrue(raucher_belegt("Raucherbereich im Hof.", q))
+
+    def test_happy_hour_nicht_ueber_halben_preis(self):
+        q = "Um 17 Uhr gibt es Bier zum halben Liter. Happy Hour 17-19 Uhr."
+        self.assertFalse(happy_hour_belegt("17 Uhr", "Um 17 Uhr gibt es Bier zum halben Liter.", q))
+        self.assertTrue(happy_hour_belegt("17–19 Uhr", "Happy Hour 17-19 Uhr.", q))
 
     def test_allgemeines_lob_belegt_kein_merkmal(self):
         # Zitat steht wörtlich im Text, sagt aber nichts über „gesellig“ – verwerfen

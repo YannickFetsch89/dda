@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
 import { kueche, sterne, zahl } from "@/lib/guide-filter";
+import { artInfo } from "@/lib/kneipen";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
@@ -62,6 +63,15 @@ export function typLabel(typ: string): string {
   }
 }
 
+/** Typ-Label eines Ortes: Kneipen zeigen ihre Unterart (Brauhaus, Bar, Kneipe) – auch im Restaurant-Hub. */
+export function ortTypLabel(o: DddOrt): string {
+  return o.typ === "kneipe" ? artInfo(o).label : typLabel(o.typ);
+}
+
+export function ortTypIcon(o: DddOrt): string {
+  return o.typ === "kneipe" ? artInfo(o).icon : typIcon(o.typ);
+}
+
 /** Untertitel der Card: "Japanisch · Flingern · €€" (fehlende Teile entfallen). */
 export function ortUntertitel(o: DddOrt): string {
   return [o.untertitel ?? kueche(o)?.name, o.stadtteil, o.preis_niveau].filter(Boolean).join(" · ");
@@ -85,12 +95,12 @@ export function OrtKarte({ o }: { o: DddOrt }) {
       <Link href={ortPfad(o)} className="gd-karte__link">
         <div className="gd-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
-          <BildImg src={bild} alt="" icon={typIcon(o.typ)} />
+          <BildImg src={bild} alt="" icon={ortTypIcon(o)} />
           {o.preis_niveau && <span className="gd-karte__preis">{o.preis_niveau}</span>}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>
         <div className="gd-karte__text">
-          <span className="gd-typ"><Icon name={typIcon(o.typ)} />{typLabel(o.typ)}</span>
+          <span className="gd-typ"><Icon name={ortTypIcon(o)} />{ortTypLabel(o)}</span>
           <h3 className="gd-karte__name d">{o.name}</h3>
           <span className="gd-karte__sub">{ortUntertitel(o)}</span>
           <span className="gd-karte__meta">
