@@ -283,7 +283,9 @@ def einordnen(max_anzahl: int, dry_run: bool, neu: bool) -> dict:
             extras, spalten, verworfen = zusammenfuehren(o, ki)
             if verworfen:
                 logger.info("  %s: verworfen %s", o["name"], ", ".join(verworfen))
-            neu_extras = {**(o.get("extras") or {}), **extras,
+            # Alte Happy-Hour-/Raucher-Angaben verwerfen: bei --neu gilt nur, was diese Einordnung belegt
+            alt = {k: v for k, v in (o.get("extras") or {}).items() if k not in ("happy_hour", "raucher")}
+            neu_extras = {**alt, **extras,
                           "ki_einordnung": {"modell": MODELL if ki else None,
                                             "datum": datetime.now(timezone.utc).date().isoformat(),
                                             "verworfen": verworfen}}
