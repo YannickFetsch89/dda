@@ -55,6 +55,8 @@ class RegelnTest(unittest.TestCase):
         self.assertNotIn("Altbier", regeln({**ORT, "name": "Café Schlüssel"})[0])
         self.assertNotIn("Altbier", regeln({**ORT, "name": "Hotel Schumacher"})[0])
         self.assertIn("Altbier", regeln({**ORT, "name": "Schumacher Gerresheim"})[0])  # Filiale zählt
+        for fremd in ("Pizzeria Schumacher", "Restaurant zum Schlüssel", "Kaffee Schlüssel", "Hostel Uerige"):
+            self.assertNotIn("Altbier", regeln({**ORT, "name": fremd})[0], fremd)
 
     def test_brauerei_als_nebentyp_ist_kein_brauhaus(self):
         # Google hängt „brewery“ auch an Fischrestaurants (Juttas Forelle) – nur Primärtyp/Name zählen
@@ -155,6 +157,36 @@ class ZusammenfuehrenTest(unittest.TestCase):
             self.assertTrue(stichwort_passt("Altbier", zitat), zitat)
         for wert, zitat in ja.items():
             self.assertTrue(stichwort_passt(wert, zitat), (wert, zitat))
+
+    def test_stichworte_dritte_runde(self):
+        nein = [
+            ("Altbier", "Das Haus ist seit 1890 alt"), ("Altbier", "Das Gebäude ist 100 alt"),
+            ("Altbier", "Die Kneipe am Dom alt und gemütlich"), ("Altbier", "Im Herbst alt geworden"),
+            ("Wein", "Frohe Weinachten an alle"), ("Wein", "Es war zum Weinen schön"),
+            ("Sportsbar", "Mit dem Sportwagen vorgefahren"),
+        ]
+        for wert, zitat in nein:
+            self.assertFalse(stichwort_passt(wert, zitat), (wert, zitat))
+        ja = [
+            ("Altbier", "Eine Stange Alt bitte"), ("Altbier", "Ein Glas Alt"), ("Altbier", "Düsseldorfer Alt vom Fass"),
+            ("Altbier", "Ein kleines Alt zum Abschluss"), ("Altbier", "0,2l Alt für 2,50"), ("Altbier", "0,2 l Alt"),
+            ("Altbier", "ein herbes Alt"), ("Wein", "Weinprobe mit drei Weinen"), ("Wein", "Glühwein am Stand"),
+            ("Wein", "Tolle Auswahl an Weinen"), ("Wein", "Brot zum Wein"),
+            ("Draußen sitzen", "Ein schönes Gartenlokal"), ("Craft Beer", "Große Auswahl an IPAs"),
+        ]
+        for wert, zitat in ja:
+            self.assertTrue(stichwort_passt(wert, zitat), (wert, zitat))
+
+    def test_raucher_klauselweise_und_smoking(self):
+        q = "Rauchverbot drinnen, Raucherbereich draußen. Der Wirt kam im Smoking."
+        self.assertTrue(raucher_belegt("Rauchverbot drinnen, Raucherbereich draußen.", q))
+        self.assertFalse(raucher_belegt("Der Wirt kam im Smoking.", q))
+
+    def test_happy_hour_bindestrich_und_jahre(self):
+        q = "Jeden Montag 2-für-1 ab 18 Uhr. Happy Hour seit 17 Jahren. Happy Hour von 17 bis 19 Uhr."
+        self.assertTrue(happy_hour_belegt("ab 18 Uhr", "Jeden Montag 2-für-1 ab 18 Uhr.", q))
+        self.assertFalse(happy_hour_belegt("17 Uhr", "Happy Hour seit 17 Jahren.", q))
+        self.assertTrue(happy_hour_belegt("17–19 Uhr", "Happy Hour von 17 bis 19 Uhr.", q))
 
     def test_raucher_gegenteil_und_rauchbier(self):
         q = "Hier gibt es Rauchbier. Reine Nichtraucherkneipe. Absolute Nicht-Raucher Bar. Seit Jahren rauchfrei. Raucherbereich im Hof."

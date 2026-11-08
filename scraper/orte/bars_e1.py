@@ -123,7 +123,7 @@ def ausfuehren(dry_run: bool) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Brauhäuser/Gastropubs in beiden Guides (E1)")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dry-run", action="store_true")
     ausfuehren(parser.parse_args().dry_run)
 
