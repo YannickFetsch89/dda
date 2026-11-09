@@ -13,6 +13,7 @@ DOM-Struktur (erwartet):
 Erstellt: 2026-04-02
 """
 import logging
+import re
 from datetime import date, timedelta
 from typing import Optional
 from urllib.parse import urljoin
@@ -31,6 +32,26 @@ QUELLE_NAME = "Tanzhaus NRW"
 ORT_STANDARD = "Tanzhaus NRW Düsseldorf"
 ADRESSE_STANDARD = "Erkrather Str. 30, 40233 Düsseldorf"
 KATEGORIE_STANDARD = "kultur"
+
+
+_DATUMSTEXT = re.compile(r"(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)|\d{1,2}\.\s*\w+\s+\d{4}|\d{1,2}:\d{2}", re.IGNORECASE)
+
+
+def _titel_text(titel_el) -> str:
+    """
+    Titel ohne versteckten Screenreader-Text. Die Kalender-Überschrift enthält
+    <span class="visually-hidden">Mittwoch, 11. November 2026, ab, 20:15: </span>Noche de la Salsa
+    <span class="visually-hidden">, DJ Vilson</span> – der Datumsteil fällt weg, ein Zusatz wird mit „–“
+    angehängt („Noche de la Salsa – DJ Vilson“). Bis 2026-11-09 landete das Datum im Titel.
+    """
+    for span in titel_el.find_all(class_="visually-hidden"):
+        text = span.get_text(" ", strip=True)
+        zusatz = text.strip(" ,:;–-")
+        if not zusatz or _DATUMSTEXT.search(text):
+            span.decompose()
+        else:
+            span.replace_with(f" – {zusatz}")
+    return " ".join(titel_el.get_text(" ", strip=True).split()).strip(" –")
 
 
 def _event_aus_element(el, heute: date) -> Optional[dict]:
@@ -54,7 +75,7 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
         )
         if not titel_el:
             return None
-        titel = titel_el.get_text(strip=True)
+        titel = _titel_text(titel_el)
         if not titel:
             return None
 
