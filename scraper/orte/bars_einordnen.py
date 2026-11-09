@@ -317,6 +317,9 @@ def zusammenfuehren(ort: dict, ki: dict | None) -> tuple[dict, dict, list[str]]:
     # KI-Texte nur dort, wo noch keiner steht
     if ort.get("typ") != "kneipe":
         spalten = {k: v for k, v in spalten.items() if not (ort.get(k) or "").strip()}
+    # Lange Texte aus texte_schreiben.py (extras.ki_text) nicht durch die kurze Einordnung ersetzen
+    if (ort.get("extras") or {}).get("ki_text"):
+        spalten = {}
 
     extras["spezialitaeten"] = [s for s in SPEZIALITAETEN if s in spez]
     extras["vibes"] = [v for v in VIBES if v in vibes]
