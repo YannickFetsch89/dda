@@ -1,9 +1,9 @@
 // Guide-Hub Kneipen & Bars (Design-Handoff v2, Ansichten 18 und 19)
 //
-// Erste HTML-Antwort mit Inhalt (SEO/GEO): Hero und die UNGEFILTERTE Liste stehen im statischen Shell
+// Erste HTML-Antwort mit Inhalt (SEO/GEO): Hero und die UNGEFILTERTE Ansicht stehen im statischen Shell
 // (Daten über orteLaden, "use cache"). Nur die filterabhängige Ansicht wartet in <Suspense> auf
-// searchParams – ihr Fallback ist genau diese ungefilterte Ansicht, Crawler ohne JavaScript sehen also
-// die vollständige Liste.
+// searchParams – ihr Fallback ist genau diese ungefilterte Ansicht. Standard ist die Kartenansicht;
+// die Karte selbst entsteht im Browser, darunter stehen alle Orte als Linkliste im HTML.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -12,6 +12,8 @@ import { GuideSticky, type StickyLink } from "@/components/guide-sticky";
 import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
+import { GuideKarteLazy } from "@/components/guide-karte-lazy";
+import { OrtLinkListe, kartenOrte } from "@/components/ort-karten";
 import { SEITE, SORTIERUNGEN, sortieren, zaehlen, zahl } from "@/lib/guide-filter";
 import {
   ARTEN, MIN_FUER_SCHALTER, SPEZIALITAETEN, VIBES, unterart, filterHref, filterLesen, filtern, happyHour, hatParameter,
@@ -43,7 +45,7 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
   };
 }
 
-const STANDARD: KneipenFilter = { art: null, stadtteil: null, spez: [], vibe: [], hh: false, raucher: false, sort: "empfohlen", anzahl: SEITE };
+const STANDARD: KneipenFilter = { art: null, stadtteil: null, spez: [], vibe: [], hh: false, raucher: false, sort: "empfohlen", anzahl: SEITE, ansicht: "karte" };
 
 /** Hero (dunkler, abendlicher Ton) mit Foto des bestempfohlenen Ortes. */
 function Hero({ orte }: { orte: DddOrt[] }) {
@@ -114,7 +116,12 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
   ].join(" · ");
   const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
   const sortOptionen = SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
-  const zuruecksetzen = BASIS;
+  // Karte ist der Standard; die Ansicht bleibt beim Zurücksetzen der Filter erhalten
+  const zuruecksetzen = f.ansicht === "grid" ? `${BASIS}?ansicht=grid` : BASIS;
+  const ansichten = [
+    { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
+    { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
+  ];
 
   return (
     <>
@@ -124,6 +131,7 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
         chips={aktiv}
         sortLabel={sortLabel}
         sortOptionen={sortOptionen}
+        ansichten={ansichten}
       />
 
       <div className="gd-filter gd-filter--abend" id="gd-filter" tabIndex={-1}>
@@ -197,6 +205,13 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
                 ))}
               </div>
             </details>
+            <div className="gd-umschalter" role="group" aria-label="Ansicht">
+              {ansichten.map((a) => (
+                <Link key={a.label} href={a.href} scroll={false} className={a.aktiv ? "is-aktiv" : ""} aria-current={a.aktiv || undefined}>
+                  <Icon name={a.icon} /><span className="gd-umschalter__label">{a.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -211,13 +226,18 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
           <div className="gd-leer">
             Keine Bar mit diesen Filtern. <Link href={zuruecksetzen} scroll={false}>Filter zurücksetzen</Link>
           </div>
+        ) : f.ansicht === "karte" ? (
+          <>
+            <GuideKarteLazy orte={kartenOrte(ergebnis)} />
+            <OrtLinkListe orte={ergebnis} zusatz={(o) => spezialitaeten(o).join(", ")} />
+          </>
         ) : (
           <div className="gd-grid gd-grid--3 gd-grid--abend" role="list">
             {sichtbar.map((o) => <KneipenKarte key={o.id} o={o} />)}
           </div>
         )}
 
-        {rest > 0 && (
+        {f.ansicht === "grid" && rest > 0 && (
           <div className="gd-mehr">
             <Link href={href({ anzahl: f.anzahl + SEITE })} scroll={false} className="gd-mehr__knopf">
               Weitere {Math.min(SEITE, rest)} laden

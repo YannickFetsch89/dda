@@ -20,16 +20,23 @@ export const FILTER_TAGS = [
   "Terrasse", "Brunch", "Frühstück", "Vegetarisch", "Hunde willkommen", "Kinderfreundlich", "Cocktails", "Reservierbar",
 ];
 
+export type OrtTyp = "restaurant" | "imbiss" | "cafe";
+export const ALLE_TYPEN: OrtTyp[] = ["restaurant", "cafe", "imbiss"];
+/** Standard ohne Parameter: Restaurants und Cafés, Schnellimbisse nur auf Wunsch. */
+export const STANDARD_TYPEN: OrtTyp[] = ["restaurant", "cafe"];
+
 export interface GuideFilter {
-  typ: "restaurant" | "imbiss" | "cafe" | null;
+  typen: OrtTyp[]; // nie leer
   stadtteil: string | null; // Slug
-  kueche: string | null; // Slug
+  kuechen: string[]; // Slugs (ODER)
   preise: number[]; // 1–3
   tags: string[]; // Slugs
   sort: SortWert;
   anzahl: number;
-  ansicht: "grid" | "karte";
+  ansicht: "grid" | "karte"; // Standard: Karte
 }
+
+const gleicheMenge = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -41,36 +48,59 @@ function liste(v: string | string[] | undefined): string[] {
   return (eins(v) ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+/** typ-Parameter: fehlt → Standard (Restaurants + Cafés), „alle“ → alle drei, sonst Kommaliste. */
+function typenLesen(v: string | string[] | undefined): OrtTyp[] {
+  const roh = liste(v);
+  if (!roh.length) return [...STANDARD_TYPEN];
+  if (roh.includes("alle")) return [...ALLE_TYPEN];
+  const typen = ALLE_TYPEN.filter((t) => roh.includes(t));
+  return typen.length ? typen : [...STANDARD_TYPEN];
+}
+
 export function filterLesen(sp: SP): GuideFilter {
-  const typ = eins(sp.typ);
   const sort = eins(sp.sort);
   const anzahl = Number.parseInt(eins(sp.anzahl) ?? "", 10);
   return {
-    typ: typ === "restaurant" || typ === "imbiss" || typ === "cafe" ? typ : null,
+    typen: typenLesen(sp.typ),
     stadtteil: eins(sp.stadtteil) || null,
-    kueche: eins(sp.kueche) || null,
+    kuechen: [...new Set(liste(sp.kueche))],
     preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 3))],
     tags: liste(sp.tags),
     sort: SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : "empfohlen",
     anzahl: Number.isFinite(anzahl) && anzahl >= SEITE ? Math.min(anzahl, 2000) : SEITE,
-    ansicht: eins(sp.ansicht) === "karte" ? "karte" : "grid",
+    ansicht: eins(sp.ansicht) === "grid" ? "grid" : "karte",
   };
 }
+
+/** Steht die Filter-Art auf dem Standard (Restaurants + Cafés)? */
+export const typenStandard = (typen: OrtTyp[]) => gleicheMenge(typen, STANDARD_TYPEN);
 
 /** Link mit geändertem Filter (null/leer entfernt den Parameter). Seitenzahl wird zurückgesetzt. */
 export function filterHref(basis: string, f: GuideFilter, aenderung: Partial<GuideFilter>): string {
   const n = { ...f, anzahl: SEITE, ...aenderung };
   const p = new URLSearchParams();
-  if (n.typ) p.set("typ", n.typ);
+  if (!n.typen.length || typenStandard(n.typen)) {
+    // Standard: kein Parameter
+  } else if (gleicheMenge(n.typen, ALLE_TYPEN)) {
+    p.set("typ", "alle");
+  } else {
+    p.set("typ", ALLE_TYPEN.filter((t) => n.typen.includes(t)).join(","));
+  }
   if (n.stadtteil) p.set("stadtteil", n.stadtteil);
-  if (n.kueche) p.set("kueche", n.kueche);
+  if (n.kuechen.length) p.set("kueche", n.kuechen.join(","));
   if (n.preise.length) p.set("preis", [...n.preise].sort().join(","));
   if (n.tags.length) p.set("tags", n.tags.join(","));
   if (n.sort !== "empfohlen") p.set("sort", n.sort);
   if (n.anzahl > SEITE) p.set("anzahl", String(n.anzahl));
-  if (n.ansicht === "karte") p.set("ansicht", "karte");
+  if (n.ansicht === "grid") p.set("ansicht", "grid");
   const qs = p.toString().replace(/%2C/g, ",");
   return qs ? `${basis}?${qs}` : basis;
+}
+
+/** Art umschalten: mindestens eine bleibt gewählt; „Alle“ ist die Auswahl aller drei. */
+export function typUmschalten(typen: OrtTyp[], typ: OrtTyp): OrtTyp[] {
+  const neu = umschalten(typen, typ);
+  return neu.length ? neu : typen;
 }
 
 export function umschalten<T>(liste: T[], wert: T): T[] {
@@ -93,9 +123,10 @@ function vorabScore(o: DddOrt): number {
 export function filtern(orte: DddOrt[], f: GuideFilter, ohne: (keyof GuideFilter)[] = []): DddOrt[] {
   const tagNamen = new Map(FILTER_TAGS.map((t) => [slugify(t), t]));
   return orte.filter((o) => {
-    if (!ohne.includes("typ") && f.typ && o.typ !== f.typ) return false;
+    // Brauhäuser aus dem Kneipen-Hub (typ „kneipe“) zählen als Restaurant
+    if (!ohne.includes("typen") && !f.typen.includes(o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp))) return false;
     if (!ohne.includes("stadtteil") && f.stadtteil && slugify(o.stadtteil ?? "") !== f.stadtteil) return false;
-    if (!ohne.includes("kueche") && f.kueche && kueche(o)?.slug !== f.kueche) return false;
+    if (!ohne.includes("kuechen") && f.kuechen.length && !f.kuechen.includes(kueche(o)?.slug ?? "")) return false;
     if (!ohne.includes("preise") && f.preise.length && !f.preise.includes(preisStufe(o.preis_niveau))) return false;
     if (!ohne.includes("tags") && f.tags.length) {
       for (const t of f.tags) if (!o.tags.includes(tagNamen.get(t) ?? "")) return false;

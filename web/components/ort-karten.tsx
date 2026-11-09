@@ -6,6 +6,7 @@ import { kueche, sterne, zahl } from "@/lib/guide-filter";
 import { artInfo } from "@/lib/kneipen";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
+import type { KartenOrt } from "./guide-karte";
 
 /** Basis-Route eines Ort-Typs (Guide-Hub). */
 export function ortRoute(typ: string): string {
@@ -124,5 +125,45 @@ export function OrtKartenGrid({ orte, spalten = 3 }: { orte: DddOrt[]; spalten?:
     <div className={`gd-grid gd-grid--${spalten}`} role="list">
       {orte.map((o) => <OrtKarte key={o.id} o={o} />)}
     </div>
+  );
+}
+
+/** Kompakter Datensatz für die Kartenansicht (nur was Liste, Pins und Popup brauchen). */
+export function kartenOrte(orte: DddOrt[]): KartenOrt[] {
+  return orte
+    .filter((o) => o.latitude != null && o.longitude != null)
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      typLabel: ortTypLabel(o),
+      icon: ortTypIcon(o),
+      stadtteil: o.stadtteil,
+      preis: o.preis_niveau,
+      rating: o.google_rating != null ? sterne(o.google_rating) : null,
+      anzahl: o.google_bewertungen_anzahl != null ? zahl(o.google_bewertungen_anzahl) : null,
+      bild: ortBildUrl(o),
+      href: ortPfad(o),
+      lat: o.latitude!,
+      lng: o.longitude!,
+    }));
+}
+
+/**
+ * Alle Treffer als einfache Linkliste unter der Karte: die Karte entsteht erst im Browser – so stehen
+ * die Orte trotzdem im HTML (Suchmaschinen, KI-Crawler, Screenreader, ohne JavaScript).
+ */
+export function OrtLinkListe({ orte, zusatz }: { orte: DddOrt[]; zusatz?: (o: DddOrt) => string | null | undefined }) {
+  return (
+    <details className="gd-alle-liste">
+      <summary><Icon name="list" />Alle {zahl(orte.length)} Empfehlungen als Liste</summary>
+      <ul>
+        {orte.map((o) => (
+          <li key={o.id}>
+            <Link href={ortPfad(o)}>{o.name}</Link>
+            <span className="muted">{[ortTypLabel(o), zusatz?.(o), o.stadtteil].filter(Boolean).join(" · ")}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

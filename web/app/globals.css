@@ -1273,3 +1273,82 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 :root[data-theme="dark"] .gd-karte--abend { border-color: var(--ddd-border); }
 :root[data-theme="dark"] .gd-hh { background: #3a3220; border-color: #5a4a26; color: #f0dca0; }
 :root[data-theme="dark"] .gd-typ--abend, :root[data-theme="dark"] .gd-karte__spez .icon { color: #c9a84c; }
+
+/* ── Linkliste unter der Kartenansicht (alle Treffer im HTML) ───────────────── */
+.gd-alle-liste { margin-top: 16px; border: 1px solid var(--ddd-border); border-radius: var(--r-md); background: var(--ddd-surface); }
+.gd-alle-liste summary { display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; }
+.gd-alle-liste summary::-webkit-details-marker { display: none; }
+.gd-alle-liste summary .icon { font-size: 20px; color: var(--ddd-text-muted); }
+.gd-alle-liste ul { list-style: none; margin: 0; padding: 0 16px 14px; }
+.gd-alle-liste li { display: flex; flex-direction: column; padding: 7px 0; border-top: 1px solid var(--ddd-border); break-inside: avoid; }
+.gd-alle-liste li a { font-weight: 600; font-size: 14px; }
+.gd-alle-liste li .muted { font-size: 12px; }
+@media (min-width: 768px) { .gd-alle-liste ul { column-count: 2; column-gap: 32px; } }
+@media (min-width: 1200px) { .gd-alle-liste ul { column-count: 3; } }
+
+/* ── Fragebogen „Was dürfen wir dir empfehlen?“ (Restaurant-Hub) ─────────────── */
+.fb-start {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; margin-top: 2px;
+  border: none; border-radius: var(--r-pill); background: var(--ddd-gold); color: var(--ddd-navy);
+  font: 600 14px var(--font-sans); cursor: pointer;
+}
+.fb-start .icon { font-size: 18px; }
+.fb-start:hover { background: var(--ddd-gold-hover); }
+html:has(.fb[open]) { overflow: hidden; }
+.fb {
+  width: min(640px, calc(100vw - 32px)); max-width: none; max-height: min(88vh, 780px); padding: 0; border: none;
+  border-radius: var(--r-panel); background: var(--ddd-surface); color: var(--ddd-text); box-shadow: var(--sh-l);
+}
+.fb[open] { display: flex; flex-direction: column; animation: fb-ein 0.22s ease-out; }
+.fb::backdrop { background: rgba(13, 17, 23, 0.55); backdrop-filter: blur(2px); }
+@keyframes fb-ein { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .fb[open] { animation: none; } }
+.fb button { font-family: inherit; }
+.fb__kopf { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 12px 10px 16px; }
+.fb__schritt { font-size: 13px; color: var(--ddd-text-muted); }
+.fb__zurueck { justify-self: start; display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px 0 4px; border: none; background: none; color: var(--ddd-text); font-size: 14px; font-weight: 600; cursor: pointer; border-radius: var(--r-pill); }
+.fb__zurueck .icon { font-size: 20px; }
+.fb__zurueck:hover { background: var(--ddd-bg); }
+.fb__x { justify-self: end; width: 40px; height: 40px; display: grid; place-items: center; border: none; border-radius: 50%; background: var(--ddd-bg); color: var(--ddd-text); cursor: pointer; }
+.fb__x:hover { background: var(--ddd-border); }
+.fb__x .icon { font-size: 22px; }
+.fb__fortschritt { height: 3px; background: var(--ddd-border); }
+.fb__fortschritt span { display: block; height: 100%; background: var(--ddd-gold); transition: width 0.3s ease; }
+.fb__inhalt { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 22px 24px 0; }
+.fb__inhalt h2 { font-size: 28px; line-height: 1.1; color: var(--ddd-text); }
+.fb .fb__hinweis { margin-top: -8px; font-size: 14px; color: var(--ddd-text-muted); }
+.fb__karten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 20px; }
+.fb__karten--preis { grid-template-columns: repeat(3, 1fr); padding-bottom: 0; }
+.fb__karte {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px; text-align: left;
+  border: 1.5px solid var(--ddd-border); border-radius: var(--r-md); background: var(--ddd-surface); color: var(--ddd-text); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.fb__karte .icon { font-size: 26px; color: var(--ddd-gold); margin-bottom: 6px; }
+.fb__karte b { font-size: 16px; }
+.fb__karten--preis .fb__karte b { font-size: 22px; letter-spacing: 1px; }
+.fb__karte span { font-size: 13px; color: var(--ddd-text-muted); }
+.fb__karte:hover:not(:disabled) { border-color: var(--ddd-navy); background: var(--ddd-bg); }
+.fb__karte.is-an { border-color: var(--ddd-navy); background: var(--ddd-navy-tint); }
+.fb__karte:disabled { opacity: 0.45; cursor: default; }
+.fb .fb__zahl { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--ddd-text-muted); }
+.fb__chips { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 20px; }
+.fb__chips .gd-chip { border: none; }
+.fb__chips .gd-chip:disabled { opacity: 0.4; cursor: default; filter: none; }
+.fb__chips .fb__chip--haupt { background: var(--ddd-navy); color: #ffffff; }
+.fb__fuss { position: sticky; bottom: 0; display: flex; justify-content: flex-end; margin: auto -24px 0; padding: 14px 24px 18px; background: var(--ddd-surface); border-top: 1px solid var(--ddd-border); }
+.fb__weiter { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border: none; border-radius: var(--r-pill); background: var(--ddd-navy); color: #ffffff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.fb__weiter:hover { background: var(--ddd-navy-hover); }
+.fb__weiter:disabled { opacity: 0.5; cursor: default; }
+.fb__weiter .icon { font-size: 20px; }
+.fb .fb__stand { padding: 0 24px 16px; font-size: 13px; color: var(--ddd-text-muted); }
+:root[data-theme="dark"] .fb__weiter, :root[data-theme="dark"] .fb__chips .fb__chip--haupt { background: var(--ddd-gold); color: var(--ddd-navy); }
+:root[data-theme="dark"] .fb__karte.is-an, :root[data-theme="dark"] .fb__karte:hover:not(:disabled) { border-color: var(--ddd-gold); background: var(--ddd-subtle); }
+@media (max-width: 599px) {
+  .fb { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
+  .fb__inhalt { padding: 18px 16px 0; }
+  .fb__inhalt h2 { font-size: 26px; }
+  .fb__fuss { margin: auto -16px 0; padding: 12px 16px 16px; }
+  .fb__weiter { flex: 1; justify-content: center; }
+  .fb__karten--preis .fb__karte { padding: 12px; }
+}

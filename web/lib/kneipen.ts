@@ -64,6 +64,7 @@ export interface KneipenFilter {
   raucher: boolean;
   sort: SortWert;
   anzahl: number;
+  ansicht: "karte" | "grid"; // Standard: Karte
 }
 
 type SP = Record<string, string | string[] | undefined>;
@@ -85,12 +86,13 @@ export function filterLesen(sp: SP): KneipenFilter {
     raucher: eins(sp.raucher) === "1",
     sort: SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : "empfohlen",
     anzahl: Number.isFinite(anzahl) && anzahl >= SEITE ? Math.min(Math.floor(anzahl), 500) : SEITE,
+    ansicht: eins(sp.ansicht) === "grid" ? "grid" : "karte",
   };
 }
 
 /** Hat die URL irgendeinen Filter-, Sortier- oder Seiten-Parameter? (→ noindex) */
 export function hatParameter(sp: SP): boolean {
-  return ["art", "stadtteil", "spez", "vibe", "hh", "raucher", "sort", "anzahl"].some((k) => eins(sp[k]) !== undefined);
+  return ["art", "stadtteil", "spez", "vibe", "hh", "raucher", "sort", "anzahl", "ansicht"].some((k) => eins(sp[k]) !== undefined);
 }
 
 export function filterHref(basis: string, f: KneipenFilter, aenderung: Partial<KneipenFilter>): string {
@@ -104,6 +106,7 @@ export function filterHref(basis: string, f: KneipenFilter, aenderung: Partial<K
   if (n.raucher) p.set("raucher", "1");
   if (n.sort !== "empfohlen") p.set("sort", n.sort);
   if (n.anzahl > SEITE) p.set("anzahl", String(n.anzahl));
+  if (n.ansicht === "grid") p.set("ansicht", "grid");
   const qs = p.toString();
   return qs ? `${basis}?${qs}` : basis;
 }

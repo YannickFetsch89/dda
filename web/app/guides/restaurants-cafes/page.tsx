@@ -7,11 +7,11 @@ import { GuideSticky, type StickyLink } from "@/components/guide-sticky";
 import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
-import type { KartenOrt } from "@/components/guide-karte";
-import { OrtKartenGrid, ortPfad, ortTypIcon, ortTypLabel } from "@/components/ort-karten";
+import { OrtKartenGrid, OrtLinkListe, kartenOrte } from "@/components/ort-karten";
+import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
-  FILTER_TAGS, SEITE, SORTIERUNGEN, filterHref, filterLesen, filtern, kueche, preisZeichen,
-  sortieren, sterne, umschalten, zaehlen, zahl, type GuideFilter,
+  ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche, preisStufe,
+  preisZeichen, sortieren, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
 import { orteLaden, ortBildUrl } from "@/lib/orte";
@@ -20,7 +20,28 @@ import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
 const TYPEN = ["restaurant", "imbiss", "cafe"] as const;
-const TYP_NAME: Record<(typeof TYPEN)[number], string> = { restaurant: "Restaurants", imbiss: "Schnellimbiss", cafe: "Cafés" };
+const TYP_NAME: Record<OrtTyp, string> = { restaurant: "Restaurants", imbiss: "Schnellimbiss", cafe: "Cafés" };
+const FILTER_PARAMETER = ["typ", "stadtteil", "kueche", "preis", "tags", "sort", "anzahl", "ansicht"];
+
+/** Kompakte Daten für die Live-Zählwerte im Fragebogen (Nachschlagetabellen + Tupel je Ort). */
+function fragebogenDaten(orte: DddOrt[]): FragebogenDaten {
+  const stadtteile = zaehlen(orte, (o) => o.stadtteil).map(({ slug, name }) => ({ slug, name }));
+  const kuechen = zaehlen(orte, (o) => kueche(o)?.name).map(({ slug, name }) => ({ slug, name }));
+  // Für Cafés sinnvolle Wünsche (Cocktails/Reservierbar gehören eher zu Restaurants und Bars)
+  const tags = ["Frühstück", "Brunch", "Terrasse", "Vegetarisch", "Hunde willkommen", "Kinderfreundlich"].map((t) => ({ slug: slugify(t), name: t }));
+  const stIndex = new Map(stadtteile.map((s, i) => [s.name, i]));
+  const kIndex = new Map(kuechen.map((k, i) => [k.slug, i]));
+  return {
+    stadtteile,
+    kuechen,
+    tags,
+    orte: orte.map((o) => {
+      const typ: OrtTyp = o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp);
+      const maske = tags.reduce((m, t, i) => (o.tags.includes(t.name) ? m | (1 << i) : m), 0);
+      return [ALLE_TYPEN.indexOf(typ), stIndex.get(o.stadtteil ?? "") ?? -1, kIndex.get(kueche(o)?.slug ?? "") ?? -1, preisStufe(o.preis_niveau), maske];
+    }),
+  };
+}
 
 export const metadata: Metadata = {
   title: "Restaurants & Cafés in Düsseldorf",
@@ -32,7 +53,7 @@ export const metadata: Metadata = {
 type SP = Record<string, string | string[] | undefined>;
 
 /** Hero mit Foto des aktuell bestempfohlenen Ortes. */
-function Hero({ orte }: { orte: DddOrt[] }) {
+function Hero({ orte, children }: { orte: DddOrt[]; children?: React.ReactNode }) {
   const alle = sortieren(orte, "empfohlen");
   const titel = alle.find((o) => ortBildUrl(o));
   return (
@@ -50,6 +71,7 @@ function Hero({ orte }: { orte: DddOrt[] }) {
         </nav>
         <h1 className="d">Restaurants &amp; Cafés</h1>
         <p>{alle.length ? `${zahl(alle.length)} Empfehlungen – handverlesen für Düsseldorf` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
+        {children}
       </div>
       {titel?.bild_attribution && <span className="gd-hero__credit">Foto: {titel.name} · {titel.bild_attribution}</span>}
     </section>
@@ -84,73 +106,66 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const alle = [...eigene, ...brauhaeuser];
   const f = filterLesen(sp);
   const href = (a: Partial<GuideFilter>) => filterHref(BASIS, f, a);
+  // Fragebogen öffnet sich nur beim Aufruf ohne jeden Filter
+  const ohneParameter = !FILTER_PARAMETER.some((k) => sp[k] !== undefined);
 
   const ergebnis = sortieren(filtern(alle, f), f.sort);
   const sichtbar = ergebnis.slice(0, f.anzahl);
   const rest = ergebnis.length - sichtbar.length;
 
   // Zählwerte: jeweils ohne den eigenen Filter, damit man sieht, was ein Wechsel bringt
-  const fuerTyp = filtern(alle, f, ["typ"]);
+  const fuerTyp = filtern(alle, f, ["typen"]);
   const stadtteile = zaehlen(filtern(alle, f, ["stadtteil"]), (o) => o.stadtteil);
-  const kuechen = zaehlen(filtern(alle, f, ["kueche"]), (o) => kueche(o)?.name);
+  const kuechen = zaehlen(filtern(alle, f, ["kuechen"]), (o) => kueche(o)?.name);
   const stadtteilName = stadtteile.find((s) => s.slug === f.stadtteil)?.name ?? f.stadtteil;
-  const kuecheName = kuechen.find((k) => k.slug === f.kueche)?.name ?? null;
+  const kuecheName = (slug: string) => kuechen.find((k) => k.slug === slug)?.name ?? slug;
   const tagName = new Map(FILTER_TAGS.map((t) => [slugify(t), t]));
+  const anzahlTyp = (t: OrtTyp) => fuerTyp.filter((o) => (o.typ === "kneipe" ? "restaurant" : o.typ) === t).length;
 
+  // Art: Mehrfachauswahl (Standard Restaurants + Cafés), „Alle“ wählt alle drei
+  const alleGewaehlt = f.typen.length === ALLE_TYPEN.length;
   const typTabs = [
-    { label: "Alle", wert: null, icon: undefined, anzahl: fuerTyp.length },
-    { label: "Restaurants", wert: "restaurant" as const, icon: "restaurant", anzahl: fuerTyp.filter((o) => o.typ === "restaurant").length },
-    { label: "Cafés", wert: "cafe" as const, icon: "local_cafe", anzahl: fuerTyp.filter((o) => o.typ === "cafe").length },
-    { label: "Schnellimbiss", wert: "imbiss" as const, icon: "lunch_dining", anzahl: fuerTyp.filter((o) => o.typ === "imbiss").length },
+    { label: "Alle", icon: undefined, anzahl: fuerTyp.length, href: href({ typen: [...ALLE_TYPEN] }), aktiv: alleGewaehlt },
+    ...(["restaurant", "cafe", "imbiss"] as OrtTyp[]).map((t) => ({
+      label: TYP_NAME[t],
+      icon: { restaurant: "restaurant", cafe: "local_cafe", imbiss: "lunch_dining" }[t],
+      anzahl: anzahlTyp(t),
+      // Aus „Alle“ heraus wählt ein Klick genau diese Art; sonst schaltet er sie zu oder ab
+      href: href({ typen: alleGewaehlt ? [t] : typUmschalten(f.typen, t) }),
+      aktiv: !alleGewaehlt && f.typen.includes(t),
+    })),
   ];
 
   // Aktive Filter (Status-Zeile und Sticky-Leiste)
   const aktiv: StickyLink[] = [
     ...(f.stadtteil ? [{ label: stadtteilName ?? "", href: href({ stadtteil: null }) }] : []),
-    ...(f.kueche ? [{ label: kuecheName ?? f.kueche, href: href({ kueche: null }) }] : []),
+    ...f.kuechen.map((k) => ({ label: kuecheName(k), href: href({ kuechen: f.kuechen.filter((x) => x !== k) }) })),
     ...f.preise.map((p) => ({ label: preisZeichen(p), href: href({ preise: f.preise.filter((x) => x !== p) }) })),
     ...f.tags.map((t) => ({ label: tagName.get(t) ?? t, href: href({ tags: f.tags.filter((x) => x !== t) }) })),
   ];
-  const hatFilter = !!f.typ || aktiv.length > 0;
+  const hatFilter = !typenStandard(f.typen) || aktiv.length > 0;
+  const typText = alleGewaehlt ? "Alle Arten" : ALLE_TYPEN.filter((t) => f.typen.includes(t)).map((t) => TYP_NAME[t]).join(" & ");
   const status = [
     `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${f.stadtteil ? ` in ${stadtteilName}` : ""}`,
-    ...(f.typ ? [TYP_NAME[f.typ]] : []),
+    typText,
     ...aktiv.filter((a) => a.label !== stadtteilName).map((a) => a.label),
   ].join(" · ");
+  const kuecheLabel = !f.kuechen.length ? "Küche" : f.kuechen.length === 1 ? kuecheName(f.kuechen[0]) : `${kuecheName(f.kuechen[0])} +${f.kuechen.length - 1}`;
   const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
   const sortOptionen = SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
   const ansichten = [
-    { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
     { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
+    { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
   ];
-  const zuruecksetzen = href({ typ: null, stadtteil: null, kueche: null, preise: [], tags: [] });
-  // Für die Karte: alle Treffer mit Koordinaten, kompakt (nur was Liste, Pins und Popup brauchen)
-  const kartenOrte: KartenOrt[] =
-    f.ansicht === "karte"
-      ? ergebnis
-          .filter((o) => o.latitude != null && o.longitude != null)
-          .map((o) => ({
-            id: o.id,
-            name: o.name,
-            typLabel: ortTypLabel(o),
-            icon: ortTypIcon(o),
-            stadtteil: o.stadtteil,
-            preis: o.preis_niveau,
-            rating: o.google_rating != null ? sterne(o.google_rating) : null,
-            anzahl: o.google_bewertungen_anzahl != null ? zahl(o.google_bewertungen_anzahl) : null,
-            bild: ortBildUrl(o),
-            href: ortPfad(o),
-            lat: o.latitude!,
-            lng: o.longitude!,
-          }))
-      : [];
-
+  const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteil: null, kuechen: [], preise: [], tags: [] });
   return (
     <>
-      <Hero orte={alle} />
+      <Hero orte={alle}>
+        <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} start={ohneParameter} />
+      </Hero>
       <GuideSticky
         zielId="gd-filter"
-        typen={typTabs.map((t) => ({ label: t.label, icon: t.icon, href: href({ typ: t.wert }), aktiv: f.typ === t.wert }))}
+        typen={typTabs.map((t) => ({ label: t.label, icon: t.icon, href: t.href, aktiv: t.aktiv }))}
         chips={aktiv}
         sortLabel={sortLabel}
         sortOptionen={sortOptionen}
@@ -161,7 +176,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
         <div className="container gd-filter__innen">
           <ScrollReihe className="gd-typen" label="Art">
             {typTabs.map((t) => (
-              <Link key={t.label} href={href({ typ: t.wert })} scroll={false} className={`gd-typ-tab ${f.typ === t.wert ? "gd-chip--an" : ""}`} aria-current={f.typ === t.wert || undefined}>
+              <Link key={t.label} href={t.href} scroll={false} className={`gd-typ-tab ${t.aktiv ? "gd-chip--an" : ""}`} aria-current={t.aktiv || undefined}>
                 {t.icon && <Icon name={t.icon} />}
                 {t.label}
                 <span className="gd-chip__zahl">{zahl(t.anzahl)}</span>
@@ -185,14 +200,15 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
             <span className="gd-zeile__label">Filter</span>
             {/* Küche steht außerhalb der scrollenden Chip-Reihe, damit das Menü nicht abgeschnitten wird */}
             <details className="gd-dropdown">
-                <summary className={`gd-chip gd-chip--gross ${f.kueche ? "gd-chip--an" : ""}`}>
-                  <Icon name="ramen_dining" />{kuecheName ?? "Küche"}<Icon name="expand_more" />
+                <summary className={`gd-chip gd-chip--gross ${f.kuechen.length ? "gd-chip--an" : ""}`}>
+                  <Icon name="ramen_dining" />{kuecheLabel}<Icon name="expand_more" />
                 </summary>
                 <div className="gd-menue">
-                  <Link href={href({ kueche: null })} scroll={false} className={!f.kueche ? "is-aktiv" : ""}>Alle Küchen</Link>
+                  <Link href={href({ kuechen: [] })} scroll={false} className={!f.kuechen.length ? "is-aktiv" : ""}>Alle Küchen</Link>
+                  {/* Mehrfachauswahl: Klick schaltet eine Küche zu oder ab */}
                   {kuechen.map((k) => (
-                    <Link key={k.slug} href={href({ kueche: k.slug })} scroll={false} className={f.kueche === k.slug ? "is-aktiv" : ""}>
-                      {k.name}<span className="muted">{k.anzahl}</span>
+                    <Link key={k.slug} href={href({ kuechen: umschalten(f.kuechen, k.slug) })} scroll={false} className={f.kuechen.includes(k.slug) ? "is-aktiv" : ""}>
+                      {f.kuechen.includes(k.slug) && <Icon name="check" />}{k.name}<span className="muted">{k.anzahl}</span>
                     </Link>
                   ))}
                 </div>
@@ -240,7 +256,10 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
             Keine Treffer mit diesen Filtern. <Link href={zuruecksetzen} scroll={false}>Filter zurücksetzen</Link>
           </div>
         ) : f.ansicht === "karte" ? (
-          <GuideKarteLazy orte={kartenOrte} />
+          <>
+            <GuideKarteLazy orte={kartenOrte(ergebnis)} />
+            <OrtLinkListe orte={ergebnis} zusatz={(o) => kueche(o)?.name} />
+          </>
         ) : (
           <OrtKartenGrid orte={sichtbar} />
         )}
