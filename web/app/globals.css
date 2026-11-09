@@ -1294,15 +1294,21 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 }
 .fb-start .icon { font-size: 18px; }
 .fb-start:hover { background: var(--ddd-gold-hover); }
-html:has(.fb[open]) { overflow: hidden; }
-.fb {
-  width: min(640px, calc(100vw - 32px)); max-width: none; max-height: min(88vh, 780px); padding: 0; border: none;
-  border-radius: var(--r-panel); background: var(--ddd-surface); color: var(--ddd-text); box-shadow: var(--sh-l);
-}
-.fb[open] { display: flex; flex-direction: column; animation: fb-ein 0.22s ease-out; }
-.fb::backdrop { background: rgba(13, 17, 23, 0.55); backdrop-filter: blur(2px); }
+html:has(.fb--dialog[open]) { overflow: hidden; }
+.fb { border-radius: var(--r-panel); background: var(--ddd-surface); color: var(--ddd-text); }
+/* Vollbild-Dialog (über „Empfehlung finden“ geöffnet) */
+.fb--dialog { width: min(640px, calc(100vw - 32px)); max-width: none; max-height: min(88vh, 780px); padding: 0; border: none; box-shadow: var(--sh-l); }
+.fb--dialog[open] { display: flex; flex-direction: column; animation: fb-ein 0.22s ease-out; }
+.fb--dialog::backdrop { background: rgba(13, 17, 23, 0.55); backdrop-filter: blur(2px); }
 @keyframes fb-ein { from { opacity: 0; transform: translateY(12px); } }
-@media (prefers-reduced-motion: reduce) { .fb[open] { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fb--dialog[open] { animation: none; } }
+/* Fester Bereich unter dem Hero (Aufruf ohne Filter) – Teil der Seite, keine Einblendung */
+.fb--inline { display: flex; flex-direction: column; margin: 24px auto 8px; max-width: 880px; border: 1px solid var(--ddd-border); box-shadow: var(--sh-m); }
+.fb--inline .fb__inhalt { overflow: visible; }
+.fb--inline h2:focus { outline: none; }
+.fb__marke { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ddd-text-muted); }
+.fb__marke .icon { font-size: 18px; color: var(--ddd-gold); }
+@media (min-width: 768px) { .fb--inline .fb__karten:not(.fb__karten--preis) { grid-template-columns: repeat(4, 1fr); } }
 .fb button { font-family: inherit; }
 .fb__kopf { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 12px 10px 16px; }
 .fb__schritt { font-size: 13px; color: var(--ddd-text-muted); }
@@ -1345,7 +1351,9 @@ html:has(.fb[open]) { overflow: hidden; }
 :root[data-theme="dark"] .fb__weiter, :root[data-theme="dark"] .fb__chips .fb__chip--haupt { background: var(--ddd-gold); color: var(--ddd-navy); }
 :root[data-theme="dark"] .fb__karte.is-an, :root[data-theme="dark"] .fb__karte:hover:not(:disabled) { border-color: var(--ddd-gold); background: var(--ddd-subtle); }
 @media (max-width: 599px) {
-  .fb { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
+  .fb--dialog { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
+  .fb--inline { margin: 16px 0 4px; }
+  .fb__marke-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .fb__inhalt { padding: 18px 16px 0; }
   .fb__inhalt h2 { font-size: 26px; }
   .fb__fuss { margin: auto -16px 0; padding: 12px 16px 16px; }

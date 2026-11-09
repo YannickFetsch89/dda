@@ -8,7 +8,7 @@ import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { OrtKartenGrid, OrtLinkListe, kartenOrte } from "@/components/ort-karten";
-import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
+import { Fragebogen, FragebogenKnopf, type FragebogenDaten } from "@/components/fragebogen";
 import {
   ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche, preisStufe,
   preisZeichen, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
@@ -106,7 +106,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const alle = [...eigene, ...brauhaeuser];
   const f = filterLesen(sp);
   const href = (a: Partial<GuideFilter>) => filterHref(BASIS, f, a);
-  // Fragebogen öffnet sich nur beim Aufruf ohne jeden Filter
+  // Fragebogen steht als Bereich nur auf der ungefilterten Hub-Seite
   const ohneParameter = !FILTER_PARAMETER.some((k) => sp[k] !== undefined);
 
   const ergebnis = sortieren(filtern(alle, f), f.sort);
@@ -161,8 +161,10 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   return (
     <>
       <Hero orte={alle}>
-        <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} start={ohneParameter} />
+        <FragebogenKnopf />
       </Hero>
+      {/* Ohne Filter: Fragebogen als fester Bereich unter dem Hero (keine Einblendung, SEO-neutral) */}
+      <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} start={ohneParameter} />
       <GuideSticky
         zielId="gd-filter"
         typen={typTabs.map((t) => ({ label: t.label, icon: t.icon, href: t.href, aktiv: t.aktiv }))}

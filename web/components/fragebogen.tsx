@@ -1,8 +1,11 @@
 "use client";
-// Fragebogen „Was dürfen wir dir empfehlen?“ für den Restaurant-Hub (Experiment).
-// Öffnet sich beim ersten Aufruf ohne Filter (einmal pro Sitzung), führt durch 3–4 Fragen und
-// springt dann auf die passend gefilterte Hub-URL. Jederzeit über das X oder Esc abbrechbar.
-// Die Seite darunter bleibt vollständig im HTML (Crawler, ohne JavaScript, nach dem Schließen).
+// Fragebogen „Was dürfen wir dir empfehlen?“ für den Restaurant-Hub.
+//
+// Beim Aufruf ohne Filter steht er als fester Bereich unter dem Hero – Teil der Seite, keine
+// Einblendung über dem Inhalt (Google wertet verdeckende Interstitials nach dem Klick aus der Suche ab).
+// Der Server rendert ihn mit (kein Nachladen, erste Frage steht im HTML); Karte und Liste folgen darunter.
+// Das X klappt ihn zu. „Empfehlung finden“ im Hero öffnet ihn als Vollbild-Dialog (vom Nutzer
+// ausgelöst – unkritisch). Nach der letzten Frage geht es auf die passend gefilterte Hub-URL.
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./karten";
@@ -18,6 +21,7 @@ export interface FragebogenDaten {
 }
 
 type Schritt = "art" | "ort" | "lust" | "wichtig" | "preis";
+type Variante = "inline" | "dialog";
 
 interface Antworten {
   typen: OrtTyp[];
@@ -28,7 +32,7 @@ interface Antworten {
 }
 
 const LEER: Antworten = { typen: [], stadtteil: null, kuechen: [], tags: [], preise: [] };
-const SPEICHER = "ddd-fragebogen-restaurants";
+const EREIGNIS = "ddd-fragebogen-oeffnen";
 
 const ARTEN: { label: string; text: string; icon: string; typen: OrtTyp[] }[] = [
   { label: "Restaurants", text: "Richtig essen gehen", icon: "restaurant", typen: ["restaurant"] },
@@ -37,32 +41,42 @@ const ARTEN: { label: string; text: string; icon: string; typen: OrtTyp[] }[] = 
   { label: "Alles", text: "Überrascht mich", icon: "auto_awesome", typen: [...ALLE_TYPEN] },
 ];
 
-function speicherGesetzt(): boolean {
-  try {
-    return sessionStorage.getItem(SPEICHER) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function speicherSetzen() {
-  try {
-    sessionStorage.setItem(SPEICHER, "1");
-  } catch {
-    // privater Modus o. Ä. – dann erscheint der Fragebogen eben erneut
-  }
+/** Knopf im Hero: öffnet den Fragebogen (Dialog bzw. springt zum offenen Bereich). */
+export function FragebogenKnopf() {
+  return (
+    <button type="button" className="fb-start" onClick={() => window.dispatchEvent(new Event(EREIGNIS))}>
+      <Icon name="auto_awesome" />Empfehlung finden
+    </button>
+  );
 }
 
 export function Fragebogen({ basis, daten, start }: { basis: string; daten: FragebogenDaten; start: boolean }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
+  const bereich = useRef<HTMLElement>(null);
+  const [inlineOffen, setInlineOffen] = useState(true);
+  const [dialogOffen, setDialogOffen] = useState(false);
   const [schritt, setSchritt] = useState<Schritt>("art");
   const [a, setA] = useState<Antworten>(LEER);
+  // Fester Bereich nur auf der ungefilterten Hub-Seite
+  const inlineSichtbar = start && inlineOffen && !dialogOffen;
 
-  // Beim ersten Aufruf ohne Filter automatisch öffnen (einmal pro Sitzung)
+  // „Empfehlung finden“: offenen Bereich ansteuern, sonst als Dialog öffnen
   useEffect(() => {
-    if (start && !speicherGesetzt()) dialog.current?.showModal();
-  }, [start]);
+    const oeffnen = () => {
+      if (start && inlineOffen) {
+        bereich.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        bereich.current?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+        return;
+      }
+      setA(LEER);
+      setSchritt("art");
+      setDialogOffen(true);
+      dialog.current?.showModal();
+    };
+    window.addEventListener(EREIGNIS, oeffnen);
+    return () => window.removeEventListener(EREIGNIS, oeffnen);
+  }, [start, inlineOffen]);
 
   const nurCafes = a.typen.length === 1 && a.typen[0] === "cafe";
   const schritte: Schritt[] = ["art", "ort", nurCafes ? "wichtig" : "lust", "preis"];
@@ -81,15 +95,15 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
 
   const treffer = passend(a).length;
 
-  function schliessen() {
-    speicherSetzen();
+  function dialogSchliessen() {
     dialog.current?.close();
+    setDialogOffen(false);
   }
 
-  function oeffnen() {
-    setA(LEER);
-    setSchritt("art");
-    dialog.current?.showModal();
+  function bereichSchliessen() {
+    setInlineOffen(false);
+    // Fokus auf die Filterleiste, damit Tastatur- und Screenreader-Nutzer nicht „ins Leere“ fallen
+    document.getElementById("gd-filter")?.focus({ preventScroll: true });
   }
 
   function weiter(neu: Antworten) {
@@ -115,8 +129,8 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
       anzahl: SEITE,
       ansicht: "karte",
     }, {});
-    speicherSetzen();
-    dialog.current?.close();
+    dialogSchliessen();
+    setInlineOffen(false);
     router.push(href);
   }
 
@@ -131,36 +145,33 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
   const stadtteilZahlen = schritt === "ort" ? zaehlen(passend({ ...a, stadtteil: null, kuechen: [], tags: [], preise: [] }), 1, daten.stadtteile) : [];
   const kuechenZahlen = schritt === "lust" ? zaehlen(passend({ ...a, kuechen: [], tags: [], preise: [] }), 2, daten.kuechen) : [];
 
-  return (
-    <>
-      <button type="button" className="fb-start" onClick={oeffnen}>
-        <Icon name="auto_awesome" />Empfehlung finden
-      </button>
-
-      <dialog
-        ref={dialog}
-        className="fb"
-        aria-labelledby="fb-frage"
-        onCancel={(e) => { e.preventDefault(); schliessen(); }}
-        onClick={(e) => { if (e.target === dialog.current) schliessen(); }}
-      >
+  /** Inhalt beider Varianten. Autofokus nur im Dialog – der feste Bereich stiehlt beim Laden keinen Fokus. */
+  const panel = (v: Variante) => {
+    const fokus = v === "dialog";
+    const frageId = `fb-frage-${v}`;
+    const titel = (text: string) => <h2 id={frageId} className="d" tabIndex={-1}>{text}</h2>;
+    return (
+      <>
         <div className="fb__kopf">
           {nummer > 1 ? (
             <button type="button" className="fb__zurueck" onClick={zurueck}><Icon name="arrow_back" />Zurück</button>
-          ) : <span />}
+          ) : v === "inline" ? <span className="fb__marke"><Icon name="auto_awesome" /><span className="fb__marke-text">Empfehlung finden</span></span> : <span />}
           <span className="fb__schritt" aria-hidden>Frage {nummer} von {schritte.length}</span>
-          <button type="button" className="fb__x" onClick={schliessen} aria-label="Fragebogen schließen"><Icon name="close" /></button>
+          <button type="button" className="fb__x" onClick={v === "dialog" ? dialogSchliessen : bereichSchliessen}
+            aria-label={v === "dialog" ? "Fragebogen schließen" : "Fragebogen zuklappen und alle Empfehlungen zeigen"}>
+            <Icon name="close" />
+          </button>
         </div>
         <div className="fb__fortschritt" aria-hidden><span style={{ width: `${(nummer / schritte.length) * 100}%` }} /></div>
 
         {schritt === "art" && (
-          <section className="fb__inhalt">
-            <h2 id="fb-frage" className="d">Was dürfen wir dir empfehlen?</h2>
+          <div className="fb__inhalt">
+            {titel("Was dürfen wir dir empfehlen?")}
             <div className="fb__karten">
               {ARTEN.map((art, i) => {
                 const n = passend({ ...LEER, typen: art.typen }).length;
                 return (
-                  <button key={art.label} type="button" className="fb__karte" autoFocus={i === 0} disabled={!n}
+                  <button key={art.label} type="button" className="fb__karte" autoFocus={fokus && i === 0} disabled={!n}
                     onClick={() => weiter({ ...LEER, typen: art.typen })}>
                     <Icon name={art.icon} />
                     <b>{art.label}</b>
@@ -170,14 +181,14 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
                 );
               })}
             </div>
-          </section>
+          </div>
         )}
 
         {schritt === "ort" && (
-          <section className="fb__inhalt">
-            <h2 id="fb-frage" className="d">Wo dürfen wir für dich suchen?</h2>
+          <div className="fb__inhalt">
+            {titel("Wo dürfen wir für dich suchen?")}
             <div className="fb__chips fb__chips--viele">
-              <button type="button" className="gd-chip gd-chip--gross fb__chip--haupt" autoFocus
+              <button type="button" className="gd-chip gd-chip--gross fb__chip--haupt" autoFocus={fokus}
                 onClick={() => weiter({ ...a, stadtteil: null })}>
                 <Icon name="explore" />Überall in Düsseldorf
               </button>
@@ -187,12 +198,12 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
                 </button>
               ))}
             </div>
-          </section>
+          </div>
         )}
 
         {schritt === "lust" && (
-          <section className="fb__inhalt">
-            <h2 id="fb-frage" className="d">Worauf hast du Lust?</h2>
+          <div className="fb__inhalt">
+            {titel("Worauf hast du Lust?")}
             <p className="fb__hinweis">Eine oder mehrere Richtungen – oder einfach weiter.</p>
             <div className="fb__chips fb__chips--viele">
               {kuechenZahlen.map(([i, n]) => {
@@ -210,12 +221,12 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
                 {a.kuechen.length ? "Weiter" : "Egal, weiter"}<Icon name="arrow_forward" />
               </button>
             </div>
-          </section>
+          </div>
         )}
 
         {schritt === "wichtig" && (
-          <section className="fb__inhalt">
-            <h2 id="fb-frage" className="d">Was ist dir wichtig?</h2>
+          <div className="fb__inhalt">
+            {titel("Was ist dir wichtig?")}
             <p className="fb__hinweis">Alles, was du wählst, muss das Café bieten.</p>
             <div className="fb__chips">
               {daten.tags.map((t, i) => {
@@ -234,12 +245,12 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
                 {a.tags.length ? "Weiter" : "Egal, weiter"}<Icon name="arrow_forward" />
               </button>
             </div>
-          </section>
+          </div>
         )}
 
         {schritt === "preis" && (
-          <section className="fb__inhalt">
-            <h2 id="fb-frage" className="d">Wie viel möchtest du ausgeben?</h2>
+          <div className="fb__inhalt">
+            {titel("Wie viel möchtest du ausgeben?")}
             <div className="fb__karten fb__karten--preis">
               {[1, 2, 3].map((p) => {
                 const an = a.preise.includes(p);
@@ -259,12 +270,34 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
                 {treffer.toLocaleString("de-DE")} {treffer === 1 ? "Empfehlung" : "Empfehlungen"} anzeigen<Icon name="arrow_forward" />
               </button>
             </div>
-          </section>
+          </div>
         )}
 
         {schritt !== "art" && schritt !== "preis" && (
           <p className="fb__stand" aria-live="polite">{treffer.toLocaleString("de-DE")} passende Orte</p>
         )}
+      </>
+    );
+  };
+
+  return (
+    <>
+      {inlineSichtbar && (
+        <div className="container">
+          <section ref={bereich} className="fb fb--inline" aria-labelledby="fb-frage-inline">
+            {panel("inline")}
+          </section>
+        </div>
+      )}
+
+      <dialog
+        ref={dialog}
+        className="fb fb--dialog"
+        aria-labelledby="fb-frage-dialog"
+        onCancel={(e) => { e.preventDefault(); dialogSchliessen(); }}
+        onClick={(e) => { if (e.target === dialog.current) dialogSchliessen(); }}
+      >
+        {dialogOffen && panel("dialog")}
       </dialog>
     </>
   );
