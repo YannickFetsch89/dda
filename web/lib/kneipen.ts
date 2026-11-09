@@ -56,8 +56,8 @@ export const RAUCHER_TEXT = { innen: "Ja – Raucherkneipe", aussen: "Ja – Au�
 // ── Filter ──────────────────────────────────────────────────────────────────
 
 export interface KneipenFilter {
-  art: Unterart | null;
-  stadtteil: string | null; // Slug
+  arten: Unterart[]; // leer = alle
+  stadtteile: string[]; // Slugs (ODER)
   spez: string[]; // Slugs
   vibe: string[]; // Slugs
   hh: boolean;
@@ -76,10 +76,9 @@ const VIBE_SLUGS = new Map(VIBES.map((v) => [slugify(v), v]));
 export function filterLesen(sp: SP): KneipenFilter {
   const sort = eins(sp.sort);
   const anzahl = Number(eins(sp.anzahl));
-  const art = eins(sp.art);
   return {
-    art: ARTEN.some((a) => a.wert === art) ? (art as Unterart) : null,
-    stadtteil: eins(sp.stadtteil) ?? null,
+    arten: ARTEN.map((a) => a.wert).filter((w) => mehrere(sp.art).includes(w)),
+    stadtteile: [...new Set(mehrere(sp.stadtteil))],
     spez: mehrere(sp.spez).filter((s) => SPEZ_SLUGS.has(s)),
     vibe: mehrere(sp.vibe).filter((s) => VIBE_SLUGS.has(s)),
     hh: eins(sp.hh) === "1",
@@ -98,8 +97,8 @@ export function hatParameter(sp: SP): boolean {
 export function filterHref(basis: string, f: KneipenFilter, aenderung: Partial<KneipenFilter>): string {
   const n = { ...f, anzahl: SEITE, ...aenderung };
   const p = new URLSearchParams();
-  if (n.art) p.set("art", n.art);
-  if (n.stadtteil) p.set("stadtteil", n.stadtteil);
+  if (n.arten.length) p.set("art", ARTEN.map((a) => a.wert).filter((w) => n.arten.includes(w)).join(","));
+  if (n.stadtteile.length) p.set("stadtteil", n.stadtteile.join(","));
   if (n.spez.length) p.set("spez", n.spez.join(","));
   if (n.vibe.length) p.set("vibe", n.vibe.join(","));
   if (n.hh) p.set("hh", "1");
@@ -107,7 +106,7 @@ export function filterHref(basis: string, f: KneipenFilter, aenderung: Partial<K
   if (n.sort !== "empfohlen") p.set("sort", n.sort);
   if (n.anzahl > SEITE) p.set("anzahl", String(n.anzahl));
   if (n.ansicht === "grid") p.set("ansicht", "grid");
-  const qs = p.toString();
+  const qs = p.toString().replace(/%2C/g, ",");
   return qs ? `${basis}?${qs}` : basis;
 }
 
@@ -115,8 +114,8 @@ export function filterHref(basis: string, f: KneipenFilter, aenderung: Partial<K
 export function filtern(orte: DddOrt[], f: KneipenFilter, ohne: (keyof KneipenFilter)[] = []): DddOrt[] {
   const mit = (k: keyof KneipenFilter) => !ohne.includes(k);
   return orte.filter((o) => {
-    if (mit("art") && f.art && unterart(o) !== f.art) return false;
-    if (mit("stadtteil") && f.stadtteil && slugify(o.stadtteil ?? "") !== f.stadtteil) return false;
+    if (mit("arten") && f.arten.length && !f.arten.includes(unterart(o))) return false;
+    if (mit("stadtteile") && f.stadtteile.length && !f.stadtteile.includes(slugify(o.stadtteil ?? ""))) return false;
     if (mit("spez") && f.spez.length) {
       const eigene = spezialitaeten(o).map(slugify);
       if (!f.spez.every((s) => eigene.includes(s))) return false;

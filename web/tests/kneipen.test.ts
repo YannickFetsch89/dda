@@ -52,7 +52,7 @@ describe("Filter", () => {
   it("filtert nach Spezialität, Vibe, Stadtteil, Happy Hour, Raucher", () => {
     const leer = filterLesen({});
     expect(filtern(alle, { ...leer, spez: ["altbier"] }).map((o) => o.id)).toEqual(["1"]);
-    expect(filtern(alle, { ...leer, stadtteil: "flingern" }).map((o) => o.id)).toEqual(["2"]);
+    expect(filtern(alle, { ...leer, stadtteile: ["flingern"] }).map((o) => o.id)).toEqual(["2"]);
     expect(filtern(alle, { ...leer, hh: true }).map((o) => o.id)).toEqual(["2"]);
     expect(filtern(alle, { ...leer, raucher: true }).map((o) => o.id)).toEqual(["2"]);
     expect(filtern(alle, { ...leer, vibe: ["gemuetlich", "draussen-sitzen"] }).map((o) => o.id)).toEqual(["1"]);
@@ -60,7 +60,7 @@ describe("Filter", () => {
   it("baut saubere URLs und erkennt Parameter für noindex", () => {
     const f = filterLesen({});
     expect(filterHref("/guides/kneipen-bars", f, {})).toBe("/guides/kneipen-bars");
-    expect(filterHref("/guides/kneipen-bars", f, { spez: ["altbier", "cocktails"], hh: true })).toBe("/guides/kneipen-bars?spez=altbier%2Ccocktails&hh=1");
+    expect(filterHref("/guides/kneipen-bars", f, { spez: ["altbier", "cocktails"], hh: true })).toBe("/guides/kneipen-bars?spez=altbier,cocktails&hh=1");
     expect(hatParameter({})).toBe(false);
     expect(hatParameter({ anzahl: "18" })).toBe(true);
     expect(hatParameter({ stadtteil: "altstadt" })).toBe(true);

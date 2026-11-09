@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterHref, filterLesen, filtern, typUmschalten } from "@/lib/guide-filter";
+import { filterHref, filterLesen, filtern, stadtteileText, typUmschalten } from "@/lib/guide-filter";
 import { filterHref as kneipenHref, filterLesen as kneipenLesen, hatParameter } from "@/lib/kneipen";
 import type { DddOrt } from "@/lib/typen";
 
@@ -49,5 +49,28 @@ describe("Kneipen-Hub: Kartenansicht", () => {
     expect(kneipenHref("/guides/kneipen-bars", f, {})).toBe("/guides/kneipen-bars");
     expect(kneipenHref("/guides/kneipen-bars", f, { ansicht: "grid" })).toBe("/guides/kneipen-bars?ansicht=grid");
     expect(hatParameter({ ansicht: "grid" })).toBe(true);
+  });
+});
+
+describe("Mehrfachauswahl Stadtteile und Art", () => {
+  const orte = [ort("a", "restaurant"), { ...ort("b", "restaurant"), stadtteil: "Bilk" }, { ...ort("c", "restaurant"), stadtteil: "Flingern" }];
+  it("Restaurants: mehrere Stadtteile (ODER), alter Einzel-Link gültig", () => {
+    const f = filterLesen({ stadtteil: "bilk,flingern" });
+    expect(f.stadtteile).toEqual(["bilk", "flingern"]);
+    expect(filtern(orte, f).map((o) => o.id)).toEqual(["b", "c"]);
+    expect(filterHref(B, f, {})).toBe(`${B}?stadtteil=bilk,flingern`);
+    expect(filterLesen({ stadtteil: "altstadt" }).stadtteile).toEqual(["altstadt"]);
+  });
+  it("Kneipen: mehrere Arten und Stadtteile, ungültige Werte fallen weg", () => {
+    const f = kneipenLesen({ art: "brauhaus,bar,quatsch", stadtteil: "altstadt,bilk" });
+    expect(f.arten).toEqual(["bar", "brauhaus"]);
+    expect(f.stadtteile).toEqual(["altstadt", "bilk"]);
+    expect(kneipenHref("/guides/kneipen-bars", f, {})).toBe("/guides/kneipen-bars?art=bar,brauhaus&stadtteil=altstadt,bilk");
+  });
+  it("Statuszeile für Stadtteile", () => {
+    const name = (s: string) => s[0].toUpperCase() + s.slice(1);
+    expect(stadtteileText([], name)).toBe("");
+    expect(stadtteileText(["bilk", "flingern"], name)).toBe(" in Bilk & Flingern");
+    expect(stadtteileText(["a", "b", "c"], name)).toBe(" in 3 Stadtteilen");
   });
 });

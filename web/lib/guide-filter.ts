@@ -1,6 +1,6 @@
 // Filter, Sortierung und Zählwerte für Guide-Übersichten (zuerst Restaurants & Cafés).
 // Alle Filter stehen in Query-Parametern, damit Links teilbar sind und ohne JavaScript funktionieren:
-//   ?typ=cafe&stadtteil=flingern&kueche=japanisch&preis=1,2&tags=terrasse,brunch&sort=bewertung&anzahl=36
+//   ?typ=cafe&stadtteil=flingern,bilk&kueche=japanisch&preis=1,2&tags=terrasse,brunch&sort=bewertung&anzahl=36
 import { kuecheVonTyp, slugify } from "./kueche";
 import type { DddOrt, PreisNiveau } from "./typen";
 
@@ -27,7 +27,7 @@ export const STANDARD_TYPEN: OrtTyp[] = ["restaurant", "cafe"];
 
 export interface GuideFilter {
   typen: OrtTyp[]; // nie leer
-  stadtteil: string | null; // Slug
+  stadtteile: string[]; // Slugs (ODER)
   kuechen: string[]; // Slugs (ODER)
   preise: number[]; // 1–3
   tags: string[]; // Slugs
@@ -62,7 +62,7 @@ export function filterLesen(sp: SP): GuideFilter {
   const anzahl = Number.parseInt(eins(sp.anzahl) ?? "", 10);
   return {
     typen: typenLesen(sp.typ),
-    stadtteil: eins(sp.stadtteil) || null,
+    stadtteile: [...new Set(liste(sp.stadtteil))],
     kuechen: [...new Set(liste(sp.kueche))],
     preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 3))],
     tags: liste(sp.tags),
@@ -86,7 +86,7 @@ export function filterHref(basis: string, f: GuideFilter, aenderung: Partial<Gui
   } else {
     p.set("typ", ALLE_TYPEN.filter((t) => n.typen.includes(t)).join(","));
   }
-  if (n.stadtteil) p.set("stadtteil", n.stadtteil);
+  if (n.stadtteile.length) p.set("stadtteil", n.stadtteile.join(","));
   if (n.kuechen.length) p.set("kueche", n.kuechen.join(","));
   if (n.preise.length) p.set("preis", [...n.preise].sort().join(","));
   if (n.tags.length) p.set("tags", n.tags.join(","));
@@ -125,7 +125,7 @@ export function filtern(orte: DddOrt[], f: GuideFilter, ohne: (keyof GuideFilter
   return orte.filter((o) => {
     // Brauhäuser aus dem Kneipen-Hub (typ „kneipe“) zählen als Restaurant
     if (!ohne.includes("typen") && !f.typen.includes(o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp))) return false;
-    if (!ohne.includes("stadtteil") && f.stadtteil && slugify(o.stadtteil ?? "") !== f.stadtteil) return false;
+    if (!ohne.includes("stadtteile") && f.stadtteile.length && !f.stadtteile.includes(slugify(o.stadtteil ?? ""))) return false;
     if (!ohne.includes("kuechen") && f.kuechen.length && !f.kuechen.includes(kueche(o)?.slug ?? "")) return false;
     if (!ohne.includes("preise") && f.preise.length && !f.preise.includes(preisStufe(o.preis_niveau))) return false;
     if (!ohne.includes("tags") && f.tags.length) {
@@ -164,3 +164,10 @@ export function zaehlen(orte: DddOrt[], wert: (o: DddOrt) => string | null | und
 
 export const zahl = (n: number) => n.toLocaleString("de-DE");
 export const sterne = (r: number) => r.toFixed(1).replace(".", ",");
+
+/** Statuszeile für gewählte Stadtteile: „in Flingern“, „in Flingern & Bilk“, „in 3 Stadtteilen“. */
+export function stadtteileText(slugs: string[], name: (slug: string) => string): string {
+  if (!slugs.length) return "";
+  if (slugs.length <= 2) return ` in ${slugs.map(name).join(" & ")}`;
+  return ` in ${slugs.length} Stadtteilen`;
+}

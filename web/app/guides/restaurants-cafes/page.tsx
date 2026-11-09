@@ -11,7 +11,7 @@ import { OrtKartenGrid, OrtLinkListe, kartenOrte } from "@/components/ort-karten
 import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
   ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche, preisStufe,
-  preisZeichen, sortieren, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
+  preisZeichen, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
 import { orteLaden, ortBildUrl } from "@/lib/orte";
@@ -115,9 +115,9 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
 
   // Zählwerte: jeweils ohne den eigenen Filter, damit man sieht, was ein Wechsel bringt
   const fuerTyp = filtern(alle, f, ["typen"]);
-  const stadtteile = zaehlen(filtern(alle, f, ["stadtteil"]), (o) => o.stadtteil);
+  const stadtteile = zaehlen(filtern(alle, f, ["stadtteile"]), (o) => o.stadtteil);
   const kuechen = zaehlen(filtern(alle, f, ["kuechen"]), (o) => kueche(o)?.name);
-  const stadtteilName = stadtteile.find((s) => s.slug === f.stadtteil)?.name ?? f.stadtteil;
+  const stadtteilName = (slug: string) => stadtteile.find((s) => s.slug === slug)?.name ?? slug;
   const kuecheName = (slug: string) => kuechen.find((k) => k.slug === slug)?.name ?? slug;
   const tagName = new Map(FILTER_TAGS.map((t) => [slugify(t), t]));
   const anzahlTyp = (t: OrtTyp) => fuerTyp.filter((o) => (o.typ === "kneipe" ? "restaurant" : o.typ) === t).length;
@@ -138,7 +138,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
 
   // Aktive Filter (Status-Zeile und Sticky-Leiste)
   const aktiv: StickyLink[] = [
-    ...(f.stadtteil ? [{ label: stadtteilName ?? "", href: href({ stadtteil: null }) }] : []),
+    ...f.stadtteile.map((s) => ({ label: stadtteilName(s), href: href({ stadtteile: f.stadtteile.filter((x) => x !== s) }) })),
     ...f.kuechen.map((k) => ({ label: kuecheName(k), href: href({ kuechen: f.kuechen.filter((x) => x !== k) }) })),
     ...f.preise.map((p) => ({ label: preisZeichen(p), href: href({ preise: f.preise.filter((x) => x !== p) }) })),
     ...f.tags.map((t) => ({ label: tagName.get(t) ?? t, href: href({ tags: f.tags.filter((x) => x !== t) }) })),
@@ -146,9 +146,9 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const hatFilter = !typenStandard(f.typen) || aktiv.length > 0;
   const typText = alleGewaehlt ? "Alle Arten" : ALLE_TYPEN.filter((t) => f.typen.includes(t)).map((t) => TYP_NAME[t]).join(" & ");
   const status = [
-    `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${f.stadtteil ? ` in ${stadtteilName}` : ""}`,
+    `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${stadtteileText(f.stadtteile, stadtteilName)}`,
     typText,
-    ...aktiv.filter((a) => a.label !== stadtteilName).map((a) => a.label),
+    ...aktiv.slice(f.stadtteile.length).map((a) => a.label),
   ].join(" · ");
   const kuecheLabel = !f.kuechen.length ? "Küche" : f.kuechen.length === 1 ? kuecheName(f.kuechen[0]) : `${kuecheName(f.kuechen[0])} +${f.kuechen.length - 1}`;
   const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
@@ -157,7 +157,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
     { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
     { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
   ];
-  const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteil: null, kuechen: [], preise: [], tags: [] });
+  const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteile: [], kuechen: [], preise: [], tags: [] });
   return (
     <>
       <Hero orte={alle}>
@@ -187,9 +187,10 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
           <div className="gd-zeile">
             <span className="gd-zeile__label">Stadtteil</span>
             <ScrollReihe className="gd-zeile__chips" label="Stadtteile">
-              <Chip href={href({ stadtteil: null })} aktiv={!f.stadtteil}>Alle</Chip>
+              <Chip href={href({ stadtteile: [] })} aktiv={!f.stadtteile.length}>Alle</Chip>
+              {/* Mehrfachauswahl: Klick schaltet einen Stadtteil zu oder ab */}
               {stadtteile.map((s) => (
-                <Chip key={s.slug} href={href({ stadtteil: f.stadtteil === s.slug ? null : s.slug })} aktiv={f.stadtteil === s.slug}>
+                <Chip key={s.slug} href={href({ stadtteile: umschalten(f.stadtteile, s.slug) })} aktiv={f.stadtteile.includes(s.slug)}>
                   {s.name}<span className="gd-chip__zahl">{s.anzahl}</span>
                 </Chip>
               ))}

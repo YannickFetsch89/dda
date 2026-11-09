@@ -107,7 +107,7 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
   function anzeigen() {
     const href = filterHref(basis, {
       typen: a.typen.length ? a.typen : [...ALLE_TYPEN],
-      stadtteil: a.stadtteil !== null ? daten.stadtteile[a.stadtteil].slug : null,
+      stadtteile: a.stadtteil !== null ? [daten.stadtteile[a.stadtteil].slug] : [],
       kuechen: a.kuechen.map((i) => daten.kuechen[i].slug),
       preise: a.preise,
       tags: a.tags.map((i) => daten.tags[i].slug),

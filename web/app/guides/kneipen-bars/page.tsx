@@ -14,10 +14,10 @@ import { Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { OrtLinkListe, kartenOrte } from "@/components/ort-karten";
-import { SEITE, SORTIERUNGEN, sortieren, zaehlen, zahl } from "@/lib/guide-filter";
+import { SEITE, SORTIERUNGEN, sortieren, stadtteileText, zaehlen, zahl } from "@/lib/guide-filter";
 import {
   ARTEN, MIN_FUER_SCHALTER, SPEZIALITAETEN, VIBES, unterart, filterHref, filterLesen, filtern, happyHour, hatParameter,
-  merkmalZaehlen, raucher, spezialitaeten, vibes, type KneipenFilter,
+  merkmalZaehlen, raucher, spezialitaeten, vibes, type KneipenFilter, type Unterart,
 } from "@/lib/kneipen";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { umschalten } from "@/lib/guide-filter";
@@ -45,7 +45,7 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
   };
 }
 
-const STANDARD: KneipenFilter = { art: null, stadtteil: null, spez: [], vibe: [], hh: false, raucher: false, sort: "empfohlen", anzahl: SEITE, ansicht: "karte" };
+const STANDARD: KneipenFilter = { arten: [], stadtteile: [], spez: [], vibe: [], hh: false, raucher: false, sort: "empfohlen", anzahl: SEITE, ansicht: "karte" };
 
 /** Hero (dunkler, abendlicher Ton) mit Foto des bestempfohlenen Ortes. */
 function Hero({ orte }: { orte: DddOrt[] }) {
@@ -88,31 +88,39 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
   const rest = ergebnis.length - sichtbar.length;
 
   // Zählwerte jeweils ohne den eigenen Filter
-  const fuerArt = filtern(alle, f, ["art"]);
+  // Art: Mehrfachauswahl; keine Auswahl (oder alle drei) = „Alle“
+  const fuerArt = filtern(alle, f, ["arten"]);
+  const artUmschalten = (w: Unterart) => {
+    const neu = umschalten(f.arten, w);
+    return neu.length === ARTEN.length ? [] : neu;
+  };
   const artTabs = [
-    { label: "Alle", wert: null, icon: undefined as string | undefined, anzahl: fuerArt.length },
-    ...ARTEN.map((a) => ({ label: a.mehrzahl, wert: a.wert, icon: a.icon, anzahl: fuerArt.filter((o) => unterart(o) === a.wert).length })),
+    { label: "Alle", icon: undefined as string | undefined, anzahl: fuerArt.length, href: href({ arten: [] }), aktiv: !f.arten.length },
+    ...ARTEN.map((a) => ({
+      label: a.mehrzahl, icon: a.icon, anzahl: fuerArt.filter((o) => unterart(o) === a.wert).length,
+      href: href({ arten: artUmschalten(a.wert) }), aktiv: f.arten.includes(a.wert),
+    })),
   ];
-  const stadtteile = zaehlen(filtern(alle, f, ["stadtteil"]), (o) => o.stadtteil);
+  const stadtteile = zaehlen(filtern(alle, f, ["stadtteile"]), (o) => o.stadtteil);
   const spezZahl = merkmalZaehlen(filtern(alle, f, ["spez"]), SPEZIALITAETEN, spezialitaeten).filter((s) => s.anzahl > 0 || f.spez.includes(s.slug));
   const vibeZahl = merkmalZaehlen(filtern(alle, f, ["vibe"]), VIBES, vibes).filter((v) => v.anzahl > 0 || f.vibe.includes(v.slug));
   // Schalter erst bei genügend belegten Angaben (E6)
   const hhAnzahl = alle.filter((o) => happyHour(o)).length;
   const raucherAnzahl = alle.filter((o) => raucher(o)).length;
-  const stadtteilName = stadtteile.find((s) => s.slug === f.stadtteil)?.name ?? f.stadtteil;
+  const stadtteilName = (slug: string) => stadtteile.find((s) => s.slug === slug)?.name ?? slug;
   const nameVon = (liste: { slug: string; name: string }[], slug: string) => liste.find((x) => x.slug === slug)?.name ?? slug;
 
   const aktiv: StickyLink[] = [
-    ...(f.stadtteil ? [{ label: stadtteilName ?? "", href: href({ stadtteil: null }) }] : []),
+    ...f.stadtteile.map((s) => ({ label: stadtteilName(s), href: href({ stadtteile: f.stadtteile.filter((x) => x !== s) }) })),
     ...f.spez.map((s) => ({ label: nameVon(spezZahl, s), href: href({ spez: f.spez.filter((x) => x !== s) }) })),
     ...f.vibe.map((v) => ({ label: nameVon(vibeZahl, v), href: href({ vibe: f.vibe.filter((x) => x !== v) }) })),
     ...(f.hh ? [{ label: "Happy Hour", href: href({ hh: false }) }] : []),
     ...(f.raucher ? [{ label: "Raucherbereich", href: href({ raucher: false }) }] : []),
   ];
   const status = [
-    `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${f.stadtteil ? ` in ${stadtteilName}` : ""}`,
-    ...(f.art ? [ARTEN.find((a) => a.wert === f.art)!.mehrzahl] : []),
-    ...aktiv.filter((a) => a.label !== stadtteilName).map((a) => a.label),
+    `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${stadtteileText(f.stadtteile, stadtteilName)}`,
+    ...(f.arten.length ? [ARTEN.filter((a) => f.arten.includes(a.wert)).map((a) => a.mehrzahl).join(" & ")] : []),
+    ...aktiv.slice(f.stadtteile.length).map((a) => a.label),
   ].join(" · ");
   const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
   const sortOptionen = SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
@@ -127,7 +135,7 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
     <>
       <GuideSticky
         zielId="gd-filter"
-        typen={artTabs.map((t) => ({ label: t.label, icon: t.icon, href: href({ art: t.wert }), aktiv: f.art === t.wert }))}
+        typen={artTabs.map((t) => ({ label: t.label, icon: t.icon, href: t.href, aktiv: t.aktiv }))}
         chips={aktiv}
         sortLabel={sortLabel}
         sortOptionen={sortOptionen}
@@ -138,7 +146,7 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
         <div className="container gd-filter__innen">
           <ScrollReihe className="gd-typen" label="Art">
             {artTabs.map((t) => (
-              <Link key={t.label} href={href({ art: t.wert })} scroll={false} className={`gd-typ-tab ${f.art === t.wert ? "gd-chip--an" : ""}`} aria-current={f.art === t.wert || undefined}>
+              <Link key={t.label} href={t.href} scroll={false} className={`gd-typ-tab ${t.aktiv ? "gd-chip--an" : ""}`} aria-current={t.aktiv || undefined}>
                 {t.icon && <Icon name={t.icon} />}
                 {t.label}
                 <span className="gd-chip__zahl">{zahl(t.anzahl)}</span>
@@ -149,9 +157,10 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
           <div className="gd-zeile">
             <span className="gd-zeile__label">Stadtteil</span>
             <ScrollReihe className="gd-zeile__chips" label="Stadtteile">
-              <Chip href={href({ stadtteil: null })} aktiv={!f.stadtteil}>Alle</Chip>
+              <Chip href={href({ stadtteile: [] })} aktiv={!f.stadtteile.length}>Alle</Chip>
+              {/* Mehrfachauswahl: Klick schaltet einen Stadtteil zu oder ab */}
               {stadtteile.map((s) => (
-                <Chip key={s.slug} href={href({ stadtteil: f.stadtteil === s.slug ? null : s.slug })} aktiv={f.stadtteil === s.slug}>
+                <Chip key={s.slug} href={href({ stadtteile: umschalten(f.stadtteile, s.slug) })} aktiv={f.stadtteile.includes(s.slug)}>
                   {s.name}<span className="gd-chip__zahl">{s.anzahl}</span>
                 </Chip>
               ))}
@@ -219,7 +228,7 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
       <div className="container">
         <div className="gd-status">
           <span>{status}</span>
-          {(aktiv.length > 0 || f.art) && <Link href={zuruecksetzen} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>}
+          {(aktiv.length > 0 || f.arten.length > 0) && <Link href={zuruecksetzen} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>}
         </div>
 
         {ergebnis.length === 0 ? (
