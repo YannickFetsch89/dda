@@ -177,6 +177,31 @@ class ZusammenfuehrenTest(unittest.TestCase):
         for wert, zitat in ja:
             self.assertTrue(stichwort_passt(wert, zitat), (wert, zitat))
 
+    def test_stichworte_vierte_runde(self):
+        for zitat in ("Ein herber Alt zum Schluss", "Ein kleiner Alt geht immer", "Ein großes Alt bitte",
+                      "Wir bestellten noch zwei Alt", "Dann noch 2 Alt"):
+            self.assertTrue(stichwort_passt("Altbier", zitat), zitat)
+        for zitat in ("Das Glas alt und stumpf", "Wir waren zwei alt gewordene Freunde"):
+            self.assertFalse(stichwort_passt("Altbier", zitat), zitat)
+
+    def test_happy_hour_spannen_und_minuten(self):
+        q = ("Happy Hour 17-19. Happy Hour 17.00-19.00. Happy Hour zwischen 17 und 19. Happy Hour bis 20:30. "
+             "Happy Hour von 17:30 bis 19:00. Happy Hour von 17 Jahren. Happy Hour für 17-Jährige.")
+        self.assertTrue(happy_hour_belegt("17-19 Uhr", "Happy Hour 17-19.", q))
+        self.assertTrue(happy_hour_belegt("17.00-19.00", "Happy Hour 17.00-19.00.", q))
+        self.assertTrue(happy_hour_belegt("17-19 Uhr", "Happy Hour zwischen 17 und 19.", q))
+        self.assertTrue(happy_hour_belegt("bis 20:30", "Happy Hour bis 20:30.", q))
+        self.assertTrue(happy_hour_belegt("17:30-19:00", "Happy Hour von 17:30 bis 19:00.", q))
+        self.assertFalse(happy_hour_belegt("17 Uhr", "Happy Hour von 17 Jahren.", q))
+        self.assertFalse(happy_hour_belegt("17 Uhr", "Happy Hour für 17-Jährige.", q))
+
+    def test_raucher_verneinung_und_verbot(self):
+        q = "Nichtraucherkneipe, Qualm von der Straße. Rauchen verboten. Kein Rauchen im Lokal. Nicht-Raucher, aber Raucherbereich im Hof."
+        self.assertFalse(raucher_belegt("Nichtraucherkneipe, Qualm von der Straße.", q))
+        self.assertFalse(raucher_belegt("Rauchen verboten.", q))
+        self.assertFalse(raucher_belegt("Kein Rauchen im Lokal.", q))
+        self.assertTrue(raucher_belegt("Nicht-Raucher, aber Raucherbereich im Hof.", q))
+
     def test_raucher_klauselweise_und_smoking(self):
         q = "Rauchverbot drinnen, Raucherbereich draußen. Der Wirt kam im Smoking."
         self.assertTrue(raucher_belegt("Rauchverbot drinnen, Raucherbereich draußen.", q))

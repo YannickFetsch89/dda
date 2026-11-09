@@ -53,8 +53,10 @@ HAPPY_HOUR_STICHWORT = r"happy ?-?hour|2[- ]?f[üu]r[- ]?1|zwei f[üu]r eins|two
 # Nur Formen, die das Rauchen selbst meinen – nicht Rauchbier, rauchfrei, Rauchverbot.
 # Nicht „smoking“: im Deutschen meist der Anzug („im Smoking“).
 RAUCHER_STICHWORT = r"raucher|rauchen|geraucht|zigarette|zigarre|aschenbecher|qualm|smoker"
+RAUCHER_STARK = r"raucher|rauchen|geraucht"  # ausdrücklich vom Rauchen
 # Belegt das Gegenteil (geprüft nach Entfernen der Bindestriche: „Nicht-Raucher“ = „nichtraucher“)
-RAUCHER_GEGENTEIL = r"nichtraucher|rauchfrei|rauchverbot|nicht geraucht|kein raucher|keine raucher"
+RAUCHER_GEGENTEIL = (r"nichtraucher|rauchfrei|rauchverbot|nicht geraucht|nicht rauchen|kein raucher|keine raucher"
+                     r"|kein rauchen|verboten")
 
 
 # ── Regeln aus Google-Signalen ────────────────────────────────────────────────
@@ -115,10 +117,14 @@ STICHWORTE = {
     # „Alt“ nur als Bier: nach Artikel, Marke, Bier-Adjektiv, Gefäß oder Menge („Schumacher Alt“, „das Alt
     # war lecker“, „eine Stange Alt“, „0,2 Alt“, „0,2l Alt“) – nicht „sehr alt“, „1890 alt“, „im Herbst alt“.
     # Mengen nur als Dezimalzahl oder mit Liter-Angabe; kein „Dom“ (Kölsch-Marke, in Düsseldorf die Kirche).
+    # „Glas Alt“ nur unbestimmt („ein Glas Alt“) – „das Glas alt und stumpf“ ist ein altes Glas.
+    # Eine nackte Anzahl („2 Alt“) nur nach einem Bestellwort („noch zwei Alt“, „bestellten 3 Alt“).
     "Altbier": (r"altbier|\balts\b|k[öo]bes|\balt vom fass|\b(das|ein|dem|den|sein|ihr|mein|frisch\w*|lecker\w*"
-                r"|gezapft\w*|gebraut\w*|gek[üu]hlt\w*|k[üu]hl\w*|gut\w*|herb(?:e|es|em|en)?|kleine[sn]?|stange|glas"
+                r"|gezapft\w*|gebraut\w*|gek[üu]hlt\w*|k[üu]hl\w*|gut\w*|herb(?:e|er|es|em|en)?|kleine[rsn]?"
+                r"|gro(?:ß|ss)e[rsn]?|stange|(?:ein|einem|ne|n) glas"
                 r"|d[üu]sseldorfer|schumacher|schuhmacher|f[üu]chschen|f[üu]chsen|frankenheim\w*|uerige|schl[üu]ssel"
-                r"|k[üu]rzer|bolten|\d,\d+(?: ?l)?|\d{1,2} ?l)[- ]alt\b"),
+                r"|k[üu]rzer|bolten|\d,\d+(?: ?l)?|\d{1,2} ?l)[- ]alt\b"
+                r"|\b(?:noch|bestellt\w*|bestellen|tranken|trinken|getrunken) (?:\d{1,2}|zwei|drei|vier|f[üu]nf) alt\b"),
     # nicht „Schwein“, „zum Weinen“, Tippfehler „Weinachten“ – aber „Auswahl an Weinen“ und „zum Wein“
     "Wein": r"(?<!sch)(?<!zum )wein(?!achten)|zum wein(?!en)|riesling|winzer|\bvino\b|\bwine\b",
     "Whisky": r"whisk",
@@ -135,15 +141,28 @@ def stichwort_passt(wert: str, zitat: str | None) -> bool:
     return bool(muster and re.search(muster, _norm(zitat or "")))
 
 
-def _als_uhrzeit(zahl: str, text: str) -> bool:
-    """Steht die Zahl im Text als Uhrzeit („17 Uhr“, „17-19“, „von 17“, „bis 20:30“) – nicht „seit 17 Jahren“?"""
-    return bool(re.search(rf"(?:\bab|\bbis|\bvon|\bum|zwischen) ?{zahl}\b|\b{zahl}(?:[:.]\d\d)? ?(?:uhr|h\b|-|bis\b)", text))
+def _als_uhrzeit(stunde: str, text: str) -> bool:
+    """
+    Steht die Stunde im Text als Uhrzeit? Zählt: mit „Uhr“/„h“ („17 Uhr“, „17h“), mit Minuten („20:30“,
+    „17.00“) oder als Teil einer Spanne aus zwei Zahlen („17-19“, „17 bis 19“, „zwischen 17 und 19“).
+    Nicht: „seit 17 Jahren“, „ab 18 Jahren“, „17-Jährige“.
+    """
+    s, minuten = rf"\b{stunde}", r"(?:[:.]\d\d)?"
+    zeit = r"\d{1,2}(?:[:.]\d\d)?"
+    verbinder = r" ?(?:-|bis|und) ?"
+    return bool(re.search(
+        rf"{s}{minuten} ?(?:uhr|h\b)"                    # 17 Uhr, 17.00 Uhr, 17h
+        rf"|{s}[:.]\d\d"                                 # 20:30, 17.00
+        rf"|{s}{minuten}{verbinder}{zeit}\b"             # 17-19, 17 bis 19, 17 und 19
+        rf"|\b{zeit}{verbinder}{stunde}\b",              # zweite Zahl einer Spanne
+        text))
 
 
 def happy_hour_belegt(zeit: str, zitat: str | None, quelle: str) -> bool:
-    """Zitat steht im Text, nennt „Happy Hour“ (o. ä.) und enthält alle Zahlen der Zeitangabe als Uhrzeit."""
+    """Zitat steht im Text, nennt „Happy Hour“ (o. ä.) und enthält alle Stunden der Zeitangabe als Uhrzeit."""
     z = _norm(zitat or "")
-    ziffern = re.findall(r"\d{1,2}", zeit or "")
+    # Nur die Stunden prüfen: aus „20:30“ wird „20“, Minuten zählen nicht als eigene Zahl
+    ziffern = re.findall(r"(\d{1,2})(?:[:.]\d\d)?", zeit or "")
     return (belegt(zitat, quelle) and bool(ziffern) and all(_als_uhrzeit(d, z) for d in ziffern)
             and bool(re.search(HAPPY_HOUR_STICHWORT, z)))
 
@@ -157,7 +176,11 @@ def raucher_belegt(zitat: str | None, quelle: str) -> bool:
         return False
     z = _norm(zitat or "").replace("-", "")
     klauseln = re.split(r"[,;.!?]| aber | jedoch | dafür ", z)
-    return any(re.search(RAUCHER_STICHWORT, k) and not re.search(RAUCHER_GEGENTEIL, k) for k in klauseln)
+    # Verneint eine Klausel das Rauchen, zählen in den übrigen nur ausdrückliche Raucher-Wörter –
+    # nicht Qualm, Aschenbecher & Co. („Nichtraucherkneipe, Qualm von der Straße“)
+    verneint = any(re.search(RAUCHER_GEGENTEIL, k) for k in klauseln)
+    muster = RAUCHER_STARK if verneint else RAUCHER_STICHWORT
+    return any(re.search(muster, k) and not re.search(RAUCHER_GEGENTEIL, k) for k in klauseln)
 
 def quelltext(ort: dict) -> str:
     """Alles, worauf sich die KI stützen darf: Google-Zusammenfassung und Bewertungstexte."""
