@@ -134,6 +134,23 @@ def datum_parsen(text: str) -> Optional[str]:
     return None
 
 
+def datum_entfernen(text: str) -> str:
+    """
+    Entfernt Datumsangaben TT.MM. (mit optionalem Jahr) aus einem Text, bevor dort nach einer Uhrzeit
+    HH.MM gesucht wird. Sonst wird aus „Mo., 09.11.2026“ die Uhrzeit 09:11 (Fehler bis 2026-11-09 bei
+    PRINZ, Stadtbüchereien, Filmmuseum u. a.). Nur gültige Tag/Monat-Kombinationen werden entfernt –
+    „20.00.“ oder „19.30.“ bleiben Uhrzeiten.
+    """
+    if not text:
+        return text
+
+    def _weg(m: re.Match) -> str:
+        tag, monat = int(m.group(1)), int(m.group(2))
+        return " " if 1 <= tag <= 31 and 1 <= monat <= 12 else m.group(0)
+
+    return re.sub(r"(?<![\d.])(\d{1,2})\.(\d{1,2})\.(?:\d{2,4})?(?![\d:])", _weg, text)
+
+
 def uhrzeit_parsen(text: str) -> Optional[str]:
     """
     Extrahiert eine Uhrzeit (HH:MM) aus einem beliebigen Text.
@@ -159,14 +176,8 @@ def uhrzeit_parsen(text: str) -> Optional[str]:
         if 0 <= stunde <= 23 and 0 <= minute <= 59:
             return f"{stunde:02d}:{minute:02d}"
 
-    # Datumsangaben entfernen, bevor nach HH.MM gesucht wird: sonst wird aus „Mo., 09.11.2026“
-    # die Uhrzeit 09:11 (bis 2026-11-09 bei PRINZ, Stadtbüchereien, Filmmuseum u. a.). Entfernt wird
-    # TT.MM. mit optionalem Jahr, aber nur bei gültigem Tag/Monat – „20.00.“ oder „19.30.“ bleiben Uhrzeiten.
-    def _datum_weg(m: re.Match) -> str:
-        tag, monat = int(m.group(1)), int(m.group(2))
-        return " " if 1 <= tag <= 31 and 1 <= monat <= 12 else m.group(0)
-
-    text = re.sub(r"(?<![\d.])(\d{1,2})\.(\d{1,2})\.(?:\d{2,4})?(?![\d:])", _datum_weg, text)
+    # Datumsangaben entfernen, bevor nach HH.MM gesucht wird (sonst „09.11.2026“ → 09:11)
+    text = datum_entfernen(text)
 
     # Standard HH:MM oder HH.MM (mit optionalem "Uhr")
     treffer = re.search(

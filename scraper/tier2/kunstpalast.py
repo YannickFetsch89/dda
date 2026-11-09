@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 
 from config import SCRAPER_VORSCHAU_TAGE
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.datum import datum_entfernen  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ def _uhrzeit_parsen(text: str) -> Optional[str]:
     """
     if not text:
         return None
-    treffer = re.search(r"\b(\d{1,2})[:\.](\d{2})\s*(?:Uhr)?", text, re.IGNORECASE)
+    treffer = re.search(r"\b(\d{1,2})[:\.](\d{2})\s*(?:Uhr)?", datum_entfernen(text), re.IGNORECASE)
     if treffer:
         stunde, minute = int(treffer.group(1)), int(treffer.group(2))
         if 0 <= stunde <= 23 and 0 <= minute <= 59:
