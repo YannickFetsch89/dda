@@ -154,7 +154,6 @@ export async function Fuss() {
         </div>
         <div className="fuss__spalte">
           <b>DDD</b>
-          <span>Über uns</span>
           <a href="https://www.instagram.com/dies.das.duesseldorf/" target="_blank" rel="noopener">Instagram</a>
           <Link href="/impressum">Impressum</Link>
           <Link href="/datenschutz">Datenschutz</Link>

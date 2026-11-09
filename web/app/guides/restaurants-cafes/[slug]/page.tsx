@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { BildImg, Reihe } from "@/components/client";
+import { BildImg, GoogleKarte, Reihe } from "@/components/client";
 import { EventKarte, Icon } from "@/components/karten";
 import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
@@ -96,11 +96,11 @@ export default async function OrtDetail(props: Props) {
   // Links aus der Datenbank nur als http(s) nach außen geben
   const webseite = sichereUrl(ort.webseite);
   const reservierung = sichereUrl(ort.extras.reservierung_url);
-  const mapsUrl =
-    sichereUrl(ort.extras.google_maps_url) ||
-    (ort.latitude != null && ort.longitude != null
-      ? `https://www.google.com/maps/search/?api=1&query=${ort.latitude},${ort.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${ort.name} ${ort.adresse ?? ""}`)}`);
+  // Karte auf der Seite (Google erst nach Zustimmung, Zwei-Klick-Lösung wie bei den Events); „Route“ öffnet Google Maps
+  const kartenAdresse = [ort.name, ort.adresse ?? `${ort.stadtteil ?? ""} Düsseldorf`.trim()].join(", ");
+  const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    ort.latitude != null && ort.longitude != null ? `${ort.latitude},${ort.longitude}` : kartenAdresse,
+  )}`;
   const [strasse, ...ortTeil] = (ort.adresse ?? "").split(", ");
   const typZeile = [typLabel(ort.typ), ort.preis_niveau, ort.stadtteil].filter(Boolean).join(" · ");
   const details = [
@@ -181,9 +181,7 @@ export default async function OrtDetail(props: Props) {
               <Icon name="photo_camera" />Instagram<span className="gd-knopf__zusatz muted">@{ort.instagram.replace(/^@/, "")}</span>
             </a>
           )}
-          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="gd-knopf">
-            <Icon name="map" />Google Maps
-          </a>
+          <GoogleKarte adresse={kartenAdresse} routeUrl={routeUrl} />
         </aside>
       </div>
 
