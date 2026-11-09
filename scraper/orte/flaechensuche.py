@@ -727,6 +727,9 @@ def neu_bewerten(dry_run: bool) -> list[dict]:
             "displayName": {"text": o["name"]},
         })
         ex = o.get("extras") or {}
+        # Redaktionell gesetzter Score (extras.score_manuell, z.B. Altbier-Hausbrauereien) bleibt stehen
+        if ex.get("score_manuell"):
+            continue
         if score == o.get("qualitaets_score") and bool(ex.get("kette")) == kette:
             continue
         geaendert.append({"name": o["name"], "alt": o.get("qualitaets_score"), "neu": score, "aktiv": o["aktiv"], "kette": kette})
