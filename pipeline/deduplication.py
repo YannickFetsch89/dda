@@ -75,6 +75,82 @@ def _uhrzeit(event: dict) -> Optional[str]:
     return str(wert)[:5] if wert else None
 
 
+# ── Ähnlichkeit: dasselbe Event aus zwei Quellen mit abweichendem Titel oder Ortsnamen ─────────
+# Beispiele (2026-11-09): „Sibel Schick im Gespräch“ in „zakk - Zentrum für Aktion, Kultur und
+# Kommunikation“ und „zakk – Studio“; „European Outdoor Film Tour 2026 - EOFT“ und „… 26/27 – EOFT“
+# im Savoy Theater – jeweils gleiche Zeit.
+
+# Wörter, die einen Ort nicht unterscheiden (Raum- und Gattungsbezeichnungen, Stadt)
+_ORT_FUELLWOERTER = {
+    "zentrum", "fuer", "und", "the", "das", "der", "die", "im", "in", "am", "an", "auf", "von", "duesseldorf",
+    "dusseldorf", "neuss", "ratingen", "halle", "saal", "studio", "raum", "buehne", "club", "bar", "kulturzentrum",
+    "theater", "kino", "e", "v", "ev", "gmbh", "stadtbuecherei", "zentralbibliothek", "foyer", "kleiner", "grosser",
+    "kleine", "grosse", "obergeschoss", "eg", "og",
+}
+# Wörter, die einen Titel nicht unterscheiden
+_TITEL_FUELLWOERTER = {
+    "der", "die", "das", "den", "dem", "des", "ein", "eine", "und", "im", "in", "am", "an", "mit", "von", "zu", "zum",
+    "zur", "auf", "fuer", "the", "a", "an", "of", "and", "feat", "ft", "live", "tour", "presents", "praesentiert",
+}
+_UMLAUTE = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+
+
+def _woerter(text: str) -> list[str]:
+    """Kleinschreibung, Umlaute ausgeschrieben, nur Buchstaben/Ziffern als Wörter."""
+    return re.findall(r"[a-z0-9]+", (text or "").lower().translate(_UMLAUTE))
+
+
+def ort_kern(ort: str) -> set[str]:
+    """Unterscheidende Wörter eines Ortsnamens („zakk – Studio“ → {"zakk"})."""
+    return {w for w in _woerter(ort) if w not in _ORT_FUELLWOERTER and len(w) > 1}
+
+
+def titel_kern(titel: str) -> set[str]:
+    """Unterscheidende Wörter eines Titels ohne Zahlen und Füllwörter („… Tour 26/27 – EOFT“ → {…, "eoft"})."""
+    return {w for w in _woerter(titel) if w not in _TITEL_FUELLWOERTER and not w.isdigit() and len(w) > 1}
+
+
+def aehnliches_event(a: dict, b: dict) -> bool:
+    """
+    Dasselbe Event trotz abweichender Schreibweise? Nur bei gleichem Datum UND gleicher (vorhandener)
+    Uhrzeit, gemeinsamem Ortskern und fast gleichem Titel – andere Uhrzeiten bleiben weitere Termine.
+    """
+    if not a.get("datum") or a.get("datum") != b.get("datum"):
+        return False
+    zeit_a, zeit_b = _uhrzeit(a), _uhrzeit(b)
+    if not zeit_a or zeit_a != zeit_b:
+        return False
+    ort_a, ort_b = ort_kern(a.get("ort") or ""), ort_kern(b.get("ort") or "")
+    if ort_a and ort_b:
+        if not ort_a & ort_b:
+            return False
+    elif _woerter(a.get("ort") or "") != _woerter(b.get("ort") or ""):
+        return False
+    titel_a, titel_b = titel_kern(a.get("titel") or ""), titel_kern(b.get("titel") or "")
+    if not titel_a or not titel_b:
+        return False
+    if titel_a == titel_b:
+        return True
+    klein, gross = sorted((titel_a, titel_b), key=len)
+    # Ein Titel enthält den anderen ganz („Sibel Schick“ ⊂ „Sibel Schick im Gespräch“) – mindestens 2 Wörter
+    if len(klein) >= 2 and klein <= gross:
+        return True
+    return len(titel_a & titel_b) / len(titel_a | titel_b) >= 0.75
+
+
+_KOSTENLOS = re.compile(
+    r"^(?:eintritt[: ]*frei|freier eintritt|kostenlos|kostenfrei|gratis|umsonst|frei|free|0(?:[,.]0{1,2})? ?€|€ ?0)$",
+    re.IGNORECASE,
+)
+
+
+def preis_normalisieren(preis: Optional[str]) -> Optional[str]:
+    """Einheitliche Schreibweise: „Eintritt frei“, „gratis“, „0,00 €“ … → „kostenlos“; sonst unverändert."""
+    if not preis:
+        return preis
+    return "kostenlos" if _KOSTENLOS.match(preis.strip()) else preis
+
+
 def _normalisiere_schluessel(titel: str, datum: str, ort: str) -> str:
     """
     Erstellt einen normalisierten Deduplizierungs-Schlüssel.
@@ -169,6 +245,7 @@ def deduplizieren(events: list[dict]) -> list[dict]:
     reihenfolge: list[str] = []
     index: dict[str, dict] = {}
     varianten: dict[str, list[str]] = {}  # Titel|Datum|Ort → Schlüssel der einzelnen Uhrzeiten
+    pro_datum: dict[str, list[str]] = {}  # Datum → Schlüssel (für den Ähnlichkeitsvergleich)
     duplikat_anzahl = 0
     angereichert_anzahl = 0
 
@@ -189,8 +266,12 @@ def deduplizieren(events: list[dict]) -> list[dict]:
                 None,
             )
             if schluessel is None:
+                # Abweichende Schreibweise aus einer anderen Quelle (Titel/Ort leicht anders, gleiche Zeit)?
+                schluessel = next((k for k in pro_datum.get(datum, []) if aehnliches_event(index[k], event)), None)
+            if schluessel is None:
                 schluessel = f"{basis}|{zeit or '-'}|{len(varianten.get(basis, []))}"
                 varianten.setdefault(basis, []).append(schluessel)
+                pro_datum.setdefault(datum, []).append(schluessel)
 
         if schluessel not in index:
             index[schluessel] = event

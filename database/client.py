@@ -12,7 +12,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from pipeline.deduplication import KATEGORIE_FEST_FELD, kategorie_ersetzen
+from pipeline.deduplication import KATEGORIE_FEST_FELD, aehnliches_event, kategorie_ersetzen, preis_normalisieren
 from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
@@ -86,6 +86,23 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
                 update[feld] = neu_wert
 
     return update
+
+
+def _tagesbestand(db: Client, datum: str, cache: dict[str, list[dict]]) -> list[dict]:
+    """Alle gespeicherten Events eines Tages (einmal je Lauf und Datum geladen) für den Ähnlichkeitsabgleich."""
+    if datum not in cache:
+        try:
+            antwort = (
+                db.table("events")
+                .select("id,titel,ort,datum,slug," + ",".join(_ANREICHERBARE_FELDER))
+                .eq("datum", datum)
+                .execute()
+            )
+            cache[datum] = list(antwort.data or [])
+        except Exception as e:
+            logger.warning("Tagesbestand für %s nicht ladbar: %s", datum, str(e))
+            cache[datum] = []
+    return cache[datum]
 
 
 def _uhrzeit_hhmm(wert: Optional[str]) -> Optional[str]:
@@ -208,6 +225,7 @@ def events_speichern(events: list[dict]) -> dict:
     duplikate = 0
     angereichert = 0
     fehler = 0
+    tagesbestand: dict[str, list[dict]] = {}  # Datum → gespeicherte Events (für den Ähnlichkeitsabgleich)
 
     for event in events:
         # Server-seitige Felder, noch nicht existierende DB-Spalten und interne Felder ("_scraper") entfernen
@@ -215,6 +233,9 @@ def events_speichern(events: list[dict]) -> dict:
             k: v for k, v in event.items()
             if k not in _IGNORE_FELDER and k not in _NICHT_IN_DB and not k.startswith("_")
         }
+        # Einheitliche Schreibweise für freien Eintritt („Eintritt frei“, „gratis“ … → „kostenlos“)
+        if datensatz.get("preis"):
+            datensatz["preis"] = preis_normalisieren(datensatz["preis"])
 
         titel = event.get("titel", "?")
         datum = event.get("datum", "?")
@@ -256,8 +277,19 @@ def events_speichern(events: list[dict]) -> dict:
                         datensatz["slug"] = freier_slug
 
             if bestehendes is None:
+                # Schritt 3: Dasselbe Event in anderer Schreibweise (Titel/Ortsname leicht anders,
+                # gleiches Datum und gleiche Uhrzeit, z.B. „zakk – Studio“ vs. „zakk - Zentrum für …“)?
+                bestehendes = next((z for z in _tagesbestand(db, datum, tagesbestand) if aehnliches_event(z, datensatz)), None)
+                if bestehendes is not None:
+                    logger.info("Duplikat über Ähnlichkeit erkannt: '%s' ≈ '%s' (%s)",
+                                titel[:40], (bestehendes.get("titel") or "")[:40], datum)
+
+            if bestehendes is None:
                 # Neues Event: direkt einfügen
-                db.table("events").insert(datensatz).execute()
+                antwort = db.table("events").insert(datensatz).execute()
+                # Für den Ähnlichkeitsabgleich späterer Events dieses Laufs merken
+                if datum in tagesbestand and antwort.data:
+                    tagesbestand[datum].append(antwort.data[0])
                 gespeichert += 1
                 neu_pro_quelle[event.get("_scraper") or event.get("quelle_name") or "?"] += 1
 

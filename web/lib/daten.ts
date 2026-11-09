@@ -34,6 +34,15 @@ function text(wert: unknown): string | null {
   return t.length ? t : null;
 }
 
+// Einheitliche Schreibweise für freien Eintritt (wie preis_normalisieren in pipeline/deduplication.py):
+// nur exakte Varianten – „kostenlos oder auf Anfrage“ bleibt, wie es ist
+const FREI_GENAU = /^(?:eintritt[: ]*frei|freier eintritt|kostenlos|kostenfrei|gratis|umsonst|frei|free|0(?:[,.]0{1,2})? ?€|€ ?0)$/i;
+
+export function preisText(wert: unknown): string | null {
+  const t = text(wert);
+  return t && FREI_GENAU.test(t) ? "kostenlos" : t;
+}
+
 export function normalisieren(z: Zeile): DddEvent {
   const titel = text(z.titel) ?? "Ohne Titel";
   const ortRoh = text(z.ort);
@@ -48,7 +57,7 @@ export function normalisieren(z: Zeile): DddEvent {
     adresse: text(z.adresse),
     kategorie: kategorieAusDb(text(z.kategorie)),
     beschreibung: text(z.beschreibung),
-    preis: text(z.preis),
+    preis: preisText(z.preis),
     quelle_name: text(z.quelle_name),
     quelle_url: text(z.quelle_url),
     bild_url: text(z.bild_url),
