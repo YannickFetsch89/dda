@@ -21,7 +21,6 @@ import {
 } from "@/lib/kneipen";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { umschalten } from "@/lib/guide-filter";
-import { ortBildUrl } from "@/lib/orte";
 import { jsonLdText } from "@/lib/json-ld";
 import { kneipenListeJsonLd } from "@/lib/kneipen-json-ld";
 import type { DddOrt } from "@/lib/typen";
@@ -47,16 +46,13 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
 
 const STANDARD: KneipenFilter = { arten: [], stadtteile: [], spez: [], vibe: [], hh: false, raucher: false, sort: "empfohlen", anzahl: SEITE, ansicht: "karte" };
 
-/** Hero (dunkler, abendlicher Ton) mit Foto des bestempfohlenen Ortes. */
+/** Hero (dunkler, abendlicher Ton) mit dem eigenen Guide-Bild (wie die Kachel auf /guides). */
 function Hero({ orte }: { orte: DddOrt[] }) {
-  const titel = orte.find((o) => ortBildUrl(o));
   return (
     <section className="gd-hero gd-hero--abend">
-      {titel && (
-        <div className="gd-hero__bild">
-          <BildImg src={ortBildUrl(titel)} alt="" icon="sports_bar" eager />
-        </div>
-      )}
+      <div className="gd-hero__bild">
+        <BildImg src="/guides/kneipen-bars.webp" alt="" icon="sports_bar" eager />
+      </div>
       <div className="gd-hero__verlauf" aria-hidden />
       <div className="gd-hero__inhalt container">
         <nav className="gd-krumen gd-krumen--hell" aria-label="Brotkrumen">
@@ -66,7 +62,6 @@ function Hero({ orte }: { orte: DddOrt[] }) {
         <h1 className="d">Kneipen &amp; Bars</h1>
         <p>{orte.length ? `${zahl(orte.length)} Empfehlungen – von der Altbier-Kneipe bis zur Cocktailbar` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
       </div>
-      {titel?.bild_attribution && <span className="gd-hero__credit">Foto: {titel.name} · {titel.bild_attribution}</span>}
     </section>
   );
 }

@@ -130,7 +130,11 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
         map.flyTo({ center: [o.lng, o.lat], zoom: Math.max(map.getZoom(), 15), offset: versatz, duration: 600 });
       } else {
         map.easeTo({ center: [o.lng, o.lat], offset: versatz, duration: 400 });
-        listeRef.current?.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        // Nur am Desktop (Liste neben der Karte, eigener Scrollbereich) zum Eintrag scrollen. Unter 1200 px
+        // steht die Liste unter der Karte – dort würde die ganze Seite wegspringen; es geht nur das Popup auf.
+        if (window.matchMedia("(min-width: 1200px)").matches) {
+          listeRef.current?.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
       }
     },
     [orte],

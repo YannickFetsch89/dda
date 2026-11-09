@@ -1,13 +1,12 @@
 "use client";
-// Fragebogen „Was dürfen wir dir empfehlen?“ für den Restaurant-Hub.
+// Fragebogen „In welche Richtung soll es gehen?“ für den Restaurant-Hub.
 //
-// Beim Aufruf ohne Filter steht er als fester Bereich unter dem Hero – Teil der Seite, keine
-// Einblendung über dem Inhalt (Google wertet verdeckende Interstitials nach dem Klick aus der Suche ab).
-// Der Server rendert ihn mit (kein Nachladen, erste Frage steht im HTML); Karte und Liste folgen darunter.
-// Das X klappt ihn zu. „Empfehlung finden“ im Hero öffnet ihn als Vollbild-Dialog (vom Nutzer
-// ausgelöst – unkritisch). Nach der letzten Frage geht es auf die passend gefilterte Hub-URL.
+// Unter dem Hero steht ein schmaler Abschnitt mit dem Knopf „dies.das empfiehlt dir was“; er bleibt
+// beim Scrollen oben am Bildschirm hängen. Der Knopf öffnet den Fragebogen als Dialog – vom Nutzer
+// ausgelöst, also keine Einblendung beim Seitenaufruf (SEO-neutral). Nach der letzten Frage geht es auf
+// die passend gefilterte Hub-URL.
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "./karten";
 import { ALLE_TYPEN, SEITE, filterHref, preisZeichen, type OrtTyp } from "@/lib/guide-filter";
 
@@ -21,7 +20,6 @@ export interface FragebogenDaten {
 }
 
 type Schritt = "art" | "ort" | "lust" | "wichtig" | "preis";
-type Variante = "inline" | "dialog";
 
 interface Antworten {
   typen: OrtTyp[];
@@ -32,7 +30,6 @@ interface Antworten {
 }
 
 const LEER: Antworten = { typen: [], stadtteil: null, kuechen: [], tags: [], preise: [] };
-const EREIGNIS = "ddd-fragebogen-oeffnen";
 
 const ARTEN: { label: string; text: string; icon: string; typen: OrtTyp[] }[] = [
   { label: "Restaurants", text: "Richtig essen gehen", icon: "restaurant", typen: ["restaurant"] },
@@ -41,42 +38,19 @@ const ARTEN: { label: string; text: string; icon: string; typen: OrtTyp[] }[] = 
   { label: "Alles", text: "Überrascht mich", icon: "auto_awesome", typen: [...ALLE_TYPEN] },
 ];
 
-/** Knopf im Hero: öffnet den Fragebogen (Dialog bzw. springt zum offenen Bereich). */
-export function FragebogenKnopf() {
-  return (
-    <button type="button" className="fb-start" onClick={() => window.dispatchEvent(new Event(EREIGNIS))}>
-      <Icon name="auto_awesome" />Empfehlung finden
-    </button>
-  );
-}
-
-export function Fragebogen({ basis, daten, start }: { basis: string; daten: FragebogenDaten; start: boolean }) {
+export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenDaten }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const bereich = useRef<HTMLElement>(null);
-  const [inlineOffen, setInlineOffen] = useState(true);
-  const [dialogOffen, setDialogOffen] = useState(false);
+  const [offen, setOffen] = useState(false);
   const [schritt, setSchritt] = useState<Schritt>("art");
   const [a, setA] = useState<Antworten>(LEER);
-  // Fester Bereich nur auf der ungefilterten Hub-Seite
-  const inlineSichtbar = start && inlineOffen && !dialogOffen;
 
-  // „Empfehlung finden“: offenen Bereich ansteuern, sonst als Dialog öffnen
-  useEffect(() => {
-    const oeffnen = () => {
-      if (start && inlineOffen) {
-        bereich.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        bereich.current?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
-        return;
-      }
-      setA(LEER);
-      setSchritt("art");
-      setDialogOffen(true);
-      dialog.current?.showModal();
-    };
-    window.addEventListener(EREIGNIS, oeffnen);
-    return () => window.removeEventListener(EREIGNIS, oeffnen);
-  }, [start, inlineOffen]);
+  function oeffnen() {
+    setA(LEER);
+    setSchritt("art");
+    setOffen(true);
+    dialog.current?.showModal();
+  }
 
   const nurCafes = a.typen.length === 1 && a.typen[0] === "cafe";
   const schritte: Schritt[] = ["art", "ort", nurCafes ? "wichtig" : "lust", "preis"];
@@ -95,15 +69,9 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
 
   const treffer = passend(a).length;
 
-  function dialogSchliessen() {
+  function schliessen() {
     dialog.current?.close();
-    setDialogOffen(false);
-  }
-
-  function bereichSchliessen() {
-    setInlineOffen(false);
-    // Fokus auf die Filterleiste, damit Tastatur- und Screenreader-Nutzer nicht „ins Leere“ fallen
-    document.getElementById("gd-filter")?.focus({ preventScroll: true });
+    setOffen(false);
   }
 
   function weiter(neu: Antworten) {
@@ -129,8 +97,7 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
       anzahl: SEITE,
       ansicht: "karte",
     }, {});
-    dialogSchliessen();
-    setInlineOffen(false);
+    schliessen();
     router.push(href);
   }
 
@@ -145,20 +112,17 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
   const stadtteilZahlen = schritt === "ort" ? zaehlen(passend({ ...a, stadtteil: null, kuechen: [], tags: [], preise: [] }), 1, daten.stadtteile) : [];
   const kuechenZahlen = schritt === "lust" ? zaehlen(passend({ ...a, kuechen: [], tags: [], preise: [] }), 2, daten.kuechen) : [];
 
-  /** Inhalt beider Varianten. Autofokus nur im Dialog – der feste Bereich stiehlt beim Laden keinen Fokus. */
-  const panel = (v: Variante) => {
-    const fokus = v === "dialog";
-    const frageId = `fb-frage-${v}`;
-    const titel = (text: string) => <h2 id={frageId} className="d" tabIndex={-1}>{text}</h2>;
+  /** Inhalt des Dialogs (Kopf, Fortschritt, aktuelle Frage). */
+  const panel = () => {
+    const titel = (text: string) => <h2 id="fb-frage" className="d">{text}</h2>;
     return (
       <>
         <div className="fb__kopf">
           {nummer > 1 ? (
             <button type="button" className="fb__zurueck" onClick={zurueck}><Icon name="arrow_back" />Zurück</button>
-          ) : v === "inline" ? <span className="fb__marke"><Icon name="auto_awesome" /><span className="fb__marke-text">Empfehlung finden</span></span> : <span />}
+          ) : <span />}
           <span className="fb__schritt" aria-hidden>Frage {nummer} von {schritte.length}</span>
-          <button type="button" className="fb__x" onClick={v === "dialog" ? dialogSchliessen : bereichSchliessen}
-            aria-label={v === "dialog" ? "Fragebogen schließen" : "Fragebogen zuklappen und alle Empfehlungen zeigen"}>
+          <button type="button" className="fb__x" onClick={schliessen} aria-label="Fragebogen schließen">
             <Icon name="close" />
           </button>
         </div>
@@ -166,12 +130,12 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
 
         {schritt === "art" && (
           <div className="fb__inhalt">
-            {titel("Was dürfen wir dir empfehlen?")}
+            {titel("In welche Richtung soll es gehen?")}
             <div className="fb__karten">
               {ARTEN.map((art, i) => {
                 const n = passend({ ...LEER, typen: art.typen }).length;
                 return (
-                  <button key={art.label} type="button" className="fb__karte" autoFocus={fokus && i === 0} disabled={!n}
+                  <button key={art.label} type="button" className="fb__karte" autoFocus={i === 0} disabled={!n}
                     onClick={() => weiter({ ...LEER, typen: art.typen })}>
                     <Icon name={art.icon} />
                     <b>{art.label}</b>
@@ -188,7 +152,7 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
           <div className="fb__inhalt">
             {titel("Wo dürfen wir für dich suchen?")}
             <div className="fb__chips fb__chips--viele">
-              <button type="button" className="gd-chip gd-chip--gross fb__chip--haupt" autoFocus={fokus}
+              <button type="button" className="gd-chip gd-chip--gross fb__chip--haupt" autoFocus
                 onClick={() => weiter({ ...a, stadtteil: null })}>
                 <Icon name="explore" />Überall in Düsseldorf
               </button>
@@ -282,22 +246,23 @@ export function Fragebogen({ basis, daten, start }: { basis: string; daten: Frag
 
   return (
     <>
-      {inlineSichtbar && (
-        <div className="container">
-          <section ref={bereich} className="fb fb--inline" aria-labelledby="fb-frage-inline">
-            {panel("inline")}
-          </section>
+      <div className="fb-leiste">
+        <div className="container fb-leiste__innen">
+          <span className="fb-leiste__text">Keine Lust zu suchen? Wir schlagen dir passende Orte vor.</span>
+          <button type="button" className="fb-start" onClick={oeffnen} aria-haspopup="dialog">
+            <Icon name="auto_awesome" />dies.das empfiehlt dir was
+          </button>
         </div>
-      )}
+      </div>
 
       <dialog
         ref={dialog}
         className="fb fb--dialog"
-        aria-labelledby="fb-frage-dialog"
-        onCancel={(e) => { e.preventDefault(); dialogSchliessen(); }}
-        onClick={(e) => { if (e.target === dialog.current) dialogSchliessen(); }}
+        aria-labelledby="fb-frage"
+        onCancel={(e) => { e.preventDefault(); schliessen(); }}
+        onClick={(e) => { if (e.target === dialog.current) schliessen(); }}
       >
-        {dialogOffen && panel("dialog")}
+        {offen && panel()}
       </dialog>
     </>
   );

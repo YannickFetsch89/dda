@@ -8,20 +8,19 @@ import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { OrtKartenGrid, OrtLinkListe, kartenOrte } from "@/components/ort-karten";
-import { Fragebogen, FragebogenKnopf, type FragebogenDaten } from "@/components/fragebogen";
+import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
   ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche, preisStufe,
   preisZeichen, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
-import { orteLaden, ortBildUrl } from "@/lib/orte";
+import { orteLaden } from "@/lib/orte";
 import { brauhaeuserFuerRestaurants } from "@/lib/kneipen-daten";
 import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
 const TYPEN = ["restaurant", "imbiss", "cafe"] as const;
 const TYP_NAME: Record<OrtTyp, string> = { restaurant: "Restaurants", imbiss: "Schnellimbiss", cafe: "Cafés" };
-const FILTER_PARAMETER = ["typ", "stadtteil", "kueche", "preis", "tags", "sort", "anzahl", "ansicht"];
 
 /** Kompakte Daten für die Live-Zählwerte im Fragebogen (Nachschlagetabellen + Tupel je Ort). */
 function fragebogenDaten(orte: DddOrt[]): FragebogenDaten {
@@ -52,17 +51,13 @@ export const metadata: Metadata = {
 
 type SP = Record<string, string | string[] | undefined>;
 
-/** Hero mit Foto des aktuell bestempfohlenen Ortes. */
-function Hero({ orte, children }: { orte: DddOrt[]; children?: React.ReactNode }) {
-  const alle = sortieren(orte, "empfohlen");
-  const titel = alle.find((o) => ortBildUrl(o));
+/** Hero mit dem eigenen Guide-Bild (wie die Kachel auf /guides) – kein Foto eines einzelnen Ortes. */
+function Hero({ orte }: { orte: DddOrt[] }) {
   return (
     <section className="gd-hero">
-      {titel && (
-        <div className="gd-hero__bild">
-          <BildImg src={ortBildUrl(titel)} alt="" icon="restaurant" eager />
-        </div>
-      )}
+      <div className="gd-hero__bild">
+        <BildImg src="/guides/restaurants-cafes.webp" alt="" icon="restaurant" eager />
+      </div>
       <div className="gd-hero__verlauf" aria-hidden />
       <div className="gd-hero__inhalt container">
         <nav className="gd-krumen gd-krumen--hell" aria-label="Brotkrumen">
@@ -70,10 +65,8 @@ function Hero({ orte, children }: { orte: DddOrt[]; children?: React.ReactNode }
           <span aria-current="page">Restaurants &amp; Cafés</span>
         </nav>
         <h1 className="d">Restaurants &amp; Cafés</h1>
-        <p>{alle.length ? `${zahl(alle.length)} Empfehlungen – handverlesen für Düsseldorf` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
-        {children}
+        <p>{orte.length ? `${zahl(orte.length)} Empfehlungen – handverlesen für Düsseldorf` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
       </div>
-      {titel?.bild_attribution && <span className="gd-hero__credit">Foto: {titel.name} · {titel.bild_attribution}</span>}
     </section>
   );
 }
@@ -106,8 +99,6 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const alle = [...eigene, ...brauhaeuser];
   const f = filterLesen(sp);
   const href = (a: Partial<GuideFilter>) => filterHref(BASIS, f, a);
-  // Fragebogen steht als Bereich nur auf der ungefilterten Hub-Seite
-  const ohneParameter = !FILTER_PARAMETER.some((k) => sp[k] !== undefined);
 
   const ergebnis = sortieren(filtern(alle, f), f.sort);
   const sichtbar = ergebnis.slice(0, f.anzahl);
@@ -160,11 +151,9 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteile: [], kuechen: [], preise: [], tags: [] });
   return (
     <>
-      <Hero orte={alle}>
-        <FragebogenKnopf />
-      </Hero>
-      {/* Ohne Filter: Fragebogen als fester Bereich unter dem Hero (keine Einblendung, SEO-neutral) */}
-      <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} start={ohneParameter} />
+      <Hero orte={alle} />
+      {/* Schmale Leiste „dies.das empfiehlt dir was“ – bleibt beim Scrollen oben, öffnet den Fragebogen */}
+      <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} />
       <GuideSticky
         zielId="gd-filter"
         typen={typTabs.map((t) => ({ label: t.label, icon: t.icon, href: t.href, aktiv: t.aktiv }))}
@@ -282,7 +271,7 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
 
 export default function RestaurantsCafes(props: { searchParams: Promise<SP> }) {
   return (
-    <div className="gd-seite">
+    <div className="gd-seite gd-seite--leiste">
       <Suspense
         fallback={
           <>

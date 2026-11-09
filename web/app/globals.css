@@ -1287,10 +1287,17 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 @media (min-width: 1200px) { .gd-alle-liste ul { column-count: 3; } }
 
 /* ── Fragebogen „Was dürfen wir dir empfehlen?“ (Restaurant-Hub) ─────────────── */
+/* Schmale Leiste unter dem Hero – bleibt beim Scrollen oben hängen */
+.fb-leiste { position: sticky; top: 0; z-index: 41; background: var(--ddd-surface); border-bottom: 1px solid var(--ddd-border); }
+.fb-leiste__innen { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; }
+.fb-leiste__text { min-width: 0; font-size: 14px; font-weight: 600; color: var(--ddd-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 599px) { .fb-leiste__text { display: none; } .fb-leiste .fb-start { flex: 1; justify-content: center; } }
+/* Die kompakte Filterleiste erscheint unterhalb der Empfehlungs-Leiste */
+.gd-seite--leiste .gd-sticky { top: 57px; }
 .fb-start {
-  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; margin-top: 2px;
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px;
   border: none; border-radius: var(--r-pill); background: var(--ddd-gold); color: var(--ddd-navy);
-  font: 600 14px var(--font-sans); cursor: pointer;
+  font: 600 14px var(--font-sans); cursor: pointer; white-space: nowrap;
 }
 .fb-start .icon { font-size: 18px; }
 .fb-start:hover { background: var(--ddd-gold-hover); }
@@ -1302,13 +1309,6 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .fb--dialog::backdrop { background: rgba(13, 17, 23, 0.55); backdrop-filter: blur(2px); }
 @keyframes fb-ein { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) { .fb--dialog[open] { animation: none; } }
-/* Fester Bereich unter dem Hero (Aufruf ohne Filter) – Teil der Seite, keine Einblendung */
-.fb--inline { display: flex; flex-direction: column; margin: 24px auto 8px; max-width: 880px; border: 1px solid var(--ddd-border); box-shadow: var(--sh-m); }
-.fb--inline .fb__inhalt { overflow: visible; }
-.fb--inline h2:focus { outline: none; }
-.fb__marke { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ddd-text-muted); }
-.fb__marke .icon { font-size: 18px; color: var(--ddd-gold); }
-@media (min-width: 768px) { .fb--inline .fb__karten:not(.fb__karten--preis) { grid-template-columns: repeat(4, 1fr); } }
 .fb button { font-family: inherit; }
 .fb__kopf { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 12px 10px 16px; }
 .fb__schritt { font-size: 13px; color: var(--ddd-text-muted); }
@@ -1352,8 +1352,6 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 :root[data-theme="dark"] .fb__karte.is-an, :root[data-theme="dark"] .fb__karte:hover:not(:disabled) { border-color: var(--ddd-gold); background: var(--ddd-subtle); }
 @media (max-width: 599px) {
   .fb--dialog { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
-  .fb--inline { margin: 16px 0 4px; }
-  .fb__marke-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .fb__inhalt { padding: 18px 16px 0; }
   .fb__inhalt h2 { font-size: 26px; }
   .fb__fuss { margin: auto -16px 0; padding: 12px 16px 16px; }
