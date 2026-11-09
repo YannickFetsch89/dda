@@ -23,13 +23,13 @@ type Schritt = "art" | "ort" | "lust" | "wichtig" | "preis";
 
 interface Antworten {
   typen: OrtTyp[];
-  stadtteil: number | null; // null = überall
+  stadtteile: number[]; // leer = überall
   kuechen: number[];
   tags: number[];
   preise: number[];
 }
 
-const LEER: Antworten = { typen: [], stadtteil: null, kuechen: [], tags: [], preise: [] };
+const LEER: Antworten = { typen: [], stadtteile: [], kuechen: [], tags: [], preise: [] };
 
 const ARTEN: { label: string; text: string; icon: string; typen: OrtTyp[] }[] = [
   { label: "Restaurants", text: "Richtig essen gehen", icon: "restaurant", typen: ["restaurant"] },
@@ -60,7 +60,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
   const passend = (ant: Antworten) =>
     daten.orte.filter(([t, s, k, p, g]) => {
       if (ant.typen.length && !ant.typen.includes(ALLE_TYPEN[t])) return false;
-      if (ant.stadtteil !== null && s !== ant.stadtteil) return false;
+      if (ant.stadtteile.length && !ant.stadtteile.includes(s)) return false;
       if (ant.kuechen.length && !ant.kuechen.includes(k)) return false;
       if (ant.tags.some((i) => !(g & (1 << i)))) return false;
       if (ant.preise.length && !ant.preise.includes(p)) return false;
@@ -89,7 +89,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
   function anzeigen() {
     const href = filterHref(basis, {
       typen: a.typen.length ? a.typen : [...ALLE_TYPEN],
-      stadtteile: a.stadtteil !== null ? [daten.stadtteile[a.stadtteil].slug] : [],
+      stadtteile: a.stadtteile.map((i) => daten.stadtteile[i].slug),
       kuechen: a.kuechen.map((i) => daten.kuechen[i].slug),
       preise: a.preise,
       tags: a.tags.map((i) => daten.tags[i].slug),
@@ -109,7 +109,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
     for (const o of orte) if (o[spalte] >= 0) z.set(o[spalte], (z.get(o[spalte]) ?? 0) + 1);
     return [...z.entries()].sort((x, y) => y[1] - x[1] || namen[x[0]].name.localeCompare(namen[y[0]].name, "de"));
   };
-  const stadtteilZahlen = schritt === "ort" ? zaehlen(passend({ ...a, stadtteil: null, kuechen: [], tags: [], preise: [] }), 1, daten.stadtteile) : [];
+  const stadtteilZahlen = schritt === "ort" ? zaehlen(passend({ ...a, stadtteile: [], kuechen: [], tags: [], preise: [] }), 1, daten.stadtteile) : [];
   const kuechenZahlen = schritt === "lust" ? zaehlen(passend({ ...a, kuechen: [], tags: [], preise: [] }), 2, daten.kuechen) : [];
 
   /** Inhalt des Dialogs (Kopf, Fortschritt, aktuelle Frage). */
@@ -151,16 +151,25 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
         {schritt === "ort" && (
           <div className="fb__inhalt">
             {titel("Wo dürfen wir für dich suchen?")}
+            <p className="fb__hinweis">Einen oder mehrere Stadtteile – oder überall.</p>
             <div className="fb__chips fb__chips--viele">
-              <button type="button" className="gd-chip gd-chip--gross fb__chip--haupt" autoFocus
-                onClick={() => weiter({ ...a, stadtteil: null })}>
+              {/* Standard: überall; ein Stadtteil hebt „Überall“ auf, „Überall“ leert die Auswahl */}
+              <button type="button" className={`gd-chip gd-chip--gross ${!a.stadtteile.length ? "gd-chip--an" : ""}`} autoFocus
+                aria-pressed={!a.stadtteile.length} onClick={() => setA({ ...a, stadtteile: [] })}>
                 <Icon name="explore" />Überall in Düsseldorf
               </button>
-              {stadtteilZahlen.map(([i, n]) => (
-                <button key={i} type="button" className="gd-chip gd-chip--gross" onClick={() => weiter({ ...a, stadtteil: i })}>
-                  {daten.stadtteile[i].name}<span className="gd-chip__zahl">{n}</span>
-                </button>
-              ))}
+              {stadtteilZahlen.map(([i, n]) => {
+                const an = a.stadtteile.includes(i);
+                return (
+                  <button key={i} type="button" className={`gd-chip gd-chip--gross ${an ? "gd-chip--an" : ""}`} aria-pressed={an}
+                    onClick={() => setA({ ...a, stadtteile: umschalten(a.stadtteile, i) })}>
+                    {an && <Icon name="check" />}{daten.stadtteile[i].name}<span className="gd-chip__zahl">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="fb__fuss">
+              <button type="button" className="fb__weiter" onClick={() => weiter(a)}>Weiter<Icon name="arrow_forward" /></button>
             </div>
           </div>
         )}
@@ -168,8 +177,12 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
         {schritt === "lust" && (
           <div className="fb__inhalt">
             {titel("Worauf hast du Lust?")}
-            <p className="fb__hinweis">Eine oder mehrere Richtungen – oder einfach weiter.</p>
+            <p className="fb__hinweis">Eine oder mehrere Richtungen – oder alle Küchen.</p>
             <div className="fb__chips fb__chips--viele">
+              <button type="button" className={`gd-chip gd-chip--gross ${!a.kuechen.length ? "gd-chip--an" : ""}`} autoFocus
+                aria-pressed={!a.kuechen.length} onClick={() => setA({ ...a, kuechen: [] })}>
+                <Icon name="restaurant_menu" />Alle Küchen
+              </button>
               {kuechenZahlen.map(([i, n]) => {
                 const an = a.kuechen.includes(i);
                 return (
@@ -182,7 +195,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
             </div>
             <div className="fb__fuss">
               <button type="button" className="fb__weiter" onClick={() => weiter(a)}>
-                {a.kuechen.length ? "Weiter" : "Egal, weiter"}<Icon name="arrow_forward" />
+                Weiter<Icon name="arrow_forward" />
               </button>
             </div>
           </div>
@@ -193,6 +206,10 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
             {titel("Was ist dir wichtig?")}
             <p className="fb__hinweis">Alles, was du wählst, muss das Café bieten.</p>
             <div className="fb__chips">
+              <button type="button" className={`gd-chip gd-chip--gross ${!a.tags.length ? "gd-chip--an" : ""}`} autoFocus
+                aria-pressed={!a.tags.length} onClick={() => setA({ ...a, tags: [] })}>
+                <Icon name="done_all" />Keine besonderen Wünsche
+              </button>
               {daten.tags.map((t, i) => {
                 const an = a.tags.includes(i);
                 const n = passend({ ...a, tags: an ? a.tags : [...a.tags, i] }).length;
@@ -206,7 +223,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
             </div>
             <div className="fb__fuss">
               <button type="button" className="fb__weiter" onClick={() => weiter(a)}>
-                {a.tags.length ? "Weiter" : "Egal, weiter"}<Icon name="arrow_forward" />
+                Weiter<Icon name="arrow_forward" />
               </button>
             </div>
           </div>
@@ -248,7 +265,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
     <>
       <div className="fb-leiste">
         <div className="container fb-leiste__innen">
-          <span className="fb-leiste__text">Keine Lust zu suchen? Wir schlagen dir passende Orte vor.</span>
+          <p className="fb-leiste__text">Keine Lust zu suchen? Wir schlagen dir passende Orte vor.</p>
           <button type="button" className="fb-start" onClick={oeffnen} aria-haspopup="dialog">
             <Icon name="auto_awesome" />dies.das empfiehlt dir was
           </button>

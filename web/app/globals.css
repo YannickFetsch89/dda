@@ -1288,19 +1288,28 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 
 /* ── Fragebogen „Was dürfen wir dir empfehlen?“ (Restaurant-Hub) ─────────────── */
 /* Schmale Leiste unter dem Hero – bleibt beim Scrollen oben hängen */
-.fb-leiste { position: sticky; top: 0; z-index: 41; background: var(--ddd-surface); border-bottom: 1px solid var(--ddd-border); }
-.fb-leiste__innen { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; }
-.fb-leiste__text { min-width: 0; font-size: 14px; font-weight: 600; color: var(--ddd-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 599px) { .fb-leiste__text { display: none; } .fb-leiste .fb-start { flex: 1; justify-content: center; } }
+/* Schmale Leiste unter dem Hero – auffällig invertiert (Gold, dunkelblaue Schrift, weißer Knopf), bleibt beim Scrollen oben */
+.gd-seite--leiste { --fb-leiste-h: 56px; }
+.fb-leiste { position: sticky; top: 0; z-index: 41; background: var(--ddd-gold); color: var(--ddd-navy); }
+.fb-leiste__innen { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: var(--fb-leiste-h); }
+.fb-leiste__text { margin: 0; min-width: 0; font-size: 15px; font-weight: 700; color: var(--ddd-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Die kompakte Filterleiste erscheint unterhalb der Empfehlungs-Leiste */
-.gd-seite--leiste .gd-sticky { top: 57px; }
+.gd-seite--leiste .gd-sticky { top: var(--fb-leiste-h); }
 .fb-start {
-  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px;
-  border: none; border-radius: var(--r-pill); background: var(--ddd-gold); color: var(--ddd-navy);
-  font: 600 14px var(--font-sans); cursor: pointer; white-space: nowrap;
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 18px;
+  border: none; border-radius: var(--r-pill); background: #ffffff; color: var(--ddd-navy);
+  font: 700 14px var(--font-sans); cursor: pointer; white-space: nowrap; box-shadow: var(--sh-s);
 }
-.fb-start .icon { font-size: 18px; }
-.fb-start:hover { background: var(--ddd-gold-hover); }
+.fb-start .icon { font-size: 18px; color: var(--ddd-gold-hover); }
+.fb-start:hover { background: var(--ddd-bg); }
+.fb-start:focus-visible { outline-color: var(--ddd-navy); }
+@media (max-width: 599px) {
+  /* Mobil: Überschrift mittig über einem kompakten Knopf */
+  .gd-seite--leiste { --fb-leiste-h: 92px; }
+  .fb-leiste__innen { flex-direction: column; justify-content: center; gap: 8px; }
+  .fb-leiste__text { font-size: 14px; white-space: normal; text-align: center; line-height: 1.3; }
+  .fb-start { height: 36px; padding: 0 16px; font-size: 13px; }
+}
 html:has(.fb--dialog[open]) { overflow: hidden; }
 .fb { border-radius: var(--r-panel); background: var(--ddd-surface); color: var(--ddd-text); }
 /* Vollbild-Dialog (über „Empfehlung finden“ geöffnet) */
@@ -1341,14 +1350,13 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .fb__chips { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 20px; }
 .fb__chips .gd-chip { border: none; }
 .fb__chips .gd-chip:disabled { opacity: 0.4; cursor: default; filter: none; }
-.fb__chips .fb__chip--haupt { background: var(--ddd-navy); color: #ffffff; }
 .fb__fuss { position: sticky; bottom: 0; display: flex; justify-content: flex-end; margin: auto -24px 0; padding: 14px 24px 18px; background: var(--ddd-surface); border-top: 1px solid var(--ddd-border); }
 .fb__weiter { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border: none; border-radius: var(--r-pill); background: var(--ddd-navy); color: #ffffff; font-size: 15px; font-weight: 700; cursor: pointer; }
 .fb__weiter:hover { background: var(--ddd-navy-hover); }
 .fb__weiter:disabled { opacity: 0.5; cursor: default; }
 .fb__weiter .icon { font-size: 20px; }
 .fb .fb__stand { padding: 0 24px 16px; font-size: 13px; color: var(--ddd-text-muted); }
-:root[data-theme="dark"] .fb__weiter, :root[data-theme="dark"] .fb__chips .fb__chip--haupt { background: var(--ddd-gold); color: var(--ddd-navy); }
+:root[data-theme="dark"] .fb__weiter { background: var(--ddd-gold); color: var(--ddd-navy); }
 :root[data-theme="dark"] .fb__karte.is-an, :root[data-theme="dark"] .fb__karte:hover:not(:disabled) { border-color: var(--ddd-gold); background: var(--ddd-subtle); }
 @media (max-width: 599px) {
   .fb--dialog { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
