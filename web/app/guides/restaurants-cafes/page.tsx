@@ -7,7 +7,7 @@ import { GuideSticky, type StickyLink } from "@/components/guide-sticky";
 import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
-import { OrtKartenGrid, OrtLinkListe, kartenOrte } from "@/components/ort-karten";
+import { OrtKartenGrid, OrtLinkListe } from "@/components/ort-karten";
 import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
   ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche, preisStufe,
@@ -92,11 +92,10 @@ function Ansicht({ ansichten }: { ansichten: { label: string; icon: string; href
   );
 }
 
-async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
+async function Inhalt({ searchParams, alle }: { searchParams: Promise<SP>; alle: DddOrt[] }) {
   // Orte einmal laden (gecached) und an Hero und Liste weitergeben
   // Brauhäuser aus dem Kneipen-Hub erscheinen zusätzlich hier (E1) – ihr Link bleibt die Kneipen-URL
-  const [sp, eigene, brauhaeuser] = await Promise.all([searchParams, orteLaden([...TYPEN]), brauhaeuserFuerRestaurants()]);
-  const alle = [...eigene, ...brauhaeuser];
+  const sp = await searchParams;
   const f = filterLesen(sp);
   const href = (a: Partial<GuideFilter>) => filterHref(BASIS, f, a);
 
@@ -149,11 +148,10 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
     { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
   ];
   const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteile: [], kuechen: [], preise: [], tags: [] });
+  // Aktuelle Filter als Query (ohne Basis) für die Kartenpunkte
+  const abfrage = href({}).split("?")[1] ?? "";
   return (
     <>
-      <Hero orte={alle} />
-      {/* Schmale Leiste „dies.das empfiehlt dir was“ – bleibt beim Scrollen oben, öffnet den Fragebogen */}
-      <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} />
       <GuideSticky
         zielId="gd-filter"
         typen={typTabs.map((t) => ({ label: t.label, icon: t.icon, href: t.href, aktiv: t.aktiv }))}
@@ -249,8 +247,9 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
           </div>
         ) : f.ansicht === "karte" ? (
           <>
-            <GuideKarteLazy orte={kartenOrte(ergebnis)} />
-            <OrtLinkListe orte={ergebnis} zusatz={(o) => kueche(o)?.name} />
+            {/* Kartenpunkte lädt die Karte selbst nach (/api/guide-karte) – hält die erste Antwort klein */}
+            <GuideKarteLazy quelle={`/api/guide-karte?hub=restaurants${abfrage ? `&${abfrage}` : ""}`} />
+            <OrtLinkListe orte={ergebnis} alleHref={href({ ansicht: "grid" })} zusatz={(o) => kueche(o)?.name} />
           </>
         ) : (
           <OrtKartenGrid orte={sichtbar} />
@@ -269,20 +268,25 @@ async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   );
 }
 
-export default function RestaurantsCafes(props: { searchParams: Promise<SP> }) {
+export default async function RestaurantsCafes(props: { searchParams: Promise<SP> }) {
+  // Orte einmal laden ("use cache") – Hero und Empfehlungs-Leiste stehen damit im statischen Teil und sind
+  // sofort da; nur Filterleiste und Ergebnisse warten auf die Filter aus der URL.
+  // Brauhäuser aus dem Kneipen-Hub erscheinen zusätzlich hier (E1) – ihr Link bleibt die Kneipen-URL
+  const [eigene, brauhaeuser] = await Promise.all([orteLaden([...TYPEN]), brauhaeuserFuerRestaurants()]);
+  const alle = [...eigene, ...brauhaeuser];
   return (
     <div className="gd-seite gd-seite--leiste">
+      <Hero orte={alle} />
+      {/* Schmale Leiste „dies.das empfiehlt dir was“ – bleibt beim Scrollen oben, öffnet den Fragebogen */}
+      <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} />
       <Suspense
         fallback={
-          <>
-            <section className="gd-hero" />
-            <div className="container" style={{ paddingTop: 24 }}>
-              <SkeletonKarten anzahl={6} hoehe={360} />
-            </div>
-          </>
+          <div className="container" style={{ paddingTop: 24 }}>
+            <SkeletonKarten anzahl={3} hoehe={300} />
+          </div>
         }
       >
-        <Inhalt searchParams={props.searchParams} />
+        <Inhalt searchParams={props.searchParams} alle={alle} />
       </Suspense>
     </div>
   );

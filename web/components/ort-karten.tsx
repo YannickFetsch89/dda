@@ -149,21 +149,37 @@ export function kartenOrte(orte: DddOrt[]): KartenOrt[] {
 }
 
 /**
- * Alle Treffer als einfache Linkliste unter der Karte: die Karte entsteht erst im Browser – so stehen
- * die Orte trotzdem im HTML (Suchmaschinen, KI-Crawler, Screenreader, ohne JavaScript).
+ * Treffer als einfache Linkliste unter der Karte: die Karte entsteht erst im Browser – so stehen die Orte
+ * trotzdem im HTML (Suchmaschinen, KI-Crawler, Screenreader, ohne JavaScript). Höchstens `max` Einträge,
+ * damit die Seite klein bleibt; alle Detailseiten stehen ohnehin in der Sitemap.
  */
-export function OrtLinkListe({ orte, zusatz }: { orte: DddOrt[]; zusatz?: (o: DddOrt) => string | null | undefined }) {
+export function OrtLinkListe({ orte, alleHref, max = 100, zusatz }: {
+  orte: DddOrt[];
+  alleHref: string; // Kachelansicht mit allen Treffern
+  max?: number;
+  zusatz?: (o: DddOrt) => string | null | undefined;
+}) {
+  const liste = orte.slice(0, max);
+  const gekuerzt = orte.length > liste.length;
   return (
     <details className="gd-alle-liste">
-      <summary><Icon name="list" />Alle {zahl(orte.length)} Empfehlungen als Liste</summary>
+      <summary>
+        <Icon name="list" />
+        {gekuerzt ? `Die ${zahl(liste.length)} beliebtesten Empfehlungen als Liste` : `Alle ${zahl(orte.length)} Empfehlungen als Liste`}
+      </summary>
       <ul>
-        {orte.map((o) => (
+        {liste.map((o) => (
           <li key={o.id}>
             <Link href={ortPfad(o)}>{o.name}</Link>
             <span className="muted">{[ortTypLabel(o), zusatz?.(o), o.stadtteil].filter(Boolean).join(" · ")}</span>
           </li>
         ))}
       </ul>
+      {gekuerzt && (
+        <Link href={alleHref} className="gd-alle-liste__mehr">
+          Alle {zahl(orte.length)} Empfehlungen in der Kachelansicht<Icon name="arrow_forward" />
+        </Link>
+      )}
     </details>
   );
 }

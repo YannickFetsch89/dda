@@ -13,7 +13,7 @@ import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
-import { OrtLinkListe, kartenOrte } from "@/components/ort-karten";
+import { OrtLinkListe } from "@/components/ort-karten";
 import { SEITE, SORTIERUNGEN, sortieren, stadtteileText, zaehlen, zahl } from "@/lib/guide-filter";
 import {
   ARTEN, MIN_FUER_SCHALTER, SPEZIALITAETEN, VIBES, unterart, filterHref, filterLesen, filtern, happyHour, hatParameter,
@@ -121,6 +121,8 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
   const sortOptionen = SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
   // Karte ist der Standard; die Ansicht bleibt beim Zurücksetzen der Filter erhalten
   const zuruecksetzen = f.ansicht === "grid" ? `${BASIS}?ansicht=grid` : BASIS;
+  // Aktuelle Filter als Query (ohne Basis) für die Kartenpunkte
+  const abfrage = href({}).split("?")[1] ?? "";
   const ansichten = [
     { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
     { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
@@ -232,8 +234,9 @@ function Ansicht({ alle, f }: { alle: DddOrt[]; f: KneipenFilter }) {
           </div>
         ) : f.ansicht === "karte" ? (
           <>
-            <GuideKarteLazy orte={kartenOrte(ergebnis)} />
-            <OrtLinkListe orte={ergebnis} zusatz={(o) => spezialitaeten(o).join(", ")} />
+            {/* Kartenpunkte lädt die Karte selbst nach (/api/guide-karte) */}
+            <GuideKarteLazy quelle={`/api/guide-karte?hub=kneipen${abfrage ? `&${abfrage}` : ""}`} />
+            <OrtLinkListe orte={ergebnis} alleHref={href({ ansicht: "grid" })} zusatz={(o) => spezialitaeten(o).join(", ")} />
           </>
         ) : (
           <div className="gd-grid gd-grid--3 gd-grid--abend" role="list">

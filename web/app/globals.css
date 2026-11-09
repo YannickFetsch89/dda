@@ -1358,3 +1358,5 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
   .fb__weiter { flex: 1; justify-content: center; }
   .fb__karten--preis .fb__karte { padding: 12px; }
 }
+.gd-alle-liste__mehr { display: flex; align-items: center; gap: 6px; padding: 12px 16px 16px; font-size: 14px; font-weight: 600; color: var(--ddd-link); border-top: 1px solid var(--ddd-border); }
+.gd-alle-liste__mehr .icon { font-size: 18px; }

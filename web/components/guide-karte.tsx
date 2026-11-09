@@ -93,7 +93,11 @@ function popupInhalt(o: KartenOrt): HTMLElement {
   return box;
 }
 
-export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
+const KEINE: KartenOrt[] = [];
+
+/** `orte` ist null, solange die Punkte noch nachgeladen werden (siehe guide-karte-lazy.tsx). */
+export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte: KartenOrt[] | null; ladefehler?: boolean }) {
+  const orte = geladen ?? KEINE;
   const kartenRef = useRef<HTMLDivElement>(null);
   const listeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -285,7 +289,9 @@ export default function GuideKarte({ orte }: { orte: KartenOrt[] }) {
             </Link>
           </div>
         ))}
-        {sichtbar.length === 0 && <div className="gd-leer">Keine Orte in diesem Bereich.</div>}
+        {geladen === null && !ladefehler && <div className="gd-kartenliste__hinweis" role="status">Orte werden geladen …</div>}
+        {ladefehler && <div className="gd-leer" role="status">Die Orte konnten gerade nicht geladen werden. Bitte die Seite neu laden.</div>}
+        {geladen !== null && !ladefehler && sichtbar.length === 0 && <div className="gd-leer">Keine Orte in diesem Bereich.</div>}
       </div>
       <div className="gd-karte-box">
         <div ref={kartenRef} className="gd-karte-map" />
