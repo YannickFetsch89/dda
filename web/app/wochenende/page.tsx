@@ -7,6 +7,7 @@ import { eventPoolLaden } from "@/lib/daten";
 import { wochenendProgramm } from "@/lib/ableitungen";
 import { kurzDatum, tagMonat } from "@/lib/datum";
 import { zeitKurz } from "@/lib/termine";
+import { kurzBeschreibung } from "@/lib/beschreibung";
 
 export const metadata: Metadata = {
   title: "Unser Wochenend-Programm",
@@ -75,7 +76,7 @@ async function WochenendeInhalt({ searchParams }: Pick<PageProps<"/wochenende">,
                 <h2 className="d">
                   <Link href={eventPfad(e)}>{e.titel}</Link>
                 </h2>
-                {e.beschreibung && <p>{e.beschreibung}</p>}
+                {e.beschreibung && <p>{kurzBeschreibung(e.beschreibung, 220)}</p>}
                 <div className="wk-eintrag__fuss">
                   <span className="preis">{e.preis}</span>
                   <Link href={eventPfad(e)} className="link">

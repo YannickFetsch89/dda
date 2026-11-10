@@ -226,6 +226,15 @@ async def _schritte_ausfuehren(report: LaufReport):
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
     report.kennzahl(kategorisiert=anzahl_kategorisiert)
 
+    # Schritt 3b: Beschreibungen für Rausgegangen-Events aus Veranstalter-Quellen (umgeschrieben)
+    logger.info("--- Schritt 3b: Beschreibungen aus Veranstalter-Quellen ---")
+    try:
+        from pipeline.beschreibung_quellen import beschreibungen_nachziehen
+        # Nur ins Log – Kennzahlen sind Spalten in scraper_laeufe, eine neue bräuchte erst eine DB-Spalte
+        beschreibungen_nachziehen(limit=40)
+    except Exception as e:
+        logger.error("Beschreibungen aus Veranstalter-Quellen fehlgeschlagen: %s", e)
+
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")
     from pipeline import caption_generator

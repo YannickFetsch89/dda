@@ -13,8 +13,10 @@ Beschreibung suchen wir deshalb die Seite des Veranstalters:
 
 Überall gilt: robots.txt wird geprüft, mindestens 2 s zwischen Abrufen.
 
-Aufruf (Probelauf, schreibt nichts in die Datenbank):
-    python -m pipeline.beschreibung_quellen --probe 20
+Aufruf:
+    python -m pipeline.beschreibung_quellen --probe 20        # Probelauf, schreibt nichts in die Datenbank
+    python -m pipeline.beschreibung_quellen --nachziehen 400  # offene Events bearbeiten (mit Sicherung)
+Im täglichen Lauf: beschreibungen_nachziehen(limit=40) nach der Kategorisierung (main.py).
 """
 import argparse
 import json
@@ -135,8 +137,10 @@ def ort_website(ort: str, adresse: str | None, orte_webseiten: dict[str, str], c
         return orte_webseiten[schluessel]
     if schluessel in cache:
         return cache[schluessel]
-    from scraper.orte.google_places import API_BASE, _headers
+    from scraper.orte.google_places import API_BASE, GOOGLE_PLACES_API_KEY, _headers
 
+    if not GOOGLE_PLACES_API_KEY:
+        return None  # z.B. im GitHub-Lauf ohne Places-Schlüssel – dann bleibt die Websuche
     website = None
     try:
         anfrage = f"{ort}, {adresse}" if adresse else f"{ort} Düsseldorf"
@@ -155,7 +159,11 @@ def ort_website(ort: str, adresse: str | None, orte_webseiten: dict[str, str], c
     except Exception as e:
         logger.warning("Places-Suche für '%s' fehlgeschlagen: %s", ort, e)
     cache[schluessel] = website
-    WEBSITE_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+    try:
+        WEBSITE_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        WEBSITE_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError as e:
+        logger.warning("Website-Zwischenspeicher nicht schreibbar: %s", e)
     return website
 
 
@@ -397,6 +405,32 @@ def orte_webseiten() -> dict[str, str]:
         start += 1000
 
 
+def event_bearbeiten(client, event: dict, webseiten: dict[str, str], cache: dict) -> dict:
+    """Quelle suchen und Beschreibung schreiben. Ergebnis-Dict mit 'freigegeben', 'beschreibung', 'quelle_url'."""
+    eintrag = {"id": event["id"], "slug": event.get("slug"), "titel": event["titel"], "datum": event["datum"],
+               "ort": event.get("ort"), "bisher": event.get("beschreibung"), "weg": None}
+    website = ort_website(event.get("ort") or "", event.get("adresse"), webseiten, cache)
+    eintrag["ort_website"] = website
+    fund = None
+    if website and not _gesperrt(website):
+        fund = event_seite_auf_website(website, event)
+        if fund:
+            eintrag["weg"] = "Website des Orts"
+    if not fund:
+        fund = event_seite_aus_suche(client, event)
+        if fund:
+            eintrag["weg"] = "Websuche"
+    if fund:
+        url, text = fund
+        eintrag["quelle_url"] = url
+        eintrag["quelltext"] = text[:9000]
+        try:
+            eintrag.update(umschreiben(client, event, url, text))
+        except Exception as e:
+            eintrag["fehler"] = f"{type(e).__name__}: {e}"
+    return eintrag
+
+
 def probe(anzahl: int) -> None:
     import anthropic
 
@@ -406,30 +440,76 @@ def probe(anzahl: int) -> None:
     ergebnisse = []
     for nr, event in enumerate(stichprobe(anzahl), 1):
         logger.info("[%d/%d] %s (%s)", nr, anzahl, event["titel"][:50], event.get("ort"))
-        eintrag = {"id": event["id"], "slug": event.get("slug"), "titel": event["titel"], "datum": event["datum"],
-                   "ort": event.get("ort"), "bisher": event.get("beschreibung"), "weg": None}
-        website = ort_website(event.get("ort") or "", event.get("adresse"), webseiten, cache)
-        eintrag["ort_website"] = website
-        fund = None
-        if website and not _gesperrt(website):
-            fund = event_seite_auf_website(website, event)
-            if fund:
-                eintrag["weg"] = "Website des Orts"
-        if not fund:
-            fund = event_seite_aus_suche(client, event)
-            if fund:
-                eintrag["weg"] = "Websuche"
-        if fund:
-            url, text = fund
-            eintrag["quelle_url"] = url
-            eintrag["quelltext"] = text[:9000]
-            try:
-                eintrag.update(umschreiben(client, event, url, text))
-            except Exception as e:
-                eintrag["fehler"] = f"{type(e).__name__}: {e}"
-        ergebnisse.append(eintrag)
+        ergebnisse.append(event_bearbeiten(client, event, webseiten, cache))
         (ORDNER / "probe.json").write_text(json.dumps(ergebnisse, ensure_ascii=False, indent=1), encoding="utf-8")
     bericht_schreiben(ergebnisse)
+
+
+def offene_rausgegangen_events(db, limit: int) -> list[dict]:
+    """Künftige Rausgegangen-Events, für die noch keine Beschreibungsquelle gesucht wurde (früheste zuerst)."""
+    from datetime import date
+
+    antwort = (
+        db.table("events")
+        .select("id,titel,ort,adresse,datum,uhrzeit,slug,beschreibung,quelle_name,quelle_url")
+        .gte("datum", date.today().isoformat())
+        .is_("beschreibung_gesucht_am", "null")
+        .or_("quelle_name.ilike.*rausgegangen*,quelle_url.ilike.*rausgegangen.de*")
+        .order("datum")
+        .limit(limit)
+        .execute()
+    )
+    return antwort.data or []
+
+
+def beschreibungen_nachziehen(limit: int = 40, sicherung: bool = False) -> int:
+    """
+    Sucht für Rausgegangen-Events eine Veranstalter-Quelle und ersetzt die Beschreibung, wenn der neue Text
+    alle Prüfungen besteht. Ohne Fund bleibt der bisherige Text. Jedes bearbeitete Event bekommt
+    beschreibung_gesucht_am, damit es nicht erneut gesucht wird.
+
+    Returns:
+        Anzahl der Events mit neuer Beschreibung
+    """
+    import anthropic
+    from datetime import datetime, timezone
+
+    from database.client import get_supabase_client
+
+    db = get_supabase_client()
+    events = offene_rausgegangen_events(db, limit)
+    if not events:
+        logger.info("Beschreibungen: keine offenen Rausgegangen-Events")
+        return 0
+    client = anthropic.Anthropic()
+    webseiten, cache = orte_webseiten(), _cache_laden()
+    sicherungsdatei = ORDNER / f"sicherung_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
+    neu = 0
+    for nr, event in enumerate(events, 1):
+        logger.info("Beschreibung [%d/%d]: %s (%s)", nr, len(events), event["titel"][:50], event.get("ort"))
+        try:
+            eintrag = event_bearbeiten(client, event, webseiten, cache)
+        except Exception as e:
+            logger.error("Beschreibung für '%s' fehlgeschlagen: %s", event["titel"][:40], e)
+            continue
+        update = {"beschreibung_gesucht_am": datetime.now(timezone.utc).isoformat()}
+        if eintrag.get("freigegeben"):
+            update["beschreibung"] = eintrag["beschreibung"].strip()
+            update["beschreibung_quelle"] = eintrag["quelle_url"]
+        try:
+            if sicherung and "beschreibung" in update:
+                ORDNER.mkdir(parents=True, exist_ok=True)
+                with sicherungsdatei.open("a", encoding="utf-8") as f:
+                    zeile = {"id": event["id"], "beschreibung": event.get("beschreibung")}
+                    f.write(json.dumps(zeile, ensure_ascii=False) + "\n")
+            db.table("events").update(update).eq("id", event["id"]).execute()
+            if "beschreibung" in update:
+                neu += 1
+                logger.info("Neue Beschreibung (%d Zeichen) aus %s", len(update["beschreibung"]), eintrag["quelle_url"])
+        except Exception as e:
+            logger.error("Speichern der Beschreibung für '%s' fehlgeschlagen: %s", event["titel"][:40], e)
+    logger.info("Beschreibungen: %d von %d Events mit neuem Text", neu, len(events))
+    return neu
 
 
 def nur_umschreiben() -> None:
@@ -482,11 +562,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Event-Beschreibungen aus Veranstalter-Quellen (Probelauf)")
     parser.add_argument("--probe", type=int, default=20, help="Anzahl Events im Probelauf")
     parser.add_argument("--nur-umschreiben", action="store_true", help="Quellen des letzten Probelaufs neu umschreiben")
+    parser.add_argument("--nachziehen", type=int, metavar="N",
+                        help="N offene Rausgegangen-Events bearbeiten und in die Datenbank schreiben (mit Sicherung)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     for laut in ("httpx", "anthropic"):
         logging.getLogger(laut).setLevel(logging.WARNING)
-    if args.nur_umschreiben:
+    if args.nachziehen:
+        beschreibungen_nachziehen(limit=args.nachziehen, sicherung=True)
+    elif args.nur_umschreiben:
         nur_umschreiben()
     else:
         probe(args.probe)

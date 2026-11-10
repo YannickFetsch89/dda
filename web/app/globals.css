@@ -656,6 +656,9 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .detail__abschnitt { display: flex; flex-direction: column; gap: 10px; }
 .detail__abschnitt h2 { font-size: 26px; }
 .detail__abschnitt p { color: var(--ddd-text-body); line-height: 1.6; }
+.beschreibung { display: flex; flex-direction: column; gap: 12px; max-width: 70ch; }
+.beschreibung ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; color: var(--ddd-text-body); line-height: 1.55; }
+.beschreibung li::marker { color: var(--ddd-gold); }
 .teilen { display: flex; gap: 8px; flex-wrap: wrap; }
 .teilen a, .teilen button { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: var(--r-md); background: var(--ddd-surface); border: 1px solid var(--ddd-border); font-size: 13px; font-weight: 600; }
 .teilen .icon { font-size: 18px; }

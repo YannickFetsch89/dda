@@ -50,7 +50,9 @@ _QUELL_FELDER: list[str] = ["quelle_name", "quelle_url"]
 _VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
 
 # Spalten, die zum Abgleich bestehender Events geladen werden
-_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + _ANREICHERBARE_FELDER)
+# (beschreibung_quelle: Beschreibung wurde aus einer Veranstalter-Seite umgeschrieben, siehe
+# pipeline/beschreibung_quellen.py – Spalte muss in der DB existieren)
+_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + ["beschreibung_quelle"] + _ANREICHERBARE_FELDER)
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
@@ -78,6 +80,7 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
     - Vorrang: Stammt der bestehende Eintrag von Rausgegangen und der neue von einer anderen
       Quelle, wechselt die Quelle (quelle_name, quelle_url); Bild, Beschreibung, Preis und
       Adresse kommen dann von der anderen Quelle, soweit sie dort belegt sind. Slug bleibt.
+      Ausnahme: Eine aus der Veranstalter-Seite recherchierte Beschreibung (beschreibung_quelle) bleibt.
 
     Args:
         bestehendes: Aktueller DB-Eintrag
@@ -108,6 +111,8 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
     # Ohne eigenen Link bleibt Rausgegangen Quelle (sonst zeigte „Zum Termin“ weiter auf Rausgegangen)
     if ist_rausgegangen(bestehendes) and neu.get("quelle_url") and not ist_rausgegangen(neu):
         for feld in _QUELL_FELDER + _VORRANG_FELDER:
+            if feld == "beschreibung" and bestehendes.get("beschreibung_quelle"):
+                continue  # aus der Veranstalter-Seite recherchierter Text bleibt (nur Lücken würden gefüllt)
             neu_wert = neu.get(feld)
             if neu_wert and neu_wert != bestehendes.get(feld):
                 update[feld] = neu_wert

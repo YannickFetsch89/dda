@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS events (
                         'outdoor', 'stadtfuehrung', 'community', 'nightlife',
                         'family', 'dating', 'sonstiges'
                     )),
-    beschreibung    TEXT CHECK (char_length(beschreibung) <= 300),
+    beschreibung    TEXT,  -- ohne Längengrenze (früher max. 300 Zeichen, entfernt 2026-11-10)
+    beschreibung_quelle     TEXT,         -- URL der Veranstalter-Seite, aus der die Beschreibung umgeschrieben wurde
+    beschreibung_gesucht_am TIMESTAMPTZ,  -- wann nach einer Quelle gesucht wurde (auch ohne Fund)
     preis           TEXT,
     quelle_name     TEXT NOT NULL,
     quelle_url      TEXT NOT NULL,

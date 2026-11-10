@@ -15,6 +15,8 @@ import { basisTitel, terminSchluessel, termineAmTag } from "@/lib/termine";
 import { istAbgelaufen, kommendeEmpfehlungen, ortSchluessel } from "@/lib/abgelaufen";
 import { eventJsonLd, jsonLdText } from "@/lib/json-ld";
 import { AbgelaufenHinweis } from "@/components/abgelaufen-hinweis";
+import { BeschreibungText } from "@/components/beschreibung-text";
+import { kurzBeschreibung } from "@/lib/beschreibung";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -24,7 +26,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const { slug } = await props.params;
   const e = await eventLaden(decodeURIComponent(slug));
   if (!e) return { title: "Event nicht gefunden" };
-  const beschreibung = e.beschreibung ?? `${tagLang(e.datum)}${e.uhrzeit ? `, ${e.uhrzeit} Uhr` : ""} · ${e.ort}`;
+  const beschreibung = kurzBeschreibung(e.beschreibung, 160) ?? `${tagLang(e.datum)}${e.uhrzeit ? `, ${e.uhrzeit} Uhr` : ""} · ${e.ort}`;
   const titel = basisTitel(e.titel);
   return {
     title: titel,
@@ -190,7 +192,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
             {e.beschreibung && (
               <section className="detail__abschnitt">
                 <h2 className="d">Worum geht&apos;s</h2>
-                <p>{e.beschreibung}</p>
+                <BeschreibungText text={e.beschreibung} />
               </section>
             )}
           </div>

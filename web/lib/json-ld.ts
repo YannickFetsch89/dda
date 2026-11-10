@@ -5,6 +5,7 @@ import { eventBildUrl } from "./bilder";
 import { symbolbild } from "./symbolbild";
 import { basisTitel } from "./termine";
 import type { DddEvent } from "./typen";
+import { kurzBeschreibung } from "./beschreibung";
 
 /** Versatz von Europe/Berlin zu einem UTC-Zeitpunkt in Minuten (60 = Winter, 120 = Sommer). */
 function versatzMinuten(zeitpunkt: Date): number {
@@ -76,7 +77,7 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
   if (e.reihe) {
     daten.superEvent = { "@type": "EventSeries", name: e.reihe.titel, url: `${siteUrl}/reihe/${encodeURIComponent(e.reihe.slug)}` };
   }
-  if (e.beschreibung) daten.description = e.beschreibung;
+  if (e.beschreibung) daten.description = kurzBeschreibung(e.beschreibung, 500) ?? e.beschreibung;
   if (bild) daten.image = [absolut(bild, siteUrl)];
   if (e.quelle_url) {
     const betrag = istKostenlos(e) ? 0 : preisBetrag(e.preis);

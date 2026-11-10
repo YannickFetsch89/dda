@@ -12,6 +12,7 @@ import { ZEITRAUM_OPTIONEN, metaZeile, zeitraumAuflösen } from "@/lib/datum";
 import { DatumWaehler } from "@/components/datum-waehler";
 import { KATEGORIEN, kategorie } from "@/lib/kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
+import { kurzBeschreibung } from "@/lib/beschreibung";
 
 export const metadata: Metadata = {
   title: "Entdecken",
@@ -304,7 +305,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
               <h2 className="top-monat__titel d">
                 <Link href={eventPfad(top)}>{top.titel}</Link>
               </h2>
-              {top.beschreibung && <p>{top.beschreibung}</p>}
+              {top.beschreibung && <p>{kurzBeschreibung(top.beschreibung, 220)}</p>}
               <div className="top-monat__fuss">
                 <span>
                   {metaZeile(top, heute)} · {top.ort}

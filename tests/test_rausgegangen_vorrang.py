@@ -126,6 +126,13 @@ class SpeichernTest(unittest.TestCase):
         self.assertNotIn("bild_url", update)
         self.assertNotIn("beschreibung", update)
 
+    def test_recherchierte_beschreibung_bleibt_beim_quellwechsel(self):
+        bestehend = rg(beschreibung="Langer Text aus der Veranstalter-Seite",
+                       beschreibung_quelle="https://www.zakk.de/programm/sibel-schick")
+        update = _anreicherungs_update_bauen(bestehend, zakk())
+        self.assertEqual(update["quelle_name"], "zakk")
+        self.assertNotIn("beschreibung", update)
+
     def test_ohne_link_kein_quellwechsel(self):
         update = _anreicherungs_update_bauen(rg(preis=None), zakk(quelle_url=None, preis="8 €"))
         self.assertNotIn("quelle_name", update)

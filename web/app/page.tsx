@@ -9,8 +9,10 @@ import { filtern, istKostenlos, nachBeliebtheit, nachNeu, nachZeit, neuSeit, sta
 import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
-import type { DddEvent } from "@/lib/typen";
+import type { DddEvent } from "@/lib/typen";
+
 import { zeitKurz, zeitLang } from "@/lib/termine";
+import { kurzBeschreibung } from "@/lib/beschreibung";
 
 const SCHNELLFILTER = [
   { key: "heute", label: "Heute" },
@@ -366,7 +368,7 @@ function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
         <h2 className="sticker__titel d">
           <Link href={eventPfad(e)}>{e.titel}</Link>
         </h2>
-        {e.beschreibung && <p className="sticker__beschreibung">{e.beschreibung}</p>}
+        {e.beschreibung && <p className="sticker__beschreibung">{kurzBeschreibung(e.beschreibung, 200)}</p>}
         <div className="sticker__infos">
           <span>
             <Icon name="schedule" />
