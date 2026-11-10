@@ -1369,3 +1369,25 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 }
 .gd-alle-liste__mehr { display: flex; align-items: center; gap: 6px; padding: 12px 16px 16px; font-size: 14px; font-weight: 600; color: var(--ddd-link); border-top: 1px solid var(--ddd-border); }
 .gd-alle-liste__mehr .icon { font-size: 18px; }
+
+/* ── Header: Aufklappmenü „Guides“ (Desktop) und Zwischentitel im Handy-Menü ── */
+.popover .popover__titel { padding: 10px 12px 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ddd-text-muted); }
+.kopf__guides { position: relative; }
+.kopf__guides summary { display: flex; align-items: center; gap: 2px; padding: 9px 10px 9px 14px; border-radius: var(--r-pill); cursor: pointer; list-style: none; }
+.kopf__guides summary::-webkit-details-marker { display: none; }
+.kopf__guides summary .icon { font-size: 18px; transition: transform 0.15s; }
+.kopf__guides[open] summary .icon { transform: rotate(180deg); }
+.kopf__guides summary.is-aktiv, .kopf__guides summary:hover { background: var(--ddd-navy-tint); color: var(--ddd-navy); }
+.kopf__guides-menue {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 230px; padding: 6px;
+  display: flex; flex-direction: column; background: var(--ddd-surface); border: 1px solid var(--ddd-border);
+  border-radius: var(--r-md); box-shadow: var(--sh-l);
+}
+.kopf__guides-menue a { display: flex; align-items: center; gap: 10px; padding: 10px 12px !important; border-radius: var(--r-sm) !important; font-weight: 600; color: var(--ddd-text-body); }
+.kopf__guides-menue a .icon { font-size: 20px; color: var(--ddd-gold); }
+.kopf__guides-menue a:hover, .kopf__guides-menue a[aria-current="page"] { background: var(--ddd-bg); color: var(--ddd-text); }
+:root[data-theme="dark"] .kopf__guides summary.is-aktiv, :root[data-theme="dark"] .kopf__guides summary:hover { color: var(--ddd-text); background: var(--ddd-subtle); }
+/* Suche: Orte vor den Events */
+.such-orte .sektion__kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.such-orte .sektion__kopf h2, .such-events-titel { font-size: 26px; }
+.such-events-titel { margin-top: 32px; }

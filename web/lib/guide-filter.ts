@@ -160,6 +160,7 @@ export function preisDetail(o: DddOrt): { zeile: string; herkunft: string } | nu
   }
   const betrag = pp.bis == null ? `ab ${pp.von} €` : pp.von === pp.bis ? `${pp.von} €` : `${pp.von}–${pp.bis} €`;
   if (pp.quelle === "website") return { zeile: `Menü ${betrag} pro Person`, herkunft: "laut Website des Restaurants" };
+  if (pp.quelle === "manuell") return { zeile: `ca. ${betrag} pro Person`, herkunft: "Einschätzung der Redaktion" };
   const herkunft = pp.quelle === "bewertungen" ? "geschätzt aus Gästebewertungen"
     : pp.quelle === "google+bewertungen" ? "laut Google und Gästebewertungen" : "laut Google";
   return { zeile: `ca. ${betrag} pro Person`, herkunft };

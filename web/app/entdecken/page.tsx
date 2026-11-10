@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Bild, EventKarte, Icon, KatBadge, Leer, SkeletonKarten, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
+import { OrtKartenGrid } from "@/components/ort-karten";
+import { orteLaden } from "@/lib/orte";
+import { orteSuchen } from "@/lib/orte-suche";
 import { TAGESZEITEN, filtern, highlights, kategorieZaehlen, nachBeliebtheit, nachNeu, nachZeit, stadtteileZaehlen, type Tageszeit } from "@/lib/ableitungen";
 import { ZEITRAUM_OPTIONEN, metaZeile, zeitraumAuflösen } from "@/lib/datum";
 import { DatumWaehler } from "@/components/datum-waehler";
@@ -66,7 +69,9 @@ export default function Entdecken(props: PageProps<"/entdecken">) {
 
 async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "searchParams">) {
   const p = einzeln(await searchParams);
-  const pool = await eventPoolLaden();
+  // Bei einer Suche auch die Orte der Guides durchsuchen (nur freigeschaltete) – sie stehen vor den Events
+  const [pool, alleOrte] = await Promise.all([eventPoolLaden(), p.q ? orteLaden(["restaurant", "cafe", "imbiss", "kneipe"]) : []]);
+  const ortTreffer = orteSuchen(alleOrte, p.q);
   const { heute } = pool;
 
   const z = zeitraumAuflösen(p.datum ?? "woche", heute);
@@ -105,7 +110,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
     <>
       <div className="seitentitel">
         <h1 className="d">Entdecken</h1>
-        <span>{treffer.length} Events</span>
+        <span>{ortTreffer.length > 0 && `${ortTreffer.length} ${ortTreffer.length === 1 ? "Ort" : "Orte"} · `}{treffer.length} Events</span>
       </div>
 
       <form id="suche" className="suchfeld" action="/entdecken" role="search">
@@ -261,7 +266,24 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
         </article>
       )}
 
-      {treffer.length === 0 ? (
+      {ortTreffer.length > 0 && (
+        <section className="sektion such-orte" aria-labelledby="such-orte-titel" style={{ marginTop: 20 }}>
+          <div className="sektion__kopf">
+            <h2 id="such-orte-titel" className="d">Orte</h2>
+            <span className="muted">{ortTreffer.length} Treffer in unseren Guides</span>
+          </div>
+          <OrtKartenGrid orte={ortTreffer.slice(0, 6)} />
+          {ortTreffer.length > 6 && (
+            <p className="muted" style={{ marginTop: 10 }}>
+              und {ortTreffer.length - 6} weitere – verfeinere die Suche oder stöbere in den{" "}
+              <Link href="/guides" className="link">Guides</Link>.
+            </p>
+          )}
+          {treffer.length > 0 && <h2 className="d such-events-titel">Events</h2>}
+        </section>
+      )}
+
+      {treffer.length === 0 && ortTreffer.length > 0 ? null : treffer.length === 0 ? (
         <div className="sektion">
           <Leer titel="Dazu haben wir gerade nichts gefunden.">
             <Link href="/entdecken" className="link">

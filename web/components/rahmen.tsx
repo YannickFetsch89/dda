@@ -55,8 +55,11 @@ export function Kopf() {
               <Link href="/entdecken">Entdecken</Link>
               <Link href="/heute">Heute</Link>
               <Link href="/wochenende">Wochenende</Link>
-              <Link href="/restaurants">Restaurants & Cafés</Link>
               <Link href="/stadtteile">Stadtteile &amp; Karte</Link>
+              <span className="popover__titel">Guides</span>
+              <Link href="/guides">Alle Guides</Link>
+              <Link href="/guides/restaurants-cafes">Restaurants &amp; Cafés</Link>
+              <Link href="/guides/kneipen-bars">Kneipen &amp; Bars</Link>
               <Link href="/merkliste">Merkliste</Link>
               <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>

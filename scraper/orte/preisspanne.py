@@ -13,6 +13,7 @@ Ergebnis in orte.extras:
   google_preisspanne  {von, bis|None, abgerufen}       Google-Rohwert (bis None = „ab …“)
   preis_bewertungen   {von, bis, belege, modell}      KI-Schätzung aus Bewertungen
   preis_website       {von, bis, belege, seiten}      Menüpreise von der eigenen Website (Fine Dining)
+  preis_manuell       {von, bis, grund, datum}        redaktionell gesetzt – hat Vorrang vor allem
   preis_pp            {von, bis, quelle}              kombinierte Spanne pro Person
 Das bestehende preis_niveau (€/€€/€€€) wird hier NICHT geändert.
 
@@ -465,6 +466,10 @@ def schreiben(dry_run: bool) -> None:
         if w and "von" in w:
             neu["preis_website"] = {x: w[x] for x in ("von", "bis", "belege", "seiten", "datum", "pdf", "beleg_ungeprueft") if x in w}
         pp = kombinieren(g, k, w)
+        # Redaktionell gesetzte Spanne (extras.preis_manuell) geht allem vor
+        manuell = ex.get("preis_manuell")
+        if manuell and manuell.get("von") is not None:
+            pp = {"von": manuell["von"], "bis": manuell.get("bis"), "quelle": "manuell"}
         if pp:
             neu["preis_pp"] = pp
         if neu != ex:

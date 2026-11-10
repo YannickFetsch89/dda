@@ -340,6 +340,12 @@ const NAV = [
   { href: "/stadtteile", label: "Karte" },
 ];
 
+export const GUIDE_LINKS = [
+  { href: "/guides", label: "Alle Guides", icon: "explore" },
+  { href: "/guides/restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant" },
+  { href: "/guides/kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar" },
+];
+
 function KopfNavMitPfad() {
   return <KopfNavListe pfad={usePathname()} />;
 }
@@ -360,6 +366,19 @@ function KopfNavListe({ pfad }: { pfad: string | null }) {
           {n.label}
         </Link>
       ))}
+      {/* Guides: Übersicht und die fertigen Hubs als Aufklappmenü */}
+      <details className="kopf__guides">
+        <summary className={istAktiv(pfad, "/guides") ? "is-aktiv" : ""}>
+          Guides<span className="icon" aria-hidden>expand_more</span>
+        </summary>
+        <div className="kopf__guides-menue">
+          {GUIDE_LINKS.map((g) => (
+            <Link key={g.href} href={g.href} aria-current={pfad === g.href ? "page" : undefined}>
+              <span className="icon" aria-hidden>{g.icon}</span>{g.label}
+            </Link>
+          ))}
+        </div>
+      </details>
     </nav>
   );
 }
