@@ -110,6 +110,25 @@ def titel_kern(titel: str) -> set[str]:
     return {w for w in _woerter(titel) if w not in _TITEL_FUELLWOERTER and not w.isdigit() and len(w) > 1}
 
 
+# Trenner zwischen Titel und Zusatz („S.O.S. EISBERG | Filmreihe … – Black Box im Filmmuseum“)
+# bzw. Original- und deutschem Titel („RONJA RÖVARDOTTER · RONJA RÄUBERTOCHTER“)
+_TITEL_TRENNER = re.compile(r"\s+[|·]\s+")
+
+
+def _titel_teile(titel: str) -> list[set[str]]:
+    """Kernwörter der einzelnen Titelteile (nur wenn der Titel Trenner enthält)."""
+    teile = [titel_kern(t) for t in _TITEL_TRENNER.split(titel or "")]
+    return [t for t in teile if t] if len(teile) > 1 else []
+
+
+def _teile_passen(a: set[str], b: set[str]) -> bool:
+    """Gleicher Titelteil – auch wenn einer ein einzelnes, längeres Wort ist („BACKROOMS“ ⊂ „BACKROOMS (Extended Cut)“)."""
+    if a == b:
+        return True
+    klein, gross = sorted((a, b), key=len)
+    return klein <= gross and (len(klein) >= 2 or len(next(iter(klein))) >= 5)
+
+
 def aehnliches_event(a: dict, b: dict) -> bool:
     """
     Dasselbe Event trotz abweichender Schreibweise? Nur bei gleichem Datum UND gleicher (vorhandener)
@@ -130,6 +149,12 @@ def aehnliches_event(a: dict, b: dict) -> bool:
     if not titel_a or not titel_b:
         return False
     if titel_a == titel_b:
+        return True
+    # Titel mit Zusatz bzw. Original-/deutschem Titel: Teile einzeln vergleichen
+    # (Zeit und Ort stimmen hier schon überein)
+    teile_a = _titel_teile(a.get("titel") or "") or [titel_a]
+    teile_b = _titel_teile(b.get("titel") or "") or [titel_b]
+    if (len(teile_a) > 1 or len(teile_b) > 1) and any(_teile_passen(x, y) for x in teile_a for y in teile_b):
         return True
     klein, gross = sorted((titel_a, titel_b), key=len)
     # Ein Titel enthält den anderen ganz („Sibel Schick“ ⊂ „Sibel Schick im Gespräch“) – mindestens 2 Wörter

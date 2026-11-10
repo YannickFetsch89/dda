@@ -3,7 +3,7 @@
 import unittest
 
 from database.client import _anreicherungs_update_bauen
-from pipeline.deduplication import deduplizieren, ist_rausgegangen
+from pipeline.deduplication import aehnliches_event, deduplizieren, ist_rausgegangen
 
 RG_BILD = "https://imageflow.rausgegangen.de/url/abc.jpg"
 
@@ -34,6 +34,38 @@ class ErkennungTest(unittest.TestCase):
         self.assertTrue(ist_rausgegangen({"quelle_name": None, "quelle_url": "https://rausgegangen.de/x"}))
         self.assertFalse(ist_rausgegangen(zakk()))
         self.assertFalse(ist_rausgegangen({}))
+
+
+def film(titel, uhrzeit="20:00", ort="Black Box Kino im Filmmuseum Düsseldorf"):
+    return {"titel": titel, "ort": ort, "datum": "2026-11-22", "uhrzeit": uhrzeit}
+
+
+class TitelteileTest(unittest.TestCase):
+    """Rausgegangen hängt Reihe und Spielort an, das Filmmuseum nennt Original- und deutschen Titel."""
+
+    def test_gleiche_vorstellung_trotz_zusatz(self):
+        rg_ort = "Filmmuseum Düsseldorf"
+        paare = [
+            ("S.O.S. EISBERG | Filmreihe - Hans Ertl: Virtuose an der Kamera - Black Box im Filmmuseum Düsseldorf",
+             "S.O.S. EISBERG"),
+            ("BACKROOMS (Extended Cut) | Filmreihe 'Liminal Spaces' - Black Box im Filmmuseum Düsseldorf", "BACKROOMS"),
+            ("I WALKED WITH A ZOMBIE | Stationen der Filmgeschichte - Black Box im Filmmuseum Düsseldorf",
+             "I WALKED WITH A ZOMBIE · ICH FOLGTE EINEM ZOMBIE"),
+            ("RONJA RÄUBERTOCHTER | Familienkino am Sonntag - Black Box im Filmmuseum Düsseldorf",
+             "RONJA RÖVARDOTTER · RONJA RÄUBERTOCHTER"),
+        ]
+        for rg_titel, titel in paare:
+            with self.subTest(titel=titel):
+                self.assertTrue(aehnliches_event(film(rg_titel, ort=rg_ort), film(titel)))
+
+    def test_keine_falschen_treffer(self):
+        # Andere Uhrzeit bleibt weitere Vorstellung
+        self.assertFalse(aehnliches_event(film("BACKROOMS | Filmreihe"), film("BACKROOMS", "16:30")))
+        # Gleiche Reihe, anderer Film zur selben Zeit an einem anderen Ort
+        self.assertFalse(aehnliches_event(film("ALPHA | Französischer Filmclub"), film("ANORA | Französischer Filmclub",
+                                                                                        ort="Metropol Kino")))
+        # Kurzes Einzelwort reicht nicht
+        self.assertFalse(aehnliches_event(film("Jazz | Abend im Foyer"), film("Jazz Brunch mit Trio")))
 
 
 class LaufTest(unittest.TestCase):
