@@ -12,7 +12,13 @@ from typing import Optional
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from pipeline.deduplication import KATEGORIE_FEST_FELD, aehnliches_event, kategorie_ersetzen, preis_normalisieren
+from pipeline.deduplication import (
+    KATEGORIE_FEST_FELD,
+    aehnliches_event,
+    ist_rausgegangen,
+    kategorie_ersetzen,
+    preis_normalisieren,
+)
 from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
@@ -36,6 +42,16 @@ _ANREICHERBARE_FELDER: list[str] = [
     "stadtteil",
 ]
 
+# Quellenangaben, die beim Vorrang-Wechsel (Rausgegangen → andere Quelle) mitgelesen werden
+_QUELL_FELDER: list[str] = ["quelle_name", "quelle_url"]
+
+# Felder, die bei einem Rausgegangen-Eintrag von der anderen Quelle übernommen werden,
+# auch wenn sie schon belegt sind (sonst gilt überall: nur leere Felder auffüllen)
+_VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
+
+# Spalten, die zum Abgleich bestehender Events geladen werden
+_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + _ANREICHERBARE_FELDER)
+
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
 # post_typ (feed | reel) setzen einige Tier-3-Scraper, die Pipeline nutzt es aber noch nicht
@@ -56,8 +72,12 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
 
     Regeln:
     - Feld wird ergänzt wenn im bestehenden Eintrag None/leer und im neuen Eintrag belegt
+      (gilt in jede Richtung – auch Rausgegangen füllt Lücken einer anderen Quelle)
     - bild_url: Rausgegangen-Bild wird durch nicht-Rausgegangen-Bild ersetzt,
       auch wenn bereits vorhanden
+    - Vorrang: Stammt der bestehende Eintrag von Rausgegangen und der neue von einer anderen
+      Quelle, wechselt die Quelle (quelle_name, quelle_url); Bild, Beschreibung, Preis und
+      Adresse kommen dann von der anderen Quelle, soweit sie dort belegt sind. Slug bleibt.
 
     Args:
         bestehendes: Aktueller DB-Eintrag
@@ -85,6 +105,13 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
             if not db_wert and neu_wert:
                 update[feld] = neu_wert
 
+    # Ohne eigenen Link bleibt Rausgegangen Quelle (sonst zeigte „Zum Termin“ weiter auf Rausgegangen)
+    if ist_rausgegangen(bestehendes) and neu.get("quelle_url") and not ist_rausgegangen(neu):
+        for feld in _QUELL_FELDER + _VORRANG_FELDER:
+            neu_wert = neu.get(feld)
+            if neu_wert and neu_wert != bestehendes.get(feld):
+                update[feld] = neu_wert
+
     return update
 
 
@@ -94,7 +121,7 @@ def _tagesbestand(db: Client, datum: str, cache: dict[str, list[dict]]) -> list[
         try:
             antwort = (
                 db.table("events")
-                .select("id,titel,ort,datum,slug," + ",".join(_ANREICHERBARE_FELDER))
+                .select("id,titel,ort,datum,slug," + _ABGLEICH_SPALTEN)
                 .eq("datum", datum)
                 .execute()
             )
@@ -127,7 +154,7 @@ def _slug_pruefen(db: Client, basis: str, uhrzeit: Optional[str]) -> tuple[Optio
     try:
         antwort = (
             db.table("events")
-            .select("id,slug,uhrzeit," + ",".join(f for f in _ANREICHERBARE_FELDER if f != "uhrzeit"))
+            .select("id,slug," + _ABGLEICH_SPALTEN)
             # PostgREST-Platzhalter "*" statt "%": ein "%" am Ende wird nicht URL-kodiert und lässt die
             # Anfrage beim Supabase-Gateway scheitern (Cloudflare 1101) – dann fehlte der Abgleich und jede
             # weitere Vorstellung am selben Tag scheiterte am eindeutigen Slug (bis 2026-11-05)
@@ -206,6 +233,8 @@ def events_speichern(events: list[dict]) -> dict:
       - Fehlende Felder werden aus dem neuen Eintrag ergänzt.
       - Ein Rausgegangen-Bild wird durch ein Bild einer anderen Quelle ersetzt,
         sofern der neue Eintrag ein besseres Bild mitbringt.
+      - Ein Rausgegangen-Eintrag wechselt zur anderen Quelle (Vorrang-Regel, siehe
+        _anreicherungs_update_bauen); der Slug bleibt.
 
     Args:
         events: Liste von Event-Dicts im DiesDasDüsseldorf-Format
@@ -246,7 +275,7 @@ def events_speichern(events: list[dict]) -> dict:
             # gleiche Uhrzeit (oder bei einem fehlt sie). Andere Uhrzeit = weiterer Termin am selben Tag.
             treffer = (
                 db.table("events")
-                .select("id," + ",".join(_ANREICHERBARE_FELDER))
+                .select("id," + _ABGLEICH_SPALTEN)
                 .eq("titel", titel)
                 .eq("datum", datum)
                 .eq("ort", ort)
@@ -302,7 +331,12 @@ def events_speichern(events: list[dict]) -> dict:
 
                 if update:
                     db.table("events").update(update).eq("id", bestehendes["id"]).execute()
+                    # Zwischengespeicherten Stand nachziehen (Tagesbestand nutzt dieselben Dicts)
+                    bestehendes.update(update)
                     angereichert += 1
+                    if "quelle_name" in update:
+                        logger.info("Quelle gewechselt: Rausgegangen → '%s' für '%s' (%s)",
+                                    update["quelle_name"], titel[:40], datum)
                     logger.info(
                         "Duplikat angereichert in DB: '%s' (%s) – Felder: %s",
                         titel[:40], datum, ", ".join(update.keys()),

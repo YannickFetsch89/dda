@@ -175,10 +175,21 @@ def _normalisiere_schluessel(titel: str, datum: str, ort: str) -> str:
     return f"{_norm(titel)}|{datum}|{_norm(ort)}"
 
 
+def ist_rausgegangen(event: dict) -> bool:
+    """True, wenn ein Event (bzw. DB-Eintrag) Rausgegangen als Quelle hat."""
+    name = (event.get("quelle_name") or "").lower()
+    url = (event.get("quelle_url") or "").lower()
+    return "rausgegangen" in name or "rausgegangen.de" in url
+
+
 def _events_mergen(basis: dict, duplikat: dict) -> dict:
     """
     Mergt zwei Events: Fehlende Felder der Basis werden aus dem Duplikat ergänzt.
     Bei bild_url: Rausgegangen-Bilder werden durch andere Quellen ersetzt.
+
+    Vorrang: Trifft ein Rausgegangen-Eintrag auf dasselbe Event aus einer anderen Quelle,
+    wird die andere Quelle zur Basis (Link, Quelle, Bild, Beschreibung, Preis, Adresse).
+    Rausgegangen füllt danach nur noch Felder auf, die dort fehlen.
 
     Args:
         basis: Primärer Event-Eintrag (wird angereichert)
@@ -187,6 +198,13 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
     Returns:
         Angereicherter Event-Dict
     """
+    if ist_rausgegangen(basis) and not ist_rausgegangen(duplikat):
+        logger.debug(
+            "Quelle getauscht: Rausgegangen → '%s' für '%s'",
+            duplikat.get("quelle_name", "?"), (duplikat.get("titel") or "")[:40],
+        )
+        basis, duplikat = duplikat, basis
+
     merged = dict(basis)
 
     for feld in _ANREICHERBARE_FELDER:
@@ -227,7 +245,8 @@ def deduplizieren(events: list[dict]) -> list[dict]:
 
     Duplikate (gleicher Titel + Datum + Ort) werden nicht verworfen,
     sondern in den ersten Eintrag gemergt. Fehlende Felder werden
-    ergänzt, Rausgegangen-Bilder durch bessere Quellen ersetzt.
+    ergänzt, Rausgegangen-Bilder durch bessere Quellen ersetzt. Liefert eine andere
+    Quelle dasselbe Event wie Rausgegangen, wird sie zur Hauptquelle (siehe _events_mergen).
 
     Verschiedene Uhrzeiten am selben Tag sind KEINE Duplikate, sondern weitere
     Termine (z.B. Führungen um 11 und 14 Uhr) und bleiben getrennt. Fehlt bei
@@ -285,7 +304,7 @@ def deduplizieren(events: list[dict]) -> list[dict]:
 
             # Prüfen ob tatsächlich etwas angereichert wurde
             veraenderte_felder = [
-                f for f in _ANREICHERBARE_FELDER
+                f for f in ["quelle_name", *_ANREICHERBARE_FELDER]
                 if vorher.get(f) != nachher.get(f)
             ]
             if veraenderte_felder:

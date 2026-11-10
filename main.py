@@ -83,7 +83,6 @@ logger = logging.getLogger(__name__)
 # bei Umbenennung reißt dort der Verlauf der Quelle ab.
 QUELLEN = [
     # Tier 1: Aggregatoren und APIs
-    ("Rausgegangen", 1, rausgegangen.scrape),
     ("Ticketmaster", 1, ticketmaster.scrape),
     ("Kulturportal Düsseldorf", 1, kulturportal.scrape),
     ("VisitDüsseldorf", 1, visitduesseldorf.scrape),
@@ -130,6 +129,9 @@ QUELLEN = [
     ("StartupDorf Meetup", 3, startupdorf.scrape),
     ("Street Food Thursday", 3, street_food_thursday.scrape),
     ("Auf ins Viertel", 3, auf_ins_viertel.scrape),  # kulinarische Stadtführungen (bookingkit)
+    # Rausgegangen zuletzt: Events, die eine andere Quelle schon liefert, behalten diese als Quelle –
+    # Rausgegangen ergänzt nur noch fehlende Felder (Vorrang-Regel in pipeline/deduplication.py)
+    ("Rausgegangen", 1, rausgegangen.scrape),
 ]
 
 
