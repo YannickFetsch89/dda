@@ -10,8 +10,8 @@ import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { OrtKartenGrid, OrtLinkListe } from "@/components/ort-karten";
 import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
-  ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche, preisStufe,
-  preisZeichen, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
+  ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche,
+  PREIS_STUFEN, preisStufeOrt, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
 import { orteLaden } from "@/lib/orte";
@@ -37,7 +37,7 @@ function fragebogenDaten(orte: DddOrt[]): FragebogenDaten {
     orte: orte.map((o) => {
       const typ: OrtTyp = o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp);
       const maske = tags.reduce((m, t, i) => (o.tags.includes(t.name) ? m | (1 << i) : m), 0);
-      return [ALLE_TYPEN.indexOf(typ), stIndex.get(o.stadtteil ?? "") ?? -1, kIndex.get(kueche(o)?.slug ?? "") ?? -1, preisStufe(o.preis_niveau), maske];
+      return [ALLE_TYPEN.indexOf(typ), stIndex.get(o.stadtteil ?? "") ?? -1, kIndex.get(kueche(o)?.slug ?? "") ?? -1, preisStufeOrt(o), maske];
     }),
   };
 }
@@ -105,6 +105,7 @@ async function Inhalt({ searchParams, alle }: { searchParams: Promise<SP>; alle:
 
   // Zählwerte: jeweils ohne den eigenen Filter, damit man sieht, was ein Wechsel bringt
   const fuerTyp = filtern(alle, f, ["typen"]);
+  const fuerPreis = filtern(alle, f, ["preise"]);
   const stadtteile = zaehlen(filtern(alle, f, ["stadtteile"]), (o) => o.stadtteil);
   const kuechen = zaehlen(filtern(alle, f, ["kuechen"]), (o) => kueche(o)?.name);
   const stadtteilName = (slug: string) => stadtteile.find((s) => s.slug === slug)?.name ?? slug;
@@ -130,7 +131,7 @@ async function Inhalt({ searchParams, alle }: { searchParams: Promise<SP>; alle:
   const aktiv: StickyLink[] = [
     ...f.stadtteile.map((s) => ({ label: stadtteilName(s), href: href({ stadtteile: f.stadtteile.filter((x) => x !== s) }) })),
     ...f.kuechen.map((k) => ({ label: kuecheName(k), href: href({ kuechen: f.kuechen.filter((x) => x !== k) }) })),
-    ...f.preise.map((p) => ({ label: preisZeichen(p), href: href({ preise: f.preise.filter((x) => x !== p) }) })),
+    ...f.preise.map((p) => ({ label: PREIS_STUFEN.find((s) => s.wert === p)?.label ?? String(p), href: href({ preise: f.preise.filter((x) => x !== p) }) })),
     ...f.tags.map((t) => ({ label: tagName.get(t) ?? t, href: href({ tags: f.tags.filter((x) => x !== t) }) })),
   ];
   const hatFilter = !typenStandard(f.typen) || aktiv.length > 0;
@@ -205,8 +206,11 @@ async function Inhalt({ searchParams, alle }: { searchParams: Promise<SP>; alle:
             </details>
             <ScrollReihe className="gd-zeile__chips" label="Filter" aktivZeigen={false}>
               <span className="gd-trenner gd-trenner--hoch gd-nur-breit" aria-hidden />
-              {[1, 2, 3].map((p) => (
-                <Chip key={p} href={href({ preise: umschalten(f.preise, p) })} aktiv={f.preise.includes(p)}>{preisZeichen(p)}</Chip>
+              {/* Preis pro Person (Mehrfachauswahl), Zahl = Treffer mit dieser Stufe bei den übrigen Filtern */}
+              {PREIS_STUFEN.map((s) => (
+                <Chip key={s.wert} href={href({ preise: umschalten(f.preise, s.wert) })} aktiv={f.preise.includes(s.wert)}>
+                  {s.wert === 4 && <Icon name="star" />}{s.label}<span className="gd-chip__zahl">{fuerPreis.filter((o) => preisStufeOrt(o) === s.wert).length}</span>
+                </Chip>
               ))}
               <span className="gd-trenner gd-trenner--hoch" aria-hidden />
               {FILTER_TAGS.map((t) => {

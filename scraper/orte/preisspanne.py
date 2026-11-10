@@ -12,6 +12,7 @@ Zwei Quellen, kombiniert:
 Ergebnis in orte.extras:
   google_preisspanne  {von, bis|None, abgerufen}       Google-Rohwert (bis None = „ab …“)
   preis_bewertungen   {von, bis, belege, modell}      KI-Schätzung aus Bewertungen
+  preis_website       {von, bis, belege, seiten}      Menüpreise von der eigenen Website (Fine Dining)
   preis_pp            {von, bis, quelle}              kombinierte Spanne pro Person
 Das bestehende preis_niveau (€/€€/€€€) wird hier NICHT geändert.
 
@@ -22,6 +23,7 @@ die Ergebnisse in die Datenbank.
 Nutzung:
   python -m scraper.orte.preisspanne google [--max N]     # Google abrufen (kostet)
   python -m scraper.orte.preisspanne ki [--max N]         # Bewertungen auswerten (Cent-Beträge)
+  python -m scraper.orte.preisspanne website              # Menüpreise der Fine-Dining-Websites (Google „ab 100 €“)
   python -m scraper.orte.preisspanne auswertung           # Verteilung anzeigen, nichts schreiben
   python -m scraper.orte.preisspanne schreiben [--dry-run]
 """
@@ -50,7 +52,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 _ORDNER = Path(__file__).resolve().parents[2] / "data" / "orte"
 # Getrennte Dateien je Schritt – beide Schritte können gleichzeitig laufen, ohne sich zu überschreiben
-DATEIEN = {"google": _ORDNER / "preisspanne.json", "ki": _ORDNER / "preisspanne_ki.json"}
+DATEIEN = {"google": _ORDNER / "preisspanne.json", "ki": _ORDNER / "preisspanne_ki.json",
+           "website": _ORDNER / "preisspanne_website.json"}
 TYPEN = ("restaurant", "cafe", "imbiss")
 FELDMASKE = "priceRange,priceLevel"
 MODELL = "claude-haiku-5-5"
@@ -188,13 +191,228 @@ def ki_auswerten(max_anzahl: int) -> None:
                 len(offen), treffer, ein / 1e6 * 0.10 + aus / 1e6 * 0.50)
 
 
+# ── 2b. Menüpreise von der eigenen Website (Fine Dining) ─────────────────────
+# Google nennt bei Fine Dining nur „ab 100 €“. Die Restaurants veröffentlichen ihre Menüpreise meist
+# selbst („7 Gänge 189 €“) – die lesen wir von Startseite und Menü-/Preis-Unterseiten, mit Beleg.
+
+MENUE_LINK = re.compile(r"men[uü]|speisekarte|karte|degustation|preise|angebot|abend|dinner|tasting", re.IGNORECASE)
+PREISZEILE = re.compile(r"\d{2,3}(?:[,.]\d{2})?\s*(?:€|eur|euro)|(?:€|eur)\s*\d{2,3}|\bg[äa]ng|\bmen[uü]", re.IGNORECASE)
+
+SCHEMA_WEBSITE = {
+    "type": "object",
+    "properties": {
+        "hat_preise": {"type": "boolean"},
+        "von": {"type": "integer"},
+        "bis": {"type": "integer"},
+        "belege": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["hat_preise", "von", "bis", "belege"],
+    "additionalProperties": False,
+}
+
+SYSTEM_WEBSITE = """Du bekommst Textausschnitte von der Website eines gehobenen Restaurants in Düsseldorf.
+Finde heraus, was ein Abendessen pro Person kostet: Preise der Abend-/Degustations-/Tasting-Menüs
+(ohne Getränke- oder Weinbegleitung), bei reiner À-la-carte-Karte Vorspeise + Hauptgang + Dessert.
+- Mittagsmenüs, Business Lunch, Gutscheine, einzelne Beilagen oder Getränke zählen NICHT.
+- „von“ = günstigstes Abendmenü, „bis“ = teuerstes (ganze Euro, pro Person). Nur ein Menü: von = bis.
+- „hat_preise“ false, wenn keine solchen Preise im Text stehen (dann von/bis 0, belege leer).
+- „belege“: 1–3 WÖRTLICHE Zitate (exakt wie im Text) mit den Preisen."""
+
+
+def _robots_erlaubt(url: str) -> bool:
+    from urllib import robotparser
+    from urllib.parse import urljoin
+
+    rp = robotparser.RobotFileParser()
+    try:
+        antwort = httpx.get(urljoin(url, "/robots.txt"), timeout=15, follow_redirects=True)
+        if antwort.status_code >= 400:
+            return True
+        rp.parse(antwort.text.splitlines())
+        return rp.can_fetch("*", url)
+    except Exception:
+        return True
+
+
+def _seiten_text(start: str) -> tuple[str, list[str], list[str]]:
+    """Text von Startseite + bis zu 3 Menü-/Preis-Unterseiten derselben Domain (nur Zeilen mit Preisen/Menüs)."""
+    from urllib.parse import urljoin, urlparse
+
+    from bs4 import BeautifulSoup
+
+    from scraper.utils.http_client import seite_abrufen
+
+    domain = urlparse(start).netloc.removeprefix("www.")
+    urls, besucht, zeilen, pdfs = [start], [], [], []
+    while urls and len(besucht) < 4:
+        url = urls.pop(0)
+        if url in besucht or not _robots_erlaubt(url):
+            continue
+        html = seite_abrufen(url, logger, wartezeit=2.0)
+        besucht.append(url)
+        if not html:
+            continue
+        soup = BeautifulSoup(html, "html.parser")
+        if len(besucht) == 1:
+            for a in soup.find_all("a", href=True):
+                ziel = urljoin(url, a["href"]).split("#")[0]
+                if ziel.lower().split("?")[0].endswith(".pdf") and MENUE_LINK.search(a.get_text(" ", strip=True) + " " + ziel):
+                    if ziel not in pdfs:
+                        pdfs.append(ziel)
+                    continue
+                if (urlparse(ziel).netloc.removeprefix("www.") == domain and not ziel.lower().endswith(".pdf")
+                        and MENUE_LINK.search(a.get_text(" ", strip=True) + " " + a["href"]) and ziel not in urls):
+                    urls.append(ziel)
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        for zeile in soup.get_text("\n", strip=True).splitlines():
+            if PREISZEILE.search(zeile) and zeile not in zeilen and len(zeile) < 400:
+                zeilen.append(zeile)
+    return "\n".join(zeilen)[:8000], besucht, pdfs
+
+
+def _seiten_text_browser(start: str) -> tuple[str, list[str], list[str]]:
+    """
+    Wie _seiten_text, aber mit echtem Browser (Playwright) – für Websites, deren Inhalt erst per
+    JavaScript entsteht (Wix, Squarespace …). Startseite + bis zu 3 Menü-/Preis-Unterseiten.
+    """
+    from urllib.parse import urljoin, urlparse
+
+    from playwright.sync_api import sync_playwright
+
+    domain = urlparse(start).netloc.removeprefix("www.")
+    zeilen, besucht, pdfs = [], [], []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        seite = browser.new_page(locale="de-DE")
+        urls = [start]
+        while urls and len(besucht) < 4:
+            url = urls.pop(0)
+            if url in besucht or not _robots_erlaubt(url):
+                continue
+            time.sleep(2)  # Rate Limiting
+            try:
+                seite.goto(url, wait_until="networkidle", timeout=30000)
+            except Exception as e:
+                logger.warning("Browser-Abruf fehlgeschlagen %s: %s", url, e)
+                besucht.append(url)
+                continue
+            besucht.append(url)
+            if len(besucht) == 1:
+                for a in seite.query_selector_all("a[href]"):
+                    try:
+                        ziel = urljoin(url, a.get_attribute("href") or "").split("#")[0]
+                        beschriftung = (a.inner_text() or "") + " " + ziel
+                    except Exception:
+                        continue
+                    if ziel.lower().split("?")[0].endswith(".pdf") and MENUE_LINK.search(beschriftung):
+                        if ziel not in pdfs:
+                            pdfs.append(ziel)
+                        continue
+                    if (urlparse(ziel).netloc.removeprefix("www.") == domain and not ziel.lower().endswith(".pdf")
+                            and MENUE_LINK.search(beschriftung) and ziel not in urls and ziel != url):
+                        urls.append(ziel)
+            for zeile in (seite.inner_text("body") or "").splitlines():
+                zeile = zeile.strip()
+                if zeile and PREISZEILE.search(zeile) and zeile not in zeilen and len(zeile) < 400:
+                    zeilen.append(zeile)
+        browser.close()
+    return "\n".join(zeilen)[:8000], besucht, pdfs
+
+
+def _pdf_auswerten(client, name: str, pdfs: list[str]) -> dict | None:
+    """
+    Menü-PDF direkt an Claude (document-Block). Ohne PDF-Bibliothek kann der Code die Zitate nicht
+    gegen den PDF-Text prüfen – solche Werte tragen „beleg_ungeprueft“ und werden zum Gegenlesen gelistet.
+    """
+    import base64
+
+    for url in pdfs:
+        if not _robots_erlaubt(url):
+            continue
+        time.sleep(2)
+        try:
+            antwort = httpx.get(url, timeout=30, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 (dies.das.duesseldorf)"})
+            antwort.raise_for_status()
+            if len(antwort.content) > 10_000_000 or not antwort.content.startswith(b"%PDF"):
+                continue
+            ki_antwort = client.messages.create(
+                model=MODELL, max_tokens=2000, system=SYSTEM_WEBSITE,
+                output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA_WEBSITE}},
+                messages=[{"role": "user", "content": [
+                    {"type": "document", "source": {"type": "base64", "media_type": "application/pdf",
+                                                    "data": base64.standard_b64encode(antwort.content).decode()}},
+                    {"type": "text", "text": f"Restaurant: {name}. Das Dokument ist eine Menü-/Speisekarte von der Website."},
+                ]}],
+            )
+            ki = json.loads(next(b.text for b in ki_antwort.content if b.type == "text"))
+        except Exception as e:
+            logger.warning("PDF %s nicht auswertbar: %s", url, e)
+            continue
+        belege = [b for b in ki.get("belege") or [] if re.search(r"\d", b)]
+        von, bis = int(ki.get("von") or 0), int(ki.get("bis") or 0)
+        if ki.get("hat_preise") and belege and 40 <= von <= bis <= 600 and any(str(von) in b for b in belege):
+            return {"von": von, "bis": bis, "belege": belege, "pdf": url, "beleg_ungeprueft": True}
+    return None
+
+
+def website_auswerten(nur_fine_dining: bool = True) -> None:
+    import anthropic
+
+    from database.client import get_supabase_client
+
+    daten = speicher_laden()
+    client = anthropic.Anthropic()
+    db = get_supabase_client()
+    webseiten = {o["id"]: o.get("webseite") for o in alle_zeilen(db, "orte", "id, webseite")}
+    # Neu versuchen: noch nie geprüfte Orte und solche ohne Fund (z. B. vor dem Browser-Abruf)
+    orte = [o for o in orte_laden() if webseiten.get(o["id"]) and "von" not in (daten["website"].get(o["id"]) or {})]
+    if nur_fine_dining:
+        orte = [o for o in orte if ((daten["google"].get(o.get("google_place_id") or "") or {}).get("von") or 0) >= 100]
+    logger.info("Websites: %d Orte", len(orte))
+    for o in orte:
+        start = webseiten[o["id"]].split("?")[0]
+        text, besucht, pdfs = _seiten_text(start)
+        if len(text.splitlines()) < 4:
+            # Kaum Preiszeilen im HTML – Inhalt entsteht vermutlich per JavaScript
+            text, besucht, pdfs_browser = _seiten_text_browser(start)
+            pdfs += [x for x in pdfs_browser if x not in pdfs]
+        eintrag = {"keine": True, "seiten": besucht, "datum": date.today().isoformat()}
+        if text:
+            try:
+                antwort = client.messages.create(
+                    model=MODELL, max_tokens=2000, system=SYSTEM_WEBSITE,
+                    output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA_WEBSITE}},
+                    messages=[{"role": "user", "content": f"Restaurant: {o['name']}\n\nTextausschnitte:\n{text}"}],
+                )
+                ki = json.loads(next(b.text for b in antwort.content if b.type == "text"))
+                belege = [b for b in ki.get("belege") or [] if belegt(b, text) and re.search(r"\d", b)]
+                von, bis = int(ki.get("von") or 0), int(ki.get("bis") or 0)
+                if ki.get("hat_preise") and belege and 40 <= von <= bis <= 600:
+                    eintrag = {"von": von, "bis": bis, "belege": belege, "seiten": besucht, "datum": date.today().isoformat()}
+            except Exception as e:
+                logger.error("Fehler bei '%s': %s", o["name"], e)
+                continue
+        if "von" not in eintrag and pdfs:
+            pdf_eintrag = _pdf_auswerten(client, o["name"], pdfs[:2])
+            if pdf_eintrag:
+                eintrag = {**pdf_eintrag, "seiten": besucht, "datum": date.today().isoformat()}
+        daten["website"][o["id"]] = eintrag
+        speicher_sichern(daten, "website")
+        logger.info("  %s: %s", o["name"], f"{eintrag['von']}–{eintrag['bis']} € ({eintrag['belege'][0][:60]})" if "von" in eintrag else "keine Menüpreise gefunden")
+
+
 # ── 3. Kombinieren ────────────────────────────────────────────────────────────
 
-def kombinieren(google: dict | None, ki: dict | None) -> dict | None:
+def kombinieren(google: dict | None, ki: dict | None, website: dict | None = None) -> dict | None:
     """
     Google-Spanne hat Vorrang (gleichmäßige Methodik über alle Orte). Fehlt Googles Obergrenze
     („ab 50 €“), ergänzt die KI-Schätzung sie, wenn sie darüber liegt. Ohne Google zählt die KI.
+    Menüpreise von der eigenen Website (Fine Dining) sind am genauesten und gehen allem vor.
     """
+    w = website if website and "von" in website else None
+    if w:
+        return {"von": w["von"], "bis": w["bis"], "quelle": "website"}
     g = google if google and google.get("von") is not None else None
     k = ki if ki and not ki.get("keine") else None
     if g and k:
@@ -210,10 +428,10 @@ def kombinieren(google: dict | None, ki: dict | None) -> dict | None:
 def auswertung() -> None:
     daten = speicher_laden()
     orte = orte_laden()
-    zahl = {"google": 0, "google+bewertungen": 0, "bewertungen": 0, "keine": 0}
+    zahl = {"website": 0, "google": 0, "google+bewertungen": 0, "bewertungen": 0, "keine": 0}
     nach_stufe: dict[str, list[float]] = {}
     for o in orte:
-        pp = kombinieren(daten["google"].get(o.get("google_place_id") or ""), daten["ki"].get(o["id"]))
+        pp = kombinieren(daten["google"].get(o.get("google_place_id") or ""), daten["ki"].get(o["id"]), daten["website"].get(o["id"]))
         if not pp:
             zahl["keine"] += 1
             continue
@@ -238,12 +456,15 @@ def schreiben(dry_run: bool) -> None:
         ex = dict(o.get("extras") or {})
         g = daten["google"].get(o.get("google_place_id") or "")
         k = daten["ki"].get(o["id"])
+        w = daten["website"].get(o["id"])
         neu = dict(ex)
         if g is not None:
             neu["google_preisspanne"] = {"von": g.get("von"), "bis": g.get("bis"), "abgerufen": g.get("abgerufen")}
         if k and not k.get("keine"):
             neu["preis_bewertungen"] = {x: k[x] for x in ("von", "bis", "belege", "modell", "datum")}
-        pp = kombinieren(g, k)
+        if w and "von" in w:
+            neu["preis_website"] = {x: w[x] for x in ("von", "bis", "belege", "seiten", "datum", "pdf", "beleg_ungeprueft") if x in w}
+        pp = kombinieren(g, k, w)
         if pp:
             neu["preis_pp"] = pp
         if neu != ex:
@@ -255,11 +476,11 @@ def schreiben(dry_run: bool) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("schritt", choices=["google", "ki", "auswertung", "schreiben"])
+    parser.add_argument("schritt", choices=["google", "ki", "website", "auswertung", "schreiben"])
     parser.add_argument("--max", type=int, default=100000)
     parser.add_argument("--dry-run", action="store_true")
     a = parser.parse_args()
-    {"google": lambda: google_abrufen(a.max), "ki": lambda: ki_auswerten(a.max),
+    {"google": lambda: google_abrufen(a.max), "ki": lambda: ki_auswerten(a.max), "website": website_auswerten,
      "auswertung": auswertung, "schreiben": lambda: schreiben(a.dry_run)}[a.schritt]()
 
 

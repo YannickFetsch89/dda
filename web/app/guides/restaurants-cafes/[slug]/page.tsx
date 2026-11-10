@@ -9,7 +9,7 @@ import { EventKarte, Icon } from "@/components/karten";
 import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { eventPoolLaden } from "@/lib/daten";
-import { kueche, sortieren, sterne, zahl } from "@/lib/guide-filter";
+import { kueche, preisDetail, preisKurz, sortieren, sterne, zahl } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
@@ -32,7 +32,6 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
-const PREIS_TEXT: Record<string, string> = { "€": "günstig", "€€": "mittleres Preisniveau", "€€€": "gehoben" };
 
 async function EventsInDerNaehe({ ort }: { ort: DddOrt }) {
   if (!ort.stadtteil) return null;
@@ -102,7 +101,8 @@ export default async function OrtDetail(props: Props) {
     ort.latitude != null && ort.longitude != null ? `${ort.latitude},${ort.longitude}` : kartenAdresse,
   )}`;
   const [strasse, ...ortTeil] = (ort.adresse ?? "").split(", ");
-  const typZeile = [typLabel(ort.typ), ort.preis_niveau, ort.stadtteil].filter(Boolean).join(" · ");
+  const typZeile = [typLabel(ort.typ), preisKurz(ort), ort.stadtteil].filter(Boolean).join(" · ");
+  const preis = preisDetail(ort);
   const details = [
     kuecheName && { label: "Küche", wert: kuecheName },
     highlightGericht && { label: "Highlight-Gericht", wert: highlightGericht },
@@ -164,7 +164,7 @@ export default async function OrtDetail(props: Props) {
                 l2={ort.google_bewertungen_anzahl != null ? `${zahl(ort.google_bewertungen_anzahl)} Google-Bewertungen` : undefined}
               />
             )}
-            {ort.preis_niveau && <InfoZeile icon="payments" l1={ort.preis_niveau} l2={PREIS_TEXT[ort.preis_niveau]} />}
+            {preis && <InfoZeile icon="payments" l1={preis.zeile} l2={preis.herkunft} />}
           </div>
           {webseite && (
             <a href={webseite} target="_blank" rel="noopener" className="gd-knopf gd-knopf--navy">

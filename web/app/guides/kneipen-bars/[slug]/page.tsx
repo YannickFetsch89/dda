@@ -11,7 +11,7 @@ import { EventKarte, Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { eventPoolLaden } from "@/lib/daten";
-import { sortieren, sterne, zahl } from "@/lib/guide-filter";
+import { preisDetail, sortieren, sterne, zahl } from "@/lib/guide-filter";
 import { RAUCHER_TEXT, artInfo, happyHour, raucher, spezialitaeten, vibes } from "@/lib/kneipen";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { barOrPubJsonLd, brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
@@ -45,7 +45,6 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
-const PREIS_TEXT: Record<string, string> = { "€": "günstig", "€€": "mittleres Preisniveau", "€€€": "gehoben" };
 // Events in der Nähe: Nightlife und Musik zuerst (Events haben keine Koordinaten → gleicher Stadtteil)
 const BEVORZUGT = new Set(["nightlife", "musik"]);
 
@@ -194,7 +193,7 @@ export default async function KneipeDetail(props: Props) {
                 l2={ort.google_bewertungen_anzahl != null ? `${zahl(ort.google_bewertungen_anzahl)} Google-Bewertungen` : undefined}
               />
             )}
-            {ort.preis_niveau && <InfoZeile icon="payments" l1={ort.preis_niveau} l2={PREIS_TEXT[ort.preis_niveau]} />}
+            {preisDetail(ort) && <InfoZeile icon="payments" l1={preisDetail(ort)!.zeile} l2={preisDetail(ort)!.herkunft} />}
           </div>
           {webseite && (
             <a href={webseite} target="_blank" rel="noopener" className="gd-knopf gd-knopf--navy">

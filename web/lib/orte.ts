@@ -23,6 +23,8 @@ const EXTRAS_FELDER = [
   "unterart", "spezialitaeten", "vibes", "happy_hour", "raucher", "auch_restaurant", "auch_kneipe",
   // strukturierte Öffnungszeiten für schema.org (JSON-LD)
   "oeffnungszeiten_perioden",
+  // Preis pro Person (scraper/orte/preisspanne.py)
+  "preis_pp", "google_preisspanne",
 ];
 const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 

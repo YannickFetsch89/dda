@@ -1333,7 +1333,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .fb__inhalt h2 { font-size: 28px; line-height: 1.1; color: var(--ddd-text); }
 .fb .fb__hinweis { margin-top: -8px; font-size: 14px; color: var(--ddd-text-muted); }
 .fb__karten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 20px; }
-.fb__karten--preis { grid-template-columns: repeat(3, 1fr); padding-bottom: 0; }
+.fb__karten--preis { grid-template-columns: repeat(2, 1fr); padding-bottom: 0; }
+@media (min-width: 600px) { .fb__karten--preis { grid-template-columns: repeat(4, 1fr); } }
 .fb__karte {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px; text-align: left;
   border: 1.5px solid var(--ddd-border); border-radius: var(--r-md); background: var(--ddd-surface); color: var(--ddd-text); cursor: pointer;
@@ -1341,7 +1342,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 }
 .fb__karte .icon { font-size: 26px; color: var(--ddd-gold); margin-bottom: 6px; }
 .fb__karte b { font-size: 16px; }
-.fb__karten--preis .fb__karte b { font-size: 22px; letter-spacing: 1px; }
+.fb__karten--preis .fb__karte b { font-size: 17px; }
 .fb__karte span { font-size: 13px; color: var(--ddd-text-muted); }
 .fb__karte:hover:not(:disabled) { border-color: var(--ddd-navy); background: var(--ddd-bg); }
 .fb__karte.is-an { border-color: var(--ddd-navy); background: var(--ddd-navy-tint); }

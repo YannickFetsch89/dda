@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterHref, filterLesen, filtern, stadtteileText, typUmschalten } from "@/lib/guide-filter";
+import { filterHref, filterLesen, filtern, preisDetail, preisKurz, preisStufeOrt, stadtteileText, typUmschalten } from "@/lib/guide-filter";
 import { filterHref as kneipenHref, filterLesen as kneipenLesen, hatParameter } from "@/lib/kneipen";
 import type { DddOrt } from "@/lib/typen";
 
@@ -72,5 +72,32 @@ describe("Mehrfachauswahl Stadtteile und Art", () => {
     expect(stadtteileText([], name)).toBe("");
     expect(stadtteileText(["bilk", "flingern"], name)).toBe(" in Bilk & Flingern");
     expect(stadtteileText(["a", "b", "c"], name)).toBe(" in 3 Stadtteilen");
+  });
+});
+
+describe("Preis pro Person", () => {
+  const mitPreis = (id: string, preis_pp: unknown, google?: unknown, niveau: string | null = "€€") =>
+    ({ ...ort(id, "restaurant", { preis_pp, ...(google ? { google_preisspanne: google } : {}) }), preis_niveau: niveau }) as DddOrt;
+  it("Stufen aus der Spanne", () => {
+    expect(preisStufeOrt(mitPreis("a", { von: 10, bis: 20, quelle: "google" }))).toBe(1);
+    expect(preisStufeOrt(mitPreis("b", { von: 20, bis: 30, quelle: "google" }))).toBe(2);
+    expect(preisStufeOrt(mitPreis("c", { von: 30, bis: 60, quelle: "google" }))).toBe(3);
+    expect(preisStufeOrt(mitPreis("d", { von: 100, bis: null, quelle: "google" }))).toBe(4);
+    // Fine Dining laut Google, auch wenn das günstigste Menü auf der Website darunter liegt
+    expect(preisStufeOrt(mitPreis("e", { von: 89, bis: 89, quelle: "website" }, { von: 100, bis: null }))).toBe(4);
+    // ohne Spanne: alte €-Stufe
+    expect(preisStufeOrt(mitPreis("f", null, undefined, "€€€"))).toBe(3);
+  });
+  it("Anzeige kurz und auf der Detailseite", () => {
+    expect(preisKurz(mitPreis("a", { von: 10, bis: 20, quelle: "google" }))).toBe("10–20 €");
+    expect(preisKurz(mitPreis("d", { von: 100, bis: null, quelle: "google" }))).toBe("ab 100 €");
+    expect(preisKurz(mitPreis("g", { von: 169, bis: 199, quelle: "website" }))).toBe("Menü 169–199 €");
+    expect(preisDetail(mitPreis("a", { von: 10, bis: 20, quelle: "google+bewertungen" }))).toEqual({ zeile: "ca. 10–20 € pro Person", herkunft: "laut Google und Gästebewertungen" });
+    expect(preisDetail(mitPreis("g", { von: 189, bis: 189, quelle: "website" }))?.zeile).toBe("Menü 189 € pro Person");
+  });
+  it("Filter mit Stufe 4", () => {
+    const orte = [mitPreis("a", { von: 10, bis: 20 }), mitPreis("d", { von: 100, bis: null })];
+    expect(filtern(orte, filterLesen({ preis: "4" })).map((o) => o.id)).toEqual(["d"]);
+    expect(filterLesen({ preis: "1,4,5" }).preise).toEqual([1, 4]);
   });
 });

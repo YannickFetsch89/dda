@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
-import { kueche, sterne, zahl } from "@/lib/guide-filter";
+import { kueche, preisKurz, sterne, zahl } from "@/lib/guide-filter";
 import { artInfo } from "@/lib/kneipen";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
@@ -75,7 +75,7 @@ export function ortTypIcon(o: DddOrt): string {
 
 /** Untertitel der Card: "Japanisch · Flingern · €€" (fehlende Teile entfallen). */
 export function ortUntertitel(o: DddOrt): string {
-  return [o.untertitel ?? kueche(o)?.name, o.stadtteil, o.preis_niveau].filter(Boolean).join(" · ");
+  return [o.untertitel ?? kueche(o)?.name, o.stadtteil].filter(Boolean).join(" · ");
 }
 
 export function Bewertung({ o }: { o: DddOrt }) {
@@ -97,7 +97,7 @@ export function OrtKarte({ o }: { o: DddOrt }) {
         <div className="gd-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
           <BildImg src={bild} alt="" icon={ortTypIcon(o)} />
-          {o.preis_niveau && <span className="gd-karte__preis">{o.preis_niveau}</span>}
+          {preisKurz(o) && <span className="gd-karte__preis">{preisKurz(o)}</span>}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>
         <div className="gd-karte__text">
@@ -138,7 +138,7 @@ export function kartenOrte(orte: DddOrt[]): KartenOrt[] {
       typLabel: ortTypLabel(o),
       icon: ortTypIcon(o),
       stadtteil: o.stadtteil,
-      preis: o.preis_niveau,
+      preis: preisKurz(o),
       rating: o.google_rating != null ? sterne(o.google_rating) : null,
       anzahl: o.google_bewertungen_anzahl != null ? zahl(o.google_bewertungen_anzahl) : null,
       bild: ortBildUrl(o),

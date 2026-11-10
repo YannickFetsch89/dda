@@ -8,14 +8,14 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Icon } from "./karten";
-import { ALLE_TYPEN, SEITE, filterHref, preisZeichen, type OrtTyp } from "@/lib/guide-filter";
+import { ALLE_TYPEN, PREIS_STUFEN, SEITE, filterHref, type OrtTyp } from "@/lib/guide-filter";
 
 /** Kompakte Daten für Live-Zählwerte: Nachschlagetabellen + ein Tupel je Ort. */
 export interface FragebogenDaten {
   stadtteile: { slug: string; name: string }[];
   kuechen: { slug: string; name: string }[];
   tags: { slug: string; name: string }[];
-  /** [Typ-Index in ALLE_TYPEN, Stadtteil-Index (-1), Küchen-Index (-1), Preisstufe 0–3, Tag-Bitmaske] */
+  /** [Typ-Index in ALLE_TYPEN, Stadtteil-Index (-1), Küchen-Index (-1), Preisstufe 0–4 (PREIS_STUFEN), Tag-Bitmaske] */
   orte: [number, number, number, number, number][];
 }
 
@@ -233,14 +233,14 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
           <div className="fb__inhalt">
             {titel("Wie viel möchtest du ausgeben?")}
             <div className="fb__karten fb__karten--preis">
-              {[1, 2, 3].map((p) => {
+              {PREIS_STUFEN.map(({ wert: p, name, text }) => {
                 const an = a.preise.includes(p);
                 const n = passend({ ...a, preise: [p] }).length;
                 return (
                   <button key={p} type="button" className={`fb__karte ${an ? "is-an" : ""}`} aria-pressed={an} disabled={!n}
                     onClick={() => setA({ ...a, preise: umschalten(a.preise, p) })}>
-                    <b>{preisZeichen(p)}</b>
-                    <span>{["Günstig", "Mittel", "Gehoben"][p - 1]}</span>
+                    <b>{name}</b>
+                    <span>{text}</span>
                     <span className="fb__zahl">{n} Orte</span>
                   </button>
                 );

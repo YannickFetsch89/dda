@@ -29,7 +29,7 @@ export interface GuideFilter {
   typen: OrtTyp[]; // nie leer
   stadtteile: string[]; // Slugs (ODER)
   kuechen: string[]; // Slugs (ODER)
-  preise: number[]; // 1–3
+  preise: number[]; // 1–4 (PREIS_STUFEN)
   tags: string[]; // Slugs
   sort: SortWert;
   anzahl: number;
@@ -64,7 +64,7 @@ export function filterLesen(sp: SP): GuideFilter {
     typen: typenLesen(sp.typ),
     stadtteile: [...new Set(liste(sp.stadtteil))],
     kuechen: [...new Set(liste(sp.kueche))],
-    preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 3))],
+    preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 4))],
     tags: liste(sp.tags),
     sort: SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : "empfohlen",
     anzahl: Number.isFinite(anzahl) && anzahl >= SEITE ? Math.min(anzahl, 2000) : SEITE,
@@ -110,6 +110,61 @@ export function umschalten<T>(liste: T[], wert: T): T[] {
 export const preisStufe = (p: PreisNiveau | null) => (p ? PREISE.indexOf(p) + 1 : 0);
 export const preisZeichen = (n: number) => PREISE[n - 1] ?? "";
 
+// ── Preis pro Person (extras.preis_pp aus scraper/orte/preisspanne.py) ─────────────────────────
+// Stufen für Filter und Fragebogen. Fine Dining = Google „ab 100 € p. P.“ oder Spanne im Schnitt ab 100 €.
+export const PREIS_STUFEN = [
+  { wert: 1, label: "bis 20 €", name: "Günstig", text: "bis 20 € p. P." },
+  { wert: 2, label: "20–40 €", name: "Mittel", text: "20–40 € p. P." },
+  { wert: 3, label: "40–100 €", name: "Gehoben", text: "40–100 € p. P." },
+  { wert: 4, label: "Fine Dining", name: "Fine Dining", text: "ab 100 € p. P." },
+] as const;
+
+interface Spanne { von: number; bis: number | null; quelle?: string }
+
+function spanne(wert: unknown): Spanne | null {
+  if (!wert || typeof wert !== "object") return null;
+  const s = wert as Record<string, unknown>;
+  if (typeof s.von !== "number") return null;
+  return { von: s.von, bis: typeof s.bis === "number" ? s.bis : null, quelle: typeof s.quelle === "string" ? s.quelle : undefined };
+}
+
+export function preisSpanne(o: DddOrt): Spanne | null {
+  return spanne(o.extras?.preis_pp);
+}
+
+/** Preisstufe 1–4 eines Ortes (0 = unbekannt). Ohne Spanne zählt die alte €-Stufe (€ → 1, €€ → 2, €€€ → 3). */
+export function preisStufeOrt(o: DddOrt): number {
+  const pp = preisSpanne(o);
+  if (!pp) return preisStufe(o.preis_niveau);
+  const google = spanne(o.extras?.google_preisspanne);
+  if ((google && google.von >= 100) || pp.von >= 100) return 4;
+  const mitte = (pp.von + (pp.bis ?? pp.von * 1.5)) / 2;
+  if (mitte >= 100) return 4;
+  return mitte < 20 ? 1 : mitte < 40 ? 2 : 3;
+}
+
+/** Kurzform für Karten und Popups: „10–20 €“, „ab 100 €“, „Menü 169–199 €“; ohne Spanne die €-Stufe. */
+export function preisKurz(o: DddOrt): string | null {
+  const pp = preisSpanne(o);
+  if (!pp) return o.preis_niveau ?? null;
+  const betrag = pp.bis == null ? `ab ${pp.von} €` : pp.von === pp.bis ? `${pp.von} €` : `${pp.von}–${pp.bis} €`;
+  return pp.quelle === "website" ? `Menü ${betrag}` : betrag;
+}
+
+/** Für die Detailseite: Zeile und Herkunft („ca. 10–20 € pro Person“ · „laut Google und Gästebewertungen“). */
+export function preisDetail(o: DddOrt): { zeile: string; herkunft: string } | null {
+  const pp = preisSpanne(o);
+  if (!pp) {
+    const alt: Record<string, string> = { "€": "günstig", "€€": "mittleres Preisniveau", "€€€": "gehoben" };
+    return o.preis_niveau ? { zeile: o.preis_niveau, herkunft: alt[o.preis_niveau] ?? "" } : null;
+  }
+  const betrag = pp.bis == null ? `ab ${pp.von} €` : pp.von === pp.bis ? `${pp.von} €` : `${pp.von}–${pp.bis} €`;
+  if (pp.quelle === "website") return { zeile: `Menü ${betrag} pro Person`, herkunft: "laut Website des Restaurants" };
+  const herkunft = pp.quelle === "bewertungen" ? "geschätzt aus Gästebewertungen"
+    : pp.quelle === "google+bewertungen" ? "laut Google und Gästebewertungen" : "laut Google";
+  return { zeile: `ca. ${betrag} pro Person`, herkunft };
+}
+
 export function kueche(o: DddOrt) {
   return kuecheVonTyp(o.extras?.google_primaertyp);
 }
@@ -127,7 +182,7 @@ export function filtern(orte: DddOrt[], f: GuideFilter, ohne: (keyof GuideFilter
     if (!ohne.includes("typen") && !f.typen.includes(o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp))) return false;
     if (!ohne.includes("stadtteile") && f.stadtteile.length && !f.stadtteile.includes(slugify(o.stadtteil ?? ""))) return false;
     if (!ohne.includes("kuechen") && f.kuechen.length && !f.kuechen.includes(kueche(o)?.slug ?? "")) return false;
-    if (!ohne.includes("preise") && f.preise.length && !f.preise.includes(preisStufe(o.preis_niveau))) return false;
+    if (!ohne.includes("preise") && f.preise.length && !f.preise.includes(preisStufeOrt(o))) return false;
     if (!ohne.includes("tags") && f.tags.length) {
       for (const t of f.tags) if (!o.tags.includes(tagNamen.get(t) ?? "")) return false;
     }
