@@ -4,7 +4,8 @@ import localFont from "next/font/local";
 import { DetailsVerhalten, TabBar } from "@/components/client";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DatenHinweis, Fuss, KategorieLeiste, Kopf } from "@/components/rahmen";
-import { STANDARD_BILD } from "@/lib/seo";
+import { STANDARD_BILD, markeJsonLd } from "@/lib/seo";
+import { jsonLdText } from "@/lib/json-ld";
 import "./globals.css";
 
 const dmSerif = DM_Serif_Display({ variable: "--font-dm-serif", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="de" className={`${dmSerif.variable} ${inter.variable} ${icons.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(markeJsonLd(process.env.SITE_URL ?? "https://diesdas.events")) }} />
       </head>
       <body>
         <DatenHinweis />

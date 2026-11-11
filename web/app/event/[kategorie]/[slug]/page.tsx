@@ -17,6 +17,8 @@ import { AbgelaufenHinweis } from "@/components/abgelaufen-hinweis";
 import { BeschreibungText } from "@/components/beschreibung-text";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { seitenMetadaten } from "@/lib/seo";
+import { kategorie as kategorieInfo } from "@/lib/kategorien";
+import { inStadtteil, kategoriePfad, stadtteilPfad } from "@/lib/landing";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -28,7 +30,11 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!e) return { title: "Event nicht gefunden" };
   const beschreibung = kurzBeschreibung(e.beschreibung, 160) ?? `${tagLang(e.datum)}${e.uhrzeit ? `, ${e.uhrzeit} Uhr` : ""} · ${e.ort}`;
   const titel = basisTitel(e.titel);
-  return seitenMetadaten({ pfad: eventPfad(e), titel, beschreibung, bild: eventBildUrl(e) ?? symbolbild(e) });
+  // Vergangene Events: Seite bleibt (HTTP 200), aber 30 Tage nach dem letzten Event-Tag noindex (Maßnahme 13)
+  // „heute“ aus dem gecachten Pool wie /tag/[datum] (kein new Date() beim Rendern)
+  const { heute } = await eventPoolLaden();
+  const langeVorbei = (e.datum_bis ?? e.datum) < plusTage(heute, -30);
+  return seitenMetadaten({ pfad: eventPfad(e), titel, beschreibung, bild: eventBildUrl(e) ?? symbolbild(e), noindex: langeVorbei });
 }
 
 // Ohne äußere Suspense-Grenze (Muster der Guide-Details): H1, Termin, Ort und Beschreibung stehen im ersten HTML.
@@ -94,7 +100,28 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           <div style={{ display: "flex", flexDirection: "column", gap: 28, minWidth: 0 }}>
             <header>
               <AbgelaufenHinweis abgelaufen={abgelaufen} />
-              <KatBadge slug={e.kategorie} />
+              {abgelaufen && (kategoriePfad(e.kategorie) || stadtteilPfad(e.stadtteil)) && (
+                <p className="abgelaufen-links">
+                  {kategoriePfad(e.kategorie) && (
+                    <Link className="link" href={kategoriePfad(e.kategorie)!}>
+                      Kommende {kategorieInfo(e.kategorie).name}-Events <Icon name="arrow_forward" />
+                    </Link>
+                  )}
+                  {stadtteilPfad(e.stadtteil) && (
+                    <Link className="link" href={stadtteilPfad(e.stadtteil)!}>
+                      Was {inStadtteil(e.stadtteil!)} los ist <Icon name="arrow_forward" />
+                    </Link>
+                  )}
+                </p>
+              )}
+              {/* Badge verlinkt die Kategorieseite – die Kante sagt Crawlern, wozu das Event gehört */}
+              {kategoriePfad(e.kategorie) ? (
+                <Link href={kategoriePfad(e.kategorie)!} className="badge-link" aria-label={`Alle Events: ${kategorieInfo(e.kategorie).name}`}>
+                  <KatBadge slug={e.kategorie} />
+                </Link>
+              ) : (
+                <KatBadge slug={e.kategorie} />
+              )}
               <h1 className="detail__titel d">{titel}</h1>
               {e.abgesagt && (
                 <p className="abgesagt-hinweis" role="status">
@@ -130,7 +157,8 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                     <b>{e.ort}</b>
                     <span>
                       {online ? "Online-Veranstaltung" : (e.adresse ?? "Düsseldorf")}
-                      {!online && e.stadtteil ? ` · ${stadtteilName(e.stadtteil)}` : ""}
+                      {!online && e.stadtteil ? " · " : ""}
+                      {!online && e.stadtteil && (stadtteilPfad(e.stadtteil) ? <Link href={stadtteilPfad(e.stadtteil)!}>{stadtteilName(e.stadtteil)}</Link> : stadtteilName(e.stadtteil))}
                     </span>
                   </div>
                 </div>
@@ -212,8 +240,8 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
               </Link>
             )}
             {e.stadtteil && (
-              <Link className="link" href={`/entdecken?stadtteil=${encodeURIComponent(e.stadtteil)}&datum=woche`}>
-                Mehr in {stadtteilName(e.stadtteil)} <Icon name="arrow_forward" />
+              <Link className="link" href={stadtteilPfad(e.stadtteil) ?? `/entdecken?stadtteil=${encodeURIComponent(e.stadtteil)}&datum=woche`}>
+                Mehr {inStadtteil(e.stadtteil)} <Icon name="arrow_forward" />
               </Link>
             )}
           </aside>
@@ -237,7 +265,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           <section className="container sektion">
             <div className="sektionskopf">
               <h2 className="d">Ähnliche Events</h2>
-              <Link href={`/entdecken?kategorie=${e.kategorie}&datum=woche`}>Alle</Link>
+              <Link href={kategoriePfad(e.kategorie) ?? `/entdecken?kategorie=${e.kategorie}&datum=woche`}>Alle</Link>
             </div>
             <Reihe breite={200} label="Ähnliche Events">
               {aehnliche.map((x) => (

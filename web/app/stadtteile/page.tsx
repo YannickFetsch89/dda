@@ -1,4 +1,5 @@
 // Stadtteil-Clustering: schematische Karte der 10 Stadtbezirke + Stadtteile mit Event-Anzahl
+import { stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
@@ -120,7 +121,7 @@ async function StadtteileInhalt({ searchParams }: Pick<PageProps<"/stadtteile">,
                 {b.stadtteile.length > 0 ? (
                   <div className="kachel-raster">
                     {b.stadtteile.map((s) => (
-                      <Link key={s.name} className="kachel" href={`/entdecken?stadtteil=${encodeURIComponent(s.name)}&datum=${z.key}`}>
+                      <Link key={s.name} className="kachel" href={stadtteilPfad(s.name) ?? `/entdecken?stadtteil=${encodeURIComponent(s.name)}&datum=${z.key}`}>
                         <span>{stadtteilName(s.name)}</span>
                         <span>{s.anzahl}</span>
                       </Link>

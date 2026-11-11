@@ -9,7 +9,7 @@
 // Antwort nicht. So wirkt das Zurücknehmen einer Entscheidung für Besucher nach spätestens 10 Minuten.
 // (Google wertet eine 301 trotzdem als dauerhaft – deshalb nur entscheiden, wenn es dabei bleiben soll.)
 import { NextResponse, type NextRequest } from "next/server";
-import { pfadPruefen } from "@/lib/pfad-pruefung";
+import { entdeckenZiel, pfadPruefen } from "@/lib/pfad-pruefung";
 import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidungen";
 
 const GONE_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Event nicht mehr verfügbar · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><h1>Dieses Event ist nicht mehr verfügbar.</h1><p>Die Seite wurde entfernt, weil das Event schon lange vorbei ist.</p><p><a href="/entdecken" style="color:#457b9d">Aktuelle Events in Düsseldorf entdecken</a></p></body></html>`;
@@ -21,6 +21,12 @@ const NICHT_GEFUNDEN_HTML = `<!doctype html><html lang="de"><head><meta charset=
 
 export async function proxy(request: NextRequest) {
   const pfad = request.nextUrl.pathname;
+
+  // Ein einzelner Kategorie- oder Stadtteil-Filter ist die Landingpage → 301 (Filter mit mehr Parametern bleiben noindex)
+  if (pfad === "/entdecken") {
+    const ziel = entdeckenZiel(request.nextUrl.searchParams);
+    return ziel ? NextResponse.redirect(new URL(ziel, request.url), 301) : NextResponse.next();
+  }
 
   const aktion = seoAktionFuer(pfad, await seoTabelle());
   if (aktion?.aktion === "weiterleiten") {
@@ -53,6 +59,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Eventseiten (auch /event/<uuid>), Tage, Reihen und Guide-Orte
-  matcher: ["/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug"],
+  // Eventseiten (auch /event/<uuid>), Tage, Reihen, Guide-Orte, Landingpages und /entdecken (301 für Einzelfilter)
+  matcher: ["/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug", "/stadtteil/:slug", "/entdecken"],
 };

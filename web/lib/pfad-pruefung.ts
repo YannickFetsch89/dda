@@ -8,6 +8,7 @@
 import { istSichtbarerClub } from "./clubs";
 import { istGueltigerTag } from "./datum";
 import { kategorieAusDb } from "./kategorien";
+import { kategorieGueltig, kategoriePfad, stadtteilAusSlug, stadtteilPfad } from "./landing";
 import { eventPfad } from "./pfade";
 import type { DddOrt, KategorieSlug } from "./typen";
 
@@ -23,7 +24,10 @@ export type Route =
   | { typ: "event"; kategorie: string; slug: string }
   | { typ: "tag"; datum: string }
   | { typ: "reihe"; slug: string }
-  | { typ: "ort"; hub: OrtHub; slug: string };
+  | { typ: "ort"; hub: OrtHub; slug: string }
+  | { typ: "kategorie"; slug: string }
+  | { typ: "stadtteil"; slug: string }
+  | { typ: "guide-stadtteil"; hub: OrtHub; slug: string };
 
 export type OrtHub = "restaurants-cafes" | "kneipen-bars" | "clubs";
 const HUBS: OrtHub[] = ["restaurants-cafes", "kneipen-bars", "clubs"];
@@ -41,12 +45,15 @@ function teil(roh: string): string | null {
 export function routeVon(pfad: string): Route | null {
   const s = pfad.replace(/\/+$/, "").split("/").slice(1).map(teil);
   if (s.some((x) => x === null || x === "")) return null;
-  const [a, b, c, d] = s as string[];
+  const [a, b, c, d, e] = s as string[];
   if (a === "event" && b && !c) return UUID.test(b) ? { typ: "event-uuid", id: b.toLowerCase() } : { typ: "ungueltig" };
   if (a === "event" && b && c && !d) return { typ: "event", kategorie: b, slug: c };
   if (a === "tag" && b && !c) return { typ: "tag", datum: b };
   if (a === "reihe" && b && !c) return { typ: "reihe", slug: b };
   if (a === "guides" && b && c && !d && (HUBS as string[]).includes(b)) return { typ: "ort", hub: b as OrtHub, slug: c };
+  if (a === "guides" && b && c === "stadtteil" && d && !e && (HUBS as string[]).includes(b)) return { typ: "guide-stadtteil", hub: b as OrtHub, slug: d };
+  if (a === "kategorie" && b && !c) return { typ: "kategorie", slug: b };
+  if (a === "stadtteil" && b && !c) return { typ: "stadtteil", slug: b };
   return null;
 }
 
@@ -177,9 +184,29 @@ export async function pfadPruefen(pfad: string): Promise<Pruefung> {
       const da = await reiheVorhanden(route.slug);
       return da === undefined || da ? WEITER : FEHLT;
     }
+    // Landingpages: rein aus dem Katalog entschieden, ohne Netz
+    case "kategorie":
+      return kategorieGueltig(route.slug) ? WEITER : FEHLT;
+    case "stadtteil":
+      return stadtteilAusSlug(route.slug) ? WEITER : FEHLT;
+    case "guide-stadtteil":
+      return stadtteilAusSlug(route.slug, true) ? WEITER : FEHLT;
     case "ort": {
       const o = await ortLaden(route.slug);
       return o === undefined ? WEITER : ortEntscheidung(route.hub, route.slug, o);
     }
   }
+}
+
+/**
+ * /entdecken mit genau EINEM Filter, der eine Landingpage trifft → Ziel der 301 (SEO-/GEO-Plan, Maßnahme 2).
+ * Interne Links tragen immer zusätzlich ein Datum und bleiben deshalb Filteransicht.
+ */
+export function entdeckenZiel(sp: URLSearchParams): string | null {
+  const gesetzt = [...sp.entries()].filter(([, v]) => v !== "");
+  if (gesetzt.length !== 1) return null;
+  const [schluessel, wert] = gesetzt[0];
+  if (schluessel === "kategorie") return kategoriePfad(wert);
+  if (schluessel === "stadtteil") return stadtteilPfad(wert);
+  return null;
 }

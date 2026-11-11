@@ -27,6 +27,15 @@ class QuellenToleranzTest(unittest.TestCase):
         self.assertTrue(aehnliches_event(ev("D.Now: Genevieve O’Driscoll", "Jazz-Schmiede Düsseldorf", "20:30", "Jazz-Schmiede Düsseldorf"),
                                          ev("D.Now: Genevieve O’Driscoll", "Jazz Schmiede", "20:30")))
 
+    def test_bandname_im_langen_titel(self):
+        self.assertTrue(aehnliches_event(
+            ev("Shinedown", "Mitsubishi Electric HALLE", "19:30", "d-live"),
+            ev("SHINEDOWN - Dance Kid Dance Act II - Düsseldorf, Mitsubishi Electric Halle", "Mitsubishi Electric Halle", "18:00", "AllEvents.in Düsseldorf")))
+        # Allgemeine Einzelwörter reichen nicht
+        self.assertFalse(aehnliches_event(ev("Party", "zakk", "22:00", "zakk"), ev("Halloween Party mit DJ Foo", "zakk", "22:00")))
+        # Dieselbe Quelle: nein
+        self.assertFalse(aehnliches_event(ev("Shinedown", "Halle", "19:30", "d-live"), ev("Shinedown Aftershow", "Halle", "23:00", "d-live")))
+
     def test_eine_uhrzeit_fehlt_bei_anderer_quelle(self):
         self.assertTrue(aehnliches_event(ev("Disney Der Glöckner von Notre Dame", "Capitol Theater Düsseldorf", None, "Capitol Theater Düsseldorf"),
                                          ev("Disney`s der Glöckner von Notre Dame das Musical", "Capitol Theater Düsseldorf", "19:30")))

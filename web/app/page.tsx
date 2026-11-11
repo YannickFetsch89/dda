@@ -1,4 +1,5 @@
 // Startseite V2 (Design-Ansichten 07 desktop / 08 mobil)
+import { stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
@@ -218,7 +219,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             </div>
             <div className="kachel-raster">
               {stadtteile.map((s) => (
-                <Link key={s.name} className="kachel" href={`/entdecken?stadtteil=${encodeURIComponent(s.name)}&datum=${imZeitraum.length >= 10 ? z.key : "woche"}`}>
+                <Link key={s.name} className="kachel" href={stadtteilPfad(s.name) ?? `/entdecken?stadtteil=${encodeURIComponent(s.name)}&datum=${imZeitraum.length >= 10 ? z.key : "woche"}`}>
                   <span>{stadtteilName(s.name)}</span>
                   <span>{s.anzahl}</span>
                 </Link>

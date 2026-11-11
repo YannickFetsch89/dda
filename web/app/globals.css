@@ -1522,3 +1522,17 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 /* Tages-Satz aus echten Daten unter der Kopfzeile von /heute und /tag/… (SEO-/GEO-Plan, Maßnahme 4) */
 .tagesatz { margin: 16px 0 0; font-size: 15px; line-height: 1.5; color: var(--ddd-text-body); max-width: 70ch; }
 .tagesatz__stand { margin: 4px 0 0; font-size: 12px; }
+
+/* Landingpages Kategorie/Stadtteil/Guide-Stadtteil, /ueber (SEO-/GEO-Plan Phase B) */
+.landing h1 { margin: 6px 0 12px; }
+.landing__text { max-width: 68ch; margin: 0 0 10px; line-height: 1.55; }
+.landing .tagesatz { margin-top: 6px; }
+.landing .filterleiste { margin-top: 14px; flex-wrap: wrap; }
+.landing__links h2 { font-size: 22px; margin-bottom: 10px; }
+.landing__links .filterleiste { margin-top: 0; }
+/* Vortag / Heute / Folgetag unter der Tagesliste */
+.tagnav { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; border-top: 1px solid var(--linie, rgba(27, 37, 64, 0.12)); padding-top: 16px; }
+/* Kategorie-Badge auf der Eventseite als Link */
+.badge-link { display: inline-flex; text-decoration: none; }
+.badge-link:hover .badge, .badge-link:focus-visible .badge { filter: brightness(0.95); text-decoration: underline; }
+.abgelaufen-links { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 12px; }

@@ -1,5 +1,6 @@
 // Guide-Detail Restaurant/Café (Design-Handoff v2, Ansichten 16 und 17)
 export const instant = false;
+import { guideStadtteilPfad, stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -12,7 +13,6 @@ import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { eventPoolLaden } from "@/lib/daten";
 import { kueche, preisDetail, preisKurz, sortieren, sterne, zahl } from "@/lib/guide-filter";
-import { slugify } from "@/lib/kueche";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
@@ -47,7 +47,7 @@ async function EventsInDerNaehe({ ort }: { ort: DddOrt }) {
     <section className="gd-abschnitt">
       <div className="gd-abschnitt__kopf">
         <h2 className="d">Events in der Nähe</h2>
-        <Link href={`/entdecken?stadtteil=${encodeURIComponent(ort.stadtteil)}`} className="link">Alle in {ort.stadtteil}</Link>
+        <Link href={stadtteilPfad(ort.stadtteil) ?? `/entdecken?stadtteil=${encodeURIComponent(ort.stadtteil)}&datum=woche`} className="link">Alle in {ort.stadtteil}</Link>
       </div>
       <Reihe breite={258} label={`Events in ${ort.stadtteil}`}>
         {events.map((e) => <EventKarte key={e.id} e={e} heute={pool.heute} variante="reihe" />)}
@@ -76,7 +76,7 @@ async function Aehnliche({ ort }: { ort: DddOrt }) {
     <section className="gd-abschnitt">
       <div className="gd-abschnitt__kopf">
         <h2 className="d">Das könnte dir auch gefallen</h2>
-        <Link href={ort.stadtteil ? `${BASIS}?stadtteil=${slugify(ort.stadtteil)}` : BASIS} className="link">
+        <Link href={ort.stadtteil ? guideStadtteilPfad("restaurants-cafes", ort.stadtteil) : BASIS} className="link">
           {ort.stadtteil ? `Alle in ${ort.stadtteil}` : "Alle Restaurants"}
         </Link>
       </div>

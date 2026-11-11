@@ -2,6 +2,7 @@
 // Name, Beschreibung und Adresse stehen außerhalb jeder Suspense-Grenze (erste HTML-Antwort);
 // nur Öffnungszeiten (Wochentag), Events und Ähnliche Kneipen werden nachgeladen.
 export const instant = false;
+import { guideStadtteilPfad, stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -18,7 +19,6 @@ import { RAUCHER_TEXT, artInfo, happyHour, raucher, spezialitaeten, vibes } from
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { barOrPubJsonLd, brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { jsonLdText } from "@/lib/json-ld";
-import { slugify } from "@/lib/kueche";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
@@ -64,7 +64,7 @@ async function EventsInDerNaehe({ ort }: { ort: DddOrt }) {
     <section className="gd-abschnitt">
       <div className="gd-abschnitt__kopf">
         <h2 className="d">Events in der Nähe</h2>
-        <Link href={`/entdecken?stadtteil=${encodeURIComponent(ort.stadtteil)}`} className="link">Alle in {ort.stadtteil}</Link>
+        <Link href={stadtteilPfad(ort.stadtteil) ?? `/entdecken?stadtteil=${encodeURIComponent(ort.stadtteil)}&datum=woche`} className="link">Alle in {ort.stadtteil}</Link>
       </div>
       <Reihe breite={258} label={`Events in ${ort.stadtteil}`}>
         {events.map((e) => <EventKarte key={e.id} e={e} heute={pool.heute} variante="reihe" />)}
@@ -212,7 +212,7 @@ export default async function KneipeDetail(props: Props) {
           <ClubProfilLink o={ort} />
           <GoogleKarte adresse={kartenAdresse} routeUrl={routeUrl} />
           {ort.stadtteil && (
-            <Link href={`${BASIS}?stadtteil=${slugify(ort.stadtteil)}`} className="link">Mehr Kneipen &amp; Bars in {ort.stadtteil}</Link>
+            <Link href={guideStadtteilPfad("kneipen-bars", ort.stadtteil)} className="link">Mehr Kneipen &amp; Bars in {ort.stadtteil}</Link>
           )}
         </aside>
       </div>

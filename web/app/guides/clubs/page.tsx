@@ -3,6 +3,7 @@
 // Erste HTML-Antwort mit Inhalt (SEO/GEO): Hero und die UNGEFILTERTE Ansicht stehen im statischen Shell.
 // Nur die filterabhängige Ansicht wartet in <Suspense> auf searchParams – ihr Fallback ist die ungefilterte.
 // Wenige Orte → alle Karten auf einer Seite (kein „Weitere laden“), keine Kartenansicht.
+import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -207,6 +208,7 @@ export default async function Clubs(props: { searchParams: Promise<SP> }) {
       <Suspense fallback={<Ansicht alle={alle} f={CLUB_STANDARD} naechste={naechste} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} naechste={naechste} />
       </Suspense>
+      <GuideStadtteilLinks hub="clubs" orte={alle} />
     </div>
   );
 }

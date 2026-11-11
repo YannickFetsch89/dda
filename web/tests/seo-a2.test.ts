@@ -24,7 +24,8 @@ describe("Tages-Satz", () => {
     expect(aufzaehlung(["Musik"])).toBe("Musik");
     expect(aufzaehlung(["Musik", "Kultur"])).toBe("Musik und Kultur");
     expect(topKategorien([ev(1, "kultur"), ev(2, "musik")])).toEqual(["Kultur", "Musik"]); // Gleichstand: alphabetisch
-    expect(topKategorien([ev(1, "family" as KategorieSlug)])).toEqual(["Sonstiges"]); // unbekannt → Sonstiges
+    expect(topKategorien([ev(1, "family" as KategorieSlug)])).toEqual([]); // unbekannt → Sonstiges, und das zählt nicht
+    expect(topKategorien([ev(1, "sonstiges"), ev(2, "musik")])).toEqual(["Musik"]);
   });
 });
 

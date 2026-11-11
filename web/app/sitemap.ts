@@ -8,6 +8,10 @@ import { kneipenLaden } from "@/lib/kneipen-daten";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
+import { KATEGORIEN } from "@/lib/kategorien";
+import { BEZIRKE } from "@/lib/stadtteile";
+import { hubOrte, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { GUIDE_HUBS, LANDING_TAGE, MIN_EINTRAEGE, guideStadtteilPfad, stadtteilPfad, type GuideHub } from "@/lib/landing";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -36,10 +40,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Start zeigt standardmäßig „heute“, Entdecken und Stadtteile „diese Woche“
     { url: `${SITE_URL}/`, ...mit(juengstes(imZeitraum(undefined))), changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/heute`, ...mit(juengstes(amTag(pool.heute))), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/morgen`, ...mit(juengstes(amTag(plusTage(pool.heute, 1)))), changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE_URL}/entdecken`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE_URL}/wochenende`, ...mit(juengstes(zwischen(we.fr, we.so))), changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/stadtteile`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/event-melden`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${SITE_URL}/ueber`, changeFrequency: "monthly", priority: 0.4 },
   ];
 
   const tage: MetadataRoute.Sitemap = Array.from({ length: 14 }, (_, i) => {
@@ -103,5 +109,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }))
       : [];
 
-  return [...feste, ...tage, ...events, ...reihen, ...guides];
+  // Landingpages (Phase B): nur ab MIN_EINTRAEGE kommenden Einträgen – dünnere Seiten sind noindex und fehlen hier.
+  // Dieselbe Liste wie auf den Seiten (die nächsten LANDING_TAGE Tage, ohne Langläufer).
+  const bis = plusTage(pool.heute, LANDING_TAGE - 1);
+  const landing = (filter: (e: (typeof pool.events)[number]) => boolean) => pool.events.filter((e) => findetStatt(e, pool.heute, bis) && filter(e));
+  const kategorien: MetadataRoute.Sitemap =
+    pool.quelle === "supabase"
+      ? KATEGORIEN.flatMap((k) => {
+          const ev = landing((e) => e.kategorie === k.slug);
+          return ev.length >= MIN_EINTRAEGE ? [{ url: `${SITE_URL}/kategorie/${k.slug}`, ...mit(juengstes(ev)), changeFrequency: "daily" as const, priority: 0.7 }] : [];
+        })
+      : [];
+  const stadtteile: MetadataRoute.Sitemap =
+    pool.quelle === "supabase"
+      ? BEZIRKE.flatMap((b) => b.stadtteile).flatMap((st) => {
+          const ev = landing((e) => e.stadtteil === st);
+          return ev.length >= MIN_EINTRAEGE ? [{ url: `${SITE_URL}${stadtteilPfad(st)}`, ...mit(juengstes(ev)), changeFrequency: "daily" as const, priority: 0.6 }] : [];
+        })
+      : [];
+  const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
+  const hubListen = await Promise.all(hubs.map((h) => hubOrte(h)));
+  const guideStadtteile: MetadataRoute.Sitemap = hubs.flatMap((h, i) =>
+    stadtteileMitOrten(hubListen[i]).map((x) => ({
+      url: `${SITE_URL}${guideStadtteilPfad(h, x.stadtteil)}`,
+      ...mit(geaendert(hubListen[i].filter((o) => o.stadtteil === x.stadtteil))),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })),
+  );
+
+  return [...feste, ...tage, ...kategorien, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile];
 }

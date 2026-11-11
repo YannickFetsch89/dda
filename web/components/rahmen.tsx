@@ -8,6 +8,7 @@ import { eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, kategorieZaehlen, stadtteileZaehlen } from "@/lib/ableitungen";
 import { ZEITRAUM_OPTIONEN, plusTage } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
+import { stadtteilPfad } from "@/lib/landing";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
 export const KONTAKT_MAIL = "hallo@diesdas.events";
@@ -84,7 +85,7 @@ export async function KategorieLeiste() {
     <nav className="katleiste" aria-label="Kategorien">
       <div className="katleiste__inner">
         {KATEGORIEN.map((k) => (
-          <Link key={k.slug} href={`/entdecken?kategorie=${k.slug}&datum=woche`} className="katitem" style={katStil(k.slug)}>
+          <Link key={k.slug} href={`/kategorie/${k.slug}`} className="katitem" style={katStil(k.slug)}>
             <span className="katitem__kreis">
               <Icon name={k.icon} />
             </span>
@@ -130,15 +131,15 @@ export async function Fuss() {
         <div className="fuss__spalte">
           <b>Kategorien</b>
           {KATEGORIEN.slice(0, 6).map((k) => (
-            <Link key={k.slug} href={`/entdecken?kategorie=${k.slug}`}>
+            <Link key={k.slug} href={`/kategorie/${k.slug}`}>
               {k.name}
             </Link>
           ))}
         </div>
         <div className="fuss__spalte">
           <b>Stadtteile</b>
-          {top.map((s) => (
-            <Link key={s.name} href={`/entdecken?stadtteil=${encodeURIComponent(s.name)}`}>
+          {top.filter((s) => stadtteilPfad(s.name)).map((s) => (
+            <Link key={s.name} href={stadtteilPfad(s.name)!}>
               {stadtteilName(s.name)}
             </Link>
           ))}
@@ -160,6 +161,7 @@ export async function Fuss() {
         <div className="fuss__spalte">
           <b>DDD</b>
           <a href="https://www.instagram.com/dies.das.duesseldorf/" target="_blank" rel="noopener">Instagram</a>
+          <Link href="/ueber">Über uns</Link>
           <Link href="/impressum">Impressum</Link>
           <Link href="/datenschutz">Datenschutz</Link>
         </div>

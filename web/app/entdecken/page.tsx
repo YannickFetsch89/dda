@@ -44,7 +44,8 @@ function einzeln(sp: Record<string, string | string[] | undefined>): Params {
 /** Baut eine Entdecken-URL aus den aktuellen Parametern plus Änderungen. */
 function url(aktuell: Params, aenderung: Params): string {
   const p = new URLSearchParams();
-  const neu = { ...aktuell, seite: undefined, ...aenderung };
+  // Immer mit Datum: eine URL mit nur ?kategorie= bzw. ?stadtteil= leitet proxy.ts per 301 auf die Landingpage
+  const neu = { datum: "woche", ...aktuell, seite: undefined, ...aenderung };
   Object.entries(neu).forEach(([k, v]) => {
     if (v) p.set(k, v);
   });

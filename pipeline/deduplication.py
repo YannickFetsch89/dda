@@ -200,15 +200,41 @@ def aehnliches_event(a: dict, b: dict) -> bool:
     """
     if not a.get("datum") or a.get("datum") != b.get("datum"):
         return False
-    if not _ort_passt(a, b) or not _titel_passt(a, b):
+    if not _ort_passt(a, b):
+        return False
+    andere_quelle = bool(_quelle(a) and _quelle(b) and _quelle(a) != _quelle(b))
+    if not (_titel_passt(a, b) or (andere_quelle and _bandname_enthalten(a, b))):
         return False
     zeit_a, zeit_b = _uhrzeit(a), _uhrzeit(b)
     if zeit_a and zeit_a == zeit_b:
         return True
-    if _quelle(a) and _quelle(b) and _quelle(a) != _quelle(b):
+    if andere_quelle:
         abstand = zeit_abstand(a, b)
         return abstand is None or abstand <= ZEIT_TOLERANZ_MINUTEN
     return bool((a.get(TITEL_STATUS_FELD) or b.get(TITEL_STATUS_FELD)) and (not zeit_a or not zeit_b))
+
+
+# Einzelwörter, die als ganzer Titel zu allgemein sind, um einen längeren Titel sicher zuzuordnen
+_ALLGEMEINE_EINZELTITEL = {
+    "konzert", "party", "fuehrung", "workshop", "lesung", "vortrag", "ausstellung", "flohmarkt", "markt",
+    "vernissage", "kabarett", "comedy", "karaoke", "quiz", "brunch", "tanzabend", "disco",
+}
+
+
+def _bandname_enthalten(a: dict, b: dict) -> bool:
+    """
+    Ein Titel ist ein einzelnes, prägnantes Wort und steckt im längeren Titel der anderen Quelle:
+    „SHINEDOWN“ (Rausgegangen) ~ „SHINEDOWN – Dance Kid Dance Act II – Düsseldorf, Mitsubishi Electric Halle“
+    (AllEvents). Nur zwischen verschiedenen Quellen und bei gleichem Ort/Tag (prüft aehnliches_event).
+    """
+    titel_a, titel_b = titel_kern(a.get("titel") or ""), titel_kern(b.get("titel") or "")
+    if not titel_a or not titel_b:
+        return False
+    klein, gross = sorted((titel_a, titel_b), key=len)
+    if len(klein) != 1:
+        return False
+    wort = next(iter(klein))
+    return len(wort) >= 5 and wort not in _ALLGEMEINE_EINZELTITEL and wort in gross
 
 
 def bester_treffer(bestand: list[dict], event: dict) -> Optional[dict]:

@@ -1,4 +1,5 @@
 // Guide-Hub Restaurants & Cafés (Design-Handoff v2, Ansichten 12, 14, 15)
+import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -292,6 +293,7 @@ export default async function RestaurantsCafes(props: { searchParams: Promise<SP
       >
         <Inhalt searchParams={props.searchParams} alle={alle} />
       </Suspense>
+      <GuideStadtteilLinks hub="restaurants-cafes" orte={alle} />
     </div>
   );
 }

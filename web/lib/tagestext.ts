@@ -14,7 +14,8 @@ export function datumText(tag: string): string {
 /** Die häufigsten Kategorien (Anzeigenamen), bei Gleichstand alphabetisch. */
 export function topKategorien(events: Pick<DddEvent, "kategorie">[], anzahl = 3): string[] {
   const zaehler = new Map<string, number>();
-  for (const e of events) zaehler.set(e.kategorie, (zaehler.get(e.kategorie) ?? 0) + 1);
+  // „Sonstiges“ ist keine Aussage über den Tag – zählt nicht zu den häufigsten Kategorien
+  for (const e of events) if (kategorie(e.kategorie).slug !== "sonstiges") zaehler.set(e.kategorie, (zaehler.get(e.kategorie) ?? 0) + 1);
   return [...zaehler.entries()]
     .map(([slug, n]) => ({ name: kategorie(slug).name, n }))
     .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, "de"))

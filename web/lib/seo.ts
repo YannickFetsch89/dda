@@ -6,6 +6,42 @@
 import type { Metadata } from "next";
 
 export const SITE_NAME = "dies.das.düsseldorf";
+/** Erster Satz von /ueber – derselbe Satz steht in Organization.description (SEO-/GEO-Plan, Maßnahme 8). */
+export const MARKE_SATZ =
+  "dies.das.düsseldorf ist ein tagesaktueller Eventkalender und Freizeitguide für Düsseldorf, mit Guides auch für Neuss und Ratingen.";
+
+/** Organization + WebSite fürs Layout: eine Entität für die Domain diesdas.events und die Schreibweise dies.das.düsseldorf. */
+export function markeJsonLd(siteUrl: string): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organisation`,
+        name: SITE_NAME,
+        url: `${siteUrl}/`,
+        logo: `${siteUrl}/icon.svg`,
+        description: MARKE_SATZ,
+        sameAs: ["https://www.instagram.com/dies.das.duesseldorf/"],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        name: SITE_NAME,
+        alternateName: "diesdas.events",
+        url: `${siteUrl}/`,
+        inLanguage: "de-DE",
+        publisher: { "@id": `${siteUrl}/#organisation` },
+        // Das Suchfeld auf /entdecken schickt genau diesen Parameter (name="q")
+        potentialAction: {
+          "@type": "SearchAction",
+          target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/entdecken?q={search_term_string}` },
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+}
 /** Vorschaubild für Seiten ohne eigenes Foto (Wortmarke auf Navy, 1200×630) */
 export const STANDARD_BILD = { url: "/og-standard.png", width: 1200, height: 630, alt: "dies.das.düsseldorf – Was geht heute in Düsseldorf?" };
 

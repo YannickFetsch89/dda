@@ -4,6 +4,7 @@
 // Orte mit Haupt-URL in einem anderen Hub (auch_club, z. B. Pitcher) haben hier eine Club-Ansicht mit
 // Canonical auf die Haupt-URL und noindex – jede Seite erscheint so nur einmal im Index.
 export const instant = false;
+import { guideStadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,7 +27,6 @@ import { tagLang } from "@/lib/datum";
 import { sterne, zahl } from "@/lib/guide-filter";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { jsonLdText } from "@/lib/json-ld";
-import { slugify } from "@/lib/kueche";
 import { ortBildAutorUrl, ortBildFokus, ortBildUrl, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
@@ -310,7 +310,7 @@ export default async function ClubDetail(props: Props) {
           )}
           <GoogleKarte adresse={kartenAdresse} routeUrl={routeUrl} />
           {ort.stadtteil && (
-            <Link href={`${BASIS}?stadtteil=${slugify(ort.stadtteil)}`} className="link">Mehr Clubs in {ort.stadtteil}</Link>
+            <Link href={guideStadtteilPfad("clubs", ort.stadtteil)} className="link">Mehr Clubs in {ort.stadtteil}</Link>
           )}
         </aside>
       </div>

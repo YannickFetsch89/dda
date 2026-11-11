@@ -21,16 +21,21 @@ const GRENZEN: Record<string, [number, number]> = {
 };
 
 function tagHref(tag: string, heute: string) {
-  return tag === heute ? "/heute" : `/tag/${tag}`;
+  return tag === heute ? "/heute" : tag === plusTage(heute, 1) ? "/morgen" : `/tag/${tag}`;
 }
+
+/** Tage, die es als indexierte Seite gibt (Sitemap-Fenster: heute plus 13 Tage) – nur dorthin verlinkt die Leiste unten. */
+const FENSTER_TAGE = 14;
 
 /**
  * pfad: kanonischer Pfad der Seite („/heute“ oder „/tag/2026-11-12“) – für Brotkrumen und ItemList.
  * Rendert ohne Suspense direkt ins erste HTML (Daten aus dem Cache): H1, Tages-Satz und die Liste stehen als Text da.
  */
-export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string }) {
+export async function Tagesplaner({ tag: tagProp, tageVoraus, pfad }: { tag?: string; tageVoraus?: number; pfad: string }) {
   const pool = await eventPoolLaden();
   const { heute } = pool;
+  // /morgen: Tag relativ zu heute (aus dem Pool, damit Seite und Daten denselben „heute“ haben)
+  const tag = tagProp ?? (tageVoraus ? plusTage(heute, tageVoraus) : undefined);
   // Vergangene Tage: Der Pool beginnt mit heute – nie die heutigen Events unter ein altes Datum schreiben
   if (tag && tag < heute) return <VergangenerTag tag={tag} heute={heute} pfad={pfad} />;
   const d = tag ?? heute;
@@ -62,7 +67,7 @@ export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string })
   const jsonLd = eventListeJsonLd(
     SITE_URL,
     `Events in Düsseldorf am ${datumText(d)}`,
-    [{ name: "Start", pfad: "/" }, { name: istHeute ? "Heute" : `Events am ${datumText(d)}`, pfad }],
+    [{ name: "Start", pfad: "/" }, { name: istHeute ? "Heute" : pfad === "/morgen" ? "Morgen" : `Events am ${datumText(d)}`, pfad }],
     events,
   );
 
@@ -99,8 +104,31 @@ export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string })
             </Leer>
           </div>
         )}
+        <TagNavigation tag={d} heute={heute} />
       </div>
     </>
+  );
+}
+
+/** Vortag, Heute, Folgetag als Textlinks unter der Liste – nur Tage im Sitemap-Fenster (kein leeres Archiv). */
+function TagNavigation({ tag, heute }: { tag: string; heute: string }) {
+  const ende = plusTage(heute, FENSTER_TAGE - 1);
+  const vortag = plusTage(tag, -1);
+  const folgetag = plusTage(tag, 1);
+  const links = [
+    ...(vortag >= heute ? [{ href: tagHref(vortag, heute), text: `← ${vortag === heute ? "Heute" : `${WT_LANG[wochentag(vortag)]}, ${tagMonat(vortag)}`}`, rel: "prev" }] : []),
+    ...(tag !== heute && vortag !== heute ? [{ href: "/heute", text: "Heute", rel: undefined }] : []),
+    ...(folgetag <= ende ? [{ href: tagHref(folgetag, heute), text: `${folgetag === plusTage(heute, 1) ? "Morgen" : `${WT_LANG[wochentag(folgetag)]}, ${tagMonat(folgetag)}`} →`, rel: "next" }] : []),
+  ];
+  if (!links.length) return null;
+  return (
+    <nav className="tagnav sektion" aria-label="Weitere Tage">
+      {links.map((l) => (
+        <Link key={l.href} href={l.href} rel={l.rel} className="link">
+          {l.text}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
