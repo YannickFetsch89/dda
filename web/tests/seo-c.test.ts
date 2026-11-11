@@ -22,6 +22,8 @@ describe("Anzeige-Titel", () => {
     expect(
       anzeigeTitel("SOTTO LE NUVOLE · POMPEJI: UNTER DEN WOLKEN | Italienischer Filmclub - Black Box im Filmmuseum Düsseldorf", "Black Box im Filmmuseum"),
     ).toBe("SOTTO LE NUVOLE · POMPEJI: UNTER DEN WOLKEN | Italienischer Filmclub");
+    // Anhang nur ein Teil des Ortsnamens: bleibt („Halle“ steckt in „Tonhalle“, ist aber nicht der Ort)
+    expect(anzeigeTitel("Konzert - Halle", "Tonhalle")).toBe("Konzert - Halle");
     // Anderer Anhang bleibt
     expect(anzeigeTitel("Romeo und Julia - Schauspiel nach Shakespeare", "Schauspielhaus")).toBe("Romeo und Julia - Schauspiel nach Shakespeare");
   });
@@ -37,5 +39,20 @@ describe("Anzeige-Titel", () => {
     expect(anzeigeTitel("Führung (14:00 Uhr)")).toBe(basisTitel("Führung (14:00 Uhr)"));
     expect(anzeigeTitel("Düsseldorf")).toBe("Düsseldorf");
     expect(anzeigeTitel("🎉")).toBe("🎉");
+  });
+});
+
+describe("Guide-Stadtteile kanonisch", () => {
+  it("Rohwerte werden wie im Proxy aufgelöst, unbekannte fallen weg", async () => {
+    const { kanonischerStadtteil } = await import("@/lib/landing");
+    const { orteImStadtteil, stadtteileMitOrten } = await import("@/lib/guide-stadtteile");
+    expect(kanonischerStadtteil("Medienhafen")).toBe("Hafen");
+    expect(kanonischerStadtteil("Hafen")).toBe("Hafen");
+    expect(kanonischerStadtteil("Neuss")).toBe("Neuss");
+    expect(kanonischerStadtteil("Oberkassel-Süd")).toBeNull();
+    const ort = (i: number, stadtteil: string) => ({ id: `o${i}`, stadtteil }) as never;
+    const orte = [ort(1, "Hafen"), ort(2, "Medienhafen"), ort(3, "Hafen"), ort(4, "Medienhafen"), ort(5, "Hafen"), ...[6, 7, 8, 9, 10].map((i) => ort(i, "Oberkassel-Süd"))];
+    expect(stadtteileMitOrten(orte)).toEqual([{ stadtteil: "Hafen", anzahl: 5 }]); // kein Eintrag für Oberkassel-Süd
+    expect(orteImStadtteil(orte, "Hafen")).toHaveLength(5);
   });
 });

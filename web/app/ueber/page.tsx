@@ -20,7 +20,7 @@ export const metadata: Metadata = seitenMetadaten({
   titel: "Über uns – weil Düsseldorf zu gut ist, um drinnen zu hocken",
   beschreibung:
     "dies.das.düsseldorf ist dein persönlicher Kompass für Konzerte, Partys, Kultur und gutes Essen in Düsseldorf – gemacht von Menschen, die hier leben, lieben und ausgehen.",
-  bild: "/ueber/party-1.jpg",
+  bild: "/ueber/og-ueber.jpg", // 1200×630, Ausschnitt aus der Rooftop-Party
 });
 
 type Foto = { src: string; alt: string; w: number; h: number };

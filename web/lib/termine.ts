@@ -37,7 +37,8 @@ function ohneOrtsAnhang(titel: string, ort: string): string {
   }
   if (letzter <= 0) return titel;
   const anhang = norm(titel.slice(letzter + laenge));
-  const passt = anhang.length >= 4 && (o.includes(anhang) || anhang.includes(o));
+  // Nur wenn der Anhang den ganzen Ortsnamen enthält – „Konzert - Halle“ bei Ort „Tonhalle“ bleibt
+  const passt = anhang.includes(o);
   return passt ? titel.slice(0, letzter) : titel;
 }
 

@@ -1650,5 +1650,4 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .ue-collage .ue-foto, .ue-band__spur { animation: none; }
-  .ue-band { overflow-x: auto; }
 }

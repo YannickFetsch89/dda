@@ -3,14 +3,14 @@
 import type { MetadataRoute } from "next";
 import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
-import { findetStatt, plusTage, wochenende, zeitraumAuflösen } from "@/lib/datum";
+import { findetStatt, plusTage, zeitraumAuflösen } from "@/lib/datum";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
 import { BEZIRKE } from "@/lib/stadtteile";
-import { hubOrte, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { hubOrte, orteImStadtteil, stadtteileMitOrten } from "@/lib/guide-stadtteile";
 import { GUIDE_HUBS, LANDING_TAGE, MIN_EINTRAEGE, guideStadtteilPfad, stadtteilPfad, type GuideHub } from "@/lib/landing";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
@@ -33,7 +33,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const z = zeitraumAuflösen(key, pool.heute);
     return zwischen(z.von, z.bis);
   };
-  const we = wochenende(pool.heute);
   const mit = (d: Date | undefined) => (d ? { lastModified: d } : {});
 
   const feste: MetadataRoute.Sitemap = [
@@ -42,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/heute`, ...mit(juengstes(amTag(pool.heute))), changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE_URL}/morgen`, ...mit(juengstes(amTag(plusTage(pool.heute, 1)))), changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE_URL}/entdecken`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/wochenende`, ...mit(juengstes(zwischen(we.fr, we.so))), changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/wochenende`, ...mit(juengstes(imZeitraum("wochenende"))), changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/stadtteile`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/event-melden`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/ueber`, changeFrequency: "monthly", priority: 0.4 },
@@ -132,7 +131,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const guideStadtteile: MetadataRoute.Sitemap = hubs.flatMap((h, i) =>
     stadtteileMitOrten(hubListen[i]).map((x) => ({
       url: `${SITE_URL}${guideStadtteilPfad(h, x.stadtteil)}`,
-      ...mit(geaendert(hubListen[i].filter((o) => o.stadtteil === x.stadtteil))),
+      ...mit(geaendert(orteImStadtteil(hubListen[i], x.stadtteil))),
       changeFrequency: "weekly" as const,
       priority: 0.6,
     })),

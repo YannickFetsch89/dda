@@ -8,7 +8,7 @@ import { JsonLd, Krumen, LinkChips } from "./landing";
 import { Icon, Leer } from "./karten";
 import { OrtKartenGrid, ortPfad } from "./ort-karten";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
-import { hubOrte, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { hubOrte, orteImStadtteil, stadtteileMitOrten } from "@/lib/guide-stadtteile";
 import { STADTTEIL_TEXTE } from "@/lib/landing-texte";
 import { GUIDE_HUBS, MIN_EINTRAEGE, inStadtteil, bezirkSatz, guideStadtteilPfad, stadtteilAusSlug, stadtteilPfad, type GuideHub } from "@/lib/landing";
 import { seitenMetadaten } from "@/lib/seo";
@@ -21,14 +21,13 @@ async function laden(hub: GuideHub, slug: string) {
   const st = stadtteilAusSlug(slug, true);
   if (!st) return null;
   const alle = await hubOrte(hub);
-  return { st, alle, orte: alle.filter((o) => o.stadtteil === st) };
+  return { st, alle, orte: orteImStadtteil(alle, st) };
 }
 
 export async function guideStadtteilMetadaten(hub: GuideHub, slug: string): Promise<Metadata> {
   const d = await laden(hub, slug);
   if (!d) return { title: "Seite nicht gefunden" };
   const h = GUIDE_HUBS[hub];
-  const name = stadtteilName(d.st);
   const imOrt = inStadtteil(d.st);
   return seitenMetadaten({
     pfad: guideStadtteilPfad(hub, d.st),

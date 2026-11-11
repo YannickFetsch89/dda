@@ -26,6 +26,14 @@ export function stadtteilAusSlug(slug: string, mitNachbarn = false): string | nu
   return liste.find((s) => stadtteilSlug(s) === slug.toLowerCase()) ?? null;
 }
 
+/**
+ * Kanonischer Stadtteil zu einem Rohwert aus der Datenbank („Medienhafen“ → „Hafen“), so wie der Proxy und die
+ * Seite ihn auflösen. null = keine Guide-Stadtteilseite (z. B. „Oberkassel-Süd“) – dann auch kein Link, kein Sitemap-Eintrag.
+ */
+export function kanonischerStadtteil(roh: string | null | undefined): string | null {
+  return roh ? stadtteilAusSlug(stadtteilSlug(roh), true) : null;
+}
+
 /** Event-Stadtteilseite, nur für Stadtteile im Katalog (sonst kein Link). */
 export function stadtteilPfad(stadtteil: string | null | undefined): string | null {
   if (!stadtteil || !bezirkVon(stadtteil)) return null;
