@@ -247,7 +247,10 @@ export function neuSeit(events: DddEvent[], jetztIso: string, stunden = 24): Ddd
   return events.filter((e) => (e.erstellt_am ?? "") >= grenze);
 }
 
-export function wochenendProgramm(pool: EventPool, proTag = 3) {
+/** Zehn Tipps fürs Wochenende: Freitag 3, Samstag 4 (der volle Ausgehtag), Sonntag 3. */
+export const WOCHENEND_TIPPS = { Fr: 3, Sa: 4, So: 3 } as const;
+
+export function wochenendProgramm(pool: EventPool) {
   const w = wochenende(pool.heute);
   const benutzt = new Set<string>();
   return (
@@ -258,7 +261,7 @@ export function wochenendProgramm(pool: EventPool, proTag = 3) {
     ] as const
   ).map(([name, kurz, tag]) => {
     const tagesEvents = filtern(pool.events, { von: tag, bis: tag }).filter((e) => e.uhrzeit);
-    const auswahl = vielfaeltig(tagesEvents, proTag, benutzt).sort(nachZeit);
+    const auswahl = vielfaeltig(tagesEvents, WOCHENEND_TIPPS[kurz], benutzt).sort(nachZeit);
     auswahl.forEach((e) => benutzt.add(e.id));
     return { name, kurz, tag, events: auswahl, vergangen: tag < pool.heute };
   });

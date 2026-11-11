@@ -38,7 +38,7 @@ export function tagesSatz(tag: string, events: Pick<DddEvent, "kategorie">[]): s
   return `Am ${datum} stehen in Düsseldorf ${n} Events an${top.length ? `, die meisten aus ${aufzaehlung(top)}` : ""}.`;
 }
 
-/** „Vom 13. bis 15. November 2026 stehen in Düsseldorf 214 Events an, die meisten aus …; neun davon empfehlen wir.“ */
+/** „Vom 13. bis 15. November 2026 stehen in Düsseldorf 214 Events an, die meisten aus …; zehn davon empfehlen wir.“ */
 export function wochenendSatz(fr: string, so: string, events: Pick<DddEvent, "kategorie">[], tipps: number): string {
   const [, mf, tf] = fr.split("-").map(Number);
   const [, ms] = so.split("-").map(Number);

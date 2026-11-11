@@ -20,7 +20,7 @@ export async function generateMetadata(props: PageProps<"/wochenende">): Promise
   return seitenMetadaten({
     pfad: "/wochenende",
     titel: "Unser Wochenend-Programm",
-    beschreibung: "Neun Tipps für das Wochenende in Düsseldorf, drei pro Tag.",
+    beschreibung: "Zehn Tipps für das Wochenende in Düsseldorf: drei am Freitag, vier am Samstag, drei am Sonntag.",
     noindex: hatParameter(await props.searchParams),
   });
 }

@@ -71,8 +71,16 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
         zeit_el = el.find("time")
         if zeit_el:
             datetime_attr = zeit_el.get("datetime", "")
-            datum = datum_parsen(datetime_attr) or datum_parsen(zeit_el.get_text(strip=True))
-            uhrzeit = uhrzeit_parsen(datetime_attr) or uhrzeit_parsen(zeit_el.get_text(strip=True))
+            # Uhrzeit steht im Attribut content („2026-11-11T20:30:00+01:00“) bzw. in .event--time.
+            # Nicht aus dem zusammengeklebten Text lesen: „11.11.2026“ + „20:30“ ergab „…202620:30“ → 11:20.
+            content_attr = zeit_el.get("content", "")
+            zeit_text = zeit_el.find(class_="event--time")
+            datum = datum_parsen(datetime_attr) or datum_parsen(content_attr) or datum_parsen(zeit_el.get_text(" ", strip=True))
+            uhrzeit = (
+                uhrzeit_parsen(content_attr)
+                or uhrzeit_parsen(datetime_attr)
+                or (uhrzeit_parsen(zeit_text.get_text(strip=True)) if zeit_text else None)
+            )
 
         if not datum:
             for text_el in el.find_all(True):

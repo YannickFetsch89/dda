@@ -347,7 +347,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
         <section id="newsletter" className="newsletter" style={{ marginTop: 24 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <span className="newsletter__titel d">Jeden Donnerstag das Wochenende im Postfach.</span>
-            <span style={{ fontSize: 14 }}>Neun Tipps, kein Spam, jederzeit abbestellbar.</span>
+            <span style={{ fontSize: 14 }}>Zehn Tipps, kein Spam, jederzeit abbestellbar.</span>
           </div>
           <NewsletterForm />
         </section>
