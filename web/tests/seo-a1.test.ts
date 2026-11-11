@@ -15,8 +15,11 @@ describe("routeVon", () => {
     expect(routeVon("/guides/clubs/salon-des-amateurs-altstadt")).toEqual({ typ: "ort", hub: "clubs", slug: "salon-des-amateurs-altstadt" });
   });
 
+  it("Einzelsegment unter /event/ ohne UUID ist ungültig (echte 404 statt Soft-404 der alten Seite)", () => {
+    expect(routeVon("/event/kein-uuid")).toEqual({ typ: "ungueltig" });
+  });
+
   it("lässt alles andere durch", () => {
-    expect(routeVon("/event/kein-uuid")).toBeNull(); // Einzelsegment ohne UUID: Next entscheidet
     expect(routeVon("/guides/spielplaetze/x")).toBeNull();
     expect(routeVon("/guides/clubs")).toBeNull();
     expect(routeVon("/heute")).toBeNull();
@@ -34,7 +37,9 @@ describe("Tage", () => {
       expect(tagGueltig(falsch)).toBe(false);
       expect(istGueltigerTag(falsch)).toBe(false);
     }
-    expect(tagGueltig("1999-01-01")).toBe(false); // außerhalb des sinnvollen Bereichs
+    // Seite und Proxy mit derselben Grenze (2020–2100) – sonst rendert die Seite, der Proxy sagt 404
+    expect(tagGueltig("2019-06-01")).toBe(false);
+    expect(istGueltigerTag("2019-06-01")).toBe(false);
   });
 });
 
@@ -90,5 +95,12 @@ describe("Pfade und Sitemap-Daten", () => {
     expect(juengstes([{ erstellt_am: "2026-11-01T10:00:00Z" }, { erstellt_am: "2026-11-09T13:55:40Z" }, { erstellt_am: null }])?.toISOString())
       .toBe("2026-11-09T13:55:40.000Z");
     expect(juengstes([{ erstellt_am: null }])).toBeUndefined();
+  });
+});
+
+describe("Kategorie wie auf der Seite", () => {
+  it("DB „family“ → Pfad „familie“ (sonst zwei URLs je Familien-Event)", async () => {
+    const { kategorieAusDb } = await import("@/lib/kategorien");
+    expect(eventPfad({ id: "u", kategorie: kategorieAusDb("family"), slug: "kinderfest" })).toBe("/event/familie/kinderfest");
   });
 });

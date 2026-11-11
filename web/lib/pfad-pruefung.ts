@@ -6,6 +6,8 @@
 // Grundsatz: Nur bei einer ERFOLGREICHEN Abfrage ohne Treffer gilt eine URL als fehlend. Fehler, fehlende
 // Zugangsdaten oder Zeitüberschreitung → „weiter“ (Seite wird normal ausgeliefert, nie fälschlich 404).
 import { istSichtbarerClub } from "./clubs";
+import { istGueltigerTag } from "./datum";
+import { kategorieAusDb } from "./kategorien";
 import { eventPfad } from "./pfade";
 import type { DddOrt, KategorieSlug } from "./typen";
 
@@ -16,6 +18,7 @@ const FEHLT: Pruefung = { art: "fehlt" };
 // ---------- Routen erkennen (rein, ohne Netz) ----------
 
 export type Route =
+  | { typ: "ungueltig" }
   | { typ: "event-uuid"; id: string }
   | { typ: "event"; kategorie: string; slug: string }
   | { typ: "tag"; datum: string }
@@ -39,7 +42,7 @@ export function routeVon(pfad: string): Route | null {
   const s = pfad.replace(/\/+$/, "").split("/").slice(1).map(teil);
   if (s.some((x) => x === null || x === "")) return null;
   const [a, b, c, d] = s as string[];
-  if (a === "event" && b && !c) return UUID.test(b) ? { typ: "event-uuid", id: b.toLowerCase() } : null;
+  if (a === "event" && b && !c) return UUID.test(b) ? { typ: "event-uuid", id: b.toLowerCase() } : { typ: "ungueltig" };
   if (a === "event" && b && c && !d) return { typ: "event", kategorie: b, slug: c };
   if (a === "tag" && b && !c) return { typ: "tag", datum: b };
   if (a === "reihe" && b && !c) return { typ: "reihe", slug: b };
@@ -47,14 +50,8 @@ export function routeVon(pfad: string): Route | null {
   return null;
 }
 
-/** Echter Kalendertag (kein „2099-99-99“, das Date.UTC sonst weiterrechnet) im sinnvollen Bereich. */
-export function tagGueltig(datum: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datum);
-  if (!m) return false;
-  const [j, mo, t] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const d = new Date(Date.UTC(j, mo - 1, t));
-  return j >= 2020 && j <= 2100 && d.getUTCFullYear() === j && d.getUTCMonth() === mo - 1 && d.getUTCDate() === t;
-}
+/** Echter Kalendertag – dieselbe Regel wie die Tagesseite (lib/datum.ts, istGueltigerTag). */
+export const tagGueltig = (datum: string): boolean => istGueltigerTag(datum);
 
 // ---------- Abfragen mit Zwischenspeicher (pro Server-Prozess) ----------
 
@@ -94,8 +91,11 @@ type EventKopf = { id: string; kategorie: KategorieSlug; slug: string | null };
 
 async function eventLaden(feld: "id" | "slug", wert: string): Promise<EventKopf | null | undefined> {
   return gemerkt(`event:${feld}:${wert}`, async () => {
-    const z = await abfrage<EventKopf>("events", `select=id,kategorie,slug&abgelehnt=eq.false&${feld}=eq.${encodeURIComponent(wert)}&limit=1`);
-    return z === undefined ? undefined : (z[0] ?? null);
+    const z = await abfrage<{ id: string; kategorie: string | null; slug: string | null }>(
+      "events", `select=id,kategorie,slug&abgelehnt=eq.false&${feld}=eq.${encodeURIComponent(wert)}&limit=1`);
+    if (z === undefined) return undefined;
+    // Wie die Seite (lib/daten.ts): DB-Wert „family“ heißt auf der Website „familie“
+    return z[0] ? { ...z[0], kategorie: kategorieAusDb(z[0].kategorie) } : null;
   });
 }
 
@@ -156,6 +156,8 @@ export async function pfadPruefen(pfad: string): Promise<Pruefung> {
   const route = routeVon(pfad);
   if (!route) return WEITER;
   switch (route.typ) {
+    case "ungueltig":
+      return FEHLT;
     case "tag":
       return tagGueltig(route.datum) ? WEITER : FEHLT;
     case "event-uuid": {

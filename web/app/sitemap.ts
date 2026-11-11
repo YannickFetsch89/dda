@@ -3,7 +3,7 @@
 import type { MetadataRoute } from "next";
 import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
-import { plusTage } from "@/lib/datum";
+import { findetStatt, plusTage, wochenende, zeitraumAuflösen } from "@/lib/datum";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { orteLaden } from "@/lib/orte";
@@ -21,17 +21,24 @@ export function juengstes(events: { erstellt_am: string | null }[]): Date | unde
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pool = await eventPoolLaden();
-  // lastModified = Inhaltsdatum (SEO-/GEO-Plan, Maßnahme 12): wann zuletzt ein Event dazukam
-  const amTag = (tag: string) => pool.alle.filter((e) => e.datum === tag || (e.datum <= tag && (e.datum_bis ?? "") >= tag));
-  const gesamt = juengstes(pool.alle);
+  // lastModified = Inhaltsdatum (SEO-/GEO-Plan, Maßnahme 12): wann zuletzt ein Event dazukam, das auf
+  // DIESER Seite steht (Standardansicht der Seite, nicht der ganze Pool)
+  const zwischen = (von: string, bis: string) => pool.alle.filter((e) => findetStatt(e, von, bis, true));
+  const amTag = (tag: string) => zwischen(tag, tag);
+  const imZeitraum = (key?: string) => {
+    const z = zeitraumAuflösen(key, pool.heute);
+    return zwischen(z.von, z.bis);
+  };
+  const we = wochenende(pool.heute);
   const mit = (d: Date | undefined) => (d ? { lastModified: d } : {});
 
   const feste: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, ...mit(gesamt), changeFrequency: "hourly", priority: 1 },
+    // Start zeigt standardmäßig „heute“, Entdecken und Stadtteile „diese Woche“
+    { url: `${SITE_URL}/`, ...mit(juengstes(imZeitraum(undefined))), changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/heute`, ...mit(juengstes(amTag(pool.heute))), changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/entdecken`, ...mit(gesamt), changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/wochenende`, ...mit(gesamt), changeFrequency: "daily", priority: 0.8 },
-    { url: `${SITE_URL}/stadtteile`, ...mit(gesamt), changeFrequency: "daily", priority: 0.7 },
+    { url: `${SITE_URL}/entdecken`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/wochenende`, ...mit(juengstes(zwischen(we.fr, we.so))), changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/stadtteile`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/event-melden`, changeFrequency: "monthly", priority: 0.4 },
   ];
 

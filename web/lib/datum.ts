@@ -38,11 +38,15 @@ export function wochentag(tag: string): number {
   return alsUtc(tag).getUTCDay();
 }
 
-/** Echter Kalendertag: „2099-99-99“ oder „2026-02-30“ rechnet Date.UTC sonst einfach weiter. */
+/**
+ * Echter Kalendertag im sinnvollen Bereich (2020–2100): „2099-99-99“ oder „2026-02-30“ rechnet Date.UTC sonst
+ * einfach weiter. Gilt für die Tagesseite und für proxy.ts (lib/pfad-pruefung.ts) gleich.
+ */
 export function istGueltigerTag(wert: string | undefined | null): wert is string {
   if (!wert || !/^\d{4}-\d{2}-\d{2}$/.test(wert)) return false;
+  const jahr = Number(wert.slice(0, 4));
   const d = alsUtc(wert);
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === wert;
+  return jahr >= 2020 && jahr <= 2100 && !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === wert;
 }
 
 /** "30.10." */

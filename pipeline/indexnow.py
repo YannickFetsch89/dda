@@ -16,6 +16,7 @@ import logging
 import os
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -26,10 +27,27 @@ INDEXNOW_ENDPUNKT = "https://api.indexnow.org/indexnow"
 SITE_URL = os.getenv("SITE_URL", "https://diesdas.events").rstrip("/")
 TAGESFENSTER = 14  # wie die Sitemap: /tag/… für heute und die nächsten 13 Tage
 MAX_JE_ANFRAGE = 10000
+SEITENGROESSE = 1000  # Supabase liefert pro Abfrage höchstens 1.000 Zeilen
+
+# Website-Slugs der Kategorien (web/lib/kategorien.ts); die DB speichert „family“, die Website zeigt „familie“
+WEB_KATEGORIEN = {"kultur", "musik", "food", "sport", "outdoor", "stadtfuehrung", "community", "nightlife",
+                  "familie", "dating", "sonstiges"}
+
+
+def kategorie_web(wert: str | None) -> str:
+    """Wie kategorieAusDb auf der Website – sonst meldet IndexNow eine URL, die per 308 umleitet."""
+    w = (wert or "").strip().lower()
+    if w == "family":
+        return "familie"
+    return w if w in WEB_KATEGORIEN else "sonstiges"
+
+
+def heute_berlin() -> date:
+    return datetime.now(ZoneInfo("Europe/Berlin")).date()
 
 
 def event_url(kategorie: str, slug: str) -> str:
-    return f"{SITE_URL}/event/{quote(kategorie, safe='')}/{quote(slug, safe='')}"
+    return f"{SITE_URL}/event/{quote(kategorie_web(kategorie), safe='')}/{quote(slug, safe='')}"
 
 
 def urls_bauen(events: list[dict], heute: date) -> list[str]:
@@ -93,10 +111,18 @@ def nach_lauf_melden(lauf_start: datetime, dry_run: bool = False) -> int:
     from database.client import get_supabase_client
 
     db = get_supabase_client()
-    events = (db.table("events").select("kategorie, slug, datum, datum_bis")
-              .eq("abgelehnt", False).gte("erstellt_am", lauf_start.isoformat())
-              .limit(5000).execute().data or [])
-    urls = urls_bauen(events, date.today())
+    events: list[dict] = []
+    seite = 0
+    while True:  # seitenweise – sonst kämen nur die ersten 1.000 Zeilen
+        teil = (db.table("events").select("kategorie, slug, datum, datum_bis")
+                .eq("abgelehnt", False).gte("erstellt_am", lauf_start.isoformat())
+                .order("id").range(seite * SEITENGROESSE, seite * SEITENGROESSE + SEITENGROESSE - 1)
+                .execute().data or [])
+        events += teil
+        if len(teil) < SEITENGROESSE:
+            break
+        seite += 1
+    urls = urls_bauen(events, heute_berlin())
     anzahl = melden(urls, dry_run)
     logger.info("IndexNow: %d neue Events → %d URLs gemeldet", len(events), anzahl)
     return anzahl

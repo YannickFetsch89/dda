@@ -30,5 +30,14 @@ class UrlsTest(unittest.TestCase):
         self.assertEqual(len(urls), len(set(urls)))
 
 
+class KategorieTest(unittest.TestCase):
+    def test_family_wird_familie(self):
+        from pipeline.indexnow import event_url, kategorie_web
+        self.assertEqual(kategorie_web("family"), "familie")
+        self.assertEqual(kategorie_web("Musik "), "musik")
+        self.assertEqual(kategorie_web("unbekannt"), "sonstiges")
+        self.assertEqual(event_url("family", "kinderfest"), f"{SITE_URL}/event/familie/kinderfest")
+
+
 if __name__ == "__main__":
     unittest.main()
