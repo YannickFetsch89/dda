@@ -144,6 +144,8 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .popover--links { left: 0; right: auto; }
 
 .menue { position: relative; }
+/* Offenes Menü liegt immer ganz vorn – auch über klebenden Leisten (z. B. Gold-Leiste im Restaurant-Guide, z-index 41) */
+.kopf:has(.menue[open]) { position: relative; z-index: 70; }
 .menue > summary { list-style: none; }
 .menue > summary::-webkit-details-marker { display: none; }
 
