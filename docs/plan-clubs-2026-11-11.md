@@ -50,12 +50,19 @@ Gespeichert in `extras.club`:
 Dazu `beschreibung` (gegliedert wie bei den Event-Texten) und `highlight`.
 
 ### 2.4 Club-Score (C2)
-Teilwerte 0–10, gewichtet, gerundet auf 1–10, gespeichert in `extras.club_score`:
-- **Programm 35 %** – Events in unserem Kalender (letzte 90 + nächste 60 Tage), Regelmäßigkeit,
-- **Szene 25 %** – Resident Advisor, kuratierte Reihen/Line-ups, Kulturhaus-Programm,
-- **Profil 20 %** – belegte Musikrichtungen und Formate,
-- **Beliebtheit 20 %** – Google (Bayes-Mittel, Anzahl Bewertungen).
-Kalibrierung nach dem ersten Lauf; Zielbild: alle bekannten Szene-Clubs ≥ 7.
+Teilwerte 0–10, gewichtet, gerundet auf 1–10, gespeichert in `extras.club_score`
+(kalibriert nach dem ersten Lauf, 11.11.2026):
+- **Programm 35 %** – das Bessere aus Kalender (Events letzte 90 + nächste 60 Tage) und belegtem Profil
+  (Öffnungstage, feste Reihen, weiteres Programm) – unser Kalender kennt viele Clubnächte nicht,
+- **Profil 25 %** – belegte Musikrichtungen, Reihen, Fakten,
+- **Beliebtheit 25 %** – Google (Bayes-Mittel, Anzahl Bewertungen),
+- **Szene 15 %** – Resident Advisor, kuratierte Reihen, Kulturprogramm (schwächer, weil es Mainstream-Clubs benachteiligt).
+
+### 2.5 Freigabe (nach Cursor-Review)
+„passt“ der KI ist nur ein Vorschlag. Sichtbar wird ein Ort erst nach der Sichtprüfung der CSV durch den
+Auftraggeber: `python -m scraper.orte.clubs_profil --freigeben "Name A; Name B"` setzt `extras.club_freigegeben`,
+danach `--freischalten`. Inaktive Orte anderer Hubs werden nur mit Freigabe und Score ≥ 7 zu `typ = club`;
+ihre alte URL leitet dauerhaft auf `/guides/clubs/<slug>` um.
 
 ## 3. Website
 - `/guides/clubs`: dunkler Hero mit Lichtflecken, Genre-Chips (Mehrfachauswahl, ODER), Unterart, Stadtteil, Eintritt;
@@ -71,3 +78,19 @@ Kalibrierung nach dem ersten Lauf; Zielbild: alle bekannten Szene-Clubs ≥ 7.
 3. Score, Sichtprüfung (CSV), Freischaltung.
 4. Website, Tests, Browser-Prüfung → Deploy nur mit OK.
 5. Später: Profil-Aktualisierung (Events/Genres) im täglichen Lauf.
+
+## 5. Cursor-Review vom 11.11.2026 – eingearbeitet
+1. Belegprüfung: angezeigter Text muss zum Zitat passen (Zahlen bzw. Wortstamm; Reihenname im Zitat oder
+   direkt daneben, ±250 Zeichen); Zusatz-Events, Publikum, Ausstattung brauchen ein Stichwort; Freigabe-Pflicht.
+2. Event-Abgleich: Teiltreffer nur ab 6 Zeichen und als ganze Wörter; Aliase nur am Anfang; „nicht im“ nur vor dem Clubnamen.
+3. Umtypen nur mit Freigabe und Score ≥ 7; Weiterleitung der alten URL.
+4. Instagram-/RA-Links nur exakt (ohne Query) und nur, wenn sie wörtlich in einer Quelle stehen (Links aus dem HTML).
+5. Genre-Stichworte mit Wortgrenzen (nicht „Warehouse“, „technology“, „Funktion“, „Discothek“); Mixed nur mit Musikwort.
+6. Namensausschluss enger (kein bloßes „DJ“, „Ticket“, „girls“).
+7. Symbolbilder: Kirche „St. Martin“ und Martinsgans kein Martinsbild; „Laternen-Umzug“, „Martins-Zug“ ja;
+   Kostümparty erst ab 11.11.; Carnival/Mardi Gras.
+8. Karten-Badges als eine Leiste oben (kein Überlappen mit dem Foto-Credit).
+9. JSON-LD-Listen und Brotkrumen nutzen die kanonische URL.
+10. Keine Beispiel-Events als „Nächstes Event“.
+11. Längengrenzen auch für Club-Texte von Orten anderer Hubs.
+Hinweise: Club-Lader paginiert; extras werden zusammengeführt statt überschrieben.

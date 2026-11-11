@@ -22,8 +22,12 @@ export function ClubKarte({ o, naechstes }: { o: DddOrt; naechstes?: DddEvent | 
         <div className="cl-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
           <BildImg src={bild} alt="" icon={art.icon} />
-          {genres[0] && <span className="cl-genre">{genres[0]}</span>}
-          {eintritt && <span className="cl-eintritt">{eintritt}</span>}
+          {(genres[0] || eintritt) && (
+            <span className="cl-badges">
+              {genres[0] && <span className="cl-genre">{genres[0]}</span>}
+              {eintritt && <span className="cl-eintritt">{eintritt}</span>}
+            </span>
+          )}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>
         <div className="cl-karte__text">

@@ -27,6 +27,9 @@ function plus(datum: string, tage: number): string {
 /** Liegt MM-DD des Datums im Bereich (Grenzen inklusive)? */
 const zwischen = (datum: string, von: string, bis: string) => datum.slice(5) >= von && datum.slice(5) <= bis;
 
+/** Karnevalssession im neuen Jahr: 1. Januar bis einschließlich Aschermittwoch (Ostersonntag − 46). */
+const karnevalsSession = (d: string) => d.slice(5) >= "01-01" && d <= plus(ostersonntag(Number(d.slice(0, 4))), -46);
+
 interface Saison {
   motiv: string;
   stichworte: RegExp;
@@ -35,17 +38,26 @@ interface Saison {
 
 const SAISON: Saison[] = [
   { motiv: "halloween", stichworte: /hallo?ween|spooky|grusel|samhain|kürbis/i, zeitfenster: (d) => zwischen(d, "10-01", "10-31") },
-  // Nicht das bloße „Laterne“ (trifft Nachtwächter-Führungen) – nur Laternen-Umzug/-Basteln und Martins-Wörter
+  // Nicht das bloße „Laterne“ (trifft Nachtwächter-Führungen) und nicht die Kirche („Konzert in St. Martin“,
+  // „St. Martinskirche“) – nur Martinsbrauch: Umzug, Feuer, Laternen basteln, Weckmann
   {
     motiv: "sankt-martin",
-    stichworte: /sankt martin|st\.? martin(?!-)|martins(zug|umzug|feuer|fest|singen|markt|gans)|martinszüge|laternen(umzug|zug|lauf|fest|basteln| basteln|werkstatt)|weckm[äa]nn|stutenkerl/i,
+    stichworte:
+      /(?<!\bin |kirche |gemeinde )\b(sankt|st\.?) ?martin\b(?!s?-?(kirche|gemeinde|pfarr|basilika))|martins-?(zug|züge|umzug|feuer|fest|singen|markt)|laternen-?(umzug|zug|lauf|fest|basteln|werkstatt)|laternen basteln|weckm[äa]nn|stutenkerl/i,
     zeitfenster: (d) => zwischen(d, "11-01", "11-15"),
   },
   {
     motiv: "karneval",
     // Kein bloßes „11.11“: trifft Datumsangaben („VERLEGT AUF 11.11.2026 Musikstudio …“)
-    stichworte: /karneval|helau|alaaf|sessionser[öo]ffnung|hoppeditz|altweiber|weiberfastnacht|rosenmontag|tulpensonntag|jeck|prunksitzung|kamelle|fastelovend|fasching|fastnacht|elfter im elften|kost[üu]m(party|ball|fest)/i,
-    zeitfenster: (d) => zwischen(d, "11-01", "11-15") || (d.slice(5) >= "01-01" && d <= plus(ostersonntag(Number(d.slice(0, 4))), -46)),
+    stichworte:
+      /karneval|carnival|mardi ?gras|helau|alaaf|sessionser[öo]ffnung|hoppeditz|altweiber|weiberfastnacht|rosenmontag|tulpensonntag|\bjeck|prunksitzung|kamelle|fastelovend|fasching|fastnacht|elfter im elften/i,
+    zeitfenster: (d) => zwischen(d, "11-01", "11-15") || karnevalsSession(d),
+  },
+  // Kostümpartys nur ab dem 11.11. bzw. in der Session – Anfang November sind es meist Halloween-Nachzügler
+  {
+    motiv: "karneval",
+    stichworte: /kost[üu]m-?(party|ball|fest|sitzung)|costume party/i,
+    zeitfenster: (d) => zwischen(d, "11-11", "11-15") || karnevalsSession(d),
   },
   { motiv: "nikolaus", stichworte: /nikolaus/i, zeitfenster: (d) => zwischen(d, "12-01", "12-06") },
   { motiv: "advent-weihnachtsmarkt", stichworte: /weihnachtsmarkt|advent|glühwein|eisbahn|winterwelt/i, zeitfenster: (d) => zwischen(d, "11-15", "12-23") },

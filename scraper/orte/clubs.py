@@ -109,9 +109,14 @@ STARTLISTE: list[tuple[str, str]] = [
 
 # Immer ausgeschlossen (C1): Erotik/Sauna/Swinger/Bordell, Shisha, Karaoke, DJ-Dienstleister, Tanzschulen …
 AUSSCHLUSS_NAME = re.compile(
-    r"erotik|bordell|sauna|swinger|privathaus|massage|lady |studio noir|domina|fetisch|bizarre|escort|girls|models"
-    r"|shisha|hookah|karaoke|\bktv\b|\bdj\b|dj-service|event dj|tanzschule|streetdance|ticket|vape|zigarre|cigar"
-    r"|stiftung|domizil|gr[äa]fin",  # Vereine bleiben: R25 heißt bei Google „Kultur-Schlachthof e.V.“
+    # Erotik/Sauna/Swinger (C1) – „girls“/„models“ nur in eindeutigen Formen, nicht „Girls Night“
+    r"erotik|bordell|laufhaus|eros-?center|sauna|swinger|privathaus|massage|studio noir|domina|fetisch|bizarre"
+    r"|escort|privatgirls|modelsgermany|bottle ?& ?models|domizil|gr[äa]fin"
+    # Shisha, Karaoke (C1)
+    r"|shisha|hookah|karaoke|\bktv\b"
+    # Dienstleister statt Ort – „DJ Bar“ und „Tickethalle“ bleiben
+    r"|dj[- ]?service|event ?-?dj|dj[- ]?agentur|hochzeits-?dj|\bticket ?(shop|verkauf|agentur|portal)|kaufticket"
+    r"|tanzschule|streetdance|vape|zigarre|cigar|stiftung",  # Vereine bleiben: R25 heißt bei Google „Kultur-Schlachthof e.V.“
     re.IGNORECASE,
 )
 AUSSCHLUSS_TYPEN = {"massage", "beauty_salon", "sports_school", "store", "gym", "hookah_bar", "spa",

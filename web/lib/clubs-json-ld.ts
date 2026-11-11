@@ -7,7 +7,9 @@ import { brotkrumenJsonLd, oeffnungszeitenSpec } from "./kneipen-json-ld";
 import { ortBildUrl, sichereUrl } from "./orte";
 import type { DddOrt } from "./typen";
 
-const clubUrl = (o: DddOrt, siteUrl: string) => `${siteUrl}/guides/clubs/${encodeURIComponent(o.slug)}`;
+/** Kanonische URL: eigene Club-Seite, bei auch_club die Haupt-URL im anderen Hub (dort ist die Club-Ansicht noindex). */
+export const clubKanonischerPfad = (o: DddOrt) => (o.typ === "club" ? `/guides/clubs/${encodeURIComponent(o.slug)}` : ortPfad(o));
+const clubUrl = (o: DddOrt, siteUrl: string) => `${siteUrl}${clubKanonischerPfad(o)}`;
 
 export function clubJsonLd(o: DddOrt, siteUrl: string): Record<string, unknown> {
   const bild = ortBildUrl(o);
@@ -19,7 +21,7 @@ export function clubJsonLd(o: DddOrt, siteUrl: string): Record<string, unknown> 
     "@type": clubArt(o) === "kulturhaus" ? "MusicVenue" : "NightClub",
     name: o.name,
     // Haupt-URL des Ortes (bei auch_club die Seite im anderen Hub)
-    url: o.typ === "club" ? clubUrl(o, siteUrl) : `${siteUrl}${ortPfad(o)}`,
+    url: clubUrl(o, siteUrl),
     address: {
       "@type": "PostalAddress",
       ...(strasse ? { streetAddress: strasse } : {}),

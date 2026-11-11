@@ -4,7 +4,8 @@ import unittest
 from datetime import date
 
 from scraper.orte.clubs import ausgeschlossen, name_passt, unterart_regel
-from scraper.orte.clubs_profil import club_score, event_orte, ort_schluessel, pruefen
+from scraper.orte.clubs_profil import (anzeige_belegt, club_score, event_orte, link_pruefen, ort_schluessel, pruefen,
+                                       umtypen_erlaubt)
 
 
 def place(name, primaer="night_club", adresse="Ronsdorfer Str. 134, 40233 Düsseldorf, Deutschland", **mehr):
@@ -129,6 +130,80 @@ class ScoreTest(unittest.TestCase):
         schlecht = club_score({"google_rating": 1.8, "google_bewertungen_anzahl": 800}, profil, self.events(8), self.HEUTE)
         gut = club_score({"google_rating": 4.6, "google_bewertungen_anzahl": 800}, profil, self.events(8), self.HEUTE)
         self.assertLessEqual(gut["gesamt"] - schlecht["gesamt"], 2)
+
+
+class CursorBefundeTest(unittest.TestCase):
+    """Fälle aus dem Cursor-Review vom 11.11.2026."""
+
+    def test_anzeige_passt_zum_zitat(self):
+        tuer = [("https://club.example/faq", "Die Tür ist streng."),
+                ("https://club.example/programm", "Jeden Samstag Ü30-Party ab 22 Uhr.")]
+        fakten = ki()["fakten"]
+        fakten["eintritt"] = {"text": "meist 5 €", "zitat": "Die Tür ist streng."}
+        fakten["tuer"] = {"text": "Strenge Tür", "zitat": "Die Tür ist streng."}
+        profil, verworfen = pruefen(ki(genres=[], fakten=fakten, formate=[
+            {"name": "Ü30", "rhythmus": "jeden Samstag", "musik": "Charts", "zitat": "Die Tür ist streng."},
+            {"name": "Ü30-Party", "rhythmus": "jeden Samstag", "musik": "Techno",
+             "zitat": "Jeden Samstag Ü30-Party ab 22 Uhr."},
+        ]), tuer)
+        self.assertNotIn("eintritt", profil["fakten"])             # „5“ steht nicht im Zitat
+        self.assertIn("tuer", profil["fakten"])                    # „streng“ steht im Zitat
+        self.assertEqual([f["name"] for f in profil["formate"]], ["Ü30-Party"])
+        self.assertEqual(profil["formate"][0]["rhythmus"], "jeden Samstag")
+        self.assertEqual(profil["formate"][0]["musik"], "")       # „Techno“ ist nicht belegt → leer
+        self.assertTrue(any("Name steht nicht beim Zitat" in v for v in verworfen))
+
+    def test_reihenname_als_ueberschrift_ueber_dem_zitat(self):
+        q = [("https://zakk.example/", "Der Rockclub\nFinest Alternative Rock mit DJ MajorTom im zakk Club.")]
+        profil, _ = pruefen(ki(genres=[], formate=[
+            {"name": "Der Rockclub", "rhythmus": "monatlich", "musik": "Alternative Rock",
+             "zitat": "Finest Alternative Rock mit DJ MajorTom im zakk Club."}]), q)
+        self.assertEqual([f["name"] for f in profil["formate"]], ["Der Rockclub"])
+        self.assertEqual(profil["formate"][0]["musik"], "Alternative Rock")
+        self.assertEqual(profil["formate"][0]["rhythmus"], "")   # „monatlich“ steht nirgends
+
+    def test_anzeige_belegt(self):
+        self.assertTrue(anzeige_belegt("Fr und Sa ab 22 Uhr", "FREITAG AB 22 UHR SAMSTAG AB 22 UHR"))
+        self.assertFalse(anzeige_belegt("meist 5 €", "Die Tür ist streng."))
+        self.assertFalse(anzeige_belegt("Kleiner Raum", "The Salon is a small, simple space"))
+
+    def test_event_orte_ganze_woerter(self):
+        self.assertEqual(event_orte("Graf Eventlocation", {"Grafenberg"}), [])
+        self.assertEqual(event_orte("The Gate", {"Southgate"}), [])
+        self.assertEqual(event_orte("Pitcher", {"Pitcher, nicht im Freien"}), ["Pitcher, nicht im Freien"])
+        self.assertEqual(event_orte("zakk", {"zakk – nicht im zakk", "zakk – Halle",
+                                             "HHU, am Finaltag im zakk"}), ["zakk – Halle"])
+        self.assertEqual(event_orte("The Eight", {"The Eight - Eventlocation & Club in Düsseldorf"}),
+                         ["The Eight - Eventlocation & Club in Düsseldorf"])
+
+    def test_umtypen_nur_mit_freigabe_und_score(self):
+        basis = {"typ": "restaurant", "aktiv": False,
+                 "extras": {"club": {"passt": True}, "club_score": {"gesamt": 8}, "club_freigegeben": "2026-11-11"}}
+        self.assertTrue(umtypen_erlaubt(basis))
+        self.assertFalse(umtypen_erlaubt({**basis, "aktiv": True}))   # aktiv im Haupt-Hub → nie
+        ohne = {**basis, "extras": {**basis["extras"], "club_freigegeben": None}}
+        self.assertFalse(umtypen_erlaubt(ohne))
+        schwach = {**basis, "extras": {**basis["extras"], "club_score": {"gesamt": 5}}}
+        self.assertFalse(umtypen_erlaubt(schwach))
+
+    def test_links(self):
+        quelle = "Folgt uns!\nLinks: https://www.instagram.com/echterclub/ https://ra.co/clubs/15478"
+        # mit oder ohne „www“ ist dasselbe Profil
+        self.assertEqual(link_pruefen("https://instagram.com/echterclub", "instagram", quelle), "https://instagram.com/echterclub")
+        self.assertEqual(link_pruefen("https://www.instagram.com/echterclub/", "instagram", quelle),
+                         "https://www.instagram.com/echterclub/")
+        self.assertIsNone(link_pruefen("https://www.instagram.com/echterclub?next=https://example.org/", "instagram", quelle))
+        self.assertIsNone(link_pruefen("https://www.instagram.com/echter", "instagram", quelle))  # nur Präfix
+        self.assertEqual(link_pruefen("http://ra.co/clubs/15478", "resident_advisor", quelle), "https://ra.co/clubs/15478")
+
+    def test_genre_stichworte_eng(self):
+        q = [("https://club.example/", "Warehouse-Party im Keller. Open from 23 bis 5 Uhr. Technology Talk.")]
+        profil, _ = pruefen(ki(genres=[
+            {"wert": "House", "anteil": "haupt", "zitat": "Warehouse-Party im Keller"},
+            {"wert": "Mixed", "anteil": "neben", "zitat": "Open from 23 bis 5 Uhr"},
+            {"wert": "Techno", "anteil": "neben", "zitat": "Technology Talk"},
+        ]), q)
+        self.assertEqual(profil["genres"], [])
 
 
 if __name__ == "__main__":

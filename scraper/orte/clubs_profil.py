@@ -61,23 +61,73 @@ DRESSCODE = ["casual", "schick", "egal", "unbekannt"]
 
 # Ein Genre zählt nur, wenn sein Zitat ein passendes Stichwort enthält (sonst belegt „tolle Musik“ jedes Genre)
 GENRE_STICHWORTE = {
-    "Techno": r"techno|rave|\bhard ?groove|\bacid|minimal|industrial",
-    "House": r"house|deep ?house|tech ?house|afro ?house",
-    "Elektro/Experimental": r"elektro|electro|electronic|experimental|ambient|clubmusik|elektronisch",
-    "Drum & Bass": r"drum ?(and|&|n|'n') ?bass|\bdnb\b|\bd&b\b|jungle|breakbeat|dubstep|bass ?music",
-    "Hip-Hop": r"hip ?-?hop|\brap\b|trap|deutschrap|urban",
-    "R&B": r"r ?& ?b|rnb|r'n'b|\brnb\b|urban",
-    "Afrobeats": r"afro ?beats?|amapiano|afro",
-    "Reggaeton/Latin": r"reggaeton|latin|salsa|bachata|perreo|dancehall|kizomba|cumbia|latino",
-    "Pop/Charts": r"\bpop\b|charts?|mainstream|hits|black ?(&|and) ?white|black music|party ?hits",
-    "80er/90er/2000er": r"80er|90er|2000er|00er|80s|90s|2000s|throwback|oldies|ü ?30|ue ?30",
-    "Schlager": r"schlager|malle|ballermann|après|apres|stimmungs",
-    "Rock/Indie": r"rock|indie|alternative|britpop|grunge|emo",
-    "Metal/Punk": r"metal|punk|hardcore|gothic|wave|dark",
-    "Disco/Funk/Soul": r"disco|funk|soul|motown|boogie",
-    "Jazz": r"jazz|swing",
-    "Mixed": r"mixed|querbeet|gemischt|bunt gemischt|alles von|von .* bis|vielf[äa]ltig|verschiedene|open format",
+    # Wortgrenzen/Ausschlüsse: nicht „technology“, „Warehouse“, „Funktion“, „Swingerclub“, „Discothek“
+    "Techno": r"\btechno(?!log)|\brave|\bhard ?groove|\bacid\b|minimal ?(techno|house|music)|\bindustrial\b",
+    "House": r"(?<!ware)(?<!ware-)\bhouse|deep ?house|tech ?house|afro ?house",
+    "Elektro/Experimental": r"\belektro|\belectro|electronic|experimental|\bambient\b|clubmusik|elektronisch",
+    "Drum & Bass": r"drum ?(and|&|n|'n') ?bass|\bdnb\b|\bd&b\b|\bjungle\b|breakbeat|dubstep|bass ?music",
+    "Hip-Hop": r"hip ?-?hop|\brap\b|\btrap\b|deutschrap|\burban\b",
+    "R&B": r"\br ?& ?b\b|\brnb\b|r'n'b|\burban\b",
+    "Afrobeats": r"afro ?beats?|amapiano|afro ?(house|vibes|party)",
+    "Reggaeton/Latin": r"reggaeton|\blatin|salsa|bachata|perreo|dancehall|kizomba|cumbia",
+    "Pop/Charts": r"\bpop\b|\bcharts?\b|mainstream|\bhits\b|black ?(&|and) ?white|black music|party ?hits",
+    # Kein „Ü30“: das ist Publikum, keine Musikrichtung
+    "80er/90er/2000er": r"\b(19)?[6789]0er|2000er|\b00er|\b[6789]0s\b|2000s|throwback|oldies|\bretro",
+    "Schlager": r"schlager|\bmalle\b|ballermann|apr[èe]s|stimmungs(musik|hits|lieder)",
+    "Rock/Indie": r"\brock|\bindie|alternative|britpop|grunge|\bemo\b",
+    "Metal/Punk": r"metal|\bpunk|hardcore|\bgoth|dark ?wave|new wave|\bebm\b",
+    "Disco/Funk/Soul": r"\bdisco\b|\bfunk\b|funky|\bsoul\b|motown|boogie",
+    "Jazz": r"\bjazz|\bswing\b",
+    # „von … bis“ nur mit Musikwort – sonst belegt „open from 23 bis 5 Uhr“ gemischte Musik
+    "Mixed": r"\bmixed\b|querbeet|gemischt|open format"
+             r"|von .{1,40} bis .{0,40}(musik|music|hits|sound|genre)"
+             r"|(vielf[äa]ltig\w*|verschiedene\w*|bunt\w*) (musik|music|sound|genres?|stile?)",
 }
+
+# Auch Zusatz-Events, Publikum und Ausstattung brauchen ein passendes Wort im Zitat
+ZUSATZ_STICHWORTE = {
+    "Konzerte": r"konzert|concert|\blive|\bband|\bgig",
+    "Comedy": r"comedy|kabarett|stand ?-?up|\bslam|impro",
+    "Lesungen": r"lesung|reading|\bliest|autor|\bbuch|literatur|poetry",
+    "Theater/Performance": r"theater|theatre|performance|\btanz|dance|b[üu]hne|\bshow",
+    "Kino": r"\bkino|\bfilm|cinema|movie|screening",
+    "Flohmarkt/Märkte": r"markt|market|basar|bazaar",
+    "Public Viewing": r"public viewing|übertragung|leinwand|fu(ß|ss)ball|\bem\b|\bwm\b|\bspiele? live",
+    "Workshops/Kurse": r"workshop|\bkurs|class|seminar|\blernen",
+    "Ausstellungen": r"ausstellung|exhibition|galerie|gallery|vernissage|\bkunst|\bart\b",
+    "Talks/Diskussion": r"\btalk|diskussion|vortrag|gespr[äa]ch|podium|lecture",
+    "Quiz/Spiele": r"quiz|kwizz|\bspiel|\bgame|bingo",
+    "Karaoke": r"karaoke|sing ?-?along|mitsing",
+    "Brunch/Essen": r"brunch|\bessen|food|k[üu]che|fr[üu]hst[üu]ck|kaffee|kuchen|dinner|caf[ée]|\bspeise",
+    "Private Feiern": r"privat|private|feier|geburtstag|firmen|mieten|buchbar|anmieten",
+    "Sonstiges": r".",
+}
+PUBLIKUM_STICHWORTE = {
+    "Studentisch": r"student|\buni\b|studi",
+    "Jung (18–25)": r"\bjung|young|\bteen|ab 18\b|18 ?-? ?25|\bu ?25",
+    "Ü30": r"[üu]e? ?30|30 ?\+|über 30|ab 30|erwachsen",
+    "Queer": r"queer|\bgay|lgbt|lesb|schwul|\bdrag",
+    "Underground": r"underground|subkultur|independent|\bdiy\b",
+    "Szene/Kenner": r"\bszene|kenner|\bkult|institution|legend[äa]r|kuratiert|resident",
+    "Mainstream": r"mainstream|\bcharts|kommerz|gro(ß|ss)raum|massen",
+    "Schick": r"schick|\bedel|elegant|\bvip\b|\bchic|upscale|fancy|dresscode",
+    "Alternativ": r"alternativ|\bindie|\bpunk|\bbunt|links",
+    "International": r"international|english|expat|touris|aus aller welt|multikult",
+}
+AUSSTATTUNG_STICHWORTE = {
+    "Außenbereich": r"drau(ß|ss)en|terrasse|\bgarten|au(ß|ss)en|outdoor|open ?air|biergarten|innenhof|rooftop|\bdach",
+    "Raucherbereich": r"raucher|rauchen|geraucht|smok",
+    "Barrierefrei": r"barrierefrei|rollstuhl|wheelchair|accessib",
+    "Garderobe": r"garderobe|cloakroom|wardrobe",
+    "Mehrere Floors": r"floors|\bfloor|etage|stockwerk|r[äa]ume|areas?\b|s[äa]le",
+    "Starkes Soundsystem": r"\bsound|anlage|funktion ?one|speaker|\bboxen|\bbass",
+    "Essen": r"\bessen|\bfood|k[üu]che|speise|snack|pizza|burger|kitchen|men[üu]",
+}
+
+# Wörter, die für den Abgleich „Anzeigetext steckt im Zitat“ nichts aussagen
+_FUELLWOERTER = {"und", "oder", "mit", "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "jeden",
+                 "jede", "jeder", "auch", "dazu", "meist", "etwa", "ca", "teils", "oft", "laut", "bei", "für", "fuer",
+                 "von", "bis", "ab", "im", "in", "am", "an", "zu", "zum", "zur", "the", "and", "with", "for"}
 
 SCHEMA = {
     "type": "object",
@@ -131,6 +181,8 @@ Grundregeln:
 - Stütze dich NUR auf die Quellen. Erfinde nichts, schließe nichts aus dem Namen.
 - Jede Angabe braucht ein WÖRTLICHES Zitat (5–25 Wörter, exakt wie in der Quelle, nicht umformuliert,
   nicht aus mehreren Stellen zusammengesetzt). Ohne passende Textstelle: Angabe weglassen bzw. leer lassen.
+  Das Zitat muss das Angegebene selbst enthalten: bei Reihen den Namen der Reihe, bei Preisen, Zeiten und
+  Kapazität die Zahlen, bei Musik das Genre-Wort.
 - „passt“: true, wenn hier regelmäßig gefeiert/getanzt wird: Club/Disco, Konzert- oder Kulturhaus mit
   regelmäßigen Partys oder Partylokal. false bei Erotik-, Swinger- oder Saunaclubs, Bordellen, reinen
   Restaurants/Cafés ohne Partys, reinen Konzertsälen, geschlossenen Orten oder Partyreihen ohne festen Ort.
@@ -170,8 +222,8 @@ def _key(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", t)
 
 
-_FUELL_NAME = re.compile(r"d[üu]sseldorf|\bclub\b|\bklub\b|\bbar\b|\be\.? ?v\.?|eventlocation|event location|"
-                         r"nachtclub|discothek|diskothek|\bdisco\b|\bthe\b|\bder\b|\bdie\b|\bdas\b|zentrum f[üu]r|"
+_FUELL_NAME = re.compile(r"d[üu]sseldorf|\bclub\b|\bklub\b|\bbar\b|\be\.? ?v\.?(?![a-zäöü])|eventlocation|event location|"
+                         r"nachtclub|discothek|diskothek|\bdisco\b|\bthe\b|\bder\b|\bdie\b|\bdas\b|\bin\b|zentrum f[üu]r|"
                          r"[-–|/&]", re.IGNORECASE)
 
 
@@ -182,14 +234,19 @@ def ort_schluessel(name: str) -> str:
     return kern if len(kern) >= 4 else _key(re.sub(r"d[üu]sseldorf|[-–|/&]", " ", name or "", flags=re.IGNORECASE))
 
 
-# Bekannte Kurzformen im Eventkalender (Google-Name → weitere Schlüssel)
+# Bekannte Kurzformen im Eventkalender: Teil des Namens (Schlüssel) → Wortfolgen am Anfang der Ortsangabe
 ALIASE = {
     "zentrumfueraktionkulturundkommunikation": ["zakk"],
     "zakk": ["zakk"],
     "kulturschlachthof": ["kulturschlachthof", "r25"],
-    "schleusezweis2": ["schleusezwei"],
+    "schleusezwei": ["schleuse zwei"],
     "giselle": ["giselle"],
 }
+
+
+def _phrase(text: str) -> str:
+    """Kernname als Wortfolge („Rudas Studios Club“ → „rudas studios“) für Ganzwort-Vergleiche."""
+    return " ".join(_woerter(_FUELL_NAME.sub(" ", text or "")))
 
 
 # Ortsangaben im Kalender, die nichts über den Club sagen
@@ -198,21 +255,29 @@ _ALLGEMEIN = {"duesseldorf", "altstadt", "neuss", "ratingen", "kultur", "online"
 
 def event_orte(name: str, alle_orte: set[str]) -> list[str]:
     """Schreibweisen dieses Orts im Eventkalender (für „Nächste Events hier“)."""
-    eigener = ort_schluessel(name)
+    eigener, phrase = ort_schluessel(name), _phrase(name)
     # Kurzformen: Alias-Schlüssel steckt im Namen („…kommunikation (zakk)“ → „zakk“)
     aliase = [a for teil, liste in ALIASE.items() if teil in _key(name) for a in liste]
+    namen = [x for x in [phrase, *aliase] if x]
     treffer = []
     for ort in alle_orte:
         # Beide Seiten gleich normalisieren („SUB Düsseldorf“ → „sub“, „Düsseldorf“ → leer)
         k = ort_schluessel(ort)
-        if not k or k in _ALLGEMEIN or re.search(r"nicht im", ort, re.IGNORECASE):
+        if not k or k in _ALLGEMEIN:
             continue
-        # Gleich, oder Teiltreffer mit mind. 4 Zeichen („Stone im Ratinger Hof“) – kurze Schlüssel wie „sub“
-        # nur exakt, sonst träfe „sub“ jeden Ort mit „Sub…“ im Namen
-        if eigener and (k == eigener or (len(eigener) >= 4 and eigener in k) or (len(k) >= 6 and k in eigener)):
+        text = f" {' '.join(_woerter(ort))} "
+        # „zakk – nicht im zakk“ gehört nicht dazu, „Pitcher, nicht im Freien“ schon
+        if any(re.search(rf" nicht im( \w+)? {re.escape(n)} ", text) for n in namen):
+            continue
+        ort_phrase = _phrase(ort)
+        # Gleich; sonst Teiltreffer nur ab 6 Zeichen und nur als ganze Wörter („Stone im Ratinger Hof“) –
+        # sonst träfe „graf“ „Grafenberg“ und „gate“ „Southgate“
+        if eigener and (k == eigener
+                        or (len(eigener) >= 6 and f" {phrase} " in text)
+                        or (len(k) >= 6 and f" {ort_phrase} " in f" {phrase} ")):
             treffer.append(ort)
         # Aliase nur am Anfang („zakk – Halle“, nicht „HHU …, am Finaltag im zakk“)
-        elif any(k.startswith(a) for a in aliase):
+        elif any(text.startswith(f" {a} ") for a in aliase):
             treffer.append(ort)
     return sorted(treffer)
 
@@ -224,6 +289,12 @@ def kalender_laden(db) -> list[dict]:
                        lambda q: q.gte("datum", ab))
 
 
+def _mit_links(text: str, html: str, url: str) -> str:
+    """Seitentext (gekürzt) plus Profil-Links aus dem HTML – damit link_pruefen() sie in der Quelle findet."""
+    links = profil_links(html, url)
+    return text[:MAX_QUELLE] + ("\nLinks: " + " ".join(links) if links else "")
+
+
 def website_quellen(start: str | None) -> list[tuple[str, str]]:
     """Startseite + passende Unterseiten derselben Domain als (url, text)."""
     from bs4 import BeautifulSoup
@@ -233,7 +304,7 @@ def website_quellen(start: str | None) -> list[tuple[str, str]]:
     html = seite_laden(start)
     if not html:
         return []
-    quellen = [(start, seiten_text(html)[:MAX_QUELLE])]
+    quellen = [(start, _mit_links(seiten_text(html), html, start))]
     host = urlparse(start).netloc
     kandidaten = []
     for a in BeautifulSoup(html, "html.parser").find_all("a", href=True):
@@ -245,7 +316,7 @@ def website_quellen(start: str | None) -> list[tuple[str, str]]:
     for url in kandidaten[:MAX_UNTERSEITEN]:
         teil = seite_laden(url)
         if teil:
-            quellen.append((url, seiten_text(teil)[:MAX_QUELLE]))
+            quellen.append((url, _mit_links(seiten_text(teil), teil, url)))
     return quellen
 
 
@@ -290,7 +361,7 @@ def such_quellen(client, ort: dict, website: str | None) -> list[tuple[str, str]
             continue
         text = seiten_text(html)
         if kern and kern in _key(text):
-            quellen.append((url, text[:MAX_QUELLE]))
+            quellen.append((url, _mit_links(text, html, url)))
         if len(quellen) >= MAX_SUCHSEITEN:
             break
     return quellen
@@ -335,6 +406,22 @@ def _herkunft(zitat: str, quellen: list[tuple[str, str]]) -> str | None:
     return None
 
 
+# Umfeld des Zitats in derselben Quelle: Reihennamen stehen oft als Überschrift direkt über dem zitierten Satz
+KONTEXT_ZEICHEN = 250
+
+
+def zitat_umfeld(zitat: str, quellen: list[tuple[str, str]], radius: int = KONTEXT_ZEICHEN) -> str:
+    """Zitat plus bis zu `radius` Zeichen davor und danach aus der Quelle, in der es steht (normalisiert)."""
+    z = _text_norm(zitat or "")
+    if not z:
+        return ""
+    for _, text in quellen:
+        t = _text_norm(text)
+        i = t.find(z)
+        if i >= 0:
+            return t[max(0, i - radius): i + len(z) + radius]
+    return z
+
 def _zahl(text: str) -> float | None:
     try:
         wert = float((text or "").replace(",", ".").strip())
@@ -343,8 +430,75 @@ def _zahl(text: str) -> float | None:
         return None
 
 
+def _woerter(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", _key_text(text))
+
+
+def _key_text(text: str) -> str:
+    return (text or "").lower().translate(str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"}))
+
+
+def anzeige_belegt(text: str, zitat: str) -> bool:
+    """
+    Passt der angezeigte Text zum (schon geprüften) Zitat? Alle Zahlen des Textes müssen im Zitat stehen;
+    ohne Zahlen muss mindestens ein Wort (Stamm aus 4 Buchstaben) im Zitat vorkommen.
+    So kann die KI nicht „meist 5 €“ mit dem Zitat „Die Tür ist streng.“ belegen.
+    """
+    zahlen_text = re.findall(r"\d+", text or "")
+    zahlen_zitat = set(re.findall(r"\d+", zitat or ""))
+    if zahlen_text:
+        return all(z in zahlen_zitat for z in zahlen_text)
+    staemme_zitat = {w[:4] for w in _woerter(zitat) if len(w) >= 4}
+    woerter = [w for w in _woerter(text) if len(w) >= 4 and w not in _FUELLWOERTER]
+    return any(w[:4] in staemme_zitat for w in woerter)
+
+
+def name_im_zitat(name: str, zitat: str) -> bool:
+    """Steht der Name einer Reihe im Zitat? (mind. die Hälfte seiner Wörter, ganze Wörter)"""
+    woerter = [w for w in _woerter(name) if w not in _FUELLWOERTER]
+    if not woerter:
+        return False
+    im_zitat = set(_woerter(zitat))
+    return sum(w in im_zitat for w in woerter) * 2 >= len(woerter)
+
+
+def profil_links(html: str, basis: str) -> list[str]:
+    """Instagram- und Resident-Advisor-Links aus dem HTML (stehen meist nur im href, nicht im Text)."""
+    from bs4 import BeautifulSoup
+
+    links = []
+    for a in BeautifulSoup(html, "html.parser").find_all("a", href=True):
+        url = urljoin(basis, a["href"])
+        if re.search(r"(instagram\.com|ra\.co/clubs)/", url) and url not in links:
+            links.append(url)
+    return links[:10]
+
+
+LINK_MUSTER = {
+    "instagram": re.compile(r"https://(www\.)?instagram\.com/[A-Za-z0-9_.]{1,30}/?"),
+    "resident_advisor": re.compile(r"https://(www\.)?ra\.co/clubs/\d{1,8}/?"),
+}
+
+
+def link_pruefen(url: str, art: str, gesamt: str) -> str | None:
+    """Profil-Link nur exakt (ohne Query/Fragment) und nur, wenn er wörtlich in einer Quelle steht."""
+    url = (url or "").strip()
+    if url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+    teile = urlparse(url)
+    if teile.query or teile.fragment or not LINK_MUSTER[art].fullmatch(url):
+        return None
+    kern = re.sub(r"^https://(www\.)?", "", url).rstrip("/").lower()
+    return url if re.search(re.escape(kern) + r"(?![a-z0-9_.])", (gesamt or "").lower()) else None
+
+
 def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
-    """Nur belegte Angaben übernehmen → (club-Profil, verworfene Angaben)."""
+    """
+    Nur belegte Angaben übernehmen → (club-Profil, verworfene Angaben).
+    Belegt heißt: Zitat steht wörtlich in einer Quelle UND der angezeigte Wert passt zum Zitat
+    (Genre/Zusatz/Publikum/Ausstattung: Stichwort; Fakten/Beispiele: Zahlen bzw. Wortstamm; Reihen: Name).
+    „passt“ ist nur ein Vorschlag – sichtbar wird ein Ort erst nach der Freigabe (club_freigegeben).
+    """
     verworfen: list[str] = []
     gesamt = "\n".join(t for _, t in quellen)
 
@@ -353,6 +507,12 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
         if not h:
             verworfen.append(f"{was} (Zitat nicht in den Quellen)")
         return h
+
+    def stichwort(muster: str, zitat: str, was: str) -> bool:
+        if re.search(muster, _text_norm(zitat)):
+            return True
+        verworfen.append(f"{was} (Zitat passt nicht)")
+        return False
 
     genres = []
     for g in ki.get("genres") or []:
@@ -368,22 +528,38 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
 
     formate = []
     for f in ki.get("formate") or []:
-        if f.get("name") and (h := ok(f.get("zitat"), f"Format {f.get('name')}")):
-            formate.append({"name": f["name"].strip()[:80], "rhythmus": (f.get("rhythmus") or "").strip()[:60],
-                            "musik": (f.get("musik") or "").strip()[:80], "zitat": f["zitat"].strip(), "quelle": h})
+        name, zitat = (f.get("name") or "").strip(), f.get("zitat") or ""
+        if not name or not (h := ok(zitat, f"Format {name}")):
+            continue
+        # Name im Zitat oder direkt daneben (Überschrift der Reihe über dem zitierten Satz)
+        umfeld = zitat_umfeld(zitat, quellen)
+        if not name_im_zitat(name, umfeld):
+            verworfen.append(f"Format {name} (Name steht nicht beim Zitat)")
+            continue
+        # Rhythmus/Musik nur, wenn sie zum Zitat passen – sonst leer statt erfunden
+        rhythmus, musik = (f.get("rhythmus") or "").strip(), (f.get("musik") or "").strip()
+        formate.append({"name": name[:80], "rhythmus": rhythmus[:60] if anzeige_belegt(rhythmus, umfeld) else "",
+                        "musik": musik[:80] if anzeige_belegt(musik, umfeld) else "", "zitat": zitat.strip(), "quelle": h})
 
     zusatz = []
     for z in ki.get("zusatz_events") or []:
-        if z.get("art") in ZUSATZ and not any(x["art"] == z["art"] for x in zusatz):
-            if (h := ok(z.get("zitat"), f"Zusatz {z['art']}")):
-                zusatz.append({"art": z["art"], "beispiel": (z.get("beispiel") or "").strip()[:100],
-                               "zitat": z["zitat"].strip(), "quelle": h})
+        art, zitat = z.get("art"), z.get("zitat") or ""
+        if art not in ZUSATZ or any(x["art"] == art for x in zusatz):
+            continue
+        if (h := ok(zitat, f"Zusatz {art}")) and stichwort(ZUSATZ_STICHWORTE[art], zitat, f"Zusatz {art}"):
+            beispiel = (z.get("beispiel") or "").strip()
+            zusatz.append({"art": art, "beispiel": beispiel[:100] if anzeige_belegt(beispiel, zitat_umfeld(zitat, quellen)) else "",
+                           "zitat": zitat.strip(), "quelle": h})
 
     fakten = {}
     for k, v in (ki.get("fakten") or {}).items():
-        text = (v.get("text") or "").strip()
-        if text and (h := ok(v.get("zitat"), f"Fakt {k}")):
-            fakten[k] = {"text": text[:120], "zitat": v["zitat"].strip(), "quelle": h}
+        text, zitat = (v.get("text") or "").strip(), v.get("zitat") or ""
+        if not text or not (h := ok(zitat, f"Fakt {k}")):
+            continue
+        if not anzeige_belegt(text, zitat_umfeld(zitat, quellen)):
+            verworfen.append(f"Fakt {k} „{text[:40]}“ (Text passt nicht zum Zitat)")
+            continue
+        fakten[k] = {"text": text[:120], "zitat": zitat.strip(), "quelle": h}
 
     eintritt = {}
     if "eintritt" in fakten:
@@ -399,16 +575,14 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
         verworfen.append(f"Dresscode {dresscode} (kein Beleg)")
         dresscode = "unbekannt"
 
-    def liste(feld: str, erlaubt: list[str]) -> list[str]:
+    def liste(feld: str, stichworte: dict[str, str]) -> list[str]:
         werte = []
         for x in ki.get(feld) or []:
-            if x.get("wert") in erlaubt and x["wert"] not in werte and ok(x.get("zitat"), f"{feld} {x['wert']}"):
-                werte.append(x["wert"])
+            wert, zitat = x.get("wert"), x.get("zitat") or ""
+            if wert in stichworte and wert not in werte and ok(zitat, f"{feld} {wert}") \
+                    and stichwort(stichworte[wert], zitat, f"{feld} {wert}"):
+                werte.append(wert)
         return werte
-
-    def link(url: str, muster: str) -> str | None:
-        url = (url or "").strip()
-        return url if re.match(muster, url) and _key(url) in _key(gesamt) else None
 
     profil = {
         "passt": bool(ki.get("passt")),
@@ -420,10 +594,10 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
         "fakten": fakten,
         "eintritt": eintritt or None,
         "dresscode": dresscode,
-        "publikum": liste("publikum", PUBLIKUM),
-        "ausstattung": liste("ausstattung", AUSSTATTUNG),
-        "instagram": link(ki.get("instagram"), r"https?://(www\.)?instagram\.com/"),
-        "resident_advisor": link(ki.get("resident_advisor"), r"https?://(www\.)?ra\.co/clubs/"),
+        "publikum": liste("publikum", PUBLIKUM_STICHWORTE),
+        "ausstattung": liste("ausstattung", AUSSTATTUNG_STICHWORTE),
+        "instagram": link_pruefen(ki.get("instagram"), "instagram", gesamt),
+        "resident_advisor": link_pruefen(ki.get("resident_advisor"), "resident_advisor", gesamt),
     }
     return profil, verworfen
 
@@ -518,8 +692,24 @@ def _events_fuer(ort: dict, kalender: list[dict], alle_orte: set[str]) -> tuple[
     return namen, [e for e in kalender if e.get("ort") in namen]
 
 
+def extras_mergen(db, ort_id: str, felder: dict, spalten: dict | None = None, entfernen: bool = False) -> None:
+    """
+    Nur die genannten extras-Schlüssel ändern: extras direkt vorher frisch lesen und zusammenführen, damit ein
+    paralleler Lauf (z. B. bars_einordnen) keine fremden Felder verliert. entfernen=True löscht die Schlüssel.
+    """
+    aktuell = (db.table("orte").select("extras").eq("id", ort_id).execute().data or [{}])[0].get("extras") or {}
+    if entfernen:
+        neu = {k: v for k, v in aktuell.items() if k not in felder}
+    else:
+        neu = {**aktuell, **felder}
+    db.table("orte").update({"extras": neu, **(spalten or {})}).eq("id", ort_id).execute()
+
+
 def speichern(db, ort: dict, extras_neu: dict, spalten: dict) -> None:
-    db.table("orte").update({"extras": extras_neu, **spalten}).eq("id", ort["id"]).execute()
+    """Club-Felder speichern – nur die Schlüssel, die sich gegenüber dem gelesenen Stand geändert haben."""
+    alt = ort.get("extras") or {}
+    geaendert = {k: v for k, v in extras_neu.items() if alt.get(k) != v}
+    extras_mergen(db, ort["id"], geaendert, spalten)
 
 
 def profile_erstellen(max_anzahl: int, nur: str | None, neu: bool, dry_run: bool) -> None:
@@ -569,27 +759,66 @@ def profile_erstellen(max_anzahl: int, nur: str | None, neu: bool, dry_run: bool
                         len(profil["formate"]), len(profil["zusatz_events"]), score["gesamt"], len(verworfen))
             if dry_run:
                 continue
-            extras = {**(o.get("extras") or {}), "club": profil, "club_score": score}
-            spalten = {}
-            if o["typ"] == "club":
-                # Eigene Club-Zeilen: Texte und Score direkt; bei auch_club bleiben die Texte des Haupt-Hubs
-                beschreibung = (ki.get("beschreibung") or "").strip()
-                highlight = (ki.get("highlight") or "").strip()
-                if 200 <= len(beschreibung) <= 1600:
-                    spalten["beschreibung"] = beschreibung
-                if 10 <= len(highlight) <= 160:
-                    spalten["highlight"] = highlight
-                spalten["qualitaets_score"] = score["gesamt"]
-                if profil["unterart"]:
-                    extras["unterart"] = profil["unterart"]
-            else:
-                extras["club_beschreibung"] = (ki.get("beschreibung") or "").strip() or None
-                extras["club_highlight"] = (ki.get("highlight") or "").strip() or None
-                if profil["unterart"]:
-                    extras["club_unterart"] = profil["unterart"]
-            speichern(db, o, extras, spalten)
+            profil_speichern(db, o, ki, profil, score)
         except Exception as e:
             logger.error("Fehler bei '%s': %s", o["name"], e)
+
+
+def texte_pruefen(ki: dict) -> tuple[str | None, str | None]:
+    """Beschreibung (200–1600 Zeichen) und Highlight (10–160) – sonst None."""
+    beschreibung = (ki.get("beschreibung") or "").strip()
+    highlight = (ki.get("highlight") or "").strip()
+    return (beschreibung if 200 <= len(beschreibung) <= 1600 else None,
+            highlight if 10 <= len(highlight) <= 160 else None)
+
+
+def profil_speichern(db, o: dict, ki: dict, profil: dict, score: dict) -> None:
+    """Profil, Score und Texte speichern. Eigene Club-Zeilen: Spalten; auch_club: extras.club_* (Haupt-Hub-Texte bleiben)."""
+    extras = {**(o.get("extras") or {}), "club": profil, "club_score": score}
+    spalten = {}
+    beschreibung, highlight = texte_pruefen(ki)
+    if o["typ"] == "club":
+        if beschreibung:
+            spalten["beschreibung"] = beschreibung
+        if highlight:
+            spalten["highlight"] = highlight
+        spalten["qualitaets_score"] = score["gesamt"]
+        if profil["unterart"]:
+            extras["unterart"] = profil["unterart"]
+    else:
+        extras["club_beschreibung"] = beschreibung
+        extras["club_highlight"] = highlight
+        if profil["unterart"]:
+            extras["club_unterart"] = profil["unterart"]
+    speichern(db, o, extras, spalten)
+
+
+def neu_pruefen(dry_run: bool) -> None:
+    """Gespeicherte KI-Antworten (data/clubs/<id>.json) mit der aktuellen Belegprüfung erneut prüfen – ohne KI."""
+    from database.client import get_supabase_client
+
+    db = get_supabase_client()
+    kalender = kalender_laden(db)
+    alle_orte = {e["ort"] for e in kalender if e.get("ort")}
+    for o in club_orte(db):
+        datei = ORDNER / f"{o['id']}.json"
+        if not datei.exists():
+            continue
+        roh = json.loads(datei.read_text(encoding="utf-8"))
+        quellen = [tuple(q) for q in roh["quellen"]]
+        profil, verworfen = pruefen(roh["ki"], quellen)
+        namen, events = _events_fuer(o, kalender, alle_orte)
+        alt = (o.get("extras") or {}).get("club") or {}
+        profil.update({"event_orte": namen, "quellen": [h for h, _ in quellen], "verworfen": verworfen,
+                       "modell": alt.get("modell", MODELL), "datum": alt.get("datum")})
+        manuell_korrigieren(o, profil)
+        score = club_score(o, profil, events)
+        vorher = len(alt.get("formate") or []), len(alt.get("fakten") or {}), len(alt.get("genres") or [])
+        nachher = len(profil["formate"]), len(profil["fakten"]), len(profil["genres"])
+        print(f"{o['name'][:34]:34s} Score {(o.get('extras') or {}).get('club_score', {}).get('gesamt')}→{score['gesamt']}  "
+              f"Formate {vorher[0]}→{nachher[0]}  Fakten {vorher[1]}→{nachher[1]}  Genres {vorher[2]}→{nachher[2]}")
+        if not dry_run:
+            profil_speichern(db, o, roh["ki"], profil, score)
 
 
 def scores_neu(dry_run: bool, ausgabe: bool = True) -> int:
@@ -619,13 +848,35 @@ def scores_neu(dry_run: bool, ausgabe: bool = True) -> int:
     return anzahl
 
 
+def ist_freigegeben(o: dict) -> bool:
+    """Hat der Auftraggeber den Ort nach der Sichtprüfung freigegeben? („passt“ der KI ist nur ein Vorschlag)"""
+    return isinstance((o.get("extras") or {}).get("club_freigegeben"), str)
+
+
+def soll_aktiv(o: dict) -> bool:
+    """typ = club: aktiv nur mit passendem Profil UND Freigabe."""
+    profil = (o.get("extras") or {}).get("club") or {}
+    return bool(profil.get("passt")) and ist_freigegeben(o)
+
+
+def umtypen_erlaubt(o: dict) -> bool:
+    """
+    Inaktiven Ort eines anderen Hubs zu typ = club machen? Nur mit Freigabe, passendem Profil und
+    Club-Score ≥ 7 – so ist er danach unter /guides/clubs/<slug> erreichbar. Aktive Orte anderer Hubs
+    (Pitcher, Schlager Cafe …) werden nie umgetypt (eine URL pro Ort).
+    """
+    ex = o.get("extras") or {}
+    return (o.get("typ") != "club" and not o.get("aktiv") and soll_aktiv(o)
+            and (ex.get("club_score") or {}).get("gesamt", 0) >= 7)
+
+
 def freischalten(dry_run: bool) -> None:
     """
-    Club-Orte sichtbar machen (die Website zeigt davon nur Score ≥ 7, lib/clubs.ts):
-      - typ = club: aktiv = passt laut Profil,
-      - auch_club-Orte, die in ihrem Haupt-Hub NICHT sichtbar sind (aktiv = false, z. B. zakk als
-        Restaurant): zu typ = club umtypen – sie hatten noch keine öffentliche URL, es geht also keine verloren.
-      - auch_club-Orte, die im Haupt-Hub aktiv sind (Pitcher, Schlager Cafe …), bleiben unverändert.
+    Club-Orte sichtbar machen (die Website zeigt nur Freigegebene mit Score ≥ 7, lib/clubs.ts):
+      - typ = club: aktiv = passt UND freigegeben,
+      - inaktive auch_club-Orte: umtypen nach umtypen_erlaubt(); die alte Haupt-URL leitet auf die Club-Seite
+        um (extras.vorher_typ, siehe Restaurant-/Kneipen-Detailseite),
+      - aktive auch_club-Orte bleiben unverändert.
     """
     from database.client import get_supabase_client
 
@@ -635,13 +886,13 @@ def freischalten(dry_run: bool) -> None:
         profil, score = ex.get("club"), ex.get("club_score") or {}
         if not profil:
             continue
-        passt = bool(profil.get("passt"))
         if o["typ"] == "club":
-            if o.get("aktiv") != passt:
-                print(f"{'aktiv  ' if passt else 'inaktiv'} {o['name']}")
+            aktiv = soll_aktiv(o)
+            if o.get("aktiv") != aktiv:
+                print(f"{'aktiv  ' if aktiv else 'inaktiv'} {o['name']}")
                 if not dry_run:
-                    db.table("orte").update({"aktiv": passt}).eq("id", o["id"]).execute()
-        elif not o.get("aktiv") and passt:
+                    db.table("orte").update({"aktiv": aktiv}).eq("id", o["id"]).execute()
+        elif umtypen_erlaubt(o):
             neu_ex = {k: v for k, v in ex.items() if k not in ("auch_club", "club_unterart", "club_beschreibung", "club_highlight")}
             neu_ex["unterart"] = ex.get("club_unterart") or profil.get("unterart") or "club"
             neu_ex["hub"] = "clubs"
@@ -656,20 +907,41 @@ def freischalten(dry_run: bool) -> None:
                 db.table("orte").update(spalten).eq("id", o["id"]).execute()
 
 
+def freigeben(namen: str, entziehen: bool, dry_run: bool) -> None:
+    """Freigabe nach Sichtprüfung setzen/entziehen. namen: durch „;“ getrennt, exakter Name (Groß/klein egal)."""
+    from database.client import get_supabase_client
+
+    db = get_supabase_client()
+    orte = {o["name"].strip().lower(): o for o in club_orte(db)}
+    heute = datetime.now(timezone.utc).date().isoformat()
+    for name in [n.strip() for n in namen.split(";") if n.strip()]:
+        o = orte.get(name.lower())
+        if not o:
+            print(f"nicht gefunden: {name}")
+            continue
+        ex = {k: v for k, v in (o.get("extras") or {}).items() if k != "club_freigegeben"}
+        if not entziehen:
+            ex["club_freigegeben"] = heute
+        print(f"{'Freigabe entzogen' if entziehen else 'freigegeben'}: {o['name']}")
+        if not dry_run:
+            extras_mergen(db, o["id"], {"club_freigegeben": ex.get("club_freigegeben")}, entfernen=entziehen)
+
+
 def csv_schreiben(pfad: str) -> None:
     from database.client import get_supabase_client
 
     db = get_supabase_client()
     with open(pfad, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f, delimiter=";")
-        w.writerow(["Name", "Typ", "Stadtteil", "passt", "Grund", "Unterart", "Score", "Programm", "Szene", "Profil",
+        w.writerow(["Name", "Typ", "Stadtteil", "freigegeben", "passt (KI-Vorschlag)", "Grund", "Unterart", "Score", "Programm", "Szene", "Profil",
                     "Beliebtheit", "Events", "Genres (haupt)", "Genres (neben)", "Formate", "Zusatz", "Öffnung",
                     "Eintritt", "Dresscode", "Publikum", "Quellen", "Verworfen"])
         for o in sorted(club_orte(db), key=lambda o: -((o.get("extras") or {}).get("club_score") or {}).get("gesamt", 0)):
             ex = o.get("extras") or {}
             p, s = ex.get("club") or {}, ex.get("club_score") or {}
             w.writerow([
-                o["name"], o["typ"], o.get("stadtteil"), p.get("passt"), p.get("passt_grund"), p.get("unterart"),
+                o["name"], o["typ"], o.get("stadtteil"), ex.get("club_freigegeben") or "", p.get("passt"),
+                p.get("passt_grund"), p.get("unterart"),
                 s.get("gesamt"), s.get("programm"), s.get("szene"), s.get("profil"), s.get("beliebtheit"),
                 s.get("events_90_60"),
                 ", ".join(g["wert"] for g in p.get("genres") or [] if g["anteil"] == "haupt"),
@@ -692,9 +964,16 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Nichts speichern (KI wird aufgerufen)")
     parser.add_argument("--nur-score", action="store_true", help="Nur Score neu berechnen (ohne KI)")
     parser.add_argument("--csv", help="Sichtprüfung als CSV schreiben")
-    parser.add_argument("--freischalten", action="store_true", help="Passende Club-Orte aktiv setzen (siehe freischalten)")
+    parser.add_argument("--freischalten", action="store_true", help="Freigegebene Club-Orte aktiv setzen (siehe freischalten)")
+    parser.add_argument("--freigeben", help="Nach Sichtprüfung freigeben: exakte Namen, durch „;“ getrennt")
+    parser.add_argument("--freigabe-entziehen", help="Freigabe zurücknehmen: exakte Namen, durch „;“ getrennt")
+    parser.add_argument("--neu-pruefen", action="store_true", help="Gespeicherte KI-Antworten erneut prüfen (ohne KI)")
     args = parser.parse_args()
-    if args.freischalten:
+    if args.freigeben or args.freigabe_entziehen:
+        freigeben(args.freigeben or args.freigabe_entziehen, bool(args.freigabe_entziehen), args.dry_run)
+    elif args.neu_pruefen:
+        neu_pruefen(args.dry_run)
+    elif args.freischalten:
         freischalten(args.dry_run)
     elif args.csv:
         csv_schreiben(args.csv)

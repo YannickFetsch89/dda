@@ -116,8 +116,9 @@ export function clubProfil(o: DddOrt): ClubProfil | null {
     dresscode: DRESSCODE_TEXT[str(p.dresscode) ?? ""] ?? null,
     publikum: arr(p.publikum).filter((x): x is string => typeof x === "string"),
     ausstattung: arr(p.ausstattung).filter((x): x is string => typeof x === "string"),
-    instagram: httpsLink(p.instagram, /^https:\/\/(www\.)?instagram\.com\//),
-    residentAdvisor: httpsLink(p.resident_advisor, /^https:\/\/(www\.)?ra\.co\/clubs\//),
+    // Nur exakte Profil-URLs ohne Query/Fragment (wie im Profil-Schritt geprüft)
+    instagram: httpsLink(p.instagram, /^https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9_.]{1,30}\/?$/),
+    residentAdvisor: httpsLink(p.resident_advisor, /^https:\/\/(www\.)?ra\.co\/clubs\/\d{1,8}\/?$/),
     eventOrte: arr(p.event_orte).filter((x): x is string => typeof x === "string"),
     datum: str(p.datum),
   };
@@ -130,11 +131,14 @@ export function clubScore(o: DddOrt): ClubScore | null {
   return { gesamt, programm: num(s.programm) ?? 0, szene: num(s.szene) ?? 0, profil: num(s.profil) ?? 0, beliebtheit: num(s.beliebtheit) ?? 0 };
 }
 
-/** Gehört der Ort sichtbar in den Club-Hub? (passt laut Profil und Club-Score ≥ 7) */
+/** Nach der Sichtprüfung freigegeben? („passt“ der KI ist nur ein Vorschlag) */
+export const istFreigegeben = (o: DddOrt) => typeof o.extras.club_freigegeben === "string";
+
+/** Gehört der Ort sichtbar in den Club-Hub? (passt laut Profil, freigegeben und Club-Score ≥ 7) */
 export function istSichtbarerClub(o: DddOrt): boolean {
   const p = clubProfil(o);
   const s = clubScore(o);
-  return !!p?.passt && !!s && s.gesamt >= MIN_CLUB_SCORE && (o.typ === "club" || o.extras.auch_club === true);
+  return !!p?.passt && istFreigegeben(o) && !!s && s.gesamt >= MIN_CLUB_SCORE && (o.typ === "club" || o.extras.auch_club === true);
 }
 
 export function clubArt(o: DddOrt): ClubArt {

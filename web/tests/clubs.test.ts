@@ -3,7 +3,9 @@ import {
   CLUB_STANDARD, clubArt, clubBeschreibung, clubFilterHref, clubFilterLesen, clubHatParameter, clubProfil, clubsFiltern,
   clubsSortieren, eintrittKurz, eintrittStufe, hauptGenres, istSichtbarerClub,
 } from "@/lib/clubs";
-import type { DddOrt } from "@/lib/typen";
+import { naechsteEvents } from "@/lib/clubs-daten";
+import { clubsListeJsonLd } from "@/lib/clubs-json-ld";
+import type { DddEvent, DddOrt, EventPool } from "@/lib/typen";
 
 function ort(name: string, extras: Record<string, unknown>, mehr: Partial<DddOrt> = {}): DddOrt {
   return {
@@ -23,14 +25,15 @@ const profil = (p: Record<string, unknown> = {}) => ({
   resident_advisor: "https://ra.co/clubs/123", event_orte: ["Salon"], ...p,
 });
 
-const SALON = ort("Salon", { club: profil(), club_score: { gesamt: 9, programm: 9 } });
+const SALON = ort("Salon", { club: profil(), club_score: { gesamt: 9, programm: 9 }, club_freigegeben: "2026-11-11" });
 const SCHLAGER = ort("Schlager Cafe", {
   auch_club: true, club_unterart: "partylocation", club_beschreibung: "Party-Text",
   club: profil({ unterart: "partylocation", genres: [{ wert: "Schlager", anteil: "haupt" }], eintritt: { min: 0, max: null } }),
-  club_score: { gesamt: 7, programm: 6 },
+  club_score: { gesamt: 7, programm: 6 }, club_freigegeben: "2026-11-11",
 }, { typ: "restaurant", beschreibung: "Restaurant-Text", qualitaets_score: 5 });
-const SCHWACH = ort("Schwach", { club: profil(), club_score: { gesamt: 6 } });
-const PASST_NICHT = ort("Sauna", { club: profil({ passt: false }), club_score: { gesamt: 9 } });
+const SCHWACH = ort("Schwach", { club: profil(), club_score: { gesamt: 6 }, club_freigegeben: "2026-11-11" });
+const OHNE_FREIGABE = ort("Vorschlag", { club: profil(), club_score: { gesamt: 9 } });
+const PASST_NICHT = ort("Sauna", { club: profil({ passt: false }), club_score: { gesamt: 9 }, club_freigegeben: "2026-11-11" });
 
 describe("clubProfil", () => {
   it("normalisiert und verwirft Unbekanntes", () => {
@@ -49,6 +52,15 @@ describe("Sichtbarkeit und Texte", () => {
     expect(istSichtbarerClub(SCHLAGER)).toBe(true);
     expect(istSichtbarerClub(SCHWACH)).toBe(false);
     expect(istSichtbarerClub(PASST_NICHT)).toBe(false);
+    // „passt“ der KI reicht nicht – erst die Freigabe nach Sichtprüfung
+    expect(istSichtbarerClub(OHNE_FREIGABE)).toBe(false);
+  });
+
+  it("Profil-Links nur exakt, ohne Query", () => {
+    const mit = (instagram: string) => clubProfil(ort("X", { club: profil({ instagram }) }))!.instagram;
+    expect(mit("https://instagram.com/echterclub")).toBe("https://instagram.com/echterclub");
+    expect(mit("https://instagram.com/echterclub?next=https://example.org/")).toBeNull();
+    expect(mit("https://instagram.com/echterclub/p/abc")).toBeNull();
   });
 
   it("auch_club nutzt eigene Club-Texte und Unterart", () => {
@@ -94,5 +106,24 @@ describe("Filter", () => {
 
   it("Empfohlen sortiert nach Club-Score", () => {
     expect(clubsSortieren([SCHLAGER, SALON], "empfohlen").map((o) => o.name)).toEqual(["Salon", "Schlager Cafe"]);
+  });
+});
+
+describe("Daten und JSON-LD", () => {
+  const event = { id: "e1", titel: "Resident Night", datum: "2026-11-20", datum_bis: null, uhrzeit: "23:00", ort: "Salon",
+    abgesagt: false } as DddEvent;
+  const pool = (quelle: "supabase" | "beispiel") =>
+    ({ heute: "2026-11-11", jetzt: "", events: [event], alle: [event], quelle, fehler: null }) as EventPool;
+
+  it("keine Beispiel-Events als „Nächstes Event“", () => {
+    expect(naechsteEvents(SALON, pool("supabase")).map((e) => e.id)).toEqual(["e1"]);
+    expect(naechsteEvents(SALON, pool("beispiel"))).toEqual([]);
+  });
+
+  it("ItemList nutzt die kanonische URL (auch_club → Haupt-URL)", () => {
+    const [, liste] = clubsListeJsonLd([SALON, SCHLAGER], "https://diesdas.events", "/guides/clubs");
+    const urls = (liste.itemListElement as { url: string }[]).map((x) => x.url);
+    expect(urls[0]).toBe("https://diesdas.events/guides/clubs/salon");
+    expect(urls[1]).toBe("https://diesdas.events/guides/restaurants-cafes/schlager-cafe");
   });
 });

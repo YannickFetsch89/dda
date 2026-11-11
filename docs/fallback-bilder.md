@@ -55,8 +55,8 @@ Die Zeitfenster sind großzügig, weil Events oft vorher angekündigt werden.
 | Motiv (`slug`) | Anlass, Stichworte | Zeitfenster | Varianten |
 |---|---|---|---|
 | `halloween` | Halloween, Grusel, Samhain, Kürbis | 1.–31. Oktober | 6 (vorhanden seit 11.11.2026) |
-| `sankt-martin` | Martinszug/-feuer, Laternenumzug, Laternen basteln, Weckmann (nicht bloß „Laterne“) | 1.–15. November | 4 (vorhanden seit 11.11.2026) |
-| `karneval` | Sessionseröffnung, Hoppeditz, Sitzungen, Altweiber, Rosenmontag, Helau/Alaaf, Kostümparty (kein bloßes „11.11“ – trifft Datumsangaben) | 1.–15. November und 1. Januar bis Aschermittwoch | 10 (vorhanden seit 11.11.2026) |
+| `sankt-martin` | Martinszug/-feuer, Laternen(-)umzug, Laternen basteln, Weckmann, „Sankt Martin“ (nicht bloß „Laterne“, nicht die Kirche „in St. Martin“/„St. Martinskirche“, nicht Martinsgans) | 1.–15. November | 4 (vorhanden seit 11.11.2026) |
+| `karneval` | Sessionseröffnung, Hoppeditz, Sitzungen, Altweiber, Rosenmontag, Helau/Alaaf, Carnival/Mardi Gras (kein bloßes „11.11“ – trifft Datumsangaben); Kostümparty erst ab 11.11. bzw. in der Session | 1.–15. November und 1. Januar bis Aschermittwoch | 10 (vorhanden seit 11.11.2026) |
 | `advent-weihnachtsmarkt` | Weihnachtsmarkt, Advent, Glühwein, Eisbahn | 15. November – 23. Dezember | 5 |
 | `nikolaus` | Nikolaus, Nikolausfeier für Kinder | 1.–6. Dezember | 3 |
 | `weihnachten` | Weihnachtskonzert, Krippenspiel, Christmette, Weihnachtsfeier | 1.–26. Dezember | 4 |

@@ -2,7 +2,8 @@
 export const instant = false;
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
+import { istSichtbarerClub } from "@/lib/clubs";
 import { Suspense } from "react";
 import { BildImg, GoogleKarte, Reihe } from "@/components/client";
 import { ClubProfilLink } from "@/components/club-karte";
@@ -87,6 +88,8 @@ async function Aehnliche({ ort }: { ort: DddOrt }) {
 export default async function OrtDetail(props: Props) {
   const slug = slugDekodieren((await props.params).slug);
   const ort = slug ? await ortLaden(slug) : null;
+  // Zum Club umgetypt (früher hier gelistet, extras.vorher_typ): alte URL dauerhaft auf die Club-Seite
+  if (ort?.typ === "club" && istSichtbarerClub(ort)) permanentRedirect(`/guides/clubs/${encodeURIComponent(ort.slug)}`);
   if (!ort || !["restaurant", "imbiss", "cafe"].includes(ort.typ)) notFound();
 
   const bild = ortBildUrl(ort);

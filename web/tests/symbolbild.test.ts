@@ -28,6 +28,22 @@ describe("Saisonale Symbolbilder", () => {
     expect(symbolMotiv(ev("Martinszug", "2026-11-20"))).not.toBe("sankt-martin");
   });
 
+  it("Kirche St. Martin ist kein Martinsbrauch, Laternen-Umzug mit Bindestrich schon", () => {
+    expect(symbolMotiv(ev("Orgelkonzert in St. Martin", "2026-11-11"))).not.toBe("sankt-martin");
+    expect(symbolMotiv(ev("Konzert St. Martinskirche Bilk", "2026-11-11"))).not.toBe("sankt-martin");
+    expect(symbolMotiv(ev("Martinsgans-Essen im Brauhaus", "2026-11-11"))).not.toBe("sankt-martin");
+    expect(symbolMotiv(ev("Laternen-Umzug durch Oberkassel", "2026-11-11"))).toBe("sankt-martin");
+    expect(symbolMotiv(ev("Martins-Zug der Kita", "2026-11-11"))).toBe("sankt-martin");
+    expect(symbolMotiv(ev("Sankt Martin für Familien", "2026-11-10"))).toBe("sankt-martin");
+  });
+
+  it("Kostümparty erst ab 11.11., englische Begriffe", () => {
+    expect(symbolMotiv(ev("Kostümparty", "2026-11-03"))).not.toBe("karneval");
+    expect(symbolMotiv(ev("Kostümparty", "2026-11-12"))).toBe("karneval");
+    expect(symbolMotiv(ev("Costume Party", "2027-02-05"))).toBe("karneval");
+    expect(symbolMotiv(ev("Carnival Night", "2026-11-11"))).toBe("karneval");
+  });
+
   it("Halloween nur im Oktober", () => {
     expect(symbolMotiv(ev("Halloween Party", "2026-10-31"))).toBe("halloween");
     expect(symbolMotiv(ev("Halloween Party", "2026-11-01"))).not.toBe("halloween");

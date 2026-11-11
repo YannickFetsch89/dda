@@ -4,7 +4,8 @@
 export const instant = false;
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
+import { istSichtbarerClub } from "@/lib/clubs";
 import { Suspense } from "react";
 import { BildImg, GoogleKarte, Reihe } from "@/components/client";
 import { ClubProfilLink } from "@/components/club-karte";
@@ -104,6 +105,8 @@ export default async function KneipeDetail(props: Props) {
   const slug = slugDekodieren((await props.params).slug);
   const ort = slug ? await ortLaden(slug) : null;
   // Eine URL pro Ort: Restaurants (auch Brauhäuser mit auch_kneipe) bleiben unter /guides/restaurants-cafes
+  // Zum Club umgetypt (früher hier gelistet, extras.vorher_typ): alte URL dauerhaft auf die Club-Seite
+  if (ort?.typ === "club" && istSichtbarerClub(ort)) permanentRedirect(`/guides/clubs/${encodeURIComponent(ort.slug)}`);
   if (!ort || ort.typ !== "kneipe") notFound();
 
   const bild = ortBildUrl(ort);

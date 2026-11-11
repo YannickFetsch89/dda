@@ -20,7 +20,7 @@ import {
   eintrittKurz, genreIcon, genreSlug, hauptGenres,
 } from "@/lib/clubs";
 import { clubLaden, clubsLaden, naechsteEvents } from "@/lib/clubs-daten";
-import { clubJsonLd } from "@/lib/clubs-json-ld";
+import { clubJsonLd, clubKanonischerPfad } from "@/lib/clubs-json-ld";
 import { eventPoolLaden } from "@/lib/daten";
 import { tagLang } from "@/lib/datum";
 import { sterne, zahl } from "@/lib/guide-filter";
@@ -154,7 +154,8 @@ export default async function ClubDetail(props: Props) {
   const eintritt = eintrittKurz(ort);
   const typZeile = [art.label, ort.stadtteil].filter(Boolean).join(" · ");
   const highlight = clubHighlight(ort);
-  const pfad = `${BASIS}/${encodeURIComponent(ort.slug)}`;
+  // Brotkrumen zeigen auf dieselbe URL wie das Canonical (bei auch_club die Haupt-URL im anderen Hub)
+  const pfad = clubKanonischerPfad(ort);
   const jsonLd = [
     clubJsonLd(ort, SITE_URL),
     brotkrumenJsonLd(SITE_URL, [
