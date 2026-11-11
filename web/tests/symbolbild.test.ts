@@ -31,6 +31,8 @@ describe("Saisonale Symbolbilder", () => {
   it("Kirche St. Martin ist kein Martinsbrauch, Laternen-Umzug mit Bindestrich schon", () => {
     expect(symbolMotiv(ev("Orgelkonzert in St. Martin", "2026-11-11"))).not.toBe("sankt-martin");
     expect(symbolMotiv(ev("Konzert St. Martinskirche Bilk", "2026-11-11"))).not.toBe("sankt-martin");
+    expect(symbolMotiv(ev("Adventsbasar bei St. Martin", "2026-11-11"))).not.toBe("sankt-martin");
+    expect(symbolMotiv(ev("Gottesdienst Kirche St. Martin", "2026-11-11"))).not.toBe("sankt-martin");
     expect(symbolMotiv(ev("Martinsgans-Essen im Brauhaus", "2026-11-11"))).not.toBe("sankt-martin");
     expect(symbolMotiv(ev("Laternen-Umzug durch Oberkassel", "2026-11-11"))).toBe("sankt-martin");
     expect(symbolMotiv(ev("Martins-Zug der Kita", "2026-11-11"))).toBe("sankt-martin");

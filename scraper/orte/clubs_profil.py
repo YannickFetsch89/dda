@@ -75,8 +75,9 @@ GENRE_STICHWORTE = {
     "80er/90er/2000er": r"\b(19)?[6789]0er|2000er|\b00er|\b[6789]0s\b|2000s|throwback|oldies|\bretro",
     "Schlager": r"schlager|\bmalle\b|ballermann|apr[èe]s|stimmungs(musik|hits|lieder)",
     "Rock/Indie": r"\brock|\bindie|alternative|britpop|grunge|\bemo\b",
-    "Metal/Punk": r"metal|\bpunk|hardcore|\bgoth|dark ?wave|new wave|\bebm\b",
-    "Disco/Funk/Soul": r"\bdisco\b|\bfunk\b|funky|\bsoul\b|motown|boogie",
+    # „punk“ nur als Wort (nicht „auf den Punkt gebracht“); „Discoabend“ ja, „Discothek“ nein
+    "Metal/Punk": r"metal|\bpunk(rock|s)?\b|hardcore|\bgoth|dark ?wave|new wave|\bebm\b",
+    "Disco/Funk/Soul": r"\bdisco(?!thek)|\bfunk\b|funky|\bsoul\b|motown|boogie",
     "Jazz": r"\bjazz|\bswing\b",
     # „von … bis“ nur mit Musikwort – sonst belegt „open from 23 bis 5 Uhr“ gemischte Musik
     "Mixed": r"\bmixed\b|querbeet|gemischt|open format"
@@ -91,9 +92,10 @@ ZUSATZ_STICHWORTE = {
     "Lesungen": r"lesung|reading|\bliest|autor|\bbuch|literatur|poetry",
     "Theater/Performance": r"theater|theatre|performance|\btanz|dance|b[üu]hne|\bshow",
     "Kino": r"\bkino|\bfilm|cinema|movie|screening",
-    "Flohmarkt/Märkte": r"markt|market|basar|bazaar",
+    # nicht „Supermarkt um die Ecke“
+    "Flohmarkt/Märkte": r"flohmarkt|tr[öo]delmarkt|designmarkt|nachtmarkt|kunstmarkt|weihnachtsmarkt|\bmarkt\b|\bmarket\b|basar|bazaar",
     "Public Viewing": r"public viewing|übertragung|leinwand|fu(ß|ss)ball|\bem\b|\bwm\b|\bspiele? live",
-    "Workshops/Kurse": r"workshop|\bkurs|class|seminar|\blernen",
+    "Workshops/Kurse": r"workshop|\bkurs|\bclass(es)?\b|seminar|\blernen",  # nicht „classic hits“
     "Ausstellungen": r"ausstellung|exhibition|galerie|gallery|vernissage|\bkunst|\bart\b",
     "Talks/Diskussion": r"\btalk|diskussion|vortrag|gespr[äa]ch|podium|lecture",
     "Quiz/Spiele": r"quiz|kwizz|\bspiel|\bgame|bingo",
@@ -108,9 +110,9 @@ PUBLIKUM_STICHWORTE = {
     "Ü30": r"[üu]e? ?30|30 ?\+|über 30|ab 30|erwachsen",
     "Queer": r"queer|\bgay|lgbt|lesb|schwul|\bdrag",
     "Underground": r"underground|subkultur|independent|\bdiy\b",
-    "Szene/Kenner": r"\bszene|kenner|\bkult|institution|legend[äa]r|kuratiert|resident",
+    "Szene/Kenner": r"\bszene|kenner|\bkult(?!ur)|institution|legend[äa]r|kuratiert|resident",  # nicht „Kulturzentrum“
     "Mainstream": r"mainstream|\bcharts|kommerz|gro(ß|ss)raum|massen",
-    "Schick": r"schick|\bedel|elegant|\bvip\b|\bchic|upscale|fancy|dresscode",
+    "Schick": r"schick|\bedel|elegant|\bvip\b|\bchic|upscale|fancy",  # nicht „Dresscode“: auch „kein Dresscode“
     "Alternativ": r"alternativ|\bindie|\bpunk|\bbunt|links",
     "International": r"international|english|expat|touris|aus aller welt|multikult",
 }
@@ -267,7 +269,7 @@ def event_orte(name: str, alle_orte: set[str]) -> list[str]:
             continue
         text = f" {' '.join(_woerter(ort))} "
         # „zakk – nicht im zakk“ gehört nicht dazu, „Pitcher, nicht im Freien“ schon
-        if any(re.search(rf" nicht im( \w+)? {re.escape(n)} ", text) for n in namen):
+        if any(re.search(rf" nicht im( \w+){{0,4}} {re.escape(n)} ", text) for n in namen):
             continue
         ort_phrase = _phrase(ort)
         # Gleich; sonst Teiltreffer nur ab 6 Zeichen und nur als ganze Wörter („Stone im Ratinger Hof“) –
@@ -406,20 +408,25 @@ def _herkunft(zitat: str, quellen: list[tuple[str, str]]) -> str | None:
     return None
 
 
-# Umfeld des Zitats in derselben Quelle: Reihennamen stehen oft als Überschrift direkt über dem zitierten Satz
-KONTEXT_ZEICHEN = 250
+# Reihennamen stehen oft als Überschrift direkt über dem zitierten Satz. Deshalb zählt für den NAMEN einer
+# Reihe auch die Zeile davor – höchstens so viele Zeichen, nie Text nach dem Zitat (Cursor-Review 2).
+UEBERSCHRIFT_ZEICHEN = 80
+ZEILENUMBRUCH = chr(10)
 
 
-def zitat_umfeld(zitat: str, quellen: list[tuple[str, str]], radius: int = KONTEXT_ZEICHEN) -> str:
-    """Zitat plus bis zu `radius` Zeichen davor und danach aus der Quelle, in der es steht (normalisiert)."""
+def zitat_umfeld(zitat: str, quellen: list[tuple[str, str]], davor: int = UEBERSCHRIFT_ZEICHEN) -> str:
+    """Zitat plus Text davor in derselben Zeile bzw. die vorangehende Zeile (max. `davor` Zeichen, normalisiert)."""
     z = _text_norm(zitat or "")
     if not z:
         return ""
     for _, text in quellen:
-        t = _text_norm(text)
+        # Zeilen getrennt normalisieren, damit „vorangehende Zeile“ erhalten bleibt
+        t = ZEILENUMBRUCH.join(_text_norm(zeile) for zeile in (text or "").splitlines())
         i = t.find(z)
         if i >= 0:
-            return t[max(0, i - radius): i + len(z) + radius]
+            zeilen = t[:i].split(ZEILENUMBRUCH)
+            vorher = " ".join(x for x in zeilen[-2:] if x.strip())
+            return f"{vorher[-davor:]} {z}".strip()
     return z
 
 def _zahl(text: str) -> float | None:
@@ -453,13 +460,17 @@ def anzeige_belegt(text: str, zitat: str) -> bool:
     return any(w[:4] in staemme_zitat for w in woerter)
 
 
+# Gattungswörter, die einen Reihennamen nicht belegen („Charts Party“ ist nicht durch „Party“ belegt)
+_GATTUNG = {"party", "partys", "parties", "night", "nights", "nacht", "club", "abend", "event", "events", "reihe"}
+
+
 def name_im_zitat(name: str, zitat: str) -> bool:
-    """Steht der Name einer Reihe im Zitat? (mind. die Hälfte seiner Wörter, ganze Wörter)"""
-    woerter = [w for w in _woerter(name) if w not in _FUELLWOERTER]
+    """Steht der Name einer Reihe im Zitat bzw. Umfeld? ALLE unterscheidenden Wörter, als ganze Wörter."""
+    woerter = [w for w in _woerter(name) if w not in _FUELLWOERTER and w not in _GATTUNG]
     if not woerter:
         return False
     im_zitat = set(_woerter(zitat))
-    return sum(w in im_zitat for w in woerter) * 2 >= len(woerter)
+    return all(w in im_zitat for w in woerter)
 
 
 def profil_links(html: str, basis: str) -> list[str]:
@@ -548,7 +559,7 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
             continue
         if (h := ok(zitat, f"Zusatz {art}")) and stichwort(ZUSATZ_STICHWORTE[art], zitat, f"Zusatz {art}"):
             beispiel = (z.get("beispiel") or "").strip()
-            zusatz.append({"art": art, "beispiel": beispiel[:100] if anzeige_belegt(beispiel, zitat_umfeld(zitat, quellen)) else "",
+            zusatz.append({"art": art, "beispiel": beispiel[:100] if anzeige_belegt(beispiel, zitat) else "",
                            "zitat": zitat.strip(), "quelle": h})
 
     fakten = {}
@@ -556,7 +567,8 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
         text, zitat = (v.get("text") or "").strip(), v.get("zitat") or ""
         if not text or not (h := ok(zitat, f"Fakt {k}")):
             continue
-        if not anzeige_belegt(text, zitat_umfeld(zitat, quellen)):
+        # Fakten nur gegen das Zitat selbst – das Umfeld würde Nachbarsätze („Eintritt 5 Euro“) mitzählen
+        if not anzeige_belegt(text, zitat):
             verworfen.append(f"Fakt {k} „{text[:40]}“ (Text passt nicht zum Zitat)")
             continue
         fakten[k] = {"text": text[:120], "zitat": zitat.strip(), "quelle": h}
@@ -604,6 +616,11 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
 
 # ── Club-Score (C2) ─────────────────────────────────────────────────────────────
 
+def _echte_zusatz(profil: dict) -> list[dict]:
+    """Zusatz-Events ohne „Sonstiges“ (das hat kein Stichwort und zählt deshalb nicht für den Score)."""
+    return [z for z in profil.get("zusatz_events") or [] if z.get("art") != "Sonstiges"]
+
+
 def _stufe(n: int, grenzen: list[tuple[int, float]]) -> float:
     wert = 0.0
     for ab, punkte in grenzen:
@@ -624,7 +641,7 @@ def club_score(ort: dict, profil: dict, events: list[dict], heute: date | None =
     kalender = _stufe(len(party), [(1, 3), (3, 5), (6, 7), (11, 8.5), (20, 10)])
     # Unser Kalender kennt viele Clubnächte nicht – deshalb zählt auch das belegte Profil:
     # feste Öffnungstage, wiederkehrende Reihen, weiteres Programm
-    belegt_programm = (3 if "oeffnung" in (profil.get("fakten") or {}) else 0)         + 1.5 * min(3, len(profil.get("formate") or [])) + (1 if profil.get("zusatz_events") else 0)
+    belegt_programm = (3 if "oeffnung" in (profil.get("fakten") or {}) else 0)         + 1.5 * min(3, len(profil.get("formate") or [])) + (1 if _echte_zusatz(profil) else 0)
     programm = max(kalender, belegt_programm)
     if kalender and belegt_programm:
         programm = min(10.0, programm + 1)
@@ -636,7 +653,7 @@ def club_score(ort: dict, profil: dict, events: list[dict], heute: date | None =
         szene += 2
     if len(profil.get("formate") or []) >= 3:
         szene += 2
-    if profil.get("unterart") == "kulturhaus" or len(profil.get("zusatz_events") or []) >= 2:
+    if profil.get("unterart") == "kulturhaus" or len(_echte_zusatz(profil)) >= 2:
         szene += 2
     if (ort.get("google_bewertungen_anzahl") or 0) >= 300:
         szene += 1
@@ -644,7 +661,7 @@ def club_score(ort: dict, profil: dict, events: list[dict], heute: date | None =
 
     haupt = [g for g in profil.get("genres") or [] if g["anteil"] == "haupt"]
     profilwert = (4 if haupt else 2 if profil.get("genres") else 0) + (2 if profil.get("formate") else 0) \
-        + (2 if profil.get("zusatz_events") else 0) + min(2, len(profil.get("fakten") or {}) * 0.5)
+        + (2 if _echte_zusatz(profil) else 0) + min(2, len(profil.get("fakten") or {}) * 0.5)
 
     r = float(ort.get("google_rating") or 0)
     n = int(ort.get("google_bewertungen_anzahl") or 0)
@@ -692,16 +709,14 @@ def _events_fuer(ort: dict, kalender: list[dict], alle_orte: set[str]) -> tuple[
     return namen, [e for e in kalender if e.get("ort") in namen]
 
 
-def extras_mergen(db, ort_id: str, felder: dict, spalten: dict | None = None, entfernen: bool = False) -> None:
+def extras_mergen(db, ort_id: str, felder: dict | None = None, spalten: dict | None = None,
+                  entfernen: tuple[str, ...] = ()) -> None:
     """
-    Nur die genannten extras-Schlüssel ändern: extras direkt vorher frisch lesen und zusammenführen, damit ein
-    paralleler Lauf (z. B. bars_einordnen) keine fremden Felder verliert. entfernen=True löscht die Schlüssel.
+    Nur die genannten extras-Schlüssel ändern: extras direkt vorher frisch lesen, `felder` setzen und
+    `entfernen` löschen – damit ein paralleler Lauf (z. B. bars_einordnen) keine fremden Felder verliert.
     """
     aktuell = (db.table("orte").select("extras").eq("id", ort_id).execute().data or [{}])[0].get("extras") or {}
-    if entfernen:
-        neu = {k: v for k, v in aktuell.items() if k not in felder}
-    else:
-        neu = {**aktuell, **felder}
+    neu = {k: v for k, v in {**aktuell, **(felder or {})}.items() if k not in entfernen}
     db.table("orte").update({"extras": neu, **(spalten or {})}).eq("id", ort_id).execute()
 
 
@@ -893,18 +908,18 @@ def freischalten(dry_run: bool) -> None:
                 if not dry_run:
                     db.table("orte").update({"aktiv": aktiv}).eq("id", o["id"]).execute()
         elif umtypen_erlaubt(o):
-            neu_ex = {k: v for k, v in ex.items() if k not in ("auch_club", "club_unterart", "club_beschreibung", "club_highlight")}
-            neu_ex["unterart"] = ex.get("club_unterart") or profil.get("unterart") or "club"
-            neu_ex["hub"] = "clubs"
-            neu_ex["vorher_typ"] = o["typ"]
-            spalten = {"typ": "club", "aktiv": True, "qualitaets_score": score.get("gesamt"), "extras": neu_ex}
+            setzen = {"unterart": ex.get("club_unterart") or profil.get("unterart") or "club", "hub": "clubs",
+                      "vorher_typ": o["typ"]}
+            spalten = {"typ": "club", "aktiv": True, "qualitaets_score": score.get("gesamt")}
             if ex.get("club_beschreibung"):
                 spalten["beschreibung"] = ex["club_beschreibung"]
             if ex.get("club_highlight"):
                 spalten["highlight"] = ex["club_highlight"]
             print(f"umtypen {o['typ']} → club: {o['name']}")
             if not dry_run:
-                db.table("orte").update(spalten).eq("id", o["id"]).execute()
+                # über extras_mergen: frisch gelesen, nur diese Schlüssel geändert
+                extras_mergen(db, o["id"], setzen, spalten,
+                              entfernen=("auch_club", "club_unterart", "club_beschreibung", "club_highlight"))
 
 
 def freigeben(namen: str, entziehen: bool, dry_run: bool) -> None:
@@ -919,12 +934,15 @@ def freigeben(namen: str, entziehen: bool, dry_run: bool) -> None:
         if not o:
             print(f"nicht gefunden: {name}")
             continue
-        ex = {k: v for k, v in (o.get("extras") or {}).items() if k != "club_freigegeben"}
-        if not entziehen:
-            ex["club_freigegeben"] = heute
         print(f"{'Freigabe entzogen' if entziehen else 'freigegeben'}: {o['name']}")
-        if not dry_run:
-            extras_mergen(db, o["id"], {"club_freigegeben": ex.get("club_freigegeben")}, entfernen=entziehen)
+        if dry_run:
+            continue
+        if entziehen:
+            # Sofort unsichtbar – auch für Routen, die die Freigabe nicht kennen (ortLaden → /ort-foto)
+            spalten = {"aktiv": False} if o["typ"] == "club" else {}
+            extras_mergen(db, o["id"], spalten=spalten, entfernen=("club_freigegeben",))
+        else:
+            extras_mergen(db, o["id"], {"club_freigegeben": heute})
 
 
 def csv_schreiben(pfad: str) -> None:

@@ -94,3 +94,13 @@ ihre alte URL leitet dauerhaft auf `/guides/clubs/<slug>` um.
 10. Keine Beispiel-Events als „Nächstes Event“.
 11. Längengrenzen auch für Club-Texte von Orten anderer Hubs.
 Hinweise: Club-Lader paginiert; extras werden zusammengeführt statt überschrieben.
+
+## 6. Cursor-Nachreview vom 11.11.2026 – eingearbeitet
+1. Fakten (und Zusatz-Beispiele) nur gegen das Zitat selbst; Reihenname braucht ALLE unterscheidenden Wörter
+   (party/night/club/nacht/abend zählen nicht), Umfeld nur die vorangehende Zeile (max. 80 Zeichen), nie Text danach.
+2. Stichworte: „Punkt“ ≠ Punk, „Discoabend“ = Disco, „Kulturzentrum“ ≠ Szene, „kein Dresscode“ ≠ Schick,
+   „classic“ ≠ Kurs, „Supermarkt“ ≠ Markt; „Sonstiges“ zählt nicht für den Score.
+3. „nicht im“ bis zu vier Wörter vor dem Clubnamen.
+4. Freigabe entziehen setzt Club-Zeilen sofort inaktiv; /ort-foto prüft die Sichtbarkeit von Club-Zeilen.
+5. Symbolbild: „bei/an/zur/zum/nach St. Martin“ ist die Kirche, kein Martinsbrauch.
+Hinweis: Umtypen schreibt extras über extras_mergen (frisch gelesen, nur eigene Schlüssel).

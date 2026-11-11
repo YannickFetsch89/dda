@@ -43,7 +43,7 @@ const SAISON: Saison[] = [
   {
     motiv: "sankt-martin",
     stichworte:
-      /(?<!\bin |kirche |gemeinde )\b(sankt|st\.?) ?martin\b(?!s?-?(kirche|gemeinde|pfarr|basilika))|martins-?(zug|züge|umzug|feuer|fest|singen|markt)|laternen-?(umzug|zug|lauf|fest|basteln|werkstatt)|laternen basteln|weckm[äa]nn|stutenkerl/i,
+      /(?<!\b(?:in|bei|an|zur|zum|nach) |kirche |gemeinde )\b(sankt|st\.?) ?martin\b(?!s?-?(kirche|gemeinde|pfarr|basilika))|martins-?(zug|züge|umzug|feuer|fest|singen|markt)|laternen-?(umzug|zug|lauf|fest|basteln|werkstatt)|laternen basteln|weckm[äa]nn|stutenkerl/i,
     zeitfenster: (d) => zwischen(d, "11-01", "11-15"),
   },
   {

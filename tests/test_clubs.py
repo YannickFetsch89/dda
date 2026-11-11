@@ -206,5 +206,47 @@ class CursorBefundeTest(unittest.TestCase):
         self.assertEqual(profil["genres"], [])
 
 
+class CursorNachreviewTest(unittest.TestCase):
+    """Fälle aus dem Cursor-Nachreview vom 11.11.2026."""
+
+    def test_eine_quelle_nachbarsaetze_belegen_nichts(self):
+        q = [("https://club.example/", "Freitags Eintritt 5 Euro ab 23 Uhr. Die Tür ist streng. Samstags Ü30 Party mit Charts.")]
+        fakten = ki()["fakten"]
+        fakten["eintritt"] = {"text": "meist 5 €", "zitat": "Die Tür ist streng."}
+        profil, _ = pruefen(ki(genres=[], fakten=fakten, formate=[
+            {"name": "Ü30", "rhythmus": "jeden Samstag", "musik": "Charts", "zitat": "Die Tür ist streng."},
+            {"name": "Charts Party", "rhythmus": "", "musik": "", "zitat": "Die Tür ist streng."},
+        ]), q)
+        self.assertNotIn("eintritt", profil["fakten"])
+        self.assertEqual(profil["formate"], [])
+
+    def test_stichworte_ohne_nachbarwoerter(self):
+        q = [("https://club.example/", "Auf den Punkt gebracht: Discoabend im Kulturzentrum mit Partys. Kein Dresscode, "
+                                       "classic hits. Supermarkt um die Ecke.")]
+        zitat = "Auf den Punkt gebracht: Discoabend im Kulturzentrum mit Partys."
+        rest = "Kein Dresscode, classic hits. Supermarkt um die Ecke."
+        profil, _ = pruefen(ki(
+            genres=[{"wert": "Metal/Punk", "anteil": "neben", "zitat": zitat},
+                    {"wert": "Disco/Funk/Soul", "anteil": "haupt", "zitat": zitat}],
+            publikum=[{"wert": "Szene/Kenner", "zitat": zitat}, {"wert": "Schick", "zitat": rest}],
+            zusatz_events=[{"art": "Workshops/Kurse", "beispiel": "", "zitat": rest},
+                           {"art": "Flohmarkt/Märkte", "beispiel": "", "zitat": rest}],
+        ), q)
+        self.assertEqual([g["wert"] for g in profil["genres"]], ["Disco/Funk/Soul"])
+        self.assertEqual(profil["publikum"], [])
+        self.assertEqual(profil["zusatz_events"], [])
+
+    def test_nicht_im_mehrere_woerter(self):
+        self.assertEqual(event_orte("Pitcher", {"Lesung – nicht im alten großen Pitcher"}), [])
+        self.assertEqual(event_orte("Pitcher", {"Pitcher, nicht im Freien"}), ["Pitcher, nicht im Freien"])
+
+    def test_sonstiges_zaehlt_nicht(self):
+        ort = {"google_rating": 4.0, "google_bewertungen_anzahl": 50}
+        basis = {"genres": [], "formate": [], "fakten": {}, "publikum": [], "unterart": "club"}
+        ohne = club_score(ort, {**basis, "zusatz_events": []}, [], date(2026, 11, 11))
+        mit = club_score(ort, {**basis, "zusatz_events": [{"art": "Sonstiges"}]}, [], date(2026, 11, 11))
+        self.assertEqual(ohne, mit)
+
+
 if __name__ == "__main__":
     unittest.main()
