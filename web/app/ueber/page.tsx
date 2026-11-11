@@ -101,9 +101,11 @@ export default async function Ueber() {
 
       {/* ── Wie es anfing ── */}
       <section className="container ue-abschnitt ue-anfang">
-        <p className="ue-gross">
-          Genau aus dieser leichten Frustration heraus ist <b>dies.das.düsseldorf</b> entstanden.
-        </p>
+        <h2 className="ue-gross">
+          <b>dies.das.düsseldorf:</b>
+          <br />
+          Aus Düsseldorf für Düsseldorf
+        </h2>
         <div className="ue-anfang__spalten">
           <p>
             Wir sind kein seelenloser, algorithmusgesteuerter Ticketshop und kein grauer Veranstaltungskalender, durch den man sich quälen muss. Wir
@@ -227,9 +229,6 @@ export default async function Ueber() {
       <section className="container ue-gruss">
         <p className="d">Hab viel Spaß beim Entdecken,</p>
         <p className="d ue-gruss__name">Dein Team von dies.das.düsseldorf</p>
-        <p className="ue-gruss__klein">
-          Betrieben von Rocktician e.&thinsp;K. in Düsseldorf – alle Angaben im <Link href="/impressum">Impressum</Link>.
-        </p>
       </section>
     </div>
   );
