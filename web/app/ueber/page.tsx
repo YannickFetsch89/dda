@@ -141,7 +141,7 @@ export default async function Ueber() {
         <h2 className="d ue-h2">Was uns wichtig ist</h2>
         <div className="ue-karten">
           {[
-            { nr: "01", titel: "Keine Masse, sondern Klasse", f: F.kultur, text: "Wir listen nicht einfach jeden x-beliebigen Standard-Termin. Wir kuratieren mit Liebe. Wenn wir dir etwas empfehlen, dann, weil wir es selbst großartig finden oder es unbedingt ausprobieren würden." },
+            { nr: "01", titel: "Keine Masse, sondern Klasse", f: F.kultur, text: "Im Kalender findest du, was in der Stadt los ist – unsere Empfehlungen aber sind handverlesen. Wir kuratieren mit Liebe: Wenn wir dir etwas empfehlen, dann, weil wir es selbst großartig finden oder es unbedingt ausprobieren würden." },
             { nr: "02", titel: "Echt & nahbar", f: F.freunde, text: "Kein steriles Corporate-Blabla. Wir schreiben so, wie wir uns auch beim Bier in der Kneipe unterhalten würden: direkt, ehrlich und mit echtem lokalen Bezug." },
             { nr: "03", titel: "Für alle, die Düsseldorf neu entdecken wollen", f: F.altstadt, text: "Egal ob du seit 20 Jahren hier wohnst und dachtest, du kennst schon alles, oder ob du gerade erst hergezogen bist – bei uns findest du sowohl den Underground-Geheimtipp als auch den etablierten Klassiker." },
           ].map((k) => (
