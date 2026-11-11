@@ -1,7 +1,8 @@
 // /ueber – Über uns: emotional statt technisch. Bildstrecken (Partys, Konzerte, Drinks …) laufen beim Scrollen
 // durchs Layout. Alle Fotos liegen in web/public/ueber/ – echte Fotos einfach mit GLEICHEM Dateinamen ablegen
-// (Platzhalter sind JPGs im Format hoch 4:5, quer 8:5, quadratisch 1:1). Kein Client-JS: Laufbänder und Parallaxe
+// Kein Client-JS: Laufbänder und Parallaxe
 // sind reines CSS (animation-timeline: view() wo der Browser es kann, sonst stehen die Bilder einfach still).
+// Neues Foto: in public/ueber/ ablegen und unten in F mit Alt-Text und echten Pixelmaßen eintragen.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/landing";
@@ -22,30 +23,31 @@ export const metadata: Metadata = seitenMetadaten({
   bild: "/ueber/party-1.jpg",
 });
 
-type Foto = { src: string; alt: string; format: "hoch" | "quer" | "quadrat" };
+type Foto = { src: string; alt: string; w: number; h: number };
 
-/** Bildliste – Reihenfolge bestimmt die Laufbänder. Echte Fotos: gleiche Dateinamen, Alt-Text hier anpassen. */
+/** Fotos in web/public/ueber/ (für das Web verkleinert, Originale liegen außerhalb des Repos). w/h = echte Pixelmaße. */
 const F: Record<string, Foto> = {
-  party: { src: "/ueber/party-1.jpg", alt: "Party mit tanzenden Menschen", format: "hoch" },
-  konzert: { src: "/ueber/konzert-1.jpg", alt: "Konzert, Blick von der Menge auf die Bühne", format: "quer" },
-  drink: { src: "/ueber/drink-1.jpg", alt: "Drink in Nahaufnahme", format: "hoch" },
-  food: { src: "/ueber/food-1.jpg", alt: "Streetfood", format: "quadrat" },
-  rhein: { src: "/ueber/rhein-1.jpg", alt: "Sommerabend am Rheinufer", format: "quer" },
-  flohmarkt: { src: "/ueber/flohmarkt-1.jpg", alt: "Flohmarkt", format: "quadrat" },
-  club: { src: "/ueber/club-1.jpg", alt: "DJ im Club", format: "hoch" },
-  indie: { src: "/ueber/konzert-2.jpg", alt: "Kleines Indie-Konzert", format: "hoch" },
-  cocktail: { src: "/ueber/drink-2.jpg", alt: "Cocktail in Nahaufnahme", format: "quadrat" },
-  freunde: { src: "/ueber/freunde-1.jpg", alt: "Freunde unterwegs in Düsseldorf", format: "quer" },
-  kultur: { src: "/ueber/kultur-1.jpg", alt: "Theater und Kunst", format: "hoch" },
-  altstadt: { src: "/ueber/altstadt-1.jpg", alt: "Altstadt am Abend", format: "quer" },
+  party: { src: "/ueber/party-1.jpg", alt: "Menschen tanzen ausgelassen auf einer Party in einem Loft", w: 1200, h: 1500 },
+  party2: { src: "/ueber/party-2.jpg", alt: "Party unter Lichterketten mit erhobenen Armen", w: 1448, h: 1086 },
+  konzert: { src: "/ueber/konzert-1.jpg", alt: "Band spielt in einem Hinterhof vor einer Backsteinmauer", w: 1536, h: 1024 },
+  indie: { src: "/ueber/konzert-2.jpg", alt: "Sängerin mit E-Gitarre bei einem kleinen Konzert", w: 1200, h: 1500 },
+  club: { src: "/ueber/club-1.jpg", alt: "DJ legt im violetten Licht eines Clubs auf", w: 1200, h: 1500 },
+  club2: { src: "/ueber/club-2.jpg", alt: "Tanzende Menge vor dem DJ-Pult", w: 1536, h: 1024 },
+  drink: { src: "/ueber/drink-1.jpg", alt: "Cocktail mit Orangenzeste auf dem Bartresen", w: 1200, h: 1500 },
+  cocktail: { src: "/ueber/drink-2.jpg", alt: "Tropischer Cocktail mit Ananas an der Bar", w: 1600, h: 1000 },
+  spritz: { src: "/ueber/drink-3.jpg", alt: "Rosa Spritz mit Grapefruit und Rosmarin im Straßencafé", w: 1200, h: 1500 },
+  food: { src: "/ueber/food-1.jpg", alt: "Bao Buns, Tataki und kleine Teller zum Teilen", w: 1254, h: 1254 },
+  flohmarkt: { src: "/ueber/flohmarkt-1.jpg", alt: "Stöbern zwischen Schallplatten auf dem Flohmarkt", w: 1536, h: 1024 },
+  freunde: { src: "/ueber/freunde-1.jpg", alt: "Freunde lachen unterwegs auf einer belebten Straße", w: 1600, h: 1000 },
+  kultur: { src: "/ueber/kultur-1.jpg", alt: "Tänzerin im Scheinwerferlicht auf einer Theaterbühne", w: 1122, h: 1402 },
+  altstadt: { src: "/ueber/altstadt-1.jpg", alt: "Abend in der Altstadt vor einer Brauhaus-Kneipe", w: 1536, h: 1024 },
+  rhein: { src: "/ueber/rhein-1.jpg", alt: "Sonnenuntergang am Rheinufer mit Rheinturm und Rheinkniebrücke", w: 1536, h: 1024 },
 };
-const MASSE = { hoch: [1000, 1250], quer: [1600, 1000], quadrat: [1100, 1100] } as const;
 
 function Bild({ f, className = "", eager = false }: { f: Foto; className?: string; eager?: boolean }) {
-  const [w, h] = MASSE[f.format];
   return (
     // eslint-disable-next-line @next/next/no-img-element -- statische Fotos aus /public, Größen fest
-    <img src={f.src} alt={f.alt} width={w} height={h} loading={eager ? "eager" : "lazy"} decoding="async" className={`ue-foto ue-foto--${f.format} ${className}`} />
+    <img src={f.src} alt={f.alt} width={f.w} height={f.h} loading={eager ? "eager" : "lazy"} decoding="async" className={`ue-foto ${className}`} />
   );
 }
 
@@ -95,7 +97,7 @@ export default async function Ueber() {
         </div>
       </section>
 
-      <Laufband richtung="links" fotos={[F.konzert, F.cocktail, F.rhein, F.club, F.food, F.freunde, F.indie]} />
+      <Laufband richtung="links" fotos={[F.konzert, F.cocktail, F.rhein, F.club, F.food, F.freunde, F.indie, F.party2]} />
 
       {/* ── Wie es anfing ── */}
       <section className="container ue-abschnitt ue-anfang">
@@ -130,6 +132,7 @@ export default async function Ueber() {
           <div className="ue-mosaik" aria-hidden>
             <Bild f={F.flohmarkt} className="ue-mosaik__a ue-parallaxe" />
             <Bild f={F.indie} className="ue-mosaik__b ue-parallaxe ue-parallaxe--schnell" />
+            <Bild f={F.party2} className="ue-mosaik__d ue-parallaxe" />
             <Bild f={F.rhein} className="ue-mosaik__c ue-parallaxe" />
           </div>
         </div>
@@ -157,13 +160,13 @@ export default async function Ueber() {
         </div>
       </section>
 
-      <Laufband richtung="rechts" fotos={[F.party, F.drink, F.altstadt, F.kultur, F.flohmarkt, F.konzert, F.cocktail]} />
+      <Laufband richtung="rechts" fotos={[F.party, F.spritz, F.altstadt, F.club2, F.kultur, F.flohmarkt, F.drink]} />
 
       {/* ── Wer dahintersteht: Polaroid-Stapel ── */}
       <section className="container ue-abschnitt ue-team">
         <div className="ue-polaroids" aria-hidden>
           <figure className="ue-polaroid ue-polaroid--1"><Bild f={F.freunde} /></figure>
-          <figure className="ue-polaroid ue-polaroid--2"><Bild f={F.club} /></figure>
+          <figure className="ue-polaroid ue-polaroid--2"><Bild f={F.club2} /></figure>
           <figure className="ue-polaroid ue-polaroid--3"><Bild f={F.food} /></figure>
         </div>
         <div>
@@ -217,7 +220,7 @@ export default async function Ueber() {
               </a>
             </div>
           </div>
-          <Bild f={F.drink} className="ue-cta__bild ue-parallaxe" />
+          <Bild f={F.spritz} className="ue-cta__bild ue-parallaxe" />
         </div>
       </section>
 
