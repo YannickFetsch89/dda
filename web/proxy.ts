@@ -14,8 +14,10 @@ import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidung
 
 const GONE_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Event nicht mehr verfügbar · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><h1>Dieses Event ist nicht mehr verfügbar.</h1><p>Die Seite wurde entfernt, weil das Event schon lange vorbei ist.</p><p><a href="/entdecken" style="color:#457b9d">Aktuelle Events in Düsseldorf entdecken</a></p></body></html>`;
 
-/** Interner Pfad ohne Route: Next rendert dort not-found.tsx mit echtem Status 404. */
-const NICHT_GEFUNDEN = "/__nicht-gefunden";
+// Eigene 404-Seite direkt aus dem Proxy (wie die 410-Seite). KEIN Rewrite auf eine interne Route: hinter nginx
+// (Host localhost:3847, X-Forwarded-Proto https) wird das Rewrite-Ziel zu https://localhost:3847/…, Next hält es
+// für eine fremde Adresse, ruft sie per HTTPS ab und antwortet mit 500 (live gemessen am 11.11.2026).
+const NICHT_GEFUNDEN_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Seite nicht gefunden · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><p style="font-style:italic;font-weight:700;font-size:20px;margin:0 0 24px">dies.das.düsseldorf</p><h1>Hier ist nichts los.</h1><p>Die Seite gibt es nicht oder das Event ist schon vorbei.</p><p><a href="/heute" style="color:#457b9d">Was heute in Düsseldorf los ist</a> · <a href="/entdecken" style="color:#457b9d">Alle Events entdecken</a> · <a href="/" style="color:#457b9d">Startseite</a></p></body></html>`;
 
 export async function proxy(request: NextRequest) {
   const pfad = request.nextUrl.pathname;
@@ -42,7 +44,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(ziel, 308);
   }
   if (pruefung.art === "fehlt") {
-    return NextResponse.rewrite(new URL(NICHT_GEFUNDEN, request.url));
+    return new NextResponse(NICHT_GEFUNDEN_HTML, {
+      status: 404,
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+    });
   }
   return NextResponse.next();
 }
