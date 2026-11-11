@@ -104,3 +104,11 @@ Hinweise: Club-Lader paginiert; extras werden zusammengeführt statt überschrie
 4. Freigabe entziehen setzt Club-Zeilen sofort inaktiv; /ort-foto prüft die Sichtbarkeit von Club-Zeilen.
 5. Symbolbild: „bei/an/zur/zum/nach St. Martin“ ist die Kirche, kein Martinsbrauch.
 Hinweis: Umtypen schreibt extras über extras_mergen (frisch gelesen, nur eigene Schlüssel).
+
+## 7. Dritte Cursor-Runde vom 11.11.2026 – eingearbeitet (nur geringe Punkte, nichts kritisch/mittel)
+1. Reihenname über dem Zitat nur aus einer kurzen Überschrift (≤ 60 Zeichen, ohne Uhrzeit, kein Satz) und nur,
+   wenn das Zitat am Zeilenanfang steht – keine Programmzeile („Fr 22 Uhr Techno Bunker“), kein Satz davor.
+2. „nicht im Saal, sondern im Pitcher Club“ bleibt dem Club zugeordnet (sondern/aber/dafür).
+3. Stichworte: Flohmärkte/Designmärkte (Plural), Masterclass, Punkrockabend.
+Bekannt und akzeptiert: Fotos (/ort-foto) bleiben nach einem Freigabe-Entzug bis zum Cache-Ablauf erreichbar;
+extras_mergen ist keine Transaktion (Restrisiko bei gleichzeitigen Läufen).

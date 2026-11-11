@@ -76,7 +76,7 @@ GENRE_STICHWORTE = {
     "Schlager": r"schlager|\bmalle\b|ballermann|apr[èe]s|stimmungs(musik|hits|lieder)",
     "Rock/Indie": r"\brock|\bindie|alternative|britpop|grunge|\bemo\b",
     # „punk“ nur als Wort (nicht „auf den Punkt gebracht“); „Discoabend“ ja, „Discothek“ nein
-    "Metal/Punk": r"metal|\bpunk(rock|s)?\b|hardcore|\bgoth|dark ?wave|new wave|\bebm\b",
+    "Metal/Punk": r"metal|\bpunk(rock\w*|s)?\b|hardcore|\bgoth|dark ?wave|new wave|\bebm\b",
     "Disco/Funk/Soul": r"\bdisco(?!thek)|\bfunk\b|funky|\bsoul\b|motown|boogie",
     "Jazz": r"\bjazz|\bswing\b",
     # „von … bis“ nur mit Musikwort – sonst belegt „open from 23 bis 5 Uhr“ gemischte Musik
@@ -93,9 +93,9 @@ ZUSATZ_STICHWORTE = {
     "Theater/Performance": r"theater|theatre|performance|\btanz|dance|b[üu]hne|\bshow",
     "Kino": r"\bkino|\bfilm|cinema|movie|screening",
     # nicht „Supermarkt um die Ecke“
-    "Flohmarkt/Märkte": r"flohmarkt|tr[öo]delmarkt|designmarkt|nachtmarkt|kunstmarkt|weihnachtsmarkt|\bmarkt\b|\bmarket\b|basar|bazaar",
+    "Flohmarkt/Märkte": r"(floh|tr[öo]del|design|nacht|kunst|weihnachts)m[aä]rkt|\bm[aä]rkte?\b|\bmarkets?\b|basar|bazaar",
     "Public Viewing": r"public viewing|übertragung|leinwand|fu(ß|ss)ball|\bem\b|\bwm\b|\bspiele? live",
-    "Workshops/Kurse": r"workshop|\bkurs|\bclass(es)?\b|seminar|\blernen",  # nicht „classic hits“
+    "Workshops/Kurse": r"workshop|\bkurs|\bclass(es)?\b|masterclass|seminar|\blernen",  # nicht „classic hits“
     "Ausstellungen": r"ausstellung|exhibition|galerie|gallery|vernissage|\bkunst|\bart\b",
     "Talks/Diskussion": r"\btalk|diskussion|vortrag|gespr[äa]ch|podium|lecture",
     "Quiz/Spiele": r"quiz|kwizz|\bspiel|\bgame|bingo",
@@ -269,7 +269,9 @@ def event_orte(name: str, alle_orte: set[str]) -> list[str]:
             continue
         text = f" {' '.join(_woerter(ort))} "
         # „zakk – nicht im zakk“ gehört nicht dazu, „Pitcher, nicht im Freien“ schon
-        if any(re.search(rf" nicht im( \w+){{0,4}} {re.escape(n)} ", text) for n in namen):
+        # … aber nicht „nicht im Saal, sondern im Pitcher Club“: dort findet es im Club statt
+        if any((m := re.search(rf" nicht im((?: \w+){{0,4}}) {re.escape(n)} ", text))
+               and not re.search(r"\b(sondern|aber|dafür)\b", m.group(1)) for n in namen):
             continue
         ort_phrase = _phrase(ort)
         # Gleich; sonst Teiltreffer nur ab 6 Zeichen und nur als ganze Wörter („Stone im Ratinger Hof“) –
@@ -414,8 +416,21 @@ UEBERSCHRIFT_ZEICHEN = 80
 ZEILENUMBRUCH = chr(10)
 
 
+def ist_ueberschrift(zeile: str, davor: int = UEBERSCHRIFT_ZEICHEN) -> bool:
+    """
+    Kurze Überschrift wie „Der Rockclub“ – keine Programmzeile („Fr 22 Uhr Techno Bunker“) und kein Satz
+    („Samstags Ü30 Party mit Charts.“). Nur so eine Zeile darf einen Reihennamen über dem Zitat belegen.
+    """
+    zeile = (zeile or "").strip()
+    return (0 < len(zeile) <= min(davor, 60)
+            and not re.search(r"\d{1,2} ?uhr|\b\d{1,2}[:.]\d{2}\b|[.!?;]", zeile))
+
+
 def zitat_umfeld(zitat: str, quellen: list[tuple[str, str]], davor: int = UEBERSCHRIFT_ZEICHEN) -> str:
-    """Zitat plus Text davor in derselben Zeile bzw. die vorangehende Zeile (max. `davor` Zeichen, normalisiert)."""
+    """
+    Zitat plus die Überschrift direkt darüber – nur wenn das Zitat am Zeilenanfang steht und die vorige Zeile
+    eine kurze Überschrift ist (ist_ueberschrift). Text davor in derselben Zeile und Text danach zählen nie.
+    """
     z = _text_norm(zitat or "")
     if not z:
         return ""
@@ -425,8 +440,10 @@ def zitat_umfeld(zitat: str, quellen: list[tuple[str, str]], davor: int = UEBERS
         i = t.find(z)
         if i >= 0:
             zeilen = t[:i].split(ZEILENUMBRUCH)
-            vorher = " ".join(x for x in zeilen[-2:] if x.strip())
-            return f"{vorher[-davor:]} {z}".strip()
+            if zeilen[-1].strip() or len(zeilen) < 2:
+                return z  # Zitat mitten in der Zeile (davor steht ein Satz) oder keine Zeile darüber
+            vorige = zeilen[-2]
+            return f"{vorige} {z}" if ist_ueberschrift(vorige, davor) else z
     return z
 
 def _zahl(text: str) -> float | None:

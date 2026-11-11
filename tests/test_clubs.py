@@ -206,6 +206,42 @@ class CursorBefundeTest(unittest.TestCase):
         self.assertEqual(profil["genres"], [])
 
 
+class CursorDritteRundeTest(unittest.TestCase):
+    """Fälle aus der dritten Cursor-Runde vom 11.11.2026."""
+
+    def _formate(self, text, zitat, name, musik=""):
+        profil, _ = pruefen(ki(genres=[], formate=[
+            {"name": name, "rhythmus": "jeden Samstag", "musik": musik, "zitat": zitat}]), [("https://x.example/", text)])
+        return profil["formate"]
+
+    def test_satz_davor_belegt_keinen_reihennamen(self):
+        self.assertEqual(self._formate("Samstags Ü30 Party mit Charts. Die Tür ist streng.", "Die Tür ist streng.", "Ü30"), [])
+
+    def test_programmzeile_darueber_belegt_keinen_reihennamen(self):
+        text = "Fr 22 Uhr Techno Bunker\nDie Tür ist streng."
+        self.assertEqual(self._formate(text, "Die Tür ist streng.", "Techno Bunker", "Techno"), [])
+
+    def test_ueberschrift_darueber_belegt_den_namen(self):
+        text = "Techno Bunker\nJeden Samstag harter Techno bis zum Morgen."
+        f = self._formate(text, "Jeden Samstag harter Techno bis zum Morgen.", "Techno Bunker", "Techno")
+        self.assertEqual([x["name"] for x in f], ["Techno Bunker"])
+
+    def test_nicht_im_sondern_im_club(self):
+        ort = "Konzert – nicht im Saal, sondern im Pitcher Club"
+        self.assertEqual(event_orte("Pitcher", {ort}), [ort])
+        self.assertEqual(event_orte("Pitcher", {"Lesung – nicht im alten großen Pitcher"}), [])
+
+    def test_stichworte_plural_und_zusammensetzungen(self):
+        q = [("https://x.example/", "Flohmärkte und Designmärkte im Hof. Masterclass für DJs. Punkrockabend im Keller.")]
+        profil, _ = pruefen(ki(
+            genres=[{"wert": "Metal/Punk", "anteil": "neben", "zitat": "Punkrockabend im Keller."}],
+            zusatz_events=[{"art": "Flohmarkt/Märkte", "beispiel": "", "zitat": "Flohmärkte und Designmärkte im Hof."},
+                           {"art": "Workshops/Kurse", "beispiel": "", "zitat": "Masterclass für DJs."}],
+        ), q)
+        self.assertEqual([g["wert"] for g in profil["genres"]], ["Metal/Punk"])
+        self.assertEqual([z["art"] for z in profil["zusatz_events"]], ["Flohmarkt/Märkte", "Workshops/Kurse"])
+
+
 class CursorNachreviewTest(unittest.TestCase):
     """Fälle aus dem Cursor-Nachreview vom 11.11.2026."""
 
