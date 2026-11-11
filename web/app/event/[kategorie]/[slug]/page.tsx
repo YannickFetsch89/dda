@@ -17,6 +17,7 @@ import { eventJsonLd, jsonLdText } from "@/lib/json-ld";
 import { AbgelaufenHinweis } from "@/components/abgelaufen-hinweis";
 import { BeschreibungText } from "@/components/beschreibung-text";
 import { kurzBeschreibung } from "@/lib/beschreibung";
+import { seitenMetadaten } from "@/lib/seo";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -28,11 +29,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!e) return { title: "Event nicht gefunden" };
   const beschreibung = kurzBeschreibung(e.beschreibung, 160) ?? `${tagLang(e.datum)}${e.uhrzeit ? `, ${e.uhrzeit} Uhr` : ""} · ${e.ort}`;
   const titel = basisTitel(e.titel);
-  return {
-    title: titel,
-    description: beschreibung,
-    openGraph: { title: titel, description: beschreibung, images: [eventBildUrl(e) ?? symbolbild(e)].filter((b): b is string => !!b) },
-  };
+  return seitenMetadaten({ pfad: eventPfad(e), titel, beschreibung, bild: eventBildUrl(e) ?? symbolbild(e) });
 }
 
 export default function EventSeite(props: Props) {

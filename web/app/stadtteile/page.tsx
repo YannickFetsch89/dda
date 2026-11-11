@@ -1,5 +1,6 @@
 // Stadtteil-Clustering: schematische Karte der 10 Stadtbezirke + Stadtteile mit Event-Anzahl
 import type { Metadata } from "next";
+import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Icon, ListenZeile, SkeletonKarten } from "@/components/karten";
@@ -10,10 +11,14 @@ import { kategorie, katStil } from "@/lib/kategorien";
 import { OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
 import { zeitKurz } from "@/lib/termine";
 
-export const metadata: Metadata = {
-  title: "Events nach Stadtteil",
-  description: "Was geht in deinem Veedel? Alle Events in Düsseldorf nach Stadtbezirk und Stadtteil.",
-};
+export async function generateMetadata(props: PageProps<"/stadtteile">): Promise<Metadata> {
+  return seitenMetadaten({
+    pfad: "/stadtteile",
+    titel: "Events nach Stadtteil",
+    beschreibung: "Was geht in deinem Veedel? Alle Events in Düsseldorf nach Stadtbezirk und Stadtteil.",
+    noindex: hatParameter(await props.searchParams),
+  });
+}
 
 const ZEITRAEUME = [
   { key: "heute", label: "Heute" },

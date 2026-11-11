@@ -163,6 +163,8 @@ async def pipeline_ausfuehren():
 
 async def _schritte_ausfuehren(report: LaufReport):
     """Die eigentlichen Pipeline-Schritte (Fehler werden in pipeline_ausfuehren protokolliert)."""
+    from datetime import datetime, timezone
+    lauf_start = datetime.now(timezone.utc)  # für IndexNow: welche Events hat dieser Lauf angelegt?
     # Schritt 1: Scraper ausführen (nacheinander, jeder einzeln abgesichert)
     logger.info("--- Schritt 1: Scraper ---")
     alle_events = []
@@ -243,6 +245,14 @@ async def _schritte_ausfuehren(report: LaufReport):
         scores_neu(dry_run=False, ausgabe=False)
     except Exception as e:
         logger.error("Club-Scores fehlgeschlagen: %s", e)
+
+    # Schritt 3d: Neue Event-URLs per IndexNow an Bing melden (ChatGPT-Suche/Copilot nutzen den Bing-Index)
+    logger.info("--- Schritt 3d: IndexNow ---")
+    try:
+        from pipeline.indexnow import nach_lauf_melden
+        nach_lauf_melden(lauf_start)
+    except Exception as e:
+        logger.error("IndexNow fehlgeschlagen: %s", e)
 
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")

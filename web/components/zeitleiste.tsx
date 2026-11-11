@@ -7,6 +7,7 @@ import { katStil, kategorie } from "@/lib/kategorien";
 import { minutenBerlin } from "@/lib/datum";
 import { symbolbild } from "@/lib/symbolbild";
 import { eventBildUrl } from "@/lib/bilder";
+import { eventPfad } from "@/lib/pfade";
 import type { DddEvent } from "@/lib/typen";
 import { zeitKurz } from "@/lib/termine";
 
@@ -66,7 +67,8 @@ function Zeile({ e, abschnitt }: { e: DddEvent; abschnitt: Pick<Abschnitt, "von"
             {k.name}
           </span>
           <h3 className="tl__titel">
-            <Link href={`/event/${encodeURIComponent(e.id)}`}>{e.titel}</Link>
+            {/* Kanonische URL direkt – nicht /event/<uuid> (das ist nur noch eine 308-Weiterleitung) */}
+            <Link href={eventPfad(e)}>{e.titel}</Link>
           </h3>
           <span className="tl__sub">
             {e.ort}

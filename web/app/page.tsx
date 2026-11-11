@@ -1,5 +1,7 @@
 // Startseite V2 (Design-Ansichten 07 desktop / 08 mobil)
+import type { Metadata } from "next";
 import Link from "next/link";
+import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import { Suspense } from "react";
 import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
@@ -36,6 +38,14 @@ function auffuellen(primaer: DddEvent[], reserve: DddEvent[], n: number): DddEve
   if (primaer.length >= n) return primaer.slice(0, n);
   const ids = new Set(primaer.map((e) => e.id));
   return [...primaer, ...reserve.filter((e) => !ids.has(e.id))].slice(0, n);
+}
+
+export async function generateMetadata(props: PageProps<"/">): Promise<Metadata> {
+  return seitenMetadaten({
+    pfad: "/",
+    beschreibung: "Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Kultur, Food, Nightlife, Familie und mehr – nach Tag, Kategorie und Stadtteil.",
+    noindex: hatParameter(await props.searchParams),
+  });
 }
 
 export default function Startseite(props: PageProps<"/">) {

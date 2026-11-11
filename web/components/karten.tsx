@@ -7,13 +7,13 @@ import { metaZeile } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
 import { istOnline } from "@/lib/ableitungen";
-import type { DddEvent } from "@/lib/typen";
+import type { DddEvent } from "@/lib/typen";
+
 import { zeitKurz } from "@/lib/termine";
 
-export function eventPfad(e: DddEvent) {
-  if (e.slug) return `/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug)}`;
-  return `/event/${encodeURIComponent(e.id)}`;
-}
+// Kanonischer Event-Pfad liegt in lib/pfade.ts (auch für Client-Komponenten und proxy.ts)
+import { eventPfad } from "@/lib/pfade";
+export { eventPfad };
 
 export function Icon({ name, className }: { name: string; className?: string }) {
   return (

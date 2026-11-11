@@ -1,5 +1,6 @@
 // Entdecken (Design-Ansicht 02): alle Events mit Filtern und Sortierung als URL-Parameter
 import type { Metadata } from "next";
+import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Bild, EventKarte, Icon, KatBadge, Leer, SkeletonKarten, eventPfad } from "@/components/karten";
@@ -14,10 +15,14 @@ import { KATEGORIEN, kategorie } from "@/lib/kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 
-export const metadata: Metadata = {
-  title: "Entdecken",
-  description: "Alle Events in Düsseldorf filtern nach Datum, Kategorie, Stadtteil, Preis und Tageszeit.",
-};
+export async function generateMetadata(props: PageProps<"/entdecken">): Promise<Metadata> {
+  return seitenMetadaten({
+    pfad: "/entdecken",
+    titel: "Entdecken",
+    beschreibung: "Alle Events in Düsseldorf filtern nach Datum, Kategorie, Stadtteil, Preis und Tageszeit.",
+    noindex: hatParameter(await props.searchParams),
+  });
+}
 
 const PRO_SEITE = 12;
 const SORTIERUNGEN = [

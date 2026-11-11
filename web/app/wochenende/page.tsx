@@ -1,5 +1,6 @@
 // Wochenende-Special (Design-Ansicht 05)
 import type { Metadata } from "next";
+import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Bild, Icon, KatBadge, Leer, eventPfad } from "@/components/karten";
@@ -9,10 +10,14 @@ import { kurzDatum, tagMonat } from "@/lib/datum";
 import { zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 
-export const metadata: Metadata = {
-  title: "Unser Wochenend-Programm",
-  description: "Neun Tipps für das Wochenende in Düsseldorf, drei pro Tag.",
-};
+export async function generateMetadata(props: PageProps<"/wochenende">): Promise<Metadata> {
+  return seitenMetadaten({
+    pfad: "/wochenende",
+    titel: "Unser Wochenend-Programm",
+    beschreibung: "Neun Tipps für das Wochenende in Düsseldorf, drei pro Tag.",
+    noindex: hatParameter(await props.searchParams),
+  });
+}
 
 export default function Wochenende(props: PageProps<"/wochenende">) {
   return (

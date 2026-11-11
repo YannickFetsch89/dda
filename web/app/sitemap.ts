@@ -11,25 +11,34 @@ import { ortPfad } from "@/components/ort-karten";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
+/** Jüngstes erstellt_am einer Event-Menge (Inhaltsdatum), sonst undefined – nie die Uhrzeit des Abrufs. */
+export function juengstes(events: { erstellt_am: string | null }[]): Date | undefined {
+  let max = "";
+  for (const e of events) if (e.erstellt_am && e.erstellt_am > max) max = e.erstellt_am;
+  const d = max ? new Date(max) : undefined;
+  return d && !Number.isNaN(d.getTime()) ? d : undefined;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pool = await eventPoolLaden();
-  const jetzt = new Date();
+  // lastModified = Inhaltsdatum (SEO-/GEO-Plan, Maßnahme 12): wann zuletzt ein Event dazukam
+  const amTag = (tag: string) => pool.alle.filter((e) => e.datum === tag || (e.datum <= tag && (e.datum_bis ?? "") >= tag));
+  const gesamt = juengstes(pool.alle);
+  const mit = (d: Date | undefined) => (d ? { lastModified: d } : {});
 
   const feste: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, lastModified: jetzt, changeFrequency: "hourly", priority: 1 },
-    { url: `${SITE_URL}/heute`, lastModified: jetzt, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/entdecken`, lastModified: jetzt, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/wochenende`, lastModified: jetzt, changeFrequency: "daily", priority: 0.8 },
-    { url: `${SITE_URL}/stadtteile`, lastModified: jetzt, changeFrequency: "daily", priority: 0.7 },
-    { url: `${SITE_URL}/event-melden`, lastModified: jetzt, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${SITE_URL}/`, ...mit(gesamt), changeFrequency: "hourly", priority: 1 },
+    { url: `${SITE_URL}/heute`, ...mit(juengstes(amTag(pool.heute))), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/entdecken`, ...mit(gesamt), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/wochenende`, ...mit(gesamt), changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/stadtteile`, ...mit(gesamt), changeFrequency: "daily", priority: 0.7 },
+    { url: `${SITE_URL}/event-melden`, changeFrequency: "monthly", priority: 0.4 },
   ];
 
-  const tage: MetadataRoute.Sitemap = Array.from({ length: 14 }, (_, i) => ({
-    url: `${SITE_URL}/tag/${plusTage(pool.heute, i)}`,
-    lastModified: jetzt,
-    changeFrequency: "daily",
-    priority: 0.6,
-  }));
+  const tage: MetadataRoute.Sitemap = Array.from({ length: 14 }, (_, i) => {
+    const tag = plusTage(pool.heute, i);
+    return { url: `${SITE_URL}/tag/${tag}`, ...mit(juengstes(amTag(tag))), changeFrequency: "daily" as const, priority: 0.6 };
+  });
 
   // Beispiel-Events (Fallback ohne Supabase) gehören nicht in die Sitemap
   const events: MetadataRoute.Sitemap =
@@ -39,7 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           .filter((e) => e.slug && !istAbgelaufen(e, pool.heute))
           .map((e) => ({
             url: `${SITE_URL}/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug!)}`,
-            lastModified: e.erstellt_am ? new Date(e.erstellt_am) : jetzt,
+            ...mit(juengstes([e])),
             changeFrequency: "weekly",
             priority: 0.5,
           }))
@@ -52,15 +61,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const clubs = clubsAlle.filter((o) => o.typ === "club");
   // Hub-URL, sobald der Kneipen-Hub etwas zeigt – auch wenn es nur Restaurants mit auch_kneipe sind
   const hatKneipen = kneipen.length > 0;
+  // Hub-Datum = jüngste Änderung eines seiner Orte
+  const geaendert = (liste: { aktualisiert_am: string | null }[]) => juengstes(liste.map((o) => ({ erstellt_am: o.aktualisiert_am })));
+  const restaurants = orte.filter((o) => o.typ !== "kneipe");
   const guides: MetadataRoute.Sitemap = orte.length
     ? [
-        { url: `${SITE_URL}/guides`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
-        { url: `${SITE_URL}/guides/restaurants-cafes`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
-        ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, lastModified: jetzt, changeFrequency: "weekly" as const, priority: 0.7 }] : []),
-        ...(clubsAlle.length ? [{ url: `${SITE_URL}/guides/clubs`, lastModified: jetzt, changeFrequency: "weekly" as const, priority: 0.7 }] : []),
+        { url: `${SITE_URL}/guides`, ...mit(geaendert([...orte, ...clubsAlle])), changeFrequency: "weekly", priority: 0.7 },
+        { url: `${SITE_URL}/guides/restaurants-cafes`, ...mit(geaendert(restaurants)), changeFrequency: "weekly", priority: 0.7 },
+        ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, ...mit(geaendert(kneipen)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
+        ...(clubsAlle.length ? [{ url: `${SITE_URL}/guides/clubs`, ...mit(geaendert(clubsAlle)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
         ...[...orte, ...clubs].map((o) => ({
           url: `${SITE_URL}${ortPfad(o)}`,
-          lastModified: o.aktualisiert_am ? new Date(o.aktualisiert_am) : jetzt,
+          ...mit(geaendert([o])),
           changeFrequency: "monthly" as const,
           priority: 0.4,
         })),
@@ -69,14 +81,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Reihen mit mindestens einem kommenden Termin. Reihenseiten ohne Termin bleiben erreichbar (HTTP 200,
   // z.B. als 301-Ziel), sind aber dünn und gehören deshalb nicht in die Sitemap.
-  const reihenSlugs = new Set(
-    pool.alle.filter((e) => e.reihe && !istAbgelaufen(e, pool.heute)).map((e) => e.reihe!.slug),
-  );
+  const reihenEvents = new Map<string, typeof pool.alle>();
+  for (const e of pool.alle) {
+    if (!e.reihe || istAbgelaufen(e, pool.heute)) continue;
+    reihenEvents.set(e.reihe.slug, [...(reihenEvents.get(e.reihe.slug) ?? []), e]);
+  }
   const reihen: MetadataRoute.Sitemap =
     pool.quelle === "supabase"
-      ? [...reihenSlugs].sort().map((slug) => ({
+      ? [...reihenEvents.keys()].sort().map((slug) => ({
           url: `${SITE_URL}/reihe/${encodeURIComponent(slug)}`,
-          lastModified: jetzt,
+          ...mit(juengstes(reihenEvents.get(slug)!)),
           changeFrequency: "weekly" as const,
           priority: 0.6,
         }))
