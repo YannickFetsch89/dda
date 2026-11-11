@@ -261,12 +261,15 @@ _AUSSCHLUSS_TYPEN = {
 _HOTEL_TYPEN = {"hotel", "motel", "lodging", "resort_hotel", "extended_stay_hotel"}
 
 
-def ort_aus_place(place: dict, gewuenschter_typ: str, hotel_erlaubt: bool = False) -> dict | None:
+def ort_aus_place(place: dict, gewuenschter_typ: str, hotel_erlaubt: bool = False,
+                  bewertung_filtern: bool = True) -> dict | None:
     """
     Konvertiert ein Google Place zu unserem Ort-Dict.
 
     hotel_erlaubt=True: Hotel-Typen schließen nicht aus (Hotelbars im Kneipen-Hub). Die übrigen
     Ausschlüsse (Einkaufszentren, Tankstellen …) gelten weiter.
+    bewertung_filtern=False: kein Mindest-Rating/keine Mindestzahl (Club-Hub: Google-Sterne sind dort
+    durch Türsteher-Beschwerden verzerrt, die Bewertung übernimmt der Club-Score).
     """
     name = place.get("displayName", {}).get("text", "")
     if not name:
@@ -282,9 +285,9 @@ def ort_aus_place(place: dict, gewuenschter_typ: str, hotel_erlaubt: bool = Fals
     bewertungen = place.get("userRatingCount", 0)
 
     # Filter: Mindest-Rating und Mindest-Bewertungen
-    if rating is not None and rating < GOOGLE_PLACES_MIN_RATING:
+    if bewertung_filtern and rating is not None and rating < GOOGLE_PLACES_MIN_RATING:
         return None
-    if bewertungen < GOOGLE_PLACES_MIN_BEWERTUNGEN:
+    if bewertung_filtern and bewertungen < GOOGLE_PLACES_MIN_BEWERTUNGEN:
         return None
 
     adresse = _adresse_bereinigen(place.get("formattedAddress"))

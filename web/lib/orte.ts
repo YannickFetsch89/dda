@@ -25,6 +25,8 @@ const EXTRAS_FELDER = [
   "oeffnungszeiten_perioden",
   // Preis pro Person (scraper/orte/preisspanne.py)
   "preis_pp", "google_preisspanne",
+  // Clubs (lib/clubs.ts, scraper/orte/clubs_profil.py) – auch für Orte anderer Hubs mit auch_club
+  "club", "club_score", "auch_club", "club_unterart", "club_beschreibung", "club_highlight",
 ];
 const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 
@@ -211,5 +213,38 @@ export async function ortLaden(slug: string): Promise<DddOrt | null> {
     console.error(`Ort '${slug}' konnte nicht geladen werden: ${err instanceof Error ? err.message : err}`);
     cacheLife(KURZ);
     return null;
+  }
+}
+
+/**
+ * Club-Hub: alle aktiven Orte mit typ = club oder extras.auch_club – OHNE die Score-Schwelle der anderen
+ * Hubs. Ob ein Ort im Club-Hub erscheint, entscheidet der Club-Score (lib/clubs.ts, istSichtbarerClub).
+ */
+export async function clubOrteLaden(): Promise<DddOrt[]> {
+  "use cache";
+  const client = supabaseClient();
+  if (!client) {
+    cacheLife(KURZ);
+    return [];
+  }
+  try {
+    const { data, error } = await client
+      .from("orte")
+      .select(SPALTEN_MIT_EXTRAS)
+      .eq("aktiv", true)
+      .or("typ.eq.club,extras->>auch_club.eq.true")
+      .order("name", { ascending: true })
+      .limit(SEITENGROESSE);
+    if (error) {
+      console.error(`Club-Orte konnten nicht geladen werden: ${error.message}`);
+      cacheLife(KURZ);
+      return [];
+    }
+    cacheLife(NORMAL);
+    return ((data ?? []) as unknown as Zeile[]).map(normalisieren);
+  } catch (err) {
+    console.error(`Fehler beim Laden der Club-Orte: ${err instanceof Error ? err.message : err}`);
+    cacheLife(KURZ);
+    return [];
   }
 }

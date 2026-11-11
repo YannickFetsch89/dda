@@ -8,6 +8,7 @@ import { Icon } from "@/components/karten";
 import { zahl } from "@/lib/guide-filter";
 import { orteLaden } from "@/lib/orte";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
+import { clubsLaden } from "@/lib/clubs-daten";
 
 export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
@@ -29,7 +30,7 @@ interface Hub {
 const HUBS: Hub[] = [
   { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
   { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },
-  { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: false },
+  { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: true },
   { slug: "spielplaetze", label: "Spielplätze", icon: "toys", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: false },
   { slug: "ausfluege", label: "Ausflüge", icon: "hiking", teaser: "Raus aus der Stadt – unter einer Stunde erreichbar", einheit: "Ziele", fertig: false },
   { slug: "wochenend-trips", label: "Wochenend-Trips", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
@@ -97,10 +98,10 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
 async function Kacheln() {
   // Jede Kachel zählt genau das, was ihr Hub zeigt (Restaurant-Hub inkl. Brauhäuser, Kneipen-Hub
   // inkl. Restaurants mit auch_kneipe)
-  const [restaurants, brauhaeuser, kneipen] = await Promise.all([
-    orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(),
+  const [restaurants, brauhaeuser, kneipen, clubs] = await Promise.all([
+    orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(), clubsLaden(),
   ]);
-  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length }} />;
+  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length, clubs: clubs.length }} />;
 }
 
 export default function GuidesUebersicht() {

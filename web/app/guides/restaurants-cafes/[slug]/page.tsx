@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BildImg, GoogleKarte, Reihe } from "@/components/client";
+import { ClubProfilLink } from "@/components/club-karte";
 import { EventKarte, Icon } from "@/components/karten";
 import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
@@ -181,6 +182,7 @@ export default async function OrtDetail(props: Props) {
               <Icon name="photo_camera" />Instagram<span className="gd-knopf__zusatz muted">@{ort.instagram.replace(/^@/, "")}</span>
             </a>
           )}
+          <ClubProfilLink o={ort} />
           <GoogleKarte adresse={kartenAdresse} routeUrl={routeUrl} />
         </aside>
       </div>

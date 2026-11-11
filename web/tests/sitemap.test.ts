@@ -16,7 +16,7 @@ vi.mock("@/lib/daten", () => ({
     return { heute: HEUTE, jetzt: `${HEUTE}T10:00:00Z`, events: alle, alle, quelle: "supabase", fehler: null };
   },
 }));
-vi.mock("@/lib/orte", () => ({ orteLaden: async () => [] }));
+vi.mock("@/lib/orte", () => ({ orteLaden: async () => [], clubOrteLaden: async () => [] }));
 vi.mock("@/components/ort-karten", () => ({ ortPfad: () => "/guides/x" }));
 
 describe("Sitemap", () => {

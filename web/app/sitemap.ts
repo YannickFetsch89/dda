@@ -5,6 +5,7 @@ import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
 import { plusTage } from "@/lib/datum";
 import { kneipenLaden } from "@/lib/kneipen-daten";
+import { clubsLaden } from "@/lib/clubs-daten";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 
@@ -46,7 +47,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
   // Jeder Ort genau einmal (URL nach typ über ortPfad) – auch Brauhäuser, die in zwei Hubs erscheinen
-  const [orte, kneipen] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden()]);
+  const [orte, kneipen, clubsAlle] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden(), clubsLaden()]);
+  // Club-Hub: nur Orte mit typ = club bekommen hier ihre URL (auch_club-Orte haben noindex und ihre Haupt-URL)
+  const clubs = clubsAlle.filter((o) => o.typ === "club");
   // Hub-URL, sobald der Kneipen-Hub etwas zeigt – auch wenn es nur Restaurants mit auch_kneipe sind
   const hatKneipen = kneipen.length > 0;
   const guides: MetadataRoute.Sitemap = orte.length
@@ -54,7 +57,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: `${SITE_URL}/guides`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
         { url: `${SITE_URL}/guides/restaurants-cafes`, lastModified: jetzt, changeFrequency: "weekly", priority: 0.7 },
         ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, lastModified: jetzt, changeFrequency: "weekly" as const, priority: 0.7 }] : []),
-        ...orte.map((o) => ({
+        ...(clubsAlle.length ? [{ url: `${SITE_URL}/guides/clubs`, lastModified: jetzt, changeFrequency: "weekly" as const, priority: 0.7 }] : []),
+        ...[...orte, ...clubs].map((o) => ({
           url: `${SITE_URL}${ortPfad(o)}`,
           lastModified: o.aktualisiert_am ? new Date(o.aktualisiert_am) : jetzt,
           changeFrequency: "monthly" as const,

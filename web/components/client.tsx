@@ -344,6 +344,7 @@ export const GUIDE_LINKS = [
   { href: "/guides", label: "Alle Guides", icon: "explore" },
   { href: "/guides/restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant" },
   { href: "/guides/kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar" },
+  { href: "/guides/clubs", label: "Clubs", icon: "nightlife" },
 ];
 
 function KopfNavMitPfad() {

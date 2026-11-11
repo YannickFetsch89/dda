@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BildImg, GoogleKarte, Reihe } from "@/components/client";
+import { ClubProfilLink } from "@/components/club-karte";
 import { EventKarte, Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
@@ -205,6 +206,7 @@ export default async function KneipeDetail(props: Props) {
               <Icon name="photo_camera" />Instagram<span className="gd-knopf__zusatz muted">@{ort.instagram.replace(/^@/, "")}</span>
             </a>
           )}
+          <ClubProfilLink o={ort} />
           <GoogleKarte adresse={kartenAdresse} routeUrl={routeUrl} />
           {ort.stadtteil && (
             <Link href={`${BASIS}?stadtteil=${slugify(ort.stadtteil)}`} className="link">Mehr Kneipen &amp; Bars in {ort.stadtteil}</Link>

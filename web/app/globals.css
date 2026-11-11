@@ -1396,3 +1396,124 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .such-orte .sektion__kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .such-orte .sektion__kopf h2, .such-events-titel { font-size: 26px; }
 .such-events-titel { margin-top: 32px; }
+
+/* ── Guide-Hub Clubs (Design-Handoff v2, Ansichten 22 und 24) ───────────────── */
+.cl-hero { height: 260px; background: linear-gradient(180deg, #1b2540, #05070d); }
+.cl-hero .gd-hero__bild img { opacity: 0.45; }
+.cl-hero__licht {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(45% 70% at 88% 8%, rgba(69, 123, 157, 0.55), transparent 70%),
+    radial-gradient(40% 60% at 92% 95%, rgba(201, 168, 76, 0.28), transparent 70%),
+    radial-gradient(35% 55% at 50% 105%, rgba(236, 72, 153, 0.18), transparent 70%),
+    linear-gradient(0deg, rgba(5, 7, 13, 0.92) 0%, rgba(5, 7, 13, 0.55) 60%, rgba(5, 7, 13, 0.35) 100%);
+}
+@media (min-width: 768px) { .cl-hero { height: 320px; } }
+@media (min-width: 1200px) { .cl-hero h1 { font-size: 64px; } }
+
+/* Große Genre-Chips (Mehrfachauswahl, ODER) */
+.cl-genres { padding-bottom: 4px; }
+.cl-genre-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 18px; border-radius: var(--r-pill);
+  background: var(--ddd-surface); border: 1px solid #cbd5e0; color: var(--ddd-text);
+  font-size: 15px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+}
+.cl-genre-chip .icon { font-size: 20px; }
+.cl-genre-chip:hover { border-color: var(--ddd-navy); color: var(--ddd-text); }
+.cl-genre-chip--an, .cl-genre-chip--an:hover { background: var(--ddd-navy); border-color: var(--ddd-navy); color: var(--ddd-gold); }
+.cl-genre-chip .gd-chip__zahl { letter-spacing: 0; }
+@media (max-width: 767px) { .cl-genre-chip { height: 44px; padding: 0 14px; font-size: 13px; } }
+
+/* Grid und Card */
+.cl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 14px; }
+@media (min-width: 768px) { .cl-grid { gap: 24px; padding-top: 16px; } }
+@media (min-width: 1200px) { .cl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.cl-karte {
+  display: flex; flex-direction: column; background: var(--ddd-surface); border: 1px solid #d9dee7; border-radius: var(--r-card);
+  overflow: hidden; box-shadow: var(--sh-m); transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.cl-karte:hover { transform: translateY(-6px); box-shadow: 0 28px 50px -16px rgba(5, 7, 13, 0.45); }
+.cl-karte__link, .cl-karte__link:hover { display: flex; flex-direction: column; flex: 1; color: inherit; }
+.cl-karte__bild {
+  position: relative; aspect-ratio: 4 / 3; overflow: hidden;
+  background:
+    radial-gradient(50% 60% at 80% 15%, rgba(69, 123, 157, 0.55), transparent 70%),
+    radial-gradient(45% 55% at 20% 100%, rgba(201, 168, 76, 0.3), transparent 70%),
+    linear-gradient(180deg, #1b2540, #05070d);
+}
+.cl-karte__bild img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cl-karte:hover .cl-karte__bild img { transform: scale(1.04); }
+.cl-karte__bild .bild__platzhalter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 48px; color: rgba(255, 255, 255, 0.5); background: none; }
+.cl-genre {
+  position: absolute; top: 12px; left: 12px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 6px 11px; border-radius: var(--r-pill); background: var(--ddd-navy); border: 1px solid rgba(201, 168, 76, 0.5);
+  color: var(--ddd-gold); font-size: 13px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.cl-eintritt {
+  position: absolute; top: 12px; right: 12px; padding: 6px 10px; border-radius: var(--r-pill); background: #ffffff; color: #1b2540;
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.cl-genre + .cl-eintritt { top: auto; bottom: 30px; }
+.cl-karte__text { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+.cl-karte__art { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6e5a22; }
+.cl-karte__art .icon { font-size: 16px; }
+.cl-karte__name { font-size: 18px; line-height: 1.2; color: var(--ddd-text); }
+.cl-karte__meta { display: flex; align-items: flex-start; gap: 4px; font-size: 13px; color: var(--ddd-text-muted); }
+.cl-karte__meta .icon { font-size: 16px; margin-top: 1px; }
+.cl-karte__event {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; margin: 0 16px; padding: 10px 0 14px;
+  border-top: 1px solid var(--ddd-border); font-size: 13px;
+}
+.cl-karte__event .icon { font-size: 16px; color: #9c8346; align-self: center; }
+.cl-karte__eventlink { color: var(--ddd-link); text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+@media (max-width: 767px) {
+  .cl-karte__text { padding: 10px 12px 10px; gap: 4px; }
+  .cl-karte__name { font-size: 16px; }
+  .cl-genre { top: 8px; left: 8px; padding: 4px 8px; font-size: 11px; letter-spacing: 0.1em; }
+  .cl-eintritt { font-size: 11px; padding: 4px 8px; }
+  .cl-genre + .cl-eintritt { bottom: 26px; right: 8px; }
+  .cl-karte__event { margin: 0 12px; padding: 8px 0 10px; font-size: 12px; }
+  .cl-karte__event .muted { display: none; }
+  .cl-karte__eventlink { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+.cl-hinweis { margin-top: 24px; font-size: 13px; line-height: 1.5; max-width: 70ch; }
+
+/* Detailseite */
+.cl-detail__hero { border-radius: 20px; background: linear-gradient(180deg, #1b2540, #05070d); }
+.cl-titel { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+.cl-titel h1 { margin: 0; }
+.cl-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--r-pill); background: var(--ddd-navy);
+  color: var(--ddd-gold); font-size: 14px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.cl-pill .icon { font-size: 18px; }
+.cl-block { margin-top: 28px; }
+.cl-block h2 { font-size: 24px; margin-bottom: 12px; }
+.cl-block__zeile { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.cl-block__zeile > .muted { font-size: 13px; font-weight: 600; }
+.cl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cl-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid #cbd5e0;
+  background: var(--ddd-surface); color: var(--ddd-text); font-size: 14px; font-weight: 700;
+}
+.cl-chip .icon { font-size: 18px; color: #9c8346; }
+.cl-chip--haupt { background: var(--ddd-navy); border-color: var(--ddd-navy); color: var(--ddd-gold); }
+.cl-chip--haupt .icon { color: var(--ddd-gold); }
+.cl-formate { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cl-formate li { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-top: 1px solid var(--ddd-border); }
+.cl-formate li:last-child { border-bottom: 1px solid var(--ddd-border); }
+.cl-formate b { font-size: 16px; }
+.cl-formate .muted { font-size: 14px; }
+.cl-unterzeile { margin: -6px 0 12px; font-size: 13px; }
+.cl-score { padding: 18px 20px; border-radius: var(--r-card); background: linear-gradient(180deg, #1b2540, #0d1220); color: #ffffff; display: flex; flex-direction: column; gap: 10px; }
+.cl-score__kopf { display: flex; align-items: baseline; justify-content: space-between; }
+.cl-score__kopf h2 { font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ddd-gold); margin: 0; }
+.cl-score__wert { font-family: var(--font-display); font-size: 36px; line-height: 1; color: #ffffff; }
+.cl-score__wert small { font-size: 16px; color: rgba(255, 255, 255, 0.6); }
+.cl-score__zeile { display: grid; grid-template-columns: 92px 1fr 32px; align-items: center; gap: 10px; font-size: 13px; }
+.cl-score__zeile b { text-align: right; }
+.cl-score__balken { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.cl-score__balken span { display: block; height: 100%; border-radius: 3px; background: var(--ddd-gold); }
+:root[data-theme="dark"] .cl-karte { border-color: var(--ddd-border); }
+:root[data-theme="dark"] .cl-karte__art { color: #c9a84c; }
+:root[data-theme="dark"] .cl-genre-chip, :root[data-theme="dark"] .cl-chip { border-color: var(--ddd-border); }

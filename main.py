@@ -235,6 +235,15 @@ async def _schritte_ausfuehren(report: LaufReport):
     except Exception as e:
         logger.error("Beschreibungen aus Veranstalter-Quellen fehlgeschlagen: %s", e)
 
+    # Schritt 3c: Club-Scores aus dem aktuellen Eventkalender neu berechnen (ohne KI, kostenlos) –
+    # Programm-Wert und die Schreibweisen der Orte für „Nächste Events hier“ bleiben so aktuell
+    logger.info("--- Schritt 3c: Club-Scores ---")
+    try:
+        from scraper.orte.clubs_profil import scores_neu
+        scores_neu(dry_run=False, ausgabe=False)
+    except Exception as e:
+        logger.error("Club-Scores fehlgeschlagen: %s", e)
+
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")
     from pipeline import caption_generator

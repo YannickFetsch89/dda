@@ -60,6 +60,7 @@ export function Kopf() {
               <Link href="/guides">Alle Guides</Link>
               <Link href="/guides/restaurants-cafes">Restaurants &amp; Cafés</Link>
               <Link href="/guides/kneipen-bars">Kneipen &amp; Bars</Link>
+              <Link href="/guides/clubs">Clubs</Link>
               <Link href="/merkliste">Merkliste</Link>
               <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>
@@ -147,6 +148,7 @@ export async function Fuss() {
           <b>Guides</b>
           <Link href="/guides/restaurants-cafes">Restaurants & Cafés</Link>
           <Link href="/guides/kneipen-bars">Kneipen & Bars</Link>
+          <Link href="/guides/clubs">Clubs</Link>
         </div>
         <div className="fuss__spalte">
           <b>Service</b>

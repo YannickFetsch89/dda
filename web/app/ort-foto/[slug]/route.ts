@@ -10,6 +10,7 @@
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
+import { clubLaden } from "@/lib/clubs-daten";
 import { ortLaden, slugDekodieren } from "@/lib/orte";
 
 const FOTO_BREITE = 1200;
@@ -70,7 +71,8 @@ async function googleFotoAdresse(name: string, slug: string): Promise<Ergebnis> 
 async function bildQuelle(slug: string): Promise<{ adresse: string | null; google: boolean }> {
   "use cache";
   cacheTag(fotoTag(slug));
-  const ort = await ortLaden(slug);
+  // Club-Hub: Orte mit auch_club (z. B. Konvex) sind im Club-Hub sichtbar, auch wenn ihr Score im Haupt-Hub < 7 ist
+  const ort = (await ortLaden(slug)) ?? (await clubLaden(slug));
   if (ort?.bild_url && !ort.bild_url.includes("key=")) {
     cacheLife({ stale: 3600, revalidate: TAG, expire: 7 * TAG });
     return { adresse: ort.bild_url, google: false };
