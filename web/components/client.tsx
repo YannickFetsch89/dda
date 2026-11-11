@@ -89,7 +89,8 @@ export function BildImg({
   eager = false,
   vollstaendig = false,
   fokus,
-  symbolAlt = "Symbolbild",
+  // Mit Alt-Text (Hero) „Symbolbild“; in Listen (alt="") auch beim Symbolbild leer – der Titel steht im Link
+  symbolAlt = alt ? "Symbolbild" : "",
 }: {
   src: string | null;
   ersatz?: string | null;
@@ -100,7 +101,7 @@ export function BildImg({
   vollstaendig?: boolean;
   /** Welcher Teil beim Beschneiden sichtbar bleibt (CSS object-position, z. B. "center bottom") */
   fokus?: string;
-  /** Alt-Text, wenn statt des eigenen Bildes das Symbolbild erscheint (Standard „Symbolbild“) */
+  /** Alt-Text, wenn statt des eigenen Bildes das Symbolbild erscheint (Standard: „Symbolbild“, in Listen leer) */
   symbolAlt?: string;
 }) {
   // Kandidaten der Reihe nach; schlägt ein Bild fehl, kommt das nächste

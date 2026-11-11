@@ -31,7 +31,9 @@ function tagHref(tag: string, heute: string) {
 export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string }) {
   const pool = await eventPoolLaden();
   const { heute } = pool;
-  const d = tag && tag >= heute ? tag : heute;
+  // Vergangene Tage: Der Pool beginnt mit heute – nie die heutigen Events unter ein altes Datum schreiben
+  if (tag && tag < heute) return <VergangenerTag tag={tag} heute={heute} pfad={pfad} />;
+  const d = tag ?? heute;
   const istHeute = d === heute;
   const titel = istHeute ? "Heute" : d === plusTage(heute, 1) ? "Morgen" : WT_LANG[wochentag(d)];
   const untertitel = istHeute || d === plusTage(heute, 1) ? `${WT_LANG[wochentag(d)]}, ${tagMonat(d)}` : tagMonat(d);
@@ -53,8 +55,9 @@ export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string })
   }));
   if (ganztags.length) abschnitte.unshift({ name: "Ganztägig", bereich: "ohne feste Uhrzeit", icon: "calendar_today", von: -1, bis: -1, events: ganztags });
 
-  // Satz aus denselben Zeilen, die die Liste zeigt (gebündelte Termine zählen einmal)
-  const satz = tagesSatz(d, events);
+  // Satz aus denselben Zeilen, die die Liste zeigt (gebündelte Termine zählen einmal) – nicht bei Beispieldaten
+  // (Ausfall der Datenbank): die wären keine echte Zählung
+  const satz = pool.quelle === "supabase" ? tagesSatz(d, events) : null;
   const stand = pool.quelle === "supabase" ? standText(pool.jetzt) : null;
   const jsonLd = eventListeJsonLd(
     SITE_URL,
@@ -83,7 +86,7 @@ export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string })
         </div>
       </div>
       <div className="container planer">
-        <p className="tagesatz">{satz}</p>
+        {satz && <p className="tagesatz">{satz}</p>}
         {stand && <p className="tagesatz__stand muted">{stand}</p>}
         {events.length ? (
           <Zeitleiste abschnitte={abschnitte} istHeute={istHeute} />
@@ -96,6 +99,36 @@ export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string })
             </Leer>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+/** Ein vergangener Tag: ehrlich als vorbei zeigen (die Seite ist noindex, siehe app/tag/[datum]/page.tsx). */
+function VergangenerTag({ tag, heute, pfad }: { tag: string; heute: string; pfad: string }) {
+  const jsonLd = eventListeJsonLd(SITE_URL, "", [{ name: "Start", pfad: "/" }, { name: `Events am ${datumText(tag)}`, pfad }], []);
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
+      <div className="tagleiste">
+        <div className="container tagleiste__inner">
+          <span className="icon-btn" aria-hidden />
+          <div className="tagleiste__mitte">
+            <h1 className="d">{WT_LANG[wochentag(tag)]}</h1>
+            <span>{datumText(tag)}</span>
+          </div>
+          <Link href={tagHref(plusTage(tag, 1), heute)} className="icon-btn" aria-label="Nächster Tag">
+            <Icon name="chevron_right" />
+          </Link>
+        </div>
+      </div>
+      <div className="container planer sektion">
+        <p className="tagesatz">Der {datumText(tag)} ist vorbei.</p>
+        <Leer titel="Dieser Tag liegt in der Vergangenheit.">
+          <Link href="/heute" className="link">
+            Was heute in Düsseldorf los ist <Icon name="arrow_forward" />
+          </Link>
+        </Leer>
       </div>
     </>
   );

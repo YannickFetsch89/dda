@@ -12,7 +12,7 @@ import { wochenendSatz } from "@/lib/tagestext";
 import type { EventPool } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
-import { kurzDatum, tagMonat } from "@/lib/datum";
+import { kurzDatum, tagMonat, zeitraumAuflösen } from "@/lib/datum";
 import { zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 
@@ -47,10 +47,12 @@ function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: strin
   // Standard-Tab: heute, falls gerade Wochenende ist, sonst der erste noch kommende Tag
   const gewaehlt =
     tage.find((t) => t.kurz.toLowerCase() === String(tagWahl ?? "").toLowerCase()) ?? tage.find((t) => t.tag === pool.heute) ?? tage.find((t) => !t.vergangen) ?? tage[0];
-  // Satz aus echten Daten: alle Events Fr–So (gebündelt wie die Listen) und die Zahl der Tipps
-  const alleAmWochenende = filtern(pool.events, { von: tage[0].tag, bis: tage[2].tag });
+  // Satz aus echten Daten – dieselbe Menge wie der Link „Alle Events am Wochenende“ (/entdecken?datum=wochenende:
+  // ab Samstag erst ab heute, Langläufer dabei). Nicht bei Beispieldaten (Ausfall der Datenbank).
+  const z = zeitraumAuflösen("wochenende", pool.heute);
+  const alleAmWochenende = filtern(pool.events, { von: z.von, bis: z.bis, mitLanglaeufern: true });
   const tipps = tage.reduce((n, t) => n + t.events.length, 0);
-  const satz = wochenendSatz(tage[0].tag, tage[2].tag, alleAmWochenende, tipps);
+  const satz = pool.quelle === "supabase" ? wochenendSatz(z.von, z.bis, alleAmWochenende, tipps) : null;
   const jsonLd = eventListeJsonLd(
     SITE_URL,
     `Wochenend-Tipps für ${gewaehlt.name}`,
@@ -67,7 +69,7 @@ function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: strin
             {tagMonat(tage[0].tag)} – {tagMonat(tage[2].tag)}
           </span>
           <h1 className="d">Unser Wochenend-Programm</h1>
-          <p>{satz} Drei Tipps pro Tag, jeden Donnerstag neu.</p>
+          <p>{satz ? `${satz} ` : ""}Jeden Donnerstag neu.</p>
           <nav className="wk-tabs" aria-label="Tag wählen">
             {tage.map((t) => (
               <Link key={t.kurz} href={`/wochenende?tag=${t.kurz.toLowerCase()}`} aria-current={t.kurz === gewaehlt.kurz ? "true" : undefined} scroll={false}>

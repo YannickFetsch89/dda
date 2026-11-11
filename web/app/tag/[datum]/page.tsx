@@ -3,14 +3,18 @@ import { notFound } from "next/navigation";
 import { seitenMetadaten } from "@/lib/seo";
 import { Tagesplaner } from "@/components/tagesplaner";
 import { istGueltigerTag, tagLang } from "@/lib/datum";
+import { eventPoolLaden } from "@/lib/daten";
 
 export async function generateMetadata(props: PageProps<"/tag/[datum]">): Promise<Metadata> {
   const { datum } = await props.params;
   if (!istGueltigerTag(datum)) return { title: "Tag nicht gefunden" };
+  // Vergangene Tage: noindex (der Pool hat dafür keine Events; ein Archiv wird erst bewusst indexiert)
+  const { heute } = await eventPoolLaden();
   return seitenMetadaten({
     pfad: `/tag/${datum}`,
     titel: `Events am ${tagLang(datum)}`,
     beschreibung: `Alle Events in Düsseldorf am ${tagLang(datum)}.`,
+    noindex: datum < heute,
   });
 }
 
