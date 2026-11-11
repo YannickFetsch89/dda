@@ -53,6 +53,8 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
   const daten: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Event",
+    // @id = URL der Eventseite: Reihen (EventSeries.subEvent) verweisen darauf
+    "@id": seitenUrl,
     name: basisTitel(e.titel),
     url: seitenUrl,
     startDate: startDatum(e),

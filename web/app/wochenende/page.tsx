@@ -5,7 +5,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Bild, Icon, KatBadge, Leer, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
-import { wochenendProgramm } from "@/lib/ableitungen";
+import { filtern, wochenendProgramm } from "@/lib/ableitungen";
+import { jsonLdText } from "@/lib/json-ld";
+import { eventListeJsonLd } from "@/lib/listen-json-ld";
+import { wochenendSatz } from "@/lib/tagestext";
+import type { EventPool } from "@/lib/typen";
+
+const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 import { kurzDatum, tagMonat } from "@/lib/datum";
 import { zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
@@ -19,40 +25,49 @@ export async function generateMetadata(props: PageProps<"/wochenende">): Promise
   });
 }
 
-export default function Wochenende(props: PageProps<"/wochenende">) {
+// Standardansicht (ohne ?tag=) im ersten HTML – Daten aus dem Cache. Nur die Tab-Variante wartet in Suspense auf
+// searchParams; ihr Fallback ist genau diese Standardansicht (Muster der Guide-Hubs, SEO-/GEO-Plan Maßnahme 1).
+export default async function Wochenende(props: PageProps<"/wochenende">) {
+  const pool = await eventPoolLaden();
   return (
-    <Suspense
-      fallback={
-        <section className="wk-hero">
-          <div className="container">
-            <h1 className="d">Unser Wochenend-Programm</h1>
-          </div>
-        </section>
-      }
-    >
-      <WochenendeInhalt searchParams={props.searchParams} />
+    <Suspense fallback={<WochenendeAnsicht pool={pool} />}>
+      <MitTab searchParams={props.searchParams} pool={pool} />
     </Suspense>
   );
 }
 
-async function WochenendeInhalt({ searchParams }: Pick<PageProps<"/wochenende">, "searchParams">) {
+async function MitTab({ searchParams, pool }: Pick<PageProps<"/wochenende">, "searchParams"> & { pool: EventPool }) {
   const sp = await searchParams;
-  const pool = await eventPoolLaden();
+  return <WochenendeAnsicht pool={pool} tagWahl={typeof sp.tag === "string" ? sp.tag : undefined} />;
+}
+
+function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: string }) {
   const tage = wochenendProgramm(pool);
 
   // Standard-Tab: heute, falls gerade Wochenende ist, sonst der erste noch kommende Tag
   const gewaehlt =
-    tage.find((t) => t.kurz.toLowerCase() === String(sp.tag ?? "").toLowerCase()) ?? tage.find((t) => t.tag === pool.heute) ?? tage.find((t) => !t.vergangen) ?? tage[0];
+    tage.find((t) => t.kurz.toLowerCase() === String(tagWahl ?? "").toLowerCase()) ?? tage.find((t) => t.tag === pool.heute) ?? tage.find((t) => !t.vergangen) ?? tage[0];
+  // Satz aus echten Daten: alle Events Fr–So (gebündelt wie die Listen) und die Zahl der Tipps
+  const alleAmWochenende = filtern(pool.events, { von: tage[0].tag, bis: tage[2].tag });
+  const tipps = tage.reduce((n, t) => n + t.events.length, 0);
+  const satz = wochenendSatz(tage[0].tag, tage[2].tag, alleAmWochenende, tipps);
+  const jsonLd = eventListeJsonLd(
+    SITE_URL,
+    `Wochenend-Tipps für ${gewaehlt.name}`,
+    [{ name: "Start", pfad: "/" }, { name: "Wochenende", pfad: "/wochenende" }],
+    gewaehlt.events,
+  );
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
       <section className="wk-hero">
         <div className="container">
           <span className="overline overline--gold">
             {tagMonat(tage[0].tag)} – {tagMonat(tage[2].tag)}
           </span>
           <h1 className="d">Unser Wochenend-Programm</h1>
-          <p>Neun Tipps aus der Redaktion, drei pro Tag. Jeden Donnerstag neu.</p>
+          <p>{satz} Drei Tipps pro Tag, jeden Donnerstag neu.</p>
           <nav className="wk-tabs" aria-label="Tag wählen">
             {tage.map((t) => (
               <Link key={t.kurz} href={`/wochenende?tag=${t.kurz.toLowerCase()}`} aria-current={t.kurz === gewaehlt.kurz ? "true" : undefined} scroll={false}>

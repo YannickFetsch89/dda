@@ -2,9 +2,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
-import { Bild, EventKarte, Icon, KatBadge, SkeletonKarten, eventPfad } from "@/components/karten";
+import { Bild, EventKarte, Icon, KatBadge, eventPfad } from "@/components/karten";
 import { eventLaden, eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, istOnline, nachBeliebtheit } from "@/lib/ableitungen";
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
@@ -32,21 +31,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return seitenMetadaten({ pfad: eventPfad(e), titel, beschreibung, bild: eventBildUrl(e) ?? symbolbild(e) });
 }
 
+// Ohne äußere Suspense-Grenze (Muster der Guide-Details): H1, Termin, Ort und Beschreibung stehen im ersten HTML.
+// Unbekannte Slugs beantwortet schon proxy.ts mit 404; notFound() bleibt als Rückfall.
+export const instant = false;
+
 export default function EventSeite(props: Props) {
-  return (
-    <Suspense
-      fallback={
-        <>
-          <div className="skeleton" style={{ height: 330, borderRadius: 0 }} />
-          <div className="container sektion">
-            <SkeletonKarten anzahl={2} hoehe={120} />
-          </div>
-        </>
-      }
-    >
-      <EventInhalt params={props.params} />
-    </Suspense>
-  );
+  return <EventInhalt params={props.params} />;
 }
 
 function routenLink(adresse: string) {
@@ -89,7 +79,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
     <article>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
       <div className="detail-hero">
-        <Bild e={e} eager vollstaendig />
+        <Bild e={e} eager vollstaendig alt={`${titel}, ${e.ort}`} symbolAlt={`Symbolbild: ${titel}`} />
         <div className="detail-hero__btns">
           <ZurueckButton />
           <div>
@@ -120,7 +110,9 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                     <Icon name="calendar_today" />
                   </span>
                   <div>
-                    <b>{zeitText}</b>
+                    <b>
+                      <time dateTime={e.datum_bis && e.datum_bis !== e.datum ? e.datum : `${e.datum}${e.uhrzeit ? `T${e.uhrzeit}` : ""}`}>{zeitText}</time>
+                    </b>
                     <span>
                       {termine.length > 0
                         ? `${e.uhrzeit} Uhr · ${termine.length} Termine an diesem Tag`

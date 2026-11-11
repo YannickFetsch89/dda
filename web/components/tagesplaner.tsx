@@ -5,6 +5,11 @@ import { Zeitleiste, type Abschnitt } from "./zeitleiste";
 import { eventPoolLaden } from "@/lib/daten";
 import { TAGESZEITEN, ersteUhrzeitIn, filtern, nachZeit, tageszeiten } from "@/lib/ableitungen";
 import { WT_LANG, plusTage, tagMonat, wochentag } from "@/lib/datum";
+import { jsonLdText } from "@/lib/json-ld";
+import { eventListeJsonLd } from "@/lib/listen-json-ld";
+import { datumText, standText, tagesSatz } from "@/lib/tagestext";
+
+const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
 // In „Tagesminuten“ wie die Zuordnung in lib/ableitungen.ts (tageszeitVon): Zeiten vor 6 Uhr gehören
 // zur Nacht und zählen als 24:00 + Uhrzeit (00:30 → 1470), siehe tagesminuten() in zeitleiste.tsx
@@ -19,7 +24,11 @@ function tagHref(tag: string, heute: string) {
   return tag === heute ? "/heute" : `/tag/${tag}`;
 }
 
-export async function Tagesplaner({ tag }: { tag?: string }) {
+/**
+ * pfad: kanonischer Pfad der Seite („/heute“ oder „/tag/2026-11-12“) – für Brotkrumen und ItemList.
+ * Rendert ohne Suspense direkt ins erste HTML (Daten aus dem Cache): H1, Tages-Satz und die Liste stehen als Text da.
+ */
+export async function Tagesplaner({ tag, pfad }: { tag?: string; pfad: string }) {
   const pool = await eventPoolLaden();
   const { heute } = pool;
   const d = tag && tag >= heute ? tag : heute;
@@ -44,8 +53,19 @@ export async function Tagesplaner({ tag }: { tag?: string }) {
   }));
   if (ganztags.length) abschnitte.unshift({ name: "Ganztägig", bereich: "ohne feste Uhrzeit", icon: "calendar_today", von: -1, bis: -1, events: ganztags });
 
+  // Satz aus denselben Zeilen, die die Liste zeigt (gebündelte Termine zählen einmal)
+  const satz = tagesSatz(d, events);
+  const stand = pool.quelle === "supabase" ? standText(pool.jetzt) : null;
+  const jsonLd = eventListeJsonLd(
+    SITE_URL,
+    `Events in Düsseldorf am ${datumText(d)}`,
+    [{ name: "Start", pfad: "/" }, { name: istHeute ? "Heute" : `Events am ${datumText(d)}`, pfad }],
+    events,
+  );
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
       <div className="tagleiste">
         <div className="container tagleiste__inner">
           <Link href={tagHref(plusTage(d, -1), heute)} className="icon-btn" aria-label="Vorheriger Tag" aria-disabled={istHeute ? "true" : undefined} tabIndex={istHeute ? -1 : undefined}>
@@ -63,6 +83,8 @@ export async function Tagesplaner({ tag }: { tag?: string }) {
         </div>
       </div>
       <div className="container planer">
+        <p className="tagesatz">{satz}</p>
+        {stand && <p className="tagesatz__stand muted">{stand}</p>}
         {events.length ? (
           <Zeitleiste abschnitte={abschnitte} istHeute={istHeute} />
         ) : (

@@ -80,8 +80,11 @@ describe("Seiten-Metadaten", () => {
     expect(hatParameter({ kategorie: undefined, q: "" })).toBe(false);
   });
 
-  it("Bild → große Twitter-Karte", () => {
-    expect(seitenMetadaten({ pfad: "/x", bild: "/bild.jpg" }).twitter).toMatchObject({ card: "summary_large_image" });
+  it("Bild → große Twitter-Karte; ohne eigenes Bild das Standardbild", () => {
+    expect(seitenMetadaten({ pfad: "/x", bild: "/bild.jpg" }).twitter).toMatchObject({ card: "summary_large_image", images: ["/bild.jpg"] });
+    const ohne = seitenMetadaten({ pfad: "/x" });
+    expect((ohne.openGraph as { images: { url: string }[] }).images[0].url).toBe("/og-standard.png");
+    expect(ohne.twitter).toMatchObject({ card: "summary_large_image", images: ["/og-standard.png"] });
   });
 });
 

@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { DetailsVerhalten, TabBar } from "@/components/client";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DatenHinweis, Fuss, KategorieLeiste, Kopf } from "@/components/rahmen";
+import { STANDARD_BILD } from "@/lib/seo";
 import "./globals.css";
 
 const dmSerif = DM_Serif_Display({ variable: "--font-dm-serif", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
@@ -23,7 +24,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "https://diesdas.events"),
   title: { default: "dies.das.düsseldorf – Was geht heute in Düsseldorf?", template: "%s · dies.das.düsseldorf" },
   description: "Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Kultur, Food, Nightlife, Familie und mehr – nach Tag, Kategorie und Stadtteil.",
-  openGraph: { siteName: "dies.das.düsseldorf", locale: "de_DE", type: "website" },
+  openGraph: { siteName: "dies.das.düsseldorf", locale: "de_DE", type: "website", images: [STANDARD_BILD] },
+  twitter: { card: "summary_large_image", images: [STANDARD_BILD.url] },
   // Google Search Console (HTML-Tag-Methode); Token kommt aus .env.local, wird beim Build eingesetzt
   verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };

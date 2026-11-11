@@ -50,7 +50,7 @@ function Zeile({ e, abschnitt }: { e: DddEvent; abschnitt: Pick<Abschnitt, "von"
   const zeit = e.uhrzeiten && abschnitt.von >= 0 ? zeitImAbschnitt(e, abschnitt) : zeitKurz(e);
   return (
     <div className="tl">
-      <span className="tl__zeit">{zeit ?? ""}</span>
+      <span className="tl__zeit">{zeit && /^\d{2}:\d{2}$/.test(zeit) ? <time dateTime={`${e.datum}T${zeit}`}>{zeit}</time> : (zeit ?? "")}</span>
       <span className="tl__linie">
         <span className="punkt" style={katStil(e.kategorie)} />
       </span>

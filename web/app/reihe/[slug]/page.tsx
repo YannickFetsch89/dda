@@ -3,9 +3,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { EventKarte, Icon, KatBadge, Leer, ListenZeile, SkeletonKarten } from "@/components/karten";
+import { EventKarte, Icon, KatBadge, Leer, ListenZeile } from "@/components/karten";
 import { reiheLaden } from "@/lib/reihen";
+import { jsonLdText } from "@/lib/json-ld";
+import { reiheJsonLd } from "@/lib/listen-json-ld";
+
+const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 import { tagKurz, tagLang } from "@/lib/datum";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -24,18 +27,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
+// Ohne äußere Suspense-Grenze (Muster der Guide-Details): Titel und Termine stehen im ersten HTML.
+// Unbekannte Reihen beantwortet schon proxy.ts mit 404; notFound() bleibt als Rückfall.
+export const instant = false;
+
 export default function ReiheSeite(props: Props) {
-  return (
-    <Suspense
-      fallback={
-        <div className="container sektion">
-          <SkeletonKarten anzahl={3} hoehe={160} />
-        </div>
-      }
-    >
-      <ReiheInhalt params={props.params} />
-    </Suspense>
-  );
+  return <ReiheInhalt params={props.params} />;
 }
 
 async function ReiheInhalt({ params }: Props) {
@@ -45,8 +42,11 @@ async function ReiheInhalt({ params }: Props) {
   const { reihe, kommende, letzter, heute } = d;
   const [naechster, ...weitere] = kommende;
 
+  const jsonLd = reiheJsonLd(SITE_URL, reihe, kommende);
+
   return (
     <div className="container sektion reihe">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
       <nav className="gd-krumen" aria-label="Brotkrumen">
         <Link href="/">Start</Link>
         <span>/</span>

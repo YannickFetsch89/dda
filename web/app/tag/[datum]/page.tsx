@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { seitenMetadaten } from "@/lib/seo";
-import { Tagesplaner, TagesplanerSkeleton } from "@/components/tagesplaner";
+import { Tagesplaner } from "@/components/tagesplaner";
 import { istGueltigerTag, tagLang } from "@/lib/datum";
 
 export async function generateMetadata(props: PageProps<"/tag/[datum]">): Promise<Metadata> {
@@ -15,16 +14,12 @@ export async function generateMetadata(props: PageProps<"/tag/[datum]">): Promis
   });
 }
 
-export default function Tag(props: PageProps<"/tag/[datum]">) {
-  return (
-    <Suspense fallback={<TagesplanerSkeleton />}>
-      <TagInhalt params={props.params} />
-    </Suspense>
-  );
-}
+// params oben lesen, ohne äußere Suspense-Grenze (Muster der Guide-Details): H1, Tages-Satz und Liste stehen im
+// ersten HTML. Ungültige Tage beantwortet schon proxy.ts mit 404; notFound() bleibt als Rückfall.
+export const instant = false;
 
-async function TagInhalt({ params }: Pick<PageProps<"/tag/[datum]">, "params">) {
-  const { datum } = await params;
+export default async function Tag(props: PageProps<"/tag/[datum]">) {
+  const { datum } = await props.params;
   if (!istGueltigerTag(datum)) notFound();
-  return <Tagesplaner tag={datum} />;
+  return <Tagesplaner tag={datum} pfad={`/tag/${datum}`} />;
 }

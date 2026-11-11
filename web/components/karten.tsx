@@ -28,17 +28,22 @@ export function Bild({
   className = "",
   eager = false,
   vollstaendig = false,
+  alt = "",
+  symbolAlt,
   children,
 }: {
   e: DddEvent;
   className?: string;
   eager?: boolean;
   vollstaendig?: boolean;
+  /** Nur fürs Hero der Eventseite; in Listen leer lassen (der Titel steht im selben Link als Text) */
+  alt?: string;
+  symbolAlt?: string;
   children?: React.ReactNode;
 }) {
   return (
     <div className={`bild ${e.abgesagt ? "bild--abgesagt" : ""} ${className}`} style={katStil(e.kategorie)}>
-      <BildImg src={eventBildUrl(e)} ersatz={symbolbild(e)} alt="" icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
+      <BildImg src={eventBildUrl(e)} ersatz={symbolbild(e)} alt={alt} symbolAlt={symbolAlt} icon={kategorie(e.kategorie).icon} eager={eager} vollstaendig={vollstaendig} />
       {e.abgesagt && <AbgesagtTag className="bild__abgesagt" />}
       {!e.abgesagt && istOnline(e) && <OnlineTag className="bild__online" />}
       {children}

@@ -6,6 +6,8 @@
 import type { Metadata } from "next";
 
 export const SITE_NAME = "dies.das.düsseldorf";
+/** Vorschaubild für Seiten ohne eigenes Foto (Wortmarke auf Navy, 1200×630) */
+export const STANDARD_BILD = { url: "/og-standard.png", width: 1200, height: 630, alt: "dies.das.düsseldorf – Was geht heute in Düsseldorf?" };
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -27,7 +29,8 @@ export interface SeitenAngaben {
 }
 
 export function seitenMetadaten({ pfad, titel, beschreibung, bild, noindex = false }: SeitenAngaben): Metadata {
-  const bilder = bild ? [{ url: bild }] : undefined;
+  // Eigenes Bild (Event-Foto/Symbolbild – dieselbe URL, die der Mensch sieht), sonst das Standardbild
+  const bilder = bild ? [{ url: bild }] : [STANDARD_BILD];
   return {
     ...(titel ? { title: titel } : {}),
     ...(beschreibung ? { description: beschreibung } : {}),
@@ -40,13 +43,13 @@ export function seitenMetadaten({ pfad, titel, beschreibung, bild, noindex = fal
       url: pfad,
       ...(titel ? { title: titel } : {}),
       ...(beschreibung ? { description: beschreibung } : {}),
-      ...(bilder ? { images: bilder } : {}),
+      images: bilder,
     },
     twitter: {
-      card: bild ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       ...(titel ? { title: titel } : {}),
       ...(beschreibung ? { description: beschreibung } : {}),
-      ...(bild ? { images: [bild] } : {}),
+      images: [bild ?? STANDARD_BILD.url],
     },
   };
 }
