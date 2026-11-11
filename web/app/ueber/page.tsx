@@ -42,6 +42,19 @@ const F: Record<string, Foto> = {
   kultur: { src: "/ueber/kultur-1.jpg", alt: "Tänzerin im Scheinwerferlicht auf einer Theaterbühne", w: 1122, h: 1402 },
   altstadt: { src: "/ueber/altstadt-1.jpg", alt: "Abend in der Altstadt vor einer Brauhaus-Kneipe", w: 1536, h: 1024 },
   rhein: { src: "/ueber/rhein-1.jpg", alt: "Sonnenuntergang am Rheinufer mit Rheinturm und Rheinkniebrücke", w: 1536, h: 1024 },
+  altbier1: { src: "/ueber/altbier-1.jpg", alt: "Köbes mit einem Tablett voller Altbiergläser im Brauhaus", w: 1122, h: 1402 },
+  altbier2: { src: "/ueber/altbier-2.jpg", alt: "Freunde stoßen in der Altstadt mit Altbier an", w: 1200, h: 1500 },
+  kultur2: { src: "/ueber/kultur-2.jpg", alt: "Besucherin vor einem großen abstrakten Gemälde im Museum", w: 1536, h: 1024 },
+  kultur3: { src: "/ueber/kultur-3.jpg", alt: "Open-Air-Kino am Rhein mit Liegestühlen und Lichterketten", w: 1536, h: 1024 },
+  kultur4: { src: "/ueber/kultur-4.jpg", alt: "Künstlerin am Mikrofon auf einer kleinen Kabarettbühne", w: 1122, h: 1402 },
+  party3: { src: "/ueber/party-3.jpg", alt: "Rooftop-Party bei Sonnenuntergang mit Blick auf den Rheinturm", w: 1536, h: 1024 },
+  party4: { src: "/ueber/party-4.jpg", alt: "Freunde feiern kostümiert Karneval in der Altstadt", w: 1122, h: 1402 },
+  freunde2: { src: "/ueber/freunde-2.jpg", alt: "Picknick mit Gitarre auf den Rheinwiesen", w: 1536, h: 1024 },
+  freunde3: { src: "/ueber/freunde-3.jpg", alt: "Freunde fahren mit dem Rad an der Rheinpromenade entlang", w: 1536, h: 1024 },
+  food2: { src: "/ueber/food-2.jpg", alt: "Dampfende Schüssel Ramen mit Ei und Chashu", w: 1200, h: 1500 },
+  food3: { src: "/ueber/food-3.jpg", alt: "Brunch-Tisch mit Avocado-Toast, Pancakes und Kaffee", w: 1300, h: 1300 },
+  team1: { src: "/ueber/team-1.jpg", alt: "Zwei aus dem Team planen im Café mit Stadtplan und Notizzetteln", w: 1254, h: 1254 },
+  team2: { src: "/ueber/team-2.jpg", alt: "Gespräch mit einem Koch an der Theke eines Restaurants", w: 1300, h: 1300 },
 };
 
 function Bild({ f, className = "", eager = false }: { f: Foto; className?: string; eager?: boolean }) {
@@ -97,7 +110,8 @@ export default async function Ueber() {
         </div>
       </section>
 
-      <Laufband richtung="links" fotos={[F.konzert, F.cocktail, F.rhein, F.club, F.food, F.freunde, F.indie, F.party2]} />
+      {/* Jedes Foto steht genau einmal auf der Seite (nur das Laufband wiederholt seine eigene Reihe für die Endlosschleife) */}
+      <Laufband richtung="links" fotos={[F.kultur2, F.cocktail, F.freunde2, F.club, F.food2, F.altbier1]} />
 
       {/* ── Wie es anfing ── */}
       <section className="container ue-abschnitt ue-anfang">
@@ -112,7 +126,7 @@ export default async function Ueber() {
             sind dein persönlicher Kompass für alles, was diese Stadt zu bieten hat – gemacht von Menschen, die genau wie du in Düsseldorf leben,
             lieben und ausgehen.
           </p>
-          <Bild f={F.cocktail} className="ue-anfang__bild ue-parallaxe" />
+          <Bild f={F.altbier2} className="ue-anfang__bild ue-parallaxe" />
         </div>
       </section>
 
@@ -162,14 +176,14 @@ export default async function Ueber() {
         </div>
       </section>
 
-      <Laufband richtung="rechts" fotos={[F.party, F.spritz, F.altstadt, F.club2, F.kultur, F.flohmarkt, F.drink]} />
+      <Laufband richtung="rechts" fotos={[F.kultur3, F.party3, F.food3, F.kultur4, F.freunde3, F.party4]} />
 
       {/* ── Wer dahintersteht: Polaroid-Stapel ── */}
       <section className="container ue-abschnitt ue-team">
         <div className="ue-polaroids" aria-hidden>
-          <figure className="ue-polaroid ue-polaroid--1"><Bild f={F.freunde} /></figure>
+          <figure className="ue-polaroid ue-polaroid--1"><Bild f={F.team1} /></figure>
           <figure className="ue-polaroid ue-polaroid--2"><Bild f={F.club2} /></figure>
-          <figure className="ue-polaroid ue-polaroid--3"><Bild f={F.food} /></figure>
+          <figure className="ue-polaroid ue-polaroid--3"><Bild f={F.team2} /></figure>
         </div>
         <div>
           <h2 className="d ue-h2">Wer hinter den Kulissen steht</h2>
