@@ -38,6 +38,10 @@ describe("Wochenend-Satz", () => {
     expect(wochenendSatz("2026-11-27", "2026-11-29", [], 0)).toBe("Vom 27. bis 29. November 2026 sind in Düsseldorf noch keine Events eingetragen.");
     expect(wochenendSatz("2027-01-29", "2027-01-31", events, 3)).toContain("drei davon empfehlen wir");
     expect(wochenendSatz("2026-12-31", "2027-01-02", events, 0)).toMatch(/^Vom 31\. Dezember bis 2\. Januar 2027/);
+    // Sonntag: nur noch ein Tag
+    expect(wochenendSatz("2026-11-15", "2026-11-15", events, 3)).toBe(
+      "Am 15. November 2026 stehen in Düsseldorf 3 Events an, die meisten aus Musik und Kultur; drei davon empfehlen wir.",
+    );
   });
 });
 

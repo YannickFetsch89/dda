@@ -46,9 +46,11 @@ export function wochenendSatz(fr: string, so: string, events: Pick<DddEvent, "ka
   const n = events.length;
   const top = n >= 3 ? topKategorien(events) : [];
   const zahlwort = ["keine", "einen", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn"][tipps] ?? String(tipps);
+  // Am Sonntag bleibt nur ein Tag übrig: „Am 15. November 2026“ statt „Vom 15. bis 15. November“
+  const zeitraum = fr === so ? `Am ${datumText(so)}` : `Vom ${von} bis ${datumText(so)}`;
   const basis = n === 0
-    ? `Vom ${von} bis ${datumText(so)} sind in Düsseldorf noch keine Events eingetragen.`
-    : `Vom ${von} bis ${datumText(so)} stehen in Düsseldorf ${n} Events an${top.length ? `, die meisten aus ${aufzaehlung(top)}` : ""}.`;
+    ? `${zeitraum} sind in Düsseldorf noch keine Events eingetragen.`
+    : `${zeitraum} stehen in Düsseldorf ${n} Events an${top.length ? `, die meisten aus ${aufzaehlung(top)}` : ""}.`;
   return tipps > 0 && n > 0 ? `${basis.slice(0, -1)}; ${zahlwort} davon empfehlen wir.` : basis;
 }
 

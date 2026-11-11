@@ -117,7 +117,8 @@ function VergangenerTag({ tag, heute, pfad }: { tag: string; heute: string; pfad
             <h1 className="d">{WT_LANG[wochentag(tag)]}</h1>
             <span>{datumText(tag)}</span>
           </div>
-          <Link href={tagHref(plusTage(tag, 1), heute)} className="icon-btn" aria-label="Nächster Tag">
+          {/* Liegt auch der Folgetag zurück, direkt auf /heute – nicht weiter durchs leere Archiv */}
+          <Link href={plusTage(tag, 1) < heute ? "/heute" : tagHref(plusTage(tag, 1), heute)} className="icon-btn" aria-label={plusTage(tag, 1) < heute ? "Heute" : "Nächster Tag"}>
             <Icon name="chevron_right" />
           </Link>
         </div>

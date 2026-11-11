@@ -51,7 +51,7 @@ function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: strin
   // ab Samstag erst ab heute, Langläufer dabei). Nicht bei Beispieldaten (Ausfall der Datenbank).
   const z = zeitraumAuflösen("wochenende", pool.heute);
   const alleAmWochenende = filtern(pool.events, { von: z.von, bis: z.bis, mitLanglaeufern: true });
-  const tipps = tage.reduce((n, t) => n + t.events.length, 0);
+  const tipps = tage.filter((t) => !t.vergangen).reduce((n, t) => n + t.events.length, 0);
   const satz = pool.quelle === "supabase" ? wochenendSatz(z.von, z.bis, alleAmWochenende, tipps) : null;
   const jsonLd = eventListeJsonLd(
     SITE_URL,
