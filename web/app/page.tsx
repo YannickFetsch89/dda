@@ -7,7 +7,7 @@ import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, SkeletonKarten, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
-import { filtern, istKostenlos, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
+import { filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
 import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
@@ -241,9 +241,10 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
                 </span>
                 <h2 className="d">{r.titel}</h2>
                 <div className="katkopf__subs">
-                  {k.unterkategorien.map((s) => (
-                    <Link key={s} href={`/entdecken?kategorie=${r.slug}&datum=${datumKey}&q=${encodeURIComponent(s.replace(/s$/, ""))}`} className="chip chip--tint">
-                      {s}
+                  {/* Feinfilter (KI-Zuordnung, pipeline/unterkategorien.py) – nur Chips mit Treffern im gezeigten Zeitraum */}
+                  {unterkategorienZaehlen(bereich, r.slug).map((u) => (
+                    <Link key={u.slug} href={`/entdecken?kategorie=${r.slug}&datum=${datumKey}&unter=${u.slug}`} className="chip chip--tint">
+                      {u.name}
                     </Link>
                   ))}
                 </div>

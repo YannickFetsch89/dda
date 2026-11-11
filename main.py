@@ -228,6 +228,14 @@ async def _schritte_ausfuehren(report: LaufReport):
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
     report.kennzahl(kategorisiert=anzahl_kategorisiert)
 
+    # Schritt 3a: Unterkategorien (Feinfilter, z.B. Musik → Klassik/Jazz/DJ) per KI, gebündelt je 25 Events
+    logger.info("--- Schritt 3a: Unterkategorien ---")
+    try:
+        from pipeline.unterkategorien import nachtragen
+        nachtragen(limit=600)
+    except Exception as e:
+        logger.error("Unterkategorien fehlgeschlagen: %s", e)
+
     # Schritt 3b: Beschreibungen für Rausgegangen-Events aus Veranstalter-Quellen (umgeschrieben)
     logger.info("--- Schritt 3b: Beschreibungen aus Veranstalter-Quellen ---")
     try:

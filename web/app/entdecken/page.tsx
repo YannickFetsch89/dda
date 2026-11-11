@@ -8,7 +8,7 @@ import { eventPoolLaden } from "@/lib/daten";
 import { OrtKartenGrid } from "@/components/ort-karten";
 import { orteLaden } from "@/lib/orte";
 import { orteSuchen } from "@/lib/orte-suche";
-import { TAGESZEITEN, filtern, highlights, kategorieZaehlen, nachBeliebtheit, nachNeu, nachZeit, stadtteileZaehlen, type Tageszeit } from "@/lib/ableitungen";
+import { TAGESZEITEN, filtern, highlights, kategorieZaehlen, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, stadtteileZaehlen, type Tageszeit } from "@/lib/ableitungen";
 import { ZEITRAUM_OPTIONEN, metaZeile, zeitraumAuflösen } from "@/lib/datum";
 import { DatumWaehler } from "@/components/datum-waehler";
 import { KATEGORIEN, kategorie } from "@/lib/kategorien";
@@ -88,7 +88,11 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   const bezirk = BEZIRKE.find((b) => String(b.nr) === p.bezirk);
 
   const basisFilter = { von: z.von, bis: z.bis, mitLanglaeufern: true, suche: p.q, thema: p.thema };
-  const treffer = filtern(pool.events, { ...basisFilter, kategorie: p.kategorie, stadtteil: p.stadtteil, bezirk: bezirk?.nr, preis, tageszeit: tz });
+  // Unterkategorie nur, wenn sie zur gewählten Kategorie gehört
+  const unter = p.kategorie ? kategorie(p.kategorie).unterkategorien.find((u) => u.slug === p.unter) : undefined;
+  const ohneUnter = filtern(pool.events, { ...basisFilter, kategorie: p.kategorie, stadtteil: p.stadtteil, bezirk: bezirk?.nr, preis, tageszeit: tz });
+  const treffer = unter ? ohneUnter.filter((e) => e.unterkategorie === unter.slug) : ohneUnter;
+  const unterListe = p.kategorie ? unterkategorienZaehlen(ohneUnter, kategorie(p.kategorie).slug) : [];
   treffer.sort(sort === "neu" ? nachNeu : sort === "datum" ? nachZeit : nachBeliebtheit);
 
   // Zähler für die Dropdowns (jeweils ohne den eigenen Filter)
@@ -96,7 +100,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   const stadtteilListe = stadtteileZaehlen(filtern(pool.events, { ...basisFilter, kategorie: p.kategorie, preis, tageszeit: tz }));
 
   const gezeigt = treffer.slice(0, seite * PRO_SEITE);
-  const ohneFilter = !p.kategorie && !p.stadtteil && !p.bezirk && !preis && !tz && !p.q && !p.thema;
+  const ohneFilter = !p.kategorie && !p.stadtteil && !p.bezirk && !preis && !tz && !p.q && !p.thema && !unter;
   const { highlight, top } = highlights(pool);
   const zeigeHighlights = ohneFilter && seite === 1;
 
@@ -154,7 +158,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
             </FilterGruppe>
             <FilterGruppe titel="Kategorie">
               {KATEGORIEN.map((k) => (
-                <Link key={k.slug} className="chip" aria-current={p.kategorie === k.slug ? "true" : undefined} href={url(p, { kategorie: p.kategorie === k.slug ? undefined : k.slug })}>
+                <Link key={k.slug} className="chip" aria-current={p.kategorie === k.slug ? "true" : undefined} href={url(p, { kategorie: p.kategorie === k.slug ? undefined : k.slug, unter: undefined })}>
                   {k.name} <small>{katZahlen[k.slug]}</small>
                 </Link>
               ))}
@@ -198,9 +202,9 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
           <DatumWaehler heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} />
         </Dropdown>
         <Dropdown label={aktiv.kategorie ?? "Kategorie"} aktiv={!!aktiv.kategorie}>
-          <Link href={url(p, { kategorie: undefined })}>Alle Kategorien</Link>
+          <Link href={url(p, { kategorie: undefined, unter: undefined })}>Alle Kategorien</Link>
           {KATEGORIEN.map((k) => (
-            <Link key={k.slug} href={url(p, { kategorie: k.slug })} aria-current={p.kategorie === k.slug ? "true" : undefined}>
+            <Link key={k.slug} href={url(p, { kategorie: k.slug, unter: undefined })} aria-current={p.kategorie === k.slug ? "true" : undefined}>
               {k.name} <span>{katZahlen[k.slug]}</span>
             </Link>
           ))}
@@ -233,6 +237,17 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
             </Link>
           ))}
         </Dropdown>
+        {unterListe.map((u) =>
+          unter?.slug === u.slug ? (
+            <Link key={u.slug} className="chip chip--aktiv" href={url(p, { unter: undefined })} aria-label={`${u.name} entfernen`}>
+              {u.name} <Icon name="close" />
+            </Link>
+          ) : (
+            <Link key={u.slug} className="chip" href={url(p, { unter: u.slug })}>
+              {u.name} <small>{u.anzahl}</small>
+            </Link>
+          ),
+        )}
         {p.thema && (
           <Link className="chip chip--aktiv" href={url(p, { thema: undefined })} aria-label={`Thema ${p.thema} entfernen`}>
             {p.thema} <Icon name="close" />

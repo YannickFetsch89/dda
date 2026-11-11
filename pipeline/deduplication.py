@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Felder die bei Duplikaten ergänzt werden dürfen (wenn None/leer)
 _ANREICHERBARE_FELDER: list[str] = [
+    "abgesagt",  # False → True, wenn eine Quelle die Absage meldet (z. B. „ENTFÄLLT!“ im Titel)
     "adresse",
     "uhrzeit",
     "beschreibung",
@@ -129,29 +130,22 @@ def _teile_passen(a: set[str], b: set[str]) -> bool:
     return klein <= gross and (len(klein) >= 2 or len(next(iter(klein))) >= 5)
 
 
-def aehnliches_event(a: dict, b: dict) -> bool:
-    """
-    Dasselbe Event trotz abweichender Schreibweise? Nur bei gleichem Datum UND gleicher (vorhandener)
-    Uhrzeit, gemeinsamem Ortskern und fast gleichem Titel – andere Uhrzeiten bleiben weitere Termine.
-    """
-    if not a.get("datum") or a.get("datum") != b.get("datum"):
-        return False
-    zeit_a, zeit_b = _uhrzeit(a), _uhrzeit(b)
-    if not zeit_a or zeit_a != zeit_b:
-        return False
+def _ort_passt(a: dict, b: dict) -> bool:
+    """Gemeinsamer Ortskern („zakk – Studio“ ~ „zakk - Zentrum für …“); ohne Kern muss der Ortsname gleich sein."""
     ort_a, ort_b = ort_kern(a.get("ort") or ""), ort_kern(b.get("ort") or "")
     if ort_a and ort_b:
-        if not ort_a & ort_b:
-            return False
-    elif _woerter(a.get("ort") or "") != _woerter(b.get("ort") or ""):
-        return False
+        return bool(ort_a & ort_b)
+    return _woerter(a.get("ort") or "") == _woerter(b.get("ort") or "")
+
+
+def _titel_passt(a: dict, b: dict) -> bool:
+    """Fast gleicher Titel (Schreibweise, Zusatz, Original-/deutscher Titel, Jahresangabe)."""
     titel_a, titel_b = titel_kern(a.get("titel") or ""), titel_kern(b.get("titel") or "")
     if not titel_a or not titel_b:
         return False
     if titel_a == titel_b:
         return True
     # Titel mit Zusatz bzw. Original-/deutschem Titel: Teile einzeln vergleichen
-    # (Zeit und Ort stimmen hier schon überein)
     teile_a = _titel_teile(a.get("titel") or "") or [titel_a]
     teile_b = _titel_teile(b.get("titel") or "") or [titel_b]
     if (len(teile_a) > 1 or len(teile_b) > 1) and any(_teile_passen(x, y) for x in teile_a for y in teile_b):
@@ -161,6 +155,122 @@ def aehnliches_event(a: dict, b: dict) -> bool:
     if len(klein) >= 2 and klein <= gross:
         return True
     return len(titel_a & titel_b) / len(titel_a | titel_b) >= 0.75
+
+
+# Quellen, die Termine nur weitergeben: Die Uhrzeit ist dort oft der Einlass statt des Beginns
+# (Shinedown: d-live 19:30, Rausgegangen 18:30) – bei Abweichungen gilt die Zeit des Veranstalters.
+_AGGREGATOR_MUSTER = re.compile(
+    r"rausgegangen|visitd(?:ue|ü)sseldorf|allevents|resident advisor|ra\.co|prinz|kulturportal|eventfinder|meinestadt"
+    r"|eventbrite|ticketmaster|songkick",
+    re.IGNORECASE,
+)
+# Wie weit dürfen Uhrzeiten zweier Quellen auseinanderliegen und trotzdem dasselbe Event meinen (Einlass/Beginn)?
+ZEIT_TOLERANZ_MINUTEN = 120
+
+
+def ist_aggregator(event: dict) -> bool:
+    """True für Sammel-Quellen (Rausgegangen, Visit Düsseldorf, AllEvents …), False für Veranstalter-Scraper."""
+    return bool(_AGGREGATOR_MUSTER.search(f"{event.get('quelle_name') or ''} {event.get('quelle_url') or ''}"))
+
+
+def _quelle(event: dict) -> str:
+    return (event.get("quelle_name") or "").strip().lower()
+
+
+def zeit_abstand(a: dict, b: dict) -> Optional[int]:
+    """Abstand der Uhrzeiten in Minuten; None, wenn bei einem die Uhrzeit fehlt."""
+    za, zb = _uhrzeit(a), _uhrzeit(b)
+    if not za or not zb:
+        return None
+    try:
+        ha, ma = (int(x) for x in za.split(":"))
+        hb, mb = (int(x) for x in zb.split(":"))
+    except ValueError:
+        return None
+    return abs((ha * 60 + ma) - (hb * 60 + mb))
+
+
+def aehnliches_event(a: dict, b: dict) -> bool:
+    """
+    Dasselbe Event trotz abweichender Schreibweise? Gleiches Datum, gemeinsamer Ortskern, fast gleicher Titel – und:
+    - gleiche Uhrzeit, oder
+    - verschiedene Quellen: Uhrzeiten höchstens ZEIT_TOLERANZ_MINUTEN auseinander (Einlass vs. Beginn) oder eine fehlt,
+    - oder ein Titel trug einen Absage-/Status-Zusatz („ENTFÄLLT! …“) und bei einem fehlt die Uhrzeit.
+    Dieselbe Quelle mit anderer Uhrzeit bleibt ein weiterer Termin.
+    """
+    if not a.get("datum") or a.get("datum") != b.get("datum"):
+        return False
+    if not _ort_passt(a, b) or not _titel_passt(a, b):
+        return False
+    zeit_a, zeit_b = _uhrzeit(a), _uhrzeit(b)
+    if zeit_a and zeit_a == zeit_b:
+        return True
+    if _quelle(a) and _quelle(b) and _quelle(a) != _quelle(b):
+        abstand = zeit_abstand(a, b)
+        return abstand is None or abstand <= ZEIT_TOLERANZ_MINUTEN
+    return bool((a.get(TITEL_STATUS_FELD) or b.get(TITEL_STATUS_FELD)) and (not zeit_a or not zeit_b))
+
+
+def bester_treffer(bestand: list[dict], event: dict) -> Optional[dict]:
+    """
+    Das passendste Event eines Tagesbestands: gleiche Uhrzeit vor naher Uhrzeit.
+    Liegen mehrere Termine derselben Quelle in Reichweite (Matinee 18:00 und Abend 20:00, Aggregator 19:00),
+    ist die Zuordnung mehrdeutig – dann bleibt das Event lieber getrennt, statt mit dem falschen zu verschmelzen.
+    """
+    treffer = [k for k in bestand if k is not event and aehnliches_event(k, event)]
+    exakte = [k for k in treffer if _uhrzeit(k) and _uhrzeit(k) == _uhrzeit(event)]
+    if exakte:
+        return exakte[0]
+    pro_quelle: dict[str, int] = {}
+    for k in treffer:
+        pro_quelle[_quelle(k)] = pro_quelle.get(_quelle(k), 0) + 1
+    eindeutig = [k for k in treffer if pro_quelle[_quelle(k)] == 1]
+
+    def abstand(k: dict) -> int:
+        a = zeit_abstand(k, event)
+        return 999 if a is None else a
+
+    return min(eindeutig, key=abstand) if eindeutig else None
+
+
+# ── Absage- und Status-Zusätze im Titel ─────────────────────────────────────────────────────────
+# Beispiele: „ENTFÄLLT! 11.11.2026 | "Kinder sicher im Internet" in Bilk“, „Leider abgesagt: Sarah Kuttner …“,
+# „! ENTFÄLLT ! Musikstudio …“, „VERLEGT AUF 11.11.2026 Musikstudio …“, „AUSGEBUCHT! 09.12.2026 | 3D-Druckstifte …“,
+# „Swiss & Die Anderen – Punk Lebt Tour 2026 (AUSVERKAUFT)“. Ohne Bereinigung entstand ein zweites Event.
+TITEL_STATUS_FELD = "_titel_status"  # intern, wird nicht gespeichert: "abgesagt" | "voll"
+_STATUS_PRAEFIX = re.compile(
+    r"^[\s!*]*(?:(?P<abgesagt>leider\s+abgesagt|abgesagt|entf(?:ä|ae)llt|f(?:ä|ae)llt\s+aus|verlegt(?:\s+auf)?)"
+    r"|(?P<voll>ausgebucht|ausverkauft))(?![a-zäöüß])[\s!:]*(?:\d{1,2}\.\d{1,2}\.(?:\d{2,4})?)?[\s|:–—-]*",
+    re.IGNORECASE,
+)
+_STATUS_SUFFIX = re.compile(
+    r"\s*[(\[]\s*(?:(?P<abgesagt>abgesagt|entf(?:ä|ae)llt)|(?P<voll>ausverkauft|ausgebucht))\s*[)\]]\s*$",
+    re.IGNORECASE,
+)
+
+
+def titel_status_bereinigen(event: dict) -> dict:
+    """
+    Entfernt Absage-/Status-Zusätze aus dem Titel. „Entfällt/abgesagt/verlegt“ markiert das Event als abgesagt
+    (für diesen Termin), „ausverkauft/ausgebucht“ wird nur entfernt. Ändert das Event an Ort und Stelle.
+    """
+    titel = event.get("titel") or ""
+    for muster in (_STATUS_PRAEFIX, _STATUS_SUFFIX):
+        m = muster.search(titel)
+        if not m:
+            continue
+        rest = (titel[: m.start()] + titel[m.end():]).strip()
+        if not rest:
+            continue  # nur der Zusatz – Titel lieber stehen lassen
+        status = "abgesagt" if m.group("abgesagt") else "voll"
+        logger.debug("Titel-Zusatz entfernt (%s): '%s' → '%s'", status, titel[:60], rest[:60])
+        titel = rest
+        event["titel"] = titel
+        if status == "abgesagt":
+            event["abgesagt"] = True
+        if event.get(TITEL_STATUS_FELD) != "abgesagt":
+            event[TITEL_STATUS_FELD] = status
+    return event
 
 
 _KOSTENLOS = re.compile(
@@ -232,6 +342,11 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
 
     merged = dict(basis)
 
+    # Uhrzeit: Bei Abweichung gilt die des Veranstalters (Aggregatoren nennen oft den Einlass)
+    if (_uhrzeit(duplikat) and _uhrzeit(basis) and _uhrzeit(basis) != _uhrzeit(duplikat)
+            and ist_aggregator(basis) and not ist_aggregator(duplikat)):
+        merged["uhrzeit"] = duplikat["uhrzeit"]
+
     for feld in _ANREICHERBARE_FELDER:
         basis_wert = basis.get(feld)
         dupli_wert = duplikat.get(feld)
@@ -294,6 +409,7 @@ def deduplizieren(events: list[dict]) -> list[dict]:
     angereichert_anzahl = 0
 
     for event in events:
+        titel_status_bereinigen(event)
         titel = event.get("titel") or ""
         datum = event.get("datum") or ""
         ort = event.get("ort") or ""
@@ -311,7 +427,9 @@ def deduplizieren(events: list[dict]) -> list[dict]:
             )
             if schluessel is None:
                 # Abweichende Schreibweise aus einer anderen Quelle (Titel/Ort leicht anders, gleiche Zeit)?
-                schluessel = next((k for k in pro_datum.get(datum, []) if aehnliches_event(index[k], event)), None)
+                kandidaten = pro_datum.get(datum, [])
+                treffer = bester_treffer([index[k] for k in kandidaten], event)
+                schluessel = next((k for k in kandidaten if index[k] is treffer), None) if treffer else None
             if schluessel is None:
                 schluessel = f"{basis}|{zeit or '-'}|{len(varianten.get(basis, []))}"
                 varianten.setdefault(basis, []).append(schluessel)

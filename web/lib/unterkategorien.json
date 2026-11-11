@@ -1,0 +1,64 @@
+{
+  "_hinweis": "Feinfilter je Kategorie. Eine Quelle für Website (lib/kategorien.ts) und Pipeline (pipeline/unterkategorien.py). Slugs nie umbenennen – sie stehen in der DB-Spalte events.unterkategorie.",
+  "kultur": [
+    { "slug": "theater", "name": "Theater", "hinweis": "Schauspiel, Musical, Figurentheater, Performance" },
+    { "slug": "oper-tanz", "name": "Oper & Tanz", "hinweis": "Oper, Operette, Ballett, zeitgenössischer Tanz" },
+    { "slug": "ausstellungen", "name": "Ausstellungen", "hinweis": "Ausstellungen, Vernissagen, Museumsführungen, Kunstworkshops im Museum" },
+    { "slug": "film", "name": "Film", "hinweis": "Kino, Filmreihen, Screenings" },
+    { "slug": "lesungen", "name": "Lesungen & Vorträge", "hinweis": "Lesungen, Poetry Slam, Vorträge, Gespräche, Diskussionen" },
+    { "slug": "comedy", "name": "Comedy & Kabarett", "hinweis": "Comedy, Kabarett, Stand-up, Impro" }
+  ],
+  "musik": [
+    { "slug": "pop-rock", "name": "Pop, Rock & Indie", "hinweis": "Band- und Tourkonzerte, Pop-Stars, Cover- und Tribute-Bands: Pop, Rock, Indie, Metal, Punk, Schlager" },
+    { "slug": "klassik", "name": "Klassik", "hinweis": "Orchester, Kammermusik, Chor, Orgel, Liederabend, Candlelight-Konzerte" },
+    { "slug": "jazz", "name": "Jazz & Soul", "hinweis": "Jazz, Blues, Soul, Funk, Swing" },
+    { "slug": "elektronisch", "name": "DJ & Elektronisch", "hinweis": "DJ-Sets, Techno, House, elektronische Live-Acts" },
+    { "slug": "hiphop", "name": "Hip-Hop & Urban", "hinweis": "Rap, Hip-Hop, R&B, Afrobeats" },
+    { "slug": "open-stage", "name": "Open Stage & Jam", "hinweis": "Jam Session, Open Mic, Singer-Songwriter-Abende, Karaoke" }
+  ],
+  "food": [
+    { "slug": "maerkte", "name": "Märkte", "hinweis": "Wochen-, Street-Food-, Weihnachts- und Bauernmärkte" },
+    { "slug": "tastings", "name": "Tastings", "hinweis": "Wein-, Bier-, Gin- und andere Verkostungen" },
+    { "slug": "dinner", "name": "Dinner & Brunch", "hinweis": "Themen-Dinner, Krimidinner, Brunch, Pop-up-Restaurants" },
+    { "slug": "kochkurse", "name": "Kochkurse", "hinweis": "Koch- und Backkurse, Food-Workshops" }
+  ],
+  "sport": [
+    { "slug": "spiele", "name": "Spiele & Wettkämpfe", "hinweis": "Zuschauen: Fortuna, DEG, Turniere, Wettkämpfe" },
+    { "slug": "laufen", "name": "Laufen", "hinweis": "Läufe, Lauftreffs, Parkrun, Marathon" },
+    { "slug": "fitness", "name": "Fitness & Yoga", "hinweis": "Mitmachen: Fitness, Yoga, Bouldern, Tanzkurse" }
+  ],
+  "outdoor": [
+    { "slug": "natur", "name": "Natur & Garten", "hinweis": "Natur, Gärten, Parks, Tiere" },
+    { "slug": "touren", "name": "Touren & Wandern", "hinweis": "Wanderungen, Radtouren, Ausflüge" },
+    { "slug": "open-air", "name": "Open Air & Feste", "hinweis": "Stadtfeste, Open-Air-Veranstaltungen, saisonale Aktionen draußen" }
+  ],
+  "stadtfuehrung": [
+    { "slug": "rundgaenge", "name": "Rundgänge", "hinweis": "Stadt-, Viertel-, Themen- und Architekturführungen" },
+    { "slug": "kulinarisch", "name": "Kulinarisch", "hinweis": "Food-Touren, kulinarische Führungen" },
+    { "slug": "kneipentouren", "name": "Kneipentouren", "hinweis": "Altbier-, Brauhaus- und Kneipentouren" }
+  ],
+  "community": [
+    { "slug": "meetups", "name": "Meetups & Stammtische", "hinweis": "Treffen, Stammtische, Spieleabende, Leute kennenlernen" },
+    { "slug": "sprachen", "name": "Sprachen & Austausch", "hinweis": "Sprachcafés, Konversationsrunden, Tandems" },
+    { "slug": "workshops", "name": "Workshops & Kurse", "hinweis": "Kurse, Workshops, Kreativangebote für Erwachsene" },
+    { "slug": "digitales", "name": "Digitales & Technik", "hinweis": "Computer, KI, 3D-Druck, Gaming, Medienkompetenz" },
+    { "slug": "vortraege", "name": "Vorträge & Infoabende", "hinweis": "Vorträge, Infoabende, Buchvorstellungen, Sprechstunden, Beratung" },
+    { "slug": "networking", "name": "Networking & Business", "hinweis": "Networking, Startups, Gründung, Karriere, IHK" }
+  ],
+  "nightlife": [
+    { "slug": "partys", "name": "Partys", "hinweis": "Mottopartys, 80er/90er/2000er, Schlager, Ü30" },
+    { "slug": "clubnaechte", "name": "Clubnächte", "hinweis": "Clubnächte mit DJs, Techno, House, Rave" },
+    { "slug": "bars", "name": "Bars & Afterwork", "hinweis": "Barabende, Afterwork, Quiz, Karaoke in Bars" },
+    { "slug": "karneval", "name": "Karneval", "hinweis": "Karnevalspartys und -sitzungen" }
+  ],
+  "familie": [
+    { "slug": "kindertheater", "name": "Theater & Kino für Kinder", "hinweis": "Kindertheater, Puppentheater, Kinderkino, Kinderkonzerte" },
+    { "slug": "basteln", "name": "Basteln & Kreativ", "hinweis": "Basteln, Malen, Werkstätten, Maker-Angebote für Kinder" },
+    { "slug": "vorlesen", "name": "Vorlesen & Lernen", "hinweis": "Vorlesen, Bibliotheksangebote, Lernen, Experimente" },
+    { "slug": "ausfluege", "name": "Ausflüge & Feste", "hinweis": "Familienfeste, Ausflüge, Martinszüge, Spielenachmittage" }
+  ],
+  "dating": [
+    { "slug": "speed-dating", "name": "Speed Dating", "hinweis": "Speed Dating" },
+    { "slug": "singles", "name": "Singles-Events", "hinweis": "Single-Partys, Singletreffs, Kennenlern-Abende" }
+  ]
+}

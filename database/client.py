@@ -14,7 +14,9 @@ from supabase import create_client, Client
 
 from pipeline.deduplication import (
     KATEGORIE_FEST_FELD,
-    aehnliches_event,
+    TITEL_STATUS_FELD,
+    bester_treffer,
+    ist_aggregator,
     ist_rausgegangen,
     kategorie_ersetzen,
     preis_normalisieren,
@@ -107,6 +109,12 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
         else:
             if not db_wert and neu_wert:
                 update[feld] = neu_wert
+
+    # Uhrzeit: Bei Abweichung gilt die des Veranstalters – Aggregatoren nennen oft den Einlass statt des Beginns
+    neue_zeit = _uhrzeit_hhmm(neu.get("uhrzeit"))
+    if (neue_zeit and bestehendes.get("uhrzeit") and neue_zeit != _uhrzeit_hhmm(bestehendes.get("uhrzeit"))
+            and ist_aggregator(bestehendes) and not ist_aggregator(neu)):
+        update["uhrzeit"] = neu["uhrzeit"]
 
     # Ohne eigenen Link bleibt Rausgegangen Quelle (sonst zeigte „Zum Termin“ weiter auf Rausgegangen)
     if ist_rausgegangen(bestehendes) and neu.get("quelle_url") and not ist_rausgegangen(neu):
@@ -311,9 +319,11 @@ def events_speichern(events: list[dict]) -> dict:
                         datensatz["slug"] = freier_slug
 
             if bestehendes is None:
-                # Schritt 3: Dasselbe Event in anderer Schreibweise (Titel/Ortsname leicht anders,
-                # gleiches Datum und gleiche Uhrzeit, z.B. „zakk – Studio“ vs. „zakk - Zentrum für …“)?
-                bestehendes = next((z for z in _tagesbestand(db, datum, tagesbestand) if aehnliches_event(z, datensatz)), None)
+                # Schritt 3: Dasselbe Event in anderer Schreibweise (Titel/Ortsname leicht anders, z.B. „zakk – Studio“
+                # vs. „zakk - Zentrum für …“) – gleiche Uhrzeit, bei anderer Quelle auch Einlass/Beginn (≤ 2 Std.) oder
+                # fehlende Uhrzeit. Der interne Titel-Status („ENTFÄLLT!“ entfernt) fließt in den Abgleich mit ein.
+                abgleich = {**datensatz, TITEL_STATUS_FELD: event.get(TITEL_STATUS_FELD)}
+                bestehendes = bester_treffer(_tagesbestand(db, datum, tagesbestand), abgleich)
                 if bestehendes is not None:
                     logger.info("Duplikat über Ähnlichkeit erkannt: '%s' ≈ '%s' (%s)",
                                 titel[:40], (bestehendes.get("titel") or "")[:40], datum)

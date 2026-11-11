@@ -142,6 +142,8 @@ export interface Filter {
   tageszeit?: Tageszeit;
   suche?: string;
   thema?: string;
+  /** Unterkategorie (Slug) – nur zusammen mit kategorie sinnvoll */
+  unter?: string;
   mitLanglaeufern?: boolean;
 }
 
@@ -151,6 +153,7 @@ export function filtern(events: DddEvent[], f: Filter): DddEvent[] {
   return events.filter((e) => {
     if (!findetStatt(e, f.von, f.bis, f.mitLanglaeufern)) return false;
     if (f.kategorie && e.kategorie !== f.kategorie) return false;
+    if (f.unter && e.unterkategorie !== f.unter) return false;
     if (f.stadtteil) {
       if (f.stadtteil === OHNE_ZUORDNUNG ? !!e.stadtteil : e.stadtteil !== f.stadtteil) return false;
     }
@@ -168,6 +171,15 @@ export function filtern(events: DddEvent[], f: Filter): DddEvent[] {
 }
 
 // ---------- Kennzahlen ----------
+
+/** Unterkategorien einer Kategorie mit Treffern, in der festgelegten Reihenfolge (leere fallen weg). */
+export function unterkategorienZaehlen(events: DddEvent[], kat: KategorieSlug): { slug: string; name: string; anzahl: number }[] {
+  const k = KATEGORIEN.find((x) => x.slug === kat);
+  if (!k) return [];
+  return k.unterkategorien
+    .map((u) => ({ ...u, anzahl: events.filter((e) => e.kategorie === kat && e.unterkategorie === u.slug).length }))
+    .filter((u) => u.anzahl > 0);
+}
 
 export function kategorieZaehlen(events: DddEvent[]): Record<KategorieSlug, number> {
   const z = Object.fromEntries([...KATEGORIEN.map((k) => k.slug), "sonstiges"].map((s) => [s, 0])) as Record<KategorieSlug, number>;

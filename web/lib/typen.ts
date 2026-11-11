@@ -29,6 +29,8 @@ export interface DddEvent {
   quelle_url: string | null;
   bild_url: string | null;
   stadtteil: string | null;
+  /** Feinfilter innerhalb der Kategorie (Slug aus lib/unterkategorien.json, „keine“ = geprüft, nichts passt) */
+  unterkategorie?: string | null;
   erstellt_am: string | null;
   tipp_des_tages: boolean;
   highlight_der_woche: boolean;
