@@ -35,10 +35,16 @@ interface Saison {
 
 const SAISON: Saison[] = [
   { motiv: "halloween", stichworte: /hallo?ween|spooky|grusel|samhain|kürbis/i, zeitfenster: (d) => zwischen(d, "10-01", "10-31") },
-  { motiv: "sankt-martin", stichworte: /sankt martin|st\.? martin|martinszug|laterne|weckmann/i, zeitfenster: (d) => zwischen(d, "11-01", "11-15") },
+  // Nicht das bloße „Laterne“ (trifft Nachtwächter-Führungen) – nur Laternen-Umzug/-Basteln und Martins-Wörter
+  {
+    motiv: "sankt-martin",
+    stichworte: /sankt martin|st\.? martin(?!-)|martins(zug|umzug|feuer|fest|singen|markt|gans)|martinszüge|laternen(umzug|zug|lauf|fest|basteln| basteln|werkstatt)|weckm[äa]nn|stutenkerl/i,
+    zeitfenster: (d) => zwischen(d, "11-01", "11-15"),
+  },
   {
     motiv: "karneval",
-    stichworte: /karneval|helau|sessionser[öo]ffnung|altweiber|rosenmontag|jeck|prunksitzung|11\.11/i,
+    // Kein bloßes „11.11“: trifft Datumsangaben („VERLEGT AUF 11.11.2026 Musikstudio …“)
+    stichworte: /karneval|helau|alaaf|sessionser[öo]ffnung|hoppeditz|altweiber|weiberfastnacht|rosenmontag|tulpensonntag|jeck|prunksitzung|kamelle|fastelovend|fasching|fastnacht|elfter im elften|kost[üu]m(party|ball|fest)/i,
     zeitfenster: (d) => zwischen(d, "11-01", "11-15") || (d.slice(5) >= "01-01" && d <= plus(ostersonntag(Number(d.slice(0, 4))), -46)),
   },
   { motiv: "nikolaus", stichworte: /nikolaus/i, zeitfenster: (d) => zwischen(d, "12-01", "12-06") },
