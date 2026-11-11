@@ -14,7 +14,7 @@ import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddEvent } from "@/lib/typen";
 
-import { zeitKurz, zeitLang } from "@/lib/termine";
+import { anzeigeTitel, zeitKurz, zeitLang } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 
 const SCHNELLFILTER = [
@@ -238,7 +238,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             <section key={r.slug} className="sektion">
               <div className="katkopf" style={katStil(r.slug)}>
                 <span className="katkopf__kreis" aria-hidden>
-                  <span className="icon">{k.icon}</span>
+                  <span className="icon" aria-hidden data-icon={k.icon} />
                 </span>
                 <h2 className="d">{r.titel}</h2>
                 <div className="katkopf__subs">
@@ -323,7 +323,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
                       <span className="zeile__zeit">{zeitKurz(e)}</span>
                       <div className="zeile__text">
                         <span className="zeile__titel">
-                          <Link href={eventPfad(e)}>{e.titel}</Link>
+                          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
                         </span>
                         <span className="zeile__sub">
                           {e.ort}
@@ -378,7 +378,7 @@ function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
           </span>
         </span>
         <h2 className="sticker__titel d">
-          <Link href={eventPfad(e)}>{e.titel}</Link>
+          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </h2>
         {e.beschreibung && <p className="sticker__beschreibung">{kurzBeschreibung(e.beschreibung, 200)}</p>}
         <div className="sticker__infos">

@@ -72,9 +72,7 @@ export function HerzButton({ id, titel, gross = false }: { id: string; titel: st
         merkenUmschalten(id);
       }}
     >
-      <span className="icon" aria-hidden>
-        favorite
-      </span>
+      <span className="icon" aria-hidden data-icon="favorite" />
     </button>
   );
 }
@@ -111,7 +109,7 @@ export function BildImg({
   if (!aktuell) {
     return (
       <span className="bild__platzhalter" aria-hidden>
-        <span className="icon">{icon}</span>
+        <span className="icon" aria-hidden data-icon={icon} />
       </span>
     );
   }
@@ -193,9 +191,7 @@ export function GoogleKarte({ adresse, routeUrl }: { adresse: string; routeUrl: 
       ) : (
         <div className="karte-ausschnitt__zustimmung">
           <span className="karte-ausschnitt__pin">
-            <span className="icon" aria-hidden>
-              location_on
-            </span>
+            <span className="icon" aria-hidden data-icon="location_on" />
           </span>
           <p>Beim Laden der Karte werden Daten (u.a. deine IP-Adresse) an Google übertragen.</p>
           <div>
@@ -209,9 +205,7 @@ export function GoogleKarte({ adresse, routeUrl }: { adresse: string; routeUrl: 
         </div>
       )}
       <a className="karte-ausschnitt__route" href={routeUrl} target="_blank" rel="noopener noreferrer" aria-label={`Route zu ${adresse} in Google Maps`}>
-        <span className="icon" aria-hidden>
-          directions
-        </span>
+        <span className="icon" aria-hidden data-icon="directions" />
         Route
       </a>
     </div>
@@ -263,10 +257,10 @@ export function Reihe({ children, breite, raster5 = false, label }: { children: 
         {children}
       </div>
       <button type="button" className="reihe__pfeil reihe__pfeil--l" disabled={!rand.links} onClick={() => scrollen(-1)} aria-label="Zurück scrollen">
-        <span className="icon">arrow_back</span>
+        <span className="icon" aria-hidden data-icon="arrow_back" />
       </button>
       <button type="button" className="reihe__pfeil reihe__pfeil--r" disabled={!rand.rechts} onClick={() => scrollen(1)} aria-label="Weiter scrollen">
-        <span className="icon">arrow_forward</span>
+        <span className="icon" aria-hidden data-icon="arrow_forward" />
       </button>
     </div>
   );
@@ -291,7 +285,7 @@ export function ThemeToggle() {
         }
       }}
     >
-      <span className="icon">dark_mode</span>
+      <span className="icon" aria-hidden data-icon="dark_mode" />
     </button>
   );
 }
@@ -331,9 +325,7 @@ function TabBarListe({ pfad }: { pfad: string | null }) {
     <nav className="tabbar" aria-label="Hauptnavigation">
       {TABS.map((t) => (
         <Link key={t.href} href={t.href} aria-current={istAktiv(pfad, t.href) ? "page" : undefined}>
-          <span className="icon" aria-hidden>
-            {t.icon}
-          </span>
+          <span className="icon" aria-hidden data-icon={t.icon} />
           {t.label}
         </Link>
       ))}
@@ -378,12 +370,12 @@ function KopfNavListe({ pfad }: { pfad: string | null }) {
       {/* Guides: Übersicht und die fertigen Hubs als Aufklappmenü */}
       <details className="kopf__guides">
         <summary className={istAktiv(pfad, "/guides") ? "is-aktiv" : ""}>
-          Guides<span className="icon" aria-hidden>expand_more</span>
+          Guides<span className="icon" aria-hidden data-icon="expand_more" />
         </summary>
         <div className="kopf__guides-menue">
           {GUIDE_LINKS.map((g) => (
             <Link key={g.href} href={g.href} aria-current={pfad === g.href ? "page" : undefined}>
-              <span className="icon" aria-hidden>{g.icon}</span>{g.label}
+              <span className="icon" aria-hidden data-icon={g.icon} />{g.label}
             </Link>
           ))}
         </div>
@@ -474,7 +466,7 @@ export function TeilenLeiste({ titel, pfad }: { titel: string; pfad: string }) {
         type="button"
         onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`${titel} ${url()}`)}`, "_blank", "noopener")}
       >
-        <span className="icon">chat</span>WhatsApp
+        <span className="icon" aria-hidden data-icon="chat" />WhatsApp
       </button>
       <button
         type="button"
@@ -492,7 +484,7 @@ export function TeilenLeiste({ titel, pfad }: { titel: string; pfad: string }) {
           setKopiert(true);
         }}
       >
-        <span className="icon">photo_camera</span>Instagram
+        <span className="icon" aria-hidden data-icon="photo_camera" />Instagram
       </button>
       <button
         type="button"
@@ -502,7 +494,7 @@ export function TeilenLeiste({ titel, pfad }: { titel: string; pfad: string }) {
           setTimeout(() => setKopiert(false), 2000);
         }}
       >
-        <span className="icon">link</span>
+        <span className="icon" aria-hidden data-icon="link" />
         {kopiert ? "Kopiert!" : "Link kopieren"}
       </button>
     </div>
@@ -528,7 +520,7 @@ export function TeilenButton({ titel, pfad }: { titel: string; pfad: string }) {
         }
       }}
     >
-      <span className="icon">ios_share</span>
+      <span className="icon" aria-hidden data-icon="ios_share" />
     </button>
   );
 }
@@ -542,7 +534,7 @@ export function ZurueckButton() {
       aria-label="Zurück"
       onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
     >
-      <span className="icon">arrow_back</span>
+      <span className="icon" aria-hidden data-icon="arrow_back" />
     </button>
   );
 }

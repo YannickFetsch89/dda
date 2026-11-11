@@ -332,7 +332,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
                   {metaZeile(top, heute)} · {top.ort}
                 </span>
                 <span className="pfeil-rund" aria-hidden>
-                  <span className="icon">arrow_forward</span>
+                  <span className="icon" aria-hidden data-icon="arrow_forward" />
                 </span>
               </div>
             </article>

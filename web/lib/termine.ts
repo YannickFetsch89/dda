@@ -12,6 +12,52 @@ export function basisTitel(titel: string): string {
   return titel.replace(ZEIT_IM_TITEL, "").trim() || titel;
 }
 
+// ---------- Anzeige-Titel (SEO-/GEO-Plan, Maßnahme 9) ----------
+// Nur für H1, <title>, JSON-LD und Listen. Der Originaltitel im Datensatz und der Bündelungs-Schlüssel
+// (terminSchluessel nutzt basisTitel) bleiben unverändert.
+
+const EMOJI_RAND = /^[\p{Extended_Pictographic}\uFE0F\u200D\s]+|[\p{Extended_Pictographic}\uFE0F\u200D\s]+$/gu;
+// „… in Düsseldorf“, „… | Düsseldorf“, „… /// Düsseldorf“ am Ende (nur am Ende – „Düsseldorf – Christmas Walk“ bleibt)
+const STADT_ENDE = /(?:\s*[-–—|•·/,:]+\s*|\s+in\s+)D(?:ü|ue)sseldorf\s*[-–—|•·/]*\s*$/i;
+// Ein einzelnes Datum am Ende („Morgenandacht 15.11.2026“, „• 14.11.26 Düsseldorf“) – steht ohnehin auf der Seite.
+// Mindestens ein Leerzeichen davor, damit Zeiträume wie „13.11.-15.11.2026“ unangetastet bleiben.
+const DATUM_ENDE = /\s+(?:[-–—|•·/,]+\s*)?(?:am\s+)?(?:(?:Mo|Di|Mi|Do|Fr|Sa|So)\.?,?\s+)?\d{1,2}\.\d{1,2}\.(?:\d{4}|\d{2})?(?:\s+D(?:ü|ue)sseldorf)?\s*$/i;
+// Trenner, hinter denen ein Ortsanhang stehen kann („DISCOTECA - The Paradise Now“)
+const ORT_TRENNER = /\s+(?:[-–—|@]|\/{2,})\s+/g;
+const RAND_TRENNER = /^[\s\-–—|•·/:,]+|[\s\-–—|•·/:,]+$/g;
+
+function ohneOrtsAnhang(titel: string, ort: string): string {
+  const o = norm(ort);
+  if (o.length < 4) return titel;
+  let letzter = -1;
+  let laenge = 0;
+  for (const m of titel.matchAll(ORT_TRENNER)) {
+    letzter = m.index ?? -1;
+    laenge = m[0].length;
+  }
+  if (letzter <= 0) return titel;
+  const anhang = norm(titel.slice(letzter + laenge));
+  const passt = anhang.length >= 4 && (o.includes(anhang) || anhang.includes(o));
+  return passt ? titel.slice(0, letzter) : titel;
+}
+
+/**
+ * Titel für die Anzeige: ohne angehängte Uhrzeit, ohne „in Düsseldorf“ / „| Düsseldorf“ am Ende, ohne einzelnes
+ * Datum am Ende, ohne Ortsanhang („… - Black Box im Filmmuseum Düsseldorf“), ohne Emojis am Rand und ohne
+ * doppelte Trenner. Bleibt zu wenig übrig, gilt der Originaltitel.
+ */
+export function anzeigeTitel(titel: string, ort?: string | null): string {
+  let t = basisTitel(titel).replace(EMOJI_RAND, "");
+  t = t.replace(DATUM_ENDE, "").replace(STADT_ENDE, "");
+  if (ort) t = ohneOrtsAnhang(t, ort).replace(STADT_ENDE, "");
+  t = t
+    .replace(/(\s[-–—]\s*){2,}/g, " - ") // „NIRVANA - - SUNDAY“
+    .replace(/\s{2,}/g, " ")
+    .replace(RAND_TRENNER, "")
+    .trim();
+  return t.length >= 3 ? t : basisTitel(titel);
+}
+
 /** Text für Vergleiche vereinheitlichen (Kleinschreibung, ohne Satzzeichen, einfache Leerzeichen). */
 export function norm(s: string): string {
   return s

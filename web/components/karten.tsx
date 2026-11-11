@@ -9,7 +9,7 @@ import { symbolbild } from "@/lib/symbolbild";
 import { istOnline } from "@/lib/ableitungen";
 import type { DddEvent } from "@/lib/typen";
 
-import { zeitKurz } from "@/lib/termine";
+import { anzeigeTitel, zeitKurz } from "@/lib/termine";
 
 // Kanonischer Event-Pfad liegt in lib/pfade.ts (auch für Client-Komponenten und proxy.ts)
 import { eventPfad } from "@/lib/pfade";
@@ -17,9 +17,9 @@ export { eventPfad };
 
 export function Icon({ name, className }: { name: string; className?: string }) {
   return (
-    <span className={className ? `icon ${className}` : "icon"} aria-hidden>
-      {name}
-    </span>
+    // Name als Attribut, nicht als Text: CSS zeigt ihn über ::before als Ligatur an. So landen „search“,
+    // „arrow_forward“ & Co. nicht im Textauszug von Crawlern und KI-Systemen (SEO-/GEO-Plan, Maßnahme 10)
+    <span className={className ? `icon ${className}` : "icon"} aria-hidden data-icon={name} />
   );
 }
 
@@ -98,7 +98,7 @@ export function EventKarte({ e, heute, variante = "standard", rang, gross = fals
       <div className="karte__text">
         <span className="meta">{metaZeile(e, heute)}</span>
         <h3 className="karte__titel">
-          <Link href={eventPfad(e)}>{e.titel}</Link>
+          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </h3>
         <span className="karte__fuss">
           <span>{e.ort}</span>
@@ -115,12 +115,12 @@ export function KompaktKarte({ e, heute }: { e: DddEvent; heute: string }) {
     <article className="kompakt" role="listitem">
       <Bild e={e} />
       <span className="kompakt__icon" style={katStil(e.kategorie)} aria-hidden>
-        <span className="icon">{k.icon}</span>
+        <span className="icon" aria-hidden data-icon={k.icon} />
       </span>
       <div className="kompakt__text">
         <span className="meta">{metaZeile(e, heute)}</span>
         <h3 className="kompakt__titel">
-          <Link href={eventPfad(e)}>{e.titel}</Link>
+          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </h3>
         <span className="kompakt__ort">
           {e.ort}
@@ -140,7 +140,7 @@ export function ListenZeile({ e, mitKategorie = false, zeit }: { e: DddEvent; mi
       <div className="zeile__text">
         <span className="zeile__titel">
           {e.abgesagt && <AbgesagtTag />}
-          <Link href={eventPfad(e)}>{e.titel}</Link>
+          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </span>
         <span className="zeile__sub">
           {e.ort}
@@ -159,7 +159,7 @@ export function ThumbZeile({ e, heute }: { e: DddEvent; heute: string }) {
       <Bild e={e} className="zeile__thumb" />
       <div className="zeile__text">
         <span className="zeile__titel">
-          <Link href={eventPfad(e)}>{e.titel}</Link>
+          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </span>
         <span className="zeile__sub">
           {metaZeile(e, heute)} · {e.ort}
@@ -176,7 +176,7 @@ export function GratisZeile({ e, heute }: { e: DddEvent; heute: string }) {
       <div className="gratis-zeile__text">
         <KatLabel slug={e.kategorie} />
         <h3 className="gratis-zeile__titel">
-          <Link href={eventPfad(e)}>{e.titel}</Link>
+          <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </h3>
         <span className="zeile__sub">
           {metaZeile(e, heute)} · {e.stadtteil ? stadtteilName(e.stadtteil) : e.ort}

@@ -69,6 +69,9 @@ h1, h2, h3, p { margin: 0; }
   -webkit-font-feature-settings: "liga"; font-feature-settings: "liga";
   user-select: none; flex-shrink: 0;
 }
+/* Icon-Name steht im Attribut data-icon, nicht als Text im HTML (SEO-/GEO-Plan, Maßnahme 10) – die Ligatur
+   entsteht im Pseudo-Element. Icons, die per Skript Text bekommen (Kartenmarker), funktionieren weiter. */
+.icon[data-icon]::before { content: attr(data-icon); }
 .icon.is-active { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
 .gold { color: var(--ddd-gold); }
 .muted { color: var(--ddd-text-muted); }

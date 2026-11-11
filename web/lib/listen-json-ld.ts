@@ -3,7 +3,7 @@
 // BreadcrumbList; EventSeries für Reihen mit subEvent als Verweis auf die kommenden Termine.
 import { brotkrumenJsonLd } from "./kneipen-json-ld";
 import { eventPfad } from "./pfade";
-import { basisTitel } from "./termine";
+import { anzeigeTitel } from "./termine";
 import type { DddEvent } from "./typen";
 
 /** Höchstzahl Einträge in einer ItemList (die Liste selbst kann länger sein). */
@@ -25,7 +25,7 @@ export function eventListeJsonLd(siteUrl: string, name: string, krumen: Krume[],
         "@type": "ListItem",
         position: i + 1,
         url: `${siteUrl}${eventPfad(e)}`,
-        name: basisTitel(e.titel),
+        name: anzeigeTitel(e.titel, e.ort),
       })),
     });
   }
@@ -44,7 +44,7 @@ export function reiheJsonLd(siteUrl: string, reihe: { slug: string; titel: strin
   if (termine.length) {
     // Nur Verweise per @id (= URL der Eventseite) – Teil-Objekte mit @type Event ohne Ort würde der
     // Rich-Results-Test als unvollständige Events melden
-    daten.subEvent = termine.map((e) => ({ "@id": `${siteUrl}${eventPfad(e)}`, url: `${siteUrl}${eventPfad(e)}`, name: basisTitel(e.titel) }));
+    daten.subEvent = termine.map((e) => ({ "@id": `${siteUrl}${eventPfad(e)}`, url: `${siteUrl}${eventPfad(e)}`, name: anzeigeTitel(e.titel, e.ort) }));
   }
   return daten;
 }

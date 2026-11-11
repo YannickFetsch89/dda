@@ -13,7 +13,7 @@ import type { EventPool } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 import { kurzDatum, tagMonat, zeitraumAuflösen } from "@/lib/datum";
-import { zeitKurz } from "@/lib/termine";
+import { anzeigeTitel, zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 
 export async function generateMetadata(props: PageProps<"/wochenende">): Promise<Metadata> {
@@ -96,7 +96,7 @@ function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: strin
                   <KatBadge slug={e.kategorie} />
                 </Bild>
                 <h2 className="d">
-                  <Link href={eventPfad(e)}>{e.titel}</Link>
+                  <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
                 </h2>
                 {e.beschreibung && <p>{kurzBeschreibung(e.beschreibung, 220)}</p>}
                 <div className="wk-eintrag__fuss">

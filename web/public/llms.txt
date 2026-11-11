@@ -1,0 +1,33 @@
+# dies.das.düsseldorf (diesdas.events)
+
+> Tagesaktueller Eventkalender und Freizeitguide für Düsseldorf, mit Guides auch für Neuss und Ratingen. Die Termine kommen aus Veranstalter-Kalendern, Spielplänen, Veranstaltungsportalen und offenen Schnittstellen und werden regelmäßig neu gesammelt. Jede Eventseite nennt ihre Quelle und verlinkt auf den Original-Eintrag; maßgeblich sind die Angaben des Veranstalters.
+
+Wichtig: Die Eventdaten ändern sich täglich. Bitte für konkrete Termine immer die aktuelle Seite abrufen statt einen älteren Stand zu zitieren.
+
+## Was heute, morgen und am Wochenende los ist
+
+- [Heute in Düsseldorf](https://diesdas.events/heute): alle Events des Tages, mit Zusammenfassung und Uhrzeiten
+- [Morgen in Düsseldorf](https://diesdas.events/morgen): dasselbe für morgen
+- [Wochenende](https://diesdas.events/wochenende): zehn Tipps für Freitag bis Sonntag
+- Einzelne Kalendertage: https://diesdas.events/tag/JJJJ-MM-TT (z. B. /tag/2026-11-20)
+
+## Nach Kategorie
+
+- [Musik](https://diesdas.events/kategorie/musik), [Kultur](https://diesdas.events/kategorie/kultur), [Nightlife](https://diesdas.events/kategorie/nightlife), [Food](https://diesdas.events/kategorie/food), [Community](https://diesdas.events/kategorie/community), [Stadtführungen](https://diesdas.events/kategorie/stadtfuehrung), [Familie](https://diesdas.events/kategorie/familie), [Sport](https://diesdas.events/kategorie/sport), [Outdoor](https://diesdas.events/kategorie/outdoor), [Dating](https://diesdas.events/kategorie/dating)
+
+## Nach Stadtteil
+
+- [Übersicht aller Stadtteile](https://diesdas.events/stadtteile)
+- Einzelne Stadtteile: https://diesdas.events/stadtteil/NAME (z. B. /stadtteil/flingern, /stadtteil/medienhafen)
+
+## Guides: Essen und Ausgehen
+
+- [Restaurants & Cafés](https://diesdas.events/guides/restaurants-cafes) – auch nach Stadtteil, z. B. /guides/restaurants-cafes/stadtteil/unterbilk
+- [Kneipen & Bars](https://diesdas.events/guides/kneipen-bars) – mit Brauhäusern und Altbierkneipen
+- [Clubs](https://diesdas.events/guides/clubs) – mit Musikrichtung und Programm
+
+## Mehr
+
+- [Über uns](https://diesdas.events/ueber): wer dahintersteht und wie die Daten entstehen
+- [Sitemap](https://diesdas.events/sitemap.xml): alle aktuellen Seiten
+- [Event melden](https://diesdas.events/event-melden)

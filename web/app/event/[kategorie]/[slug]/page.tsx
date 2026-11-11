@@ -10,7 +10,7 @@ import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
 import { eventBildUrl } from "@/lib/bilder";
-import { basisTitel, terminSchluessel, termineAmTag } from "@/lib/termine";
+import { anzeigeTitel, termineAmTag, terminSchluessel } from "@/lib/termine";
 import { istAbgelaufen, kommendeEmpfehlungen, ortSchluessel } from "@/lib/abgelaufen";
 import { eventJsonLd, jsonLdText } from "@/lib/json-ld";
 import { AbgelaufenHinweis } from "@/components/abgelaufen-hinweis";
@@ -29,7 +29,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const e = await eventLaden(decodeURIComponent(slug));
   if (!e) return { title: "Event nicht gefunden" };
   const beschreibung = kurzBeschreibung(e.beschreibung, 160) ?? `${tagLang(e.datum)}${e.uhrzeit ? `, ${e.uhrzeit} Uhr` : ""} · ${e.ort}`;
-  const titel = basisTitel(e.titel);
+  const titel = anzeigeTitel(e.titel, e.ort);
   // Vergangene Events: Seite bleibt (HTTP 200), aber 30 Tage nach dem letzten Event-Tag noindex (Maßnahme 13)
   // „heute“ aus dem gecachten Pool wie /tag/[datum] (kein new Date() beim Rendern)
   const { heute } = await eventPoolLaden();
@@ -58,7 +58,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   const { heute } = pool;
   // Weitere Uhrzeiten desselben Events am selben Tag (je Uhrzeit eine eigene Event-Seite)
   const termine = termineAmTag(pool.alle, e);
-  const titel = basisTitel(e.titel);
+  const titel = anzeigeTitel(e.titel, e.ort);
   // „Zum Termin um …“ nur, wenn dieser Termin einen eigenen Link hat (sonst führen alle Uhrzeiten zur selben Seite)
   const eigenerTerminLink = termine.length > 0 && !!e.quelle_url && termine.filter((t) => t.quelle_url === e.quelle_url).length === 1;
   const eigenerSchluessel = terminSchluessel(e);

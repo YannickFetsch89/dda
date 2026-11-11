@@ -210,7 +210,7 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
   if (zustand === "fertig") {
     return (
       <div className="formular__danke" role="status">
-        <span className="icon" aria-hidden>check_circle</span>
+        <span className="icon" aria-hidden data-icon="check_circle" />
         <h2 className="d">Danke für deine Meldung!</h2>
         <p>Wir schauen uns dein Event an und schalten es nach der Prüfung frei – meist innerhalb von ein bis zwei Tagen. Bei Rückfragen melden wir uns per E-Mail.</p>
         <div className="formular__aktionen">
@@ -315,7 +315,7 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
         <label className="formular__datei">
           <input type="file" name="bild_datei" accept="image/jpeg,image/png,image/webp"
             onChange={(e) => bildGewaehlt(e.target.files?.[0])} {...fehlerAttr("bild")} />
-          <span className="icon" aria-hidden>add_photo_alternate</span>
+          <span className="icon" aria-hidden data-icon="add_photo_alternate" />
           <span>{bild ? "Anderes Bild wählen" : "Bild auswählen (JPG, PNG oder WebP)"}</span>
         </label>
         {bildInfo && <span className="formular__hinweis">{bildInfo}</span>}

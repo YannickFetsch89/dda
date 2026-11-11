@@ -44,7 +44,7 @@ export function MerklisteInhalt() {
   if (zustand.status === "fehler") {
     return (
       <div className="status status--fehler" role="alert">
-        <span className="icon">error</span>
+        <span className="icon" aria-hidden data-icon="error" />
         <div>
           Die Merkliste konnte nicht geladen werden.{" "}
           <button type="button" className="link" onClick={() => setVersuch((v) => v + 1)} style={{ color: "inherit", textDecoration: "underline" }}>

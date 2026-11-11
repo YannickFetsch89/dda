@@ -9,7 +9,7 @@ import { symbolbild } from "@/lib/symbolbild";
 import { eventBildUrl } from "@/lib/bilder";
 import { eventPfad } from "@/lib/pfade";
 import type { DddEvent } from "@/lib/typen";
-import { zeitKurz } from "@/lib/termine";
+import { anzeigeTitel, zeitKurz } from "@/lib/termine";
 
 export interface Abschnitt {
   name: string;
@@ -61,14 +61,12 @@ function Zeile({ e, abschnitt }: { e: DddEvent; abschnitt: Pick<Abschnitt, "von"
         </div>
         <div className="tl__karte-text">
           <span className="katlabel" style={katStil(e.kategorie)}>
-            <span className="icon" aria-hidden>
-              {k.icon}
-            </span>
+            <span className="icon" aria-hidden data-icon={k.icon} />
             {k.name}
           </span>
           <h3 className="tl__titel">
             {/* Kanonische URL direkt – nicht /event/<uuid> (das ist nur noch eine 308-Weiterleitung) */}
-            <Link href={eventPfad(e)}>{e.titel}</Link>
+            <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
           </h3>
           <span className="tl__sub">
             {e.ort}
@@ -117,9 +115,7 @@ export function Zeitleiste({ abschnitte, istHeute }: { abschnitte: Abschnitt[]; 
         return (
           <section key={a.name} className="tagesabschnitt">
             <div className="tagesabschnitt__kopf">
-              <span className="icon" aria-hidden>
-                {a.icon}
-              </span>
+              <span className="icon" aria-hidden data-icon={a.icon} />
               <h2 className="d">{a.name}</h2>
               <span>{a.bereich}</span>
             </div>

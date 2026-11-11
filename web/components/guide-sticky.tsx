@@ -54,7 +54,7 @@ export function GuideSticky({
         <div className="gd-sticky__typen">
           {typen.map((t) => (
             <Link key={t.label} href={t.href} scroll={false} className={`gd-chip ${t.aktiv ? "gd-chip--an" : ""}`} aria-current={t.aktiv || undefined}>
-              {t.icon && <span className="icon" aria-hidden>{t.icon}</span>}
+              {t.icon && <span className="icon" aria-hidden data-icon={t.icon} />}
               {t.label}
             </Link>
           ))}
@@ -64,21 +64,21 @@ export function GuideSticky({
           {chips.map((c) => (
             <Link key={c.label} href={c.href} scroll={false} className="gd-chip gd-chip--an gd-chip--entfernen" aria-label={`Filter ${c.label} entfernen`}>
               {c.label}
-              <span className="icon" aria-hidden>close</span>
+              <span className="icon" aria-hidden data-icon="close" />
             </Link>
           ))}
         </div>
         <button type="button" className="gd-filterknopf" onClick={zurFilterleiste}>
-          <span className="icon" aria-hidden>tune</span>
+          <span className="icon" aria-hidden data-icon="tune" />
           Filter
           {chips.length > 0 && <span className="gd-filterknopf__zahl">{chips.length}</span>}
         </button>
         <details className="gd-sort gd-sticky__sort">
           <summary>
-            <span className="icon muted" aria-hidden>sort</span>
+            <span className="icon muted" aria-hidden data-icon="sort" />
             <span className="gd-sort__label muted">Sortieren:</span>
             <b>{sortLabel}</b>
-            <span className="icon" aria-hidden>expand_more</span>
+            <span className="icon" aria-hidden data-icon="expand_more" />
           </summary>
           <div className="gd-menue gd-menue--rechts">
             {sortOptionen.map((s) => (
@@ -90,7 +90,7 @@ export function GuideSticky({
           <div className="gd-umschalter gd-sticky__ansicht" role="group" aria-label="Ansicht">
             {ansichten.map((a) => (
               <Link key={a.label} href={a.href} scroll={false} className={a.aktiv ? "is-aktiv" : ""} aria-current={a.aktiv || undefined}>
-                {a.icon && <span className="icon" aria-hidden>{a.icon}</span>}
+                {a.icon && <span className="icon" aria-hidden data-icon={a.icon} />}
                 <span className="gd-umschalter__label">{a.label}</span>
               </Link>
             ))}

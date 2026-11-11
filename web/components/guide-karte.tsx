@@ -272,20 +272,20 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={o.bild} alt="" loading="lazy" />
                 ) : (
-                  <span className="icon" aria-hidden>{o.icon}</span>
+                  <span className="icon" aria-hidden data-icon={o.icon} />
                 )}
               </span>
               <span className="gd-kompakt__text">
-                <span className="gd-typ"><span className="icon" aria-hidden>{o.icon}</span>{o.typLabel}</span>
+                <span className="gd-typ"><span className="icon" aria-hidden data-icon={o.icon} />{o.typLabel}</span>
                 <span className="gd-kompakt__name d">{o.name}</span>
                 <span className="gd-kompakt__meta">
-                  {o.rating && <span className="gd-bewertung"><span className="icon is-active" aria-hidden>star</span><b>{o.rating}</b>{o.anzahl && <span className="muted">({o.anzahl})</span>}</span>}
+                  {o.rating && <span className="gd-bewertung"><span className="icon is-active" aria-hidden data-icon="star" /><b>{o.rating}</b>{o.anzahl && <span className="muted">({o.anzahl})</span>}</span>}
                   <span className="muted">{[o.stadtteil, o.preis].filter(Boolean).join(" · ")}</span>
                 </span>
               </span>
             </button>
             <Link href={o.href} className="gd-kompakt__link" aria-label={`${o.name} – Details`}>
-              <span className="icon" aria-hidden>arrow_forward</span>
+              <span className="icon" aria-hidden data-icon="arrow_forward" />
             </Link>
           </div>
         ))}
@@ -297,7 +297,7 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
         <div ref={kartenRef} className="gd-karte-map" />
         {fehler && (
           <div className="gd-karte-fehler" role="status">
-            <span className="icon" aria-hidden>map</span>
+            <span className="icon" aria-hidden data-icon="map" />
             Die Karte konnte gerade nicht geladen werden. Die Liste funktioniert weiterhin.
           </div>
         )}
@@ -313,7 +313,7 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
               listeRef.current?.scrollTo({ top: 0 });
             }}
           >
-            <span className="icon" aria-hidden>refresh</span>In diesem Bereich suchen
+            <span className="icon" aria-hidden data-icon="refresh" />In diesem Bereich suchen
           </button>
         )}
       </div>

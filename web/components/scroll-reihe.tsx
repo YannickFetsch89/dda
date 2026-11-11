@@ -68,14 +68,14 @@ export function ScrollReihe({
     <div className={`gd-scroll${links ? " gd-scroll--links" : ""}${rechts ? " gd-scroll--rechts" : ""}`}>
       <button type="button" className="gd-scroll__pfeil gd-scroll__pfeil--links" onClick={() => blaettern(-1)}
         aria-label={`${label}: nach links blättern`} tabIndex={-1} hidden={!links}>
-        <span className="icon" aria-hidden>chevron_left</span>
+        <span className="icon" aria-hidden data-icon="chevron_left" />
       </button>
       <div ref={ref} className={className}>
         {children}
       </div>
       <button type="button" className="gd-scroll__pfeil gd-scroll__pfeil--rechts" onClick={() => blaettern(1)}
         aria-label={`${label}: nach rechts blättern`} tabIndex={-1} hidden={!rechts}>
-        <span className="icon" aria-hidden>chevron_right</span>
+        <span className="icon" aria-hidden data-icon="chevron_right" />
       </button>
     </div>
   );

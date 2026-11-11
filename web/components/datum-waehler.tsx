@@ -67,11 +67,11 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
     <div className="kalender">
       <div className="kalender__kopf">
         <button type="button" className="kalender__pfeil" onClick={vorherigerMonat} disabled={!kannZurueck} aria-label="Vorheriger Monat">
-          <span className="icon">chevron_left</span>
+          <span className="icon" aria-hidden data-icon="chevron_left" />
         </button>
         <span className="kalender__monat">{MONATE[monat]} {jahr}</span>
         <button type="button" className="kalender__pfeil" onClick={naechsterMonat} disabled={!kannVor} aria-label="Nächster Monat">
-          <span className="icon">chevron_right</span>
+          <span className="icon" aria-hidden data-icon="chevron_right" />
         </button>
       </div>
       <div className="kalender__wt">
@@ -109,7 +109,7 @@ export function KalenderToggle({ heute, ziel }: { heute: string; ziel?: string }
   return (
     <div className="kalender-toggle">
       <button type="button" className="chip chip--navy" onClick={() => setOffen(!offen)}>
-        <span className="icon" style={{ fontSize: 16 }}>calendar_month</span>
+        <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon="calendar_month" />
         {offen ? "Schließen" : "Kalender"}
       </button>
       {offen && (
@@ -130,9 +130,9 @@ export function PopoverKalender({ heute, ziel }: { heute: string; ziel?: string 
         className="popover-kalender-btn"
         onClick={() => setOffen(!offen)}
       >
-        <span className="icon" style={{ fontSize: 16 }}>calendar_month</span>
+        <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon="calendar_month" />
         Exaktes Datum
-        <span className="icon" style={{ fontSize: 16 }}>{offen ? "expand_less" : "expand_more"}</span>
+        <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon={offen ? "expand_less" : "expand_more"} />
       </button>
       {offen && (
         <div className="popover-kalender">
@@ -179,9 +179,9 @@ export function DatumPill() {
   return (
     <div className="datum-pill" ref={ref}>
       <button type="button" className="datum-pill__btn" onClick={() => { setOffen(!offen); setKalender(false); }}>
-        <span className="icon" style={{ fontSize: 16 }}>calendar_today</span>
+        <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon="calendar_today" />
         Heute
-        <span className="icon" style={{ fontSize: 16 }}>{offen ? "expand_less" : "expand_more"}</span>
+        <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon={offen ? "expand_less" : "expand_more"} />
       </button>
       {offen && heute && (
         <div className="popover">
@@ -196,9 +196,9 @@ export function DatumPill() {
               className="popover-kalender-btn"
               onClick={() => setKalender(!kalender)}
             >
-              <span className="icon" style={{ fontSize: 16 }}>calendar_month</span>
+              <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon="calendar_month" />
               Exaktes Datum
-              <span className="icon" style={{ fontSize: 16 }}>{kalender ? "expand_less" : "expand_more"}</span>
+              <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon={kalender ? "expand_less" : "expand_more"} />
             </button>
             {kalender && (
               <div className="popover-kalender">

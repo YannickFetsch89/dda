@@ -3,7 +3,7 @@
 import { istKostenlos, istOnline } from "./ableitungen";
 import { eventBildUrl } from "./bilder";
 import { symbolbild } from "./symbolbild";
-import { basisTitel } from "./termine";
+import { anzeigeTitel } from "./termine";
 import type { DddEvent } from "./typen";
 import { kurzBeschreibung } from "./beschreibung";
 
@@ -55,7 +55,7 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
     "@type": "Event",
     // @id = URL der Eventseite: Reihen (EventSeries.subEvent) verweisen darauf
     "@id": seitenUrl,
-    name: basisTitel(e.titel),
+    name: anzeigeTitel(e.titel, e.ort),
     url: seitenUrl,
     startDate: startDatum(e),
     eventStatus: e.abgesagt ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
