@@ -1536,3 +1536,116 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .badge-link { display: inline-flex; text-decoration: none; }
 .badge-link:hover .badge, .badge-link:focus-visible .badge { filter: brightness(0.95); text-decoration: underline; }
 .abgelaufen-links { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 12px; }
+
+/* ── Über uns (/ueber): Collage, Laufbänder, Parallaxe, Polaroids ─────────────────────────────── */
+.ue { overflow-x: clip; }
+.ue-foto { display: block; width: 100%; height: auto; border-radius: var(--r-card); object-fit: cover; background: var(--ddd-subtle); }
+
+.ue-hero { background: var(--ddd-navy); color: var(--ddd-on-navy); padding: 36px 0 56px; }
+.ue-hero__raster { display: grid; gap: 28px; align-items: center; }
+.ue-hero h1 { font-size: clamp(40px, 7vw, 84px); line-height: 1.02; margin: 12px 0 20px; color: var(--ddd-on-navy); text-wrap: balance; }
+.ue-lead { font-size: clamp(17px, 2vw, 21px); line-height: 1.55; color: var(--ddd-on-navy); opacity: 0.85; max-width: 42ch; }
+.ue-collage { position: relative; height: 380px; }
+.ue-collage .ue-foto { position: absolute; box-shadow: 0 26px 50px -18px rgba(0, 0, 0, 0.65); }
+.ue-collage__a { width: 44%; left: 2%; top: 4%; rotate: -6deg; animation: ue-schweben 9s ease-in-out infinite; }
+.ue-collage__b { width: 32%; right: 4%; top: 0; rotate: 5deg; animation: ue-schweben 11s ease-in-out -3s infinite; }
+.ue-collage__c { width: 56%; right: 0; bottom: 6%; rotate: -2deg; z-index: 1; animation: ue-schweben 13s ease-in-out -6s infinite; }
+.ue-collage__d { width: 27%; left: 14%; bottom: 0; rotate: 8deg; z-index: 2; animation: ue-schweben 10s ease-in-out -2s infinite; }
+@keyframes ue-schweben { 50% { translate: 0 -12px; } }
+@media (min-width: 900px) {
+  .ue-hero { padding: 72px 0 96px; }
+  .ue-hero__raster { grid-template-columns: 1.05fr 1fr; gap: 48px; }
+  .ue-collage { height: 560px; }
+}
+
+/* Endlose Laufbänder, leicht schräg – die Liste steht doppelt, -50 % ist genau eine Länge */
+.ue-band { overflow: hidden; padding: 10px 0; margin: 28px -2vw; rotate: -1.5deg; }
+.ue-band--rechts { rotate: 1.5deg; }
+.ue-band__spur { display: flex; width: max-content; animation: ue-lauf 70s linear infinite; }
+.ue-band--rechts .ue-band__spur { animation-direction: reverse; }
+.ue-band:hover .ue-band__spur { animation-play-state: paused; }
+.ue-band__bild { flex: none; height: 200px; padding-right: 14px; }
+.ue-band__bild .ue-foto { height: 100%; width: auto; }
+@keyframes ue-lauf { to { translate: -50% 0; } }
+@media (min-width: 900px) { .ue-band__bild { height: 300px; padding-right: 18px; } }
+
+.ue-abschnitt { padding-top: 56px; padding-bottom: 24px; }
+.ue-h2, .ue-warum h2 { font-size: clamp(32px, 4.2vw, 50px); line-height: 1.08; margin: 8px 0 18px; }
+.ue-gross { font-family: var(--font-display); font-style: italic; font-size: clamp(30px, 4.6vw, 58px); line-height: 1.1; color: var(--ddd-text); max-width: 22ch; text-wrap: balance; }
+.ue-gross b { color: var(--ddd-gold); font-weight: 400; }
+.ue-anfang__spalten { display: grid; gap: 28px; margin-top: 28px; align-items: center; }
+.ue-anfang__spalten p { font-size: 19px; line-height: 1.65; max-width: 52ch; }
+.ue-anfang__bild { max-width: 340px; justify-self: end; rotate: 3deg; box-shadow: var(--sh-l); }
+@media (min-width: 900px) { .ue-anfang__spalten { grid-template-columns: 1.3fr 1fr; } }
+
+.ue-warum { background: var(--ddd-subtle); padding: 64px 0; margin-top: 40px; }
+.ue-warum__raster { display: grid; gap: 40px; align-items: center; }
+.ue-warum__text p { font-size: 17px; line-height: 1.7; margin-bottom: 14px; max-width: 58ch; }
+.ue-mosaik { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ue-mosaik__a { margin-top: 48px; }
+.ue-mosaik__b { grid-row: span 2; }
+.ue-mosaik__c { grid-column: 1 / -1; }
+@media (min-width: 900px) { .ue-warum { padding: 96px 0; } .ue-warum__raster { grid-template-columns: 1fr 1.1fr; gap: 64px; } }
+
+/* Parallaxe beim Scrollen – nur wo der Browser Scroll-Timelines kann und Bewegung erwünscht ist */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ue-parallaxe { animation: ue-parallaxe linear both; animation-timeline: view(); animation-range: cover; }
+    .ue-parallaxe--schnell { animation-name: ue-parallaxe-schnell; }
+    .ue-karte { animation: ue-auftauchen linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+  }
+}
+@keyframes ue-parallaxe { from { translate: 0 40px; } to { translate: 0 -40px; } }
+@keyframes ue-parallaxe-schnell { from { translate: 0 100px; } to { translate: 0 -100px; } }
+@keyframes ue-auftauchen { from { opacity: 0; scale: 0.94; } to { opacity: 1; scale: 1; } }
+
+.ue-karten { display: grid; gap: 18px; margin-top: 24px; }
+.ue-karte { background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-radius: var(--r-panel); padding-bottom: 24px; overflow: hidden; box-shadow: var(--sh-m); }
+.ue-karte__bild { aspect-ratio: 16 / 10; overflow: hidden; }
+.ue-karte__bild .ue-foto { width: 100%; height: 100%; border-radius: 0; transition: scale 0.6s ease; }
+.ue-karte:hover .ue-karte__bild .ue-foto { scale: 1.06; }
+.ue-karte__nr { display: block; font-size: 44px; line-height: 1; color: var(--ddd-gold); padding: 20px 22px 0; }
+.ue-karte h3 { font-size: 24px; line-height: 1.15; padding: 8px 22px 10px; }
+.ue-karte p { padding: 0 22px; line-height: 1.6; }
+@media (min-width: 900px) { .ue-karten { grid-template-columns: repeat(3, 1fr); align-items: start; } .ue-karte:nth-child(2) { margin-top: 48px; } }
+
+.ue-team { display: grid; gap: 40px; align-items: center; padding-top: 64px; }
+.ue-team p { font-size: 17px; line-height: 1.7; margin-bottom: 12px; max-width: 58ch; }
+.ue-team .ue-frage { font-size: clamp(24px, 3vw, 36px); color: var(--ddd-gold); line-height: 1.2; margin: 18px 0; }
+.ue-polaroids { position: relative; height: 360px; }
+.ue-polaroid { position: absolute; margin: 0; width: 52%; background: #fff; padding: 10px 10px 36px; border-radius: 4px; box-shadow: var(--sh-l); transition: rotate 0.3s ease, scale 0.3s ease; }
+.ue-polaroid .ue-foto { aspect-ratio: 1; border-radius: 2px; }
+.ue-polaroid--1 { left: 0; top: 12%; rotate: -8deg; }
+.ue-polaroid--2 { left: 25%; top: 0; rotate: 4deg; z-index: 1; }
+.ue-polaroid--3 { left: 46%; top: 30%; rotate: -3deg; z-index: 2; }
+.ue-polaroid:hover { rotate: 0deg; scale: 1.05; z-index: 3; }
+@media (min-width: 900px) { .ue-team { grid-template-columns: 1fr 1.1fr; gap: 64px; padding-top: 96px; } .ue-polaroids { height: 480px; } }
+
+.ue-zahlen { background: var(--ddd-gold-tint); padding: 48px 0; margin-top: 72px; }
+.ue-zahlen__satz { font-size: 18px; line-height: 1.6; max-width: 62ch; margin-bottom: 26px; color: var(--ddd-text); }
+.ue-zahlen__raster { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+.ue-zahlen b { display: block; font-size: clamp(40px, 6vw, 66px); line-height: 1; color: var(--ddd-navy); }
+.ue-zahlen span { font-size: 14px; color: var(--ddd-text-body); }
+@media (min-width: 900px) { .ue-zahlen__raster { grid-template-columns: repeat(4, 1fr); } }
+:root[data-theme="dark"] .ue-zahlen { background: var(--ddd-subtle); }
+:root[data-theme="dark"] .ue-zahlen b { color: var(--ddd-gold); }
+
+.ue-cta { background: var(--ddd-navy); color: var(--ddd-on-navy); padding: 64px 0; }
+.ue-cta h2 { color: var(--ddd-on-navy); font-size: clamp(32px, 4.5vw, 54px); line-height: 1.08; margin-bottom: 16px; text-wrap: balance; }
+.ue-cta p { color: var(--ddd-on-navy); opacity: 0.85; font-size: 17px; line-height: 1.65; max-width: 56ch; margin-bottom: 10px; }
+.ue-cta__raster { display: grid; gap: 40px; align-items: center; }
+.ue-cta__bild { max-width: 360px; justify-self: center; rotate: -4deg; box-shadow: 0 26px 50px -18px rgba(0, 0, 0, 0.65); }
+.ue-cta__knoepfe { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.btn--hell { border: 1.5px solid rgba(247, 248, 250, 0.6); color: var(--ddd-on-navy); }
+.btn--hell:hover { background: rgba(247, 248, 250, 0.1); color: var(--ddd-on-navy); }
+@media (min-width: 900px) { .ue-cta { padding: 96px 0; } .ue-cta__raster { grid-template-columns: 1.4fr 1fr; } }
+
+.ue-gruss { text-align: center; padding-top: 56px; }
+.ue-gruss .d { font-size: clamp(26px, 3.2vw, 38px); line-height: 1.2; }
+.ue-gruss__name { color: var(--ddd-gold); }
+.ue-gruss__klein { font-size: 13px; color: var(--ddd-text-muted); margin-top: 20px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ue-collage .ue-foto, .ue-band__spur { animation: none; }
+  .ue-band { overflow-x: auto; }
+}
