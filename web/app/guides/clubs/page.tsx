@@ -54,7 +54,7 @@ function Hero({ orte }: { orte: DddOrt[] }) {
           <span aria-current="page">Clubs</span>
         </nav>
         <h1 className="d">Clubs in Düsseldorf</h1>
-        <p>{orte.length ? `${zahl(orte.length)} Clubs und Partyorte – von Techno bis Schlager` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
+        <p>{orte.length ? `${zahl(orte.length)} Clubs und Partyorte – mit Musik, Partyreihen und den nächsten Events` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
       </div>
     </section>
   );

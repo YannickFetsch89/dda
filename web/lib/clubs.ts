@@ -28,7 +28,7 @@ export const GENRES: { name: string; icon: string }[] = [
   { name: "Pop/Charts", icon: "trending_up" },
   { name: "80er/90er/2000er", icon: "history" },
   { name: "Schlager", icon: "celebration" },
-  { name: "Rock/Indie", icon: "electric_guitar" },
+  { name: "Rock/Indie", icon: "radio" }, // „electric_guitar“ fehlt in der lokalen Icon-Schrift
   { name: "Metal/Punk", icon: "bolt" },
   { name: "Disco/Funk/Soul", icon: "album" },
   { name: "Jazz", icon: "piano" },
