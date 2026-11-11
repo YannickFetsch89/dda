@@ -19,6 +19,7 @@ Nutzung:
 """
 import argparse
 import csv
+import copy
 import json
 import logging
 import re
@@ -49,7 +50,7 @@ ORDNER = Path(__file__).resolve().parents[2] / "data" / "clubs"
 UNTERARTEN = ["club", "kulturhaus", "partylocation"]
 GENRES = ["Techno", "House", "Elektro/Experimental", "Drum & Bass", "Hip-Hop", "R&B", "Afrobeats",
           "Reggaeton/Latin", "Pop/Charts", "80er/90er/2000er", "Schlager", "Rock/Indie", "Metal/Punk",
-          "Disco/Funk/Soul", "Jazz", "Mixed"]
+          "Disco/Funk/Soul", "Jazz", "Gemischt"]
 ZUSATZ = ["Konzerte", "Comedy", "Lesungen", "Theater/Performance", "Kino", "Flohmarkt/Märkte", "Public Viewing",
           "Workshops/Kurse", "Ausstellungen", "Talks/Diskussion", "Quiz/Spiele", "Karaoke", "Brunch/Essen",
           "Private Feiern", "Sonstiges"]
@@ -80,7 +81,7 @@ GENRE_STICHWORTE = {
     "Disco/Funk/Soul": r"\bdisco(?!thek)|\bfunk\b|funky|\bsoul\b|motown|boogie",
     "Jazz": r"\bjazz|\bswing\b",
     # „von … bis“ nur mit Musikwort – sonst belegt „open from 23 bis 5 Uhr“ gemischte Musik
-    "Mixed": r"\bmixed\b|querbeet|gemischt|open format"
+    "Gemischt": r"\bmixed\b|querbeet|gemischt|open format"
              r"|von .{1,40} bis .{0,40}(musik|music|hits|sound|genre)"
              r"|(vielf[äa]ltig\w*|verschiedene\w*|bunt\w*) (musik|music|sound|genres?|stile?)",
 }
@@ -192,7 +193,7 @@ Grundregeln:
   Kneipe/Bar/Restaurant mit regelmäßigen Partys, Schlager-/Après-Ski-Lokal).
 - „genres“: Musikrichtungen, die hier gespielt/aufgelegt werden. „haupt“ = prägt den Ort (regelmäßig,
   mehrere Belege oder ausdrücklich so beschrieben), „neben“ = gelegentlich. Event-Titel aus unserem Kalender
-  sind gute Belege („Techno Night …“). Mixed nur, wenn die Quelle ausdrücklich gemischte Musik nennt.
+  sind gute Belege („Techno Night …“). Gemischt nur, wenn die Quelle ausdrücklich gemischte Musik nennt.
 - „formate“: wiederkehrende Reihen mit Namen – vor allem Partyreihen (z. B. „Ü30-Party jeden 1. Samstag“),
   auch feste Konzert- oder Veranstaltungsreihen. Rhythmus kurz („monatlich“, „jeden Freitag“, „unregelmäßig“),
   Musik/Inhalt kurz. Keine Einzelevents.
@@ -544,6 +545,9 @@ def pruefen(ki: dict, quellen: list[tuple[str, str]]) -> tuple[dict, list[str]]:
 
     genres = []
     for g in ki.get("genres") or []:
+        # Früherer Name (gespeicherte KI-Antworten vor dem 11.11.2026)
+        if g.get("wert") == "Mixed":
+            g = {**g, "wert": "Gemischt"}
         if g.get("wert") not in GENRES or any(x["wert"] == g["wert"] for x in genres):
             continue
         if not re.search(GENRE_STICHWORTE[g["wert"]], _text_norm(g.get("zitat"))):
@@ -706,11 +710,23 @@ NICHT_IM_HUB = {
 }
 
 
+# Nach Sichtprüfung: Musikrichtung vom Auftraggeber festgelegt (Name klein → [(Genre, Anteil)], Begründung)
+MANUELLE_GENRES = {
+    "rudas studios club": ([("Gemischt", "haupt")],
+                           "Auftraggeber 11.11.2026: sehr unterschiedliche Partys (Oldskool, Disney/Kindheit, "
+                           "Hannah Montana, Flight Crew, Halloween)"),
+}
+
+
 def manuell_korrigieren(o: dict, profil: dict) -> None:
-    grund = NICHT_IM_HUB.get((o.get("name") or "").strip().lower())
+    name = (o.get("name") or "").strip().lower()
+    grund = NICHT_IM_HUB.get(name)
     if grund:
         profil["passt"] = False
         profil["passt_grund"] = f"Manuell: {grund}"
+    if name in MANUELLE_GENRES:
+        genres, begruendung = MANUELLE_GENRES[name]
+        profil["genres"] = [{"wert": w, "anteil": a, "zitat": begruendung, "quelle": "manuell"} for w, a in genres]
 
 
 def club_orte(db) -> list[dict]:
@@ -862,7 +878,8 @@ def scores_neu(dry_run: bool, ausgabe: bool = True) -> int:
     alle_orte = {e["ort"] for e in kalender if e.get("ort")}
     anzahl = 0
     for o in club_orte(db):
-        profil = (o.get("extras") or {}).get("club")
+        # Kopie: speichern() vergleicht mit dem gelesenen Stand – eine Änderung am selben Objekt sähe es nicht
+        profil = copy.deepcopy((o.get("extras") or {}).get("club"))
         if not profil:
             continue
         namen, events = _events_fuer(o, kalender, alle_orte)

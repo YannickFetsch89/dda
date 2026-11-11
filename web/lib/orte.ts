@@ -29,6 +29,8 @@ const EXTRAS_FELDER = [
   "club", "club_score", "auch_club", "club_unterart", "club_beschreibung", "club_highlight", "club_freigegeben",
   // umgetypte Orte (früher Restaurant/Kneipe) → alte URL leitet auf die Club-Seite um
   "vorher_typ",
+  // Bildausschnitt („unten“/„oben“) und Bildversion (neue URL nach einem Bildtausch → kein alter Browser-Cache)
+  "bild_fokus", "foto_version",
 ];
 const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 
@@ -105,7 +107,15 @@ function googleFoto(o: DddOrt): GoogleFoto | null {
 export function ortBildUrl(o: DddOrt): string | null {
   // Immer über den eigenen Server – auch ein eigenes bild_url kann auf einem fremden Server liegen
   const eigenesBild = !!o.bild_url && !o.bild_url.includes("key=");
-  return (eigenesBild || googleFoto(o)) && o.slug ? `/ort-foto/${encodeURIComponent(o.slug)}` : null;
+  if (!(eigenesBild || googleFoto(o)) || !o.slug) return null;
+  const version = o.extras.foto_version;
+  return `/ort-foto/${encodeURIComponent(o.slug)}${typeof version === "number" && version > 1 ? `?v=${version}` : ""}`;
+}
+
+/** Bildausschnitt eines Ortes für object-position („unten“ → Unterkante bleibt sichtbar). */
+export function ortBildFokus(o: DddOrt): string | undefined {
+  const f = o.extras.bild_fokus;
+  return f === "unten" ? "center bottom" : f === "oben" ? "center top" : undefined;
 }
 
 /** Urheber-Link des Google-Fotos (Google verlangt die Nennung beim Foto). */

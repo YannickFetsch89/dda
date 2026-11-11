@@ -200,7 +200,7 @@ class CursorBefundeTest(unittest.TestCase):
         q = [("https://club.example/", "Warehouse-Party im Keller. Open from 23 bis 5 Uhr. Technology Talk.")]
         profil, _ = pruefen(ki(genres=[
             {"wert": "House", "anteil": "haupt", "zitat": "Warehouse-Party im Keller"},
-            {"wert": "Mixed", "anteil": "neben", "zitat": "Open from 23 bis 5 Uhr"},
+            {"wert": "Gemischt", "anteil": "neben", "zitat": "Open from 23 bis 5 Uhr"},
             {"wert": "Techno", "anteil": "neben", "zitat": "Technology Talk"},
         ]), q)
         self.assertEqual(profil["genres"], [])

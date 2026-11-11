@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon, eventPfad } from "./karten";
-import { clubArtInfo, eintrittKurz, hauptGenres, istSichtbarerClub } from "@/lib/clubs";
+import { clubArtInfo, hauptGenres, istSichtbarerClub } from "@/lib/clubs";
 import { tagKurz } from "@/lib/datum";
-import { ortBildUrl } from "@/lib/orte";
+import { ortBildFokus, ortBildUrl } from "@/lib/orte";
 import type { DddEvent, DddOrt } from "@/lib/typen";
 
 /** Pfad im Club-Hub – auch für Orte, deren Haupt-URL in einem anderen Hub liegt (auch_club). */
@@ -15,17 +15,16 @@ export function ClubKarte({ o, naechstes }: { o: DddOrt; naechstes?: DddEvent | 
   const bild = ortBildUrl(o);
   const art = clubArtInfo(o);
   const genres = hauptGenres(o);
-  const eintritt = eintrittKurz(o);
   return (
     <article className="cl-karte" role="listitem">
       <Link href={clubPfad(o)} className="cl-karte__link">
         <div className="cl-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
-          <BildImg src={bild} alt="" icon={art.icon} />
-          {(genres[0] || eintritt) && (
+          <BildImg src={bild} alt="" icon={art.icon} fokus={ortBildFokus(o)} />
+          {/* Nur das Genre – Preis-Badges sind auf Wunsch entfernt (Eintritt steht auf der Detailseite) */}
+          {genres[0] && (
             <span className="cl-badges">
-              {genres[0] && <span className="cl-genre">{genres[0]}</span>}
-              {eintritt && <span className="cl-eintritt">{eintritt}</span>}
+              <span className="cl-genre">{genres[0]}</span>
             </span>
           )}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}

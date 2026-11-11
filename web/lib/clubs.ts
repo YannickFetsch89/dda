@@ -32,7 +32,7 @@ export const GENRES: { name: string; icon: string }[] = [
   { name: "Metal/Punk", icon: "bolt" },
   { name: "Disco/Funk/Soul", icon: "album" },
   { name: "Jazz", icon: "piano" },
-  { name: "Mixed", icon: "queue_music" },
+  { name: "Gemischt", icon: "queue_music" },
 ];
 const GENRE_NAMEN = GENRES.map((g) => g.name);
 export const genreIcon = (name: string) => GENRES.find((g) => g.name === name)?.icon ?? "music_note";

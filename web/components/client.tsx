@@ -88,6 +88,7 @@ export function BildImg({
   icon,
   eager = false,
   vollstaendig = false,
+  fokus,
 }: {
   src: string | null;
   ersatz?: string | null;
@@ -96,6 +97,8 @@ export function BildImg({
   eager?: boolean;
   /** Bild nicht beschneiden, sondern ganz zeigen und den Rand mit einer unscharfen Kopie füllen */
   vollstaendig?: boolean;
+  /** Welcher Teil beim Beschneiden sichtbar bleibt (CSS object-position, z. B. "center bottom") */
+  fokus?: string;
 }) {
   // Kandidaten der Reihe nach; schlägt ein Bild fehl, kommt das nächste
   const kandidaten = [src, ersatz].filter((s): s is string => !!s);
@@ -120,6 +123,7 @@ export function BildImg({
       <img
         key={aktuell}
         className={vollstaendig ? "bild__ganz" : undefined}
+        style={fokus && !istSymbol ? { objectPosition: fokus } : undefined}
         src={aktuell}
         alt={istSymbol ? "Symbolbild" : alt}
         loading={eager ? "eager" : "lazy"}

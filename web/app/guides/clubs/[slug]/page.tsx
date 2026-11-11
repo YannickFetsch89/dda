@@ -27,7 +27,7 @@ import { sterne, zahl } from "@/lib/guide-filter";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { jsonLdText } from "@/lib/json-ld";
 import { slugify } from "@/lib/kueche";
-import { ortBildAutorUrl, ortBildUrl, sichereUrl, slugDekodieren } from "@/lib/orte";
+import { ortBildAutorUrl, ortBildFokus, ortBildUrl, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/clubs";
@@ -178,7 +178,7 @@ export default async function ClubDetail(props: Props) {
 
       {bild && (
         <div className="gd-detail__hero cl-detail__hero">
-          <BildImg src={bild} alt={`${ort.name}, ${art.label} in ${ort.stadtteil ?? "Düsseldorf"}`} icon={art.icon} eager />
+          <BildImg src={bild} alt={`${ort.name}, ${art.label} in ${ort.stadtteil ?? "Düsseldorf"}`} icon={art.icon} eager fokus={ortBildFokus(ort)} />
           {ort.bild_attribution && (
             <span className="gd-detail__credit">
               Foto:{" "}
