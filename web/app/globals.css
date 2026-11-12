@@ -495,7 +495,8 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .band__kopf { display: flex; flex-direction: column; gap: 14px; }
 .band__kopf h2 { font-size: 32px; line-height: 1; }
 .band__spalten { display: grid; gap: 14px; }
-.band__spalte { background: rgba(247, 248, 250, 0.06); border: 1px solid rgba(247, 248, 250, 0.12); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+/* min-width: 0 – sonst wächst die Spalte mit langen, nicht umbrechenden Ortszeilen über das Band hinaus */
+.band__spalte { min-width: 0; background: rgba(247, 248, 250, 0.06); border: 1px solid rgba(247, 248, 250, 0.12); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
 .band__tag { font-size: 24px; margin-bottom: 6px; }
 .band__tag small { font-family: var(--font-sans); font-style: normal; font-size: 13px; color: var(--ddd-on-navy-muted); }
 .band .zeile { border-top-color: rgba(247, 248, 250, 0.12); }
@@ -507,7 +508,8 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .band { border-radius: var(--r-panel); padding: 36px; gap: 24px; }
   .band__kopf { flex-direction: row; justify-content: space-between; align-items: flex-end; }
   .band__kopf h2 { font-size: 44px; }
-  .band__spalten { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  /* minmax(0, 1fr): drei gleich breite Spalten, auch wenn ein Ortsname länger ist als die Spalte */
+  .band__spalten { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
   .band__spalte { padding: 18px; }
   .band__tag { font-size: 26px; }
 }
@@ -723,7 +725,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .wk-eintrag h2 { font-size: 28px; line-height: 1.05; }
 .wk-eintrag p { color: var(--ddd-text-body); }
 .wk-eintrag__fuss { display: flex; justify-content: space-between; align-items: center; }
-@media (min-width: 768px) { .wk-liste { grid-template-columns: repeat(3, 1fr); gap: 24px; } .wk-hero h1 { font-size: 52px; } }
+@media (min-width: 768px) { .wk-liste { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } .wk-hero h1 { font-size: 52px; } }
 
 /* ---------- Stadtteile / Karte ---------- */
 .karte-schema { position: relative; background: var(--ddd-surface); border-radius: var(--r-panel); overflow: hidden; box-shadow: var(--sh-s); }
