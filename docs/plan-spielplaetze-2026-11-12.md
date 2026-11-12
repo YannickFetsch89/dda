@@ -1,6 +1,6 @@
 # Plan: Guide „Spielplätze“ (`/guides/spielplaetze`)
 
-Stand 12.11.2026 · **konsolidierte Fassung** nach zwei Cursor-Prüfungen und zwei eigenen Durchsichten · noch nichts umgesetzt.
+Stand 12.11.2026 · **konsolidierte Fassung** nach drei Cursor-Prüfungen und vier eigenen Durchsichten · noch nichts umgesetzt.
 Diese Fassung ersetzt alle früheren Abschnitte (0, 0.3 usw.); die Prüfhistorie steht in Abschnitt 14.
 
 **Ziel:** Eltern finden den passenden öffentlichen Spielplatz in Düsseldorf – nach Alter, Ausstattung, Stadtteil und Nähe.
@@ -22,10 +22,11 @@ maßgeblich ist das Stadtportal). Dateistand der Ressourcen **25.09.2020** (HTTP
 - `objektart` ist Text: `336 Kinderspielplatz` (322), `536 Waldkinderspielplatz` (20), `337 Wasserspielplatz` (9) → **351 Einträge
   im Hub**. Nicht im Hub: `338 Bolzplatz` (71), `538 Waldbolzplatz` (5), `335 Skateranlage` (3), `333 Freizeitanlage` (3).
 - `groesse` ist Text mit Komma (`664,1`); `stadtbezirk` ist bei allen 20 Waldspielplätzen leer; `strasse_hausnr` fehlt bei 78 der 351.
-- `4stellige_nr` (Notfallnummer) bei allen 351 vorhanden; **7 Nummern verteilen sich auf 15 Einträge**. Alle Gruppen liegen am selben
-  Punkt, nur Hanielpark 127 m auseinander. Es sind **Teilflächen eines Spielplatzes** (z. B. „SAN-REMO-STR., KSP Kleinkinder“ +
-  „… Schulkinder“, „AUF' M ROTT, WSP“ + „… KSP“, „GRAFENTAL, Naturpark Flingern“ ×3). Zusätzlich teilen sich 35 Kinderspielplätze
-  die Nummer mit einem Bolzplatz (nicht im Hub, irrelevant).
+- `4stellige_nr` (Notfallnummer) bei allen 351 vorhanden; **7 Nummern verteilen sich auf 15 Einträge**. Sechs Gruppen liegen auf
+  demselben Punkt (San-Remo-Straße, Am Angerbach, Stadtwerkepark, Naturpark Flingern ×3, Gerresheimer Friedhof, Auf'm Rott).
+  Hanielpark (9754) liegt **127 m** auseinander: Rollerbahn 5.308 m² und „gegenüber Sohnstraße“ 734 m². Auf'm Rott (9861) ist
+  707 m² Wasser plus 11.472 m² Kinderfläche. Zusätzlich teilen sich 35 Kinderspielplätze die Nummer mit einem Bolzplatz
+  (nicht im Hub, zählt nicht mit).
 - 33 Hub-Einträge beginnen mit „GW“ (Bedeutung unbekannt, Auftraggeber: weglassen), alle mit Komma.
 
 ### 1.2 Weitere Datenquellen
@@ -69,11 +70,11 @@ ergänzend `DESIGN_PROMPTS_GUIDES.md` Abschnitt 10 (Repo). **Abweichungen vom Ha
 
 | Nr. | Entscheidung |
 |---|---|
-| E1 | Im Hub: Kinder-, Wald- und Wasserspielplätze der Stadt (351 Einträge → **343 Spielplätze** nach Zusammenführung, 4.1). Keine Bolz-, Skater-, Freizeit-, Indoor- oder kommerziellen Anlagen. Die Einleitung sagt das. |
-| E2 | Alle Spielplätze aus E1 mit gültiger Koordinate kommen auf die Karte. Freischaltung nach Stichprobe der Prüf-CSV, nicht Einzel-Freigabe. Ausschlussliste `NICHT_IM_HUB` (mit Grund) nur für: nicht öffentlich, Dublette, nachweislich abgebaut, unauflösbarer Name. |
+| E1 | Im Hub: Kinder-, Wald- und Wasserspielplätze der Stadt (351 Einträge → **344 Spielplätze** nach Zusammenführung, 4.1). Keine Bolz-, Skater-, Freizeit-, Indoor- oder kommerziellen Anlagen. Die Einleitung sagt das. |
+| E2 | Alle Spielplätze aus E1 mit gültiger Koordinate kommen auf die Karte. Freischaltung nach Stichprobe der Prüf-CSV, nicht Einzel-Freigabe. Ausschlüsse stehen in `data/spielplaetze/korrekturen.csv` (Schlüssel → Grund, 3.1) und nur für: nicht öffentlich, Dublette, nachweislich abgebaut, unauflösbarer Name. |
 | E3 | Nur Düsseldorf. Neuss/Ratingen später. |
 | E4 | Ausstattung nur belegt (OSM-Tag oder wörtliches Zitat). Ohne Beleg „keine Angabe“, nie „fehlt“; „fehlt/nein“ nur bei belegter Abwesenheit. |
-| E5 | Alter: **belegt** (OSM `min_age`/`max_age`, Zitat, Stadtname „Kleinkind/Schulkind“) oder **vermutlich** (aus belegten Geräten abgeleitet, Regel 4.5). Vermutlich zählt für Filter und Pin-Farbe, wird überall als „vermutlich“ gekennzeichnet und zählt **nicht** für die Indexierung. |
+| E5 | Alter: **belegt** (OSM `min_age`/`max_age`, Zitat, Stadtname „Kleinkind/Schulkind“) oder **vermutlich** (Formel 4.5, erste zutreffende Zeile). Vermutlich zählt für Filter und Pin-Farbe, wird überall als „vermutlich“ gekennzeichnet und zählt **nicht** für die Indexierung: es ersetzt die zwei Geräte nicht und blockiert eine sonst indexierbare Seite nicht. |
 | E6 | Fotos: keine erkennbaren Kinder/Personen. Google-Fotos nur nach Sichtprüfung (`foto_manuell`), sonst Typ-Illustration (Abschnitt 11). Kein Street View. |
 | E7 | Notfallnummer als Hinweis, kein `tel:`-Link (Regel 4.1, Wortlaut 6.3). |
 | E8 | „In der Nähe“ nur nach Klick, nur im Browser (Haversine), nichts gespeichert oder gesendet, kein URL-Parameter. Ohne Freigabe bleibt die Standardsortierung, ein Satz erklärt es. |
@@ -97,9 +98,15 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
 - `extras.spielplatz`:
   ```
   { quelle: "stadt-duesseldorf", lizenz: "dl-de/zero-2.0", quelle_url, datenstand: "2020-09-25",
-    teile: [{ objektschluessel, stadt_name, objektart, groesse_m2 }],   // 1–3 Teilflächen (4.1)
-    typ: "kinder" | "wald" | "wasser",
+    teile: [{ objektschluessel, stadt_name, objektart, groesse_m2, latitude, longitude }],   // 1–3 Teilflächen (4.1)
+    typ: "kinder" | "wald" | "wasser" | "abenteuer",   // abenteuer nur aus der manuellen Liste (4.6)
+    name_quelle: "stadt" | "korrektur",   // Anzeigename aus der Normalisierung oder aus korrekturen.csv
+    pruefung: ["name_unklar" | "kein_stadtteil" | "access_private" | "bezirk_abweichend" | "gruppe_gemischt" | "zuordnung_mehrdeutig"],
+              // offene Prüfpunkte; die Freischalt-SQL nimmt nur Zeilen mit leerer Liste (bezirk_abweichend allein sperrt nicht)
     notfallnummer: "9601" | null,  groesse_m2,  stadtbezirk_stadt: 1–10 | null,
+    eintritt: "ja" | "nein" | null,   // OSM fee; null = kein Treffer. Städtischer Platz gilt dann als frei
+    fehlende_teile: [{ objektschluessel, seit }],   // Schlüssel aus einem späteren Stadtstand verschwunden
+    stadt_fehlt_seit?: "YYYY-MM-DD",   // nur wenn kein Schlüssel der Zeile mehr in der Datei steht
     ausstattung: { <geraet>: { wert: "ja"|"nein", quelle: "osm"|"zitat"|"stadt", beleg?, url? } },
     alter: { wert: "0-3"|"3-6"|"6-12"|"alle", art: "belegt"|"vermutlich", beleg? } | null,
     extras: { schatten|wc|eingezaeunt|picknick|rollstuhl: { wert: "ja"|"nein"|"teilweise", notiz?, quelle, beleg? } },
@@ -107,8 +114,18 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
     osm: { id, tags_stand }, google: { place_id, rating, anzahl } (intern), score, top: bool }
   ```
 - `extras.foto_manuell`, `extras.google_foto`, `extras.foto_version` wie bei den Clubs.
-- `NICHT_IM_HUB` als Konstante im Skript (Name → Grund), wie bei den Clubs.
-- Identität für Wiederholungsimporte: sortierte Liste der `objektschluessel` der Teilflächen.
+- Öffnungszeiten (nur Abenteuerplätze) in der vorhandenen Spalte `oeffnungszeiten`.
+
+### 3.1 Korrekturdatei `data/spielplaetze/korrekturen.csv` (eingecheckt, vom Auftraggeber gepflegt)
+Spalten: `schluessel` (Objektschlüssel der Stadt bzw. manueller Schlüssel `abenteuer:<kurz>`), `anzeigename`, `ausschliessen`
+(leer/ja), `grund`, `stadtteil` (nur bei `kein_stadtteil`). Der Import wendet die Datei **vor** Namensbildung, Slug und
+Freischalt-Prüfung an: ein `anzeigename` ersetzt den normalisierten Namen (`name_quelle: "korrektur"`, `name_unklar` entfällt),
+`ausschliessen = ja` hält die Zeile dauerhaft inaktiv (statt `NICHT_IM_HUB` nach Name – Namen ändern sich durch die
+Normalisierung, Schlüssel nicht). Bei zusammengeführten Plätzen gilt der Eintrag für den kleinsten Objektschlüssel der Gruppe.
+Ablauf: Import → Prüf-CSV → Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein → Import erneut (nur Stadtfelder,
+Name, Slug solange inaktiv) → Freischalt-SQL.
+- Wiederholungsimport findet die Zeile über die **Schnittmenge** der `objektschluessel` (4.7), nicht über die exakte Liste.
+  Die sortierte Liste bleibt der gespeicherte Stand der aktuellen Teilflächen.
 
 ---
 
@@ -117,46 +134,68 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
 ### 4.1 Stadt-Import (`stadt_import.py`)
 1. GeoJSON WGS84 laden; Features ohne Geometrie verwerfen; Filter über den **Text** der Objektart (E1).
 2. Koordinate nur aus `geometry`; jeder Punkt muss in 6,6–7,0 °O / 51,1–51,4 °N liegen, sonst **Abbruch** (falsche Datei/Projektion).
-3. **Zusammenführung:** Einträge mit gleicher Notfallnummer, die alle ≤ 150 m auseinanderliegen, sind **ein** Spielplatz
-   (Koordinate = die der größten Teilfläche, Größe = Summe, Typ = Wasser vor Wald vor Kinder, Teilflächen in `teile`).
-   Ergebnis 351 → 343. Gleiche Nummer > 150 m: nicht zusammenführen, Nummer bei beiden unterdrücken (`notfallnummer = null`),
-   Plätze behalten, Prüf-CSV. Vergleich nur innerhalb des Hubs (Bolzplätze zählen nicht).
+3. **Zusammenführung**, nur innerhalb des Hubs (Bolzplätze zählen nicht):
+   - Alle Teile derselben Nummer ≤ **30 m**: **ein** Spielplatz. Koordinate = die der größten Teilfläche, bei gleicher
+     Größe der kleinste `objektschluessel`. Größe = Summe. Typ = Wasser vor Wald vor Kinder. Jede Teilfläche in `teile`
+     **mit eigener Koordinate und eigenem Namen**.
+   - Dieselbe Nummer, Abstand über 30 m und bis 150 m: **nicht** zusammenführen, Nummer **behalten** (Hanielpark, 127 m).
+   - Dieselbe Nummer, irgendein Paar > 150 m: nicht zusammenführen, Nummer bei allen unterdrücken (`notfallnummer = null`),
+     Plätze behalten, Prüf-CSV.
+   - **Gemischte Gruppe** (einige Teile ≤ 30 m, andere weiter weg): Teile, die über Abstände ≤ 30 m verbunden sind, bilden
+     je eine Teilgruppe (ein Platz je Teilgruppe); Nummer nach den Regeln oben für die ganze Gruppe; Code `gruppe_gemischt`
+     in der Prüf-CSV. Kommt heute nicht vor, kann mit einem neuen Stadtstand kommen.
+   - Heute: sechs Gruppen auf einem Punkt werden je ein Platz, Hanielpark bleibt zwei. **351 → 344.**
 4. **Name** (reine, getestete Funktion): „GW “-Präfix weg (E10); Teil vor dem Komma = Ort/Park, danach Zusatz.
    `Ksp/KSP` → Spielplatz, `Wsp/WSP` → Wasserspielplatz, `Waldksp` → Waldspielplatz; Schreibweise normalisieren
    („HOFGARTEN“ → „Hofgarten“, „SPEE`SCHER GRABEN“ → „Spee'scher Graben“, „Str.“ → „straße“ nur bei eindeutigem Wortende).
-   Muster: „Spielplatz Hofgarten (Oederallee)“, „Wasserspielplatz Volksgarten“. Bei zusammengeführten Teilflächen ohne
-   Zusatz den gemeinsamen Teil („Spielplatz San-Remo-Straße“), Teilflächen auf der Detailseite nennen („Bereich für Kleinkinder
-   und für Schulkinder“). Abkürzungen, die sich nicht sicher auflösen lassen („Fritz./Mörsenb.“, „a.d.“), → Prüf-CSV, Platz
-   bleibt **inaktiv**, bis dort ein Anzeigename steht. Typ immer aus `objektart`, nie aus dem Namen.
+   Muster: „Spielplatz Hofgarten (Oederallee)“, „Wasserspielplatz Volksgarten“. Bei zusammengeführten Teilflächen den
+   gemeinsamen Stamm („Spielplatz San-Remo-Straße“); die Zusätze stehen als Bereiche auf der Detailseite („Bereich für
+   Kleinkinder und für Schulkinder“). Ein unklarer Zusatz blockiert den zusammengeführten Platz nicht, der Stamm ist der
+   Anzeigename. Bei einem nicht zusammengeführten Platz gehört der Zusatz zum Anzeigenamen. Sichere Auflösungen,
+   geschlossen: `Str.` am Wortende → „straße“, `a.d.` → „an der“, `ggü.` → „gegenüber“. Damit heißen die zwei
+   Hanielpark-Plätze „Spielplatz Hanielpark (an der Rollerbahn)“ und „Spielplatz Hanielpark (gegenüber Sohnstraße)“.
+   Lässt sich der Zusatz nicht auflösen („Fritz./Mörsenb.“), bekommt der Platz `name_unklar` und bleibt **inaktiv**, bis
+   `korrekturen.csv` einen Anzeigenamen hat (3.1). Typ immer aus `objektart`, nie aus dem Namen.
 5. **Stadtteil** per Ray-Casting gegen jedes Teilpolygon der WGS84-Stadtteildatei (keine Löcher vorhanden; Code kann sie trotzdem).
    Katalog-Mapping: „Flingern Nord“ → `Flingern-Nord`, „Flingern Süd“ → `Flingern-Süd`, sonst Name 1:1; `Hafen` bleibt
-   Datenbankwert (Anzeige „Medienhafen“ über die bestehende Logik). Kein Treffer → Prüf-CSV, Platz inaktiv.
+   Datenbankwert (Anzeige „Medienhafen“ über die bestehende Logik). Kein Treffer → `kein_stadtteil`, Prüf-CSV, Platz inaktiv
+   (Stadtteil dann aus `korrekturen.csv`).
    **Kontrolle Bezirk:** Bezirk = `int(Nummer[:2])`; nur ein **gesetzter**, abweichender `stadtbezirk` der Spielplatzdatei kommt
-   in die Prüf-CSV, leer ist kein Widerspruch (Polygon gewinnt).
+   als `bezirk_abweichend` in die Prüf-CSV (sperrt die Freischaltung nicht), leer ist kein Widerspruch (Polygon gewinnt).
 6. **Adresse** nur aus `strasse_hausnr`; sonst leer. Kein Geocoding, keine Adressliste. „Route planen“ aus der Koordinate.
-7. **Slug** = Anzeigename + Stadtteil (bestehende Slug-Funktion), Kollision → `slug_mit_suffix`. **Slugs werden vor der
-   Freischaltung festgezogen** und danach nicht mehr geändert (Namensänderungen ändern nur `name`).
-8. Schreiben über das Skript (wie der Club-Import), alle Zeilen `aktiv=false`, `extras.spielplatz.quelle` gesetzt
-   (Rücknahme: `DELETE … WHERE typ='spielplatz' AND extras->'spielplatz'->>'quelle'='stadt-duesseldorf'`).
-   Wiederholter Import ändert nur Stadtfelder (`extras_mergen`), nie Profil, Foto, Name nach Freigabe oder `aktiv`.
-9. Ausgabe: `data/spielplaetze/pruefung.csv` (Name alt/neu, Stadtteil, Bezirk-Abweichung, zusammengeführt, Nummer unterdrückt,
-   GW, unklare Abkürzung, keine Adresse) und Zusammenfassung im Log.
+7. **Slug** = Anzeigename + Stadtteil (bestehende Slug-Funktion), Kollision → `slug_mit_suffix`. Solange `aktiv=false`, bildet
+   jeder Import den Slug aus dem aktuellen Anzeigenamen neu (so verschwindet ein Rohname wie „…-fritz-moersenb-…“, sobald
+   `korrekturen.csv` einen Namen hat). **Ab `aktiv=true` ist der Slug fest**; spätere Namensänderungen ändern nur `name`.
+8. Schreiben über das Skript (wie der Club-Import), alle Zeilen `aktiv=false`, `extras.spielplatz.quelle` gesetzt.
+   Rücknahme **nur vor der Freischaltung**: `DELETE … WHERE typ='spielplatz' AND aktiv=false AND extras->'spielplatz'->>'quelle'='stadt-duesseldorf'`.
+   Wiederholter Import findet die Zeile nach 4.7 und ändert nur Stadtfelder (`extras_mergen`): `teile`, Größe, Koordinate, Typ,
+   Notfallnummer, Adresse, `eintritt`, `pruefung` – bei inaktiven Zeilen auch Name und Slug. Nie Profil, Foto, `aktiv`, und bei
+   aktiven Zeilen nie Name aus der Normalisierung (nur aus `korrekturen.csv`) oder Slug.
+9. Ausgabe: `data/spielplaetze/pruefung.csv` (Schlüssel, Name alt/neu, Stadtteil, Prüf-Codes aus `pruefung`, zusammengeführt,
+   Nummer unterdrückt, GW, keine Adresse) und Zusammenfassung im Log. Die Prüf-CSV ist eine Ausgabe; Entscheidungen gehen nur über
+   `korrekturen.csv` zurück.
 
 ### 4.2 OSM-Abgleich (`osm_abgleich.py`)
 - Eine Overpass-Abfrage `nwr[leisure=playground]` + Geräte-Objekte `playground=*` im Stadtgebiet, generischer User-Agent,
   Wiederholung mit Pause, Zwischenspeicher `data/spielplaetze/osm.json` (gitignored, nie veröffentlicht).
 - Zuordnung: Stadt-Punkt liegt in der OSM-Fläche **oder** OSM-Mittelpunkt ≤ 60 m; mehrere Kandidaten → Prüf-CSV, nichts übernehmen.
-- Übernahme mit `quelle: "osm"`: Geräte (Mapping-Tabelle, 4.5), `min_age`/`max_age`, `wheelchair`, `fee`, `access`
-  (`access=private` → Prüf-CSV, Kandidat für `NICHT_IM_HUB`).
+- Übernahme mit `quelle: "osm"`: Geräte (Mapping-Tabelle, 4.5), `min_age`/`max_age`, `wheelchair`, `fee` → `eintritt`
+  (`yes` → `ja`, `no` → `nein`, sonst `null`), `access`
+  (`access=private` → Code `access_private`, Prüf-CSV, sperrt die Freischaltung; dauerhaft über `korrekturen.csv` ausschließen).
+  Mehrere OSM-Kandidaten → Code `zuordnung_mehrdeutig` (sperrt nicht, es wird nur nichts übernommen).
 - **Bericht:** Anteil der Plätze mit ≥ 1 / ≥ 2 OSM-Geräten. OSM-Plätze ohne Stadt-Treffer nur auflisten (nicht anlegen) – Kandidaten
   für neuere Plätze und Abenteuerspielplätze.
 
 ### 4.3 Profil (`profil.py`, KI + Websuche, wie Club-Profil)
-- **Runde 1 (109 Plätze):** alle Wasser (9) + Wald (20) + Kinderspielplätze ≥ 3.000 m² (86), Überschneidungen 6.
-  Erst **Probe mit 10**, Bericht zum Gegenlesen, dann der Rest. Runde 2 (85 Plätze 1.500–3.000 m²) nur nach Bericht und Freigabe.
+- **Runde 1 (108 Spielplätze, nach der Zusammenführung gezählt):** alle Wasser (9) + alle Wald (20) + Kinderspielplätze
+  mit **summierter** Größe ≥ 3.000 m² (79). Die frühere Rechnung 9 + 20 + 86 − 6 = 109 zählte Einträge vor der
+  Zusammenführung; Auf'm Rott fällt mit der Kinderfläche in die 9 Wasser und wird nicht noch einmal als großer
+  Kinderspielplatz gezählt. Erst **Probe mit 10**, Bericht zum Gegenlesen, dann der Rest. Runde 2 (**74** Kinderspielplätze
+  mit Summe 1.500–3.000 m², nach der Zusammenführung gezählt; die frühere 85 zählte Einträge davor) nur nach Bericht und Freigabe. Profil erst, wenn Schritt 3 von 4.1 gelaufen ist.
 - Quellen: duesseldorf.de, Pressemitteilungen der Stadt, Vorlagen der Bezirksvertretungen, lokale Presse; Spielplatz-Portale nur als
   Fakt mit Zitat. robots.txt, ≥ 2 s Pause, keine Rausgegangen-Seiten.
-- Ergebnis je Platz: Geräte, Extras (inkl. Rollstuhl), Alter, `saison` (nur Wasser, nur mit Beleg), Beschreibung 2–4 eigene Sätze,
+- Ergebnis je Platz: Geräte, Extras (inkl. Rollstuhl), Alter, `saison` (nur mit Beleg; bei Typ Wasser für den Platz,
+  bei einer größeren Kinder-Teilfläche nur für den Wasserbereich formulieren), Beschreibung 2–4 eigene Sätze,
   Highlight, `profil_stand` = Datum der jüngsten Quelle. **Jede Aussage mit wörtlichem Beleg**, Prüfung wie bei den Clubs
   (Wortstamm/Zahl im Zitat). Eine Schablone aus Stadtfeldern („Spielplatz X in Y, Z m²“) ist keine Beschreibung.
 - Widerspruch OSM ↔ Zitat: jüngere Quelle gewinnt, beide in der Prüf-CSV.
@@ -170,19 +209,48 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
 - **Geräte-Mapping OSM → Liste:** `sandpit`→Sandkasten, `swing`/`basketswing`/`baby_swing`→Schaukel, `slide`→Rutsche,
   `climbingwall`/`climbingframe`/`climbing_net`→Klettern, `water`/`pump`/`splash_pad`→Wasserspiel, `zipwire`→Seilbahn;
   weitere (`springy`, `seesaw`, `roundabout`, `balancebeam`) als Nebengeräte (Detailseite, kein Filter).
-- **Alter vermutlich:** nur Sandkasten/Federwippe/Babyschaukel → „0-3“; Sandkasten/Rutsche/Schaukel ohne Klettern/Seilbahn → „3-6“;
-  Klettern oder Seilbahn ohne Kleinkindgeräte → „6-12“; Kleinkind- **und** Großkind-Geräte → „alle“; < 2 belegte Geräte → kein Alter.
-- **Score (intern):** Ausstattung 35 %, Größe 20 %, Besonderheit (Wasser, Wald, Inklusion) 20 %, Google 15 % (fehlend = neutral),
-  Extras 10 %. „Top-Spielplatz“ = oberstes Fünftel **und** indexierbar (5.4).
+- **Alter.** Erst ein belegter Wert, sonst die Ableitung. Belegt (dann nicht weiter ableiten): OSM `min_age`/`max_age`,
+  wörtliches Zitat oder Stadtname. „Kleinkind“ und „Schulkind“ an zusammengeführten Teilen, oder eine Spanne über mehr
+  als ein Band: „alle“. Nur „Kleinkind“ oder `max_age` ≤ 3: „0-3“. Nur „Schulkind“ oder `min_age` ≥ 6: „6-12“. Sonst das
+  Band aus dem Zitat. Widerspruch OSM gegen Zitat: die jüngere Quelle; der Stadtname zählt mit dem Dateistand 2020-09-25.
+  Ohne Beleg, erste zutreffende Zeile. Gezählt werden die gemappten Geräte plus die Rohwerte `baby_swing` und `springy`
+  (Filter: Babyschaukel bleibt Schaukel, Federwippe ein Nebengerät). Kleinkindgerät = Sandkasten, Federwippe, Babyschaukel.
+  Großkindgerät = Klettern, Seilbahn.
+  1. Weniger als zwei Geräte: kein Alter.
+  2. Kleinkindgerät und Großkindgerät: „alle“.
+  3. Nur Sandkasten, Federwippe, Babyschaukel: „0-3“.
+  4. Klettern oder Seilbahn, ohne Kleinkindgerät: „6-12“.
+  5. Sandkasten, Rutsche oder Schaukel, ohne Klettern und ohne Seilbahn: „3-6“.
+  6. Sonst kein Alter.
+  Leeres Alter: neutraler Pin, nur unter „Alle Alter“. „alle“ hat eine eigene Farbe und passt zu jedem Altersfilter.
+  „Vermutlich“ zählt für Filter und Pin, ersetzt bei der Indexierung keine Geräte und sperrt eine Seite mit Beschreibung
+  und mindestens zwei Geräten nicht.
+- **Score (intern, 0–1):** gewichtete Summe aus Teilwerten, jeder Teilwert 0–1:
+  Ausstattung 35 % (Anzahl belegter Hauptgeräte / 6, höchstens 1), Größe 20 % (Perzentil-Rang der summierten Größe unter allen
+  sichtbaren Plätzen), Besonderheit 20 % (Wasser 1, Wald 1, Abenteuer 1, rollstuhlgerecht belegt +0,5, höchstens 1; sonst 0),
+  Google 15 % (Bayes-Mittel wie beim Club-Score auf 0–1; ohne Google 0,5 = neutral), Extras 10 % (Anteil belegter „ja“ unter
+  Schatten, WC, eingezäunt, Picknick). Sortierung „Empfohlen“ = Score absteigend, dann Name.
+  „Top-Spielplatz“ = die besten 20 % **der indexierbaren** Plätze nach Score (mindestens 1, aufgerundet).
 
 ### 4.6 Abenteuer-/Bauspielplätze
-Manuelle Liste (Name, Träger, Adresse, Koordinate aus OSM oder vom Auftraggeber bestätigt, Quelle-URL) vor dem Livegang,
-nur öffentlich belegte, öffentlich zugängliche Anlagen; eigener Typ-Text „betreuter Abenteuerspielplatz – Öffnungszeiten beachten“.
-Blockiert den Import der städtischen Plätze nicht.
+Manuelle Liste (Name, Träger, Adresse, Koordinate aus OSM oder vom Auftraggeber bestätigt, Öffnungszeiten, Quelle-URL) vor dem
+Livegang, als Zeilen in `korrekturen.csv` mit Schlüssel `abenteuer:<kurz>`; nur öffentlich belegte, öffentlich zugängliche Anlagen.
+`typ: "abenteuer"`, Öffnungszeiten in der Spalte `oeffnungszeiten`, Ersatzbild = Kinder-Motiv, eigener Typ-Text „betreuter
+Abenteuerspielplatz – Öffnungszeiten beachten“. Keine Notfallnummer (nicht städtisch), Score-Besonderheit 1.
+`quelle` ist nicht `stadt-duesseldorf`, damit Rücknahme-DELETE und der Stadt-Diff sie nicht treffen. Eigene Identität
+(manueller Schlüssel), nicht die Objektschlüssel der Stadt. Blockiert den Import der städtischen Plätze nicht.
 
 ### 4.7 Aktualisierung
-Stadtdatei jährlich prüfen (Last-Modified). Bei neuem Stand: Diff; fehlende Objektschlüssel → `stadt_fehlt_seit` + Prüf-CSV,
-nicht sofort deaktivieren. OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei Hinweis/Umbau.
+Stadtdatei jährlich prüfen (Last-Modified). Bei neuem Stand die Gruppen nach 4.1 neu bilden und so zuordnen:
+- Schnittmenge der Objektschlüssel mit genau einer bestehenden Zeile: diese Zeile. Stadtfelder neu rechnen (Größe, Koordinate
+  der größten verbliebenen Teilfläche, Typ, Nummer). Slug, Profil, Foto, freigegebener Name und `aktiv` bleiben.
+- Ein Schlüssel fehlt, andere der Zeile stehen noch in der Datei: Schlüssel aus `teile` nach `fehlende_teile` (mit Datum),
+  Zeile nicht deaktivieren.
+- Kein Schlüssel der Zeile steht noch in der Datei: `stadt_fehlt_seit` setzen, nicht sofort deaktivieren.
+- Eine neue Gruppe trifft keine Zeile: neue inaktive Zeile.
+- Eine Gruppe trifft mehrere Zeilen, oder eine Zeile trifft mehrere Gruppen: nichts automatisch teilen oder verschmelzen,
+  Prüf-CSV.
+OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei Hinweis oder Umbau.
 
 ---
 
@@ -193,7 +261,8 @@ nicht sofort deaktivieren. OSM halbjährlich neu abgleichen (nur `quelle: "osm"`
   **mit** `extras` (nicht die Spaltenliste aus `orte.ts`), **ohne** Score-Schwelle.
 - `web/lib/spielplaetze.ts`: Profil nur aus bekannten Werten lesen; Konstanten (Altersfarben/Labels aus dem Handoff, Geräte, Extras);
   Filter `alter` (Einzelauswahl; „alle“ passt zu jedem Alter; unbekannt nur bei „Alle Alter“), `geraet` (UND, nur „ja“),
-  `extra` (UND), `stadtteil` (Mehrfach, ODER), `sort` (`empfohlen` = Score, dann Name; `ausstattung` = Anzahl belegter Geräte);
+  `extra` (UND), `typ` (Wasser, Wald, Abenteuer; Mehrfach, ODER; aus Stadtdaten bzw. Liste belegt, daher ohne Schwelle – ein
+  Chip erscheint, sobald mindestens ein sichtbarer Platz den Typ hat), `stadtteil` (Mehrfach, ODER), `sort` (`empfohlen` = Score, dann Name; `ausstattung` = Anzahl belegter Geräte);
   `istIndexierbar` (5.4); Chip-Schwelle 5 (E11). „In der Nähe“ ist kein URL-Parameter.
 - `GuideHub`/`GUIDE_HUBS` um `spielplaetze` erweitern (Name „Spielplätze“, Mehrzahl „Spielplätze“, Icon `toys`);
   `hubOrte("spielplaetze")` → Spielplätze laden (expliziter Zweig, kein Fallback auf Clubs).
@@ -201,37 +270,53 @@ nicht sofort deaktivieren. OSM halbjährlich neu abgleichen (nur `quelle: "osm"`
 ### 5.2 Hub `/guides/spielplaetze` (`instant = false`)
 - Heller Hero (Tokens mit Dark-Variante), H1 „Spielplätze in Düsseldorf“, Zahl aus den Daten, Brotkrumen Start / Düsseldorf entdecken /
   Spielplätze. Darunter **Einleitung** (2–3 Sätze inkl. „nur öffentliche städtische Spielplätze“).
-- Filter: Alter (groß, Farbpunkt + Text), Ausstattung, Extras inkl. Rollstuhl (E11), Stadtteil, Sortierung; „In der Nähe“-Knopf (E8).
-  Leere Ergebnisse erklären: „Die Ausstattung ist noch nicht für alle Spielplätze erfasst.“ Sichtbarer Hinweis über der Liste:
-  „Ausstattung für X von Y Spielplätzen erfasst“.
+- Filter: Alter (groß, Farbpunkt + Text), Typ (Wasser/Wald/Abenteuer), Ausstattung, Extras inkl. Rollstuhl (E11), Stadtteil, Sortierung; „In der Nähe“-Knopf (E8,
+  nur dieser Knopf fragt den Standort ab). Leere Ergebnisse erklären: „Die Ausstattung ist noch nicht für alle Spielplätze erfasst.“
+  Sichtbarer Hinweis über der Liste: „Ausstattung für X von Y Spielplätzen erfasst“. X = Spielplätze mit mindestens einem
+  belegten Gerät, Y = sichtbare Spielplätze. Die Chip-Schwelle 5 bleibt.
 - **Karte (Standard) + Liste:** Punkte über `/api/guide-karte?hub=spielplaetze` mit **eigener** Punktfunktion: id, Name, Typ, Alter
   (+ „vermutlich“), Stadtteil, Koordinate, URL, Thumb – **keine Bewertung, keine OSM-Tags**. Pins in Altersfarbe, unbekannt neutral,
   Legende mit Text, gewählter Pin mit hellem Ring auf dunkler Karte, Hover-Puls.
 - Unter der Karte `OrtLinkListe` mit **allen** Spielplätzen (Parameter `max` erhöhen), damit alle Links im ersten HTML stehen.
 - Unten `GuideSeoText` mit fünf FAQs (6.2). **Kein** Block „… nach Stadtteil“ unten (wie Clubs/Kneipen).
-- Filter-URLs `noindex, follow`, Canonical `/guides/spielplaetze`. JSON-LD BreadcrumbList + ItemList (nur indexierbare, max. 30).
+- Filter-URLs `noindex, follow`, Canonical immer `/guides/spielplaetze`. Das setzt die Seite selbst, wie
+  `web/app/guides/clubs/page.tsx`: Canonical auch bei Filtern, `robots` nur dann. Nicht über `seitenMetadaten({ noindex: true })`,
+  denn der Helfer streicht dabei den Canonical (`web/lib/seo.ts`). JSON-LD BreadcrumbList + ItemList (nur indexierbare, max. 30).
 - Fuß: „Kartendaten und Ausstattung teils © OpenStreetMap-Mitwirkende · Spielplatzdaten: Landeshauptstadt Düsseldorf (dl-de/zero-2.0)“.
 
 ### 5.3 Detail `/guides/spielplaetze/[slug]` (`instant = false`)
 - Brotkrumen bis zum Namen; Bild (freigegebenes Foto mit Urheber) oder Typ-Illustration; H1; Stadtteil (Anzeige wie überall,
   „Medienhafen“); Adresse falls vorhanden; Alters-Badge (+ „vermutlich“).
-- Beschreibung (nur aus Profil); Teilflächen („Bereich für Kleinkinder und für Schulkinder“); Ausstattung: ja (grün) / keine Angabe
-  (neutral) / nein (rot, nur belegt); Extras mit Notiz; Größe „ca. 1.200 m² laut Stadt“; Saison-Hinweis bei Wasser; **Notfallnummer** (6.3);
-  „Stand der Angaben“, Quellen, OSM-Namensnennung, Haftungssatz (6.5).
-- Rechts: Mini-Karte, „Route planen“ (Google-Maps-Link aus der Koordinate, öffnet erst nach Klick), „In der Nähe“-Anker.
-- „In der Nähe“: (1) „Weitere Spielplätze in {Park}“ bei Teilflächen desselben Parks/Namensstamms, sonst die 3 nächsten;
+- Beschreibung (nur aus Profil); zusammengeführte Teilflächen als Bereiche („Bereich für Kleinkinder und für Schulkinder“);
+  Ausstattung: ja (grün) / keine Angabe (neutral) / nein (rot, nur belegt); Extras mit Notiz; Größe „ca. 1.200 m² laut Stadt“
+  (Summe der Teilflächen); Saison-Hinweis nur für den Wasserbereich, wenn eine Kinder-Teilfläche größer ist, sonst bei Typ Wasser;
+  **Notfallnummer** (6.3); „Stand der Angaben“, Quellen, OSM-Namensnennung, Haftungssatz (6.5).
+- Rechts: Mini-Karte, „Route planen“ (Google-Maps-Link aus der Koordinate, öffnet erst nach Klick), Anker „In der Nähe“
+  (scrollt nur, fragt den Standort nicht ab).
+- „In der Nähe“: (1) „Weitere Spielplätze in {Park}“ = andere Spielplätze mit demselben Namensstamm (die zwei Hanielpark-Plätze,
+  mehrere Plätze im Hofgarten), nicht die schon zusammengeführten Bereiche; sonst die 3 nächsten;
   (2) bis zu 2 Cafés aus dem Restaurant-Guide (Typ Café, ≤ 1 km, kanonische URL) – Block entfällt, wenn keins;
   (3) „Familien-Events {inStadtteil}“ (Kategorie Familie, gleicher Stadtteil; Events haben keine Koordinate).
-- JSON-LD `Playground` mit `geo`, `address` (falls vorhanden), `isAccessibleForFree` nur ohne OSM `fee=yes`; kein `aggregateRating`;
+- JSON-LD `Playground` mit `geo`, `address` (falls vorhanden), `isAccessibleForFree` nur wenn `eintritt` nicht `ja`
+  (fehlendes OSM-`fee` lässt einen städtischen Platz frei); kein `aggregateRating`;
   BreadcrumbList aus derselben Kette wie die sichtbaren Brotkrumen.
-- Title/Description: „{Name} – Spielplatz {inStadtteil}“, Description aus Profil, sonst „{Typ} {inStadtteil}: Lage, Größe, Notfallnummer“.
+- Title/Description: „{Name} {inStadtteil}“ ohne Gedankenstrich, z. B. „Spielplatz Hofgarten (Oederallee) in Pempelfort“,
+  „Wasserspielplatz Volksgarten in Oberbilk“ (der Name trägt den Typ schon). Description aus Profil, sonst
+  „{Typ} {inStadtteil}: Lage, Größe, Notfallnummer“. Dünnes Detail: Metadaten mit `noindex` und ohne Canonical, wie Stufe C
+  in `web/app/guides/clubs/[slug]/page.tsx`. `seitenMetadaten({ noindex: true })` leistet das.
 
 ### 5.4 Indexierung
 - Hub indexierbar.
-- **Detail indexierbar nur mit** Profil-Beschreibung **und** ≥ 2 belegten Geräten (vermutetes Alter zählt nicht; Typ Wasser/Wald allein
-  reicht nicht). Sonst `noindex, follow`, ohne Canonical, nicht in der Sitemap, aber erreichbar und in Hub/Liste verlinkt.
-- **Stadtteilseiten** `/guides/spielplaetze/stadtteil/{slug}` ab 5 sichtbaren Spielplätzen (dünne zählen mit; `zaehltFuerIndex`-Default).
-  Eigene schmale Spielplatz-Karte in `guide-stadtteil.tsx` (Name, Typ, Alter, Größe) statt Restaurant-Karte; ItemList-URL = Spielplatz-URL.
+- **Detail indexierbar nur mit** Profil-Beschreibung **und** ≥ 2 belegten Geräten. Vermutetes Alter ersetzt diese zwei Geräte
+  nicht und macht eine Seite, die beides hat, nicht zu noindex. Typ Wasser/Wald allein reicht nicht. Sonst `noindex, follow`,
+  ohne Canonical, nicht in der Sitemap, aber erreichbar und in Hub/Liste verlinkt.
+- **Stadtteilseiten** `/guides/spielplaetze/stadtteil/{slug}` (`instant = false`) ab 5 **sichtbaren** Spielplätzen indexierbar.
+  Dünne zählen mit. `zaehltFuerIndex` bleibt der Default (jeder sichtbare Ort) und darf nicht auf `istIndexierbar` umgebogen
+  werden, sonst würden dünne Seiten die Schwelle nicht mehr füllen. Unter 5: `noindex, follow`, ohne Canonical, nicht in der
+  Sitemap; `guideStadtteilMetadaten` macht das, weil `seitenMetadaten` bei noindex keinen Canonical setzt.
+  Eigene schmale Spielplatz-Karte in `guide-stadtteil.tsx` (Name, Typ, Alter, Größe) statt Restaurant-Karte. Die sichtbare
+  Liste enthält alle Spielplätze des Viertels. Die ItemList nur die indexierbaren (max. 30), URL = Spielplatz-URL.
+  Schwelle und ItemList sind zwei Listen; `indexOrte` der bestehenden Komponente darf nicht beides sein.
 - **Sitemap:** eigene Liste indexierbarer Detailseiten, `lastModified` aus `aktualisiert_am`; Stadtteilseiten über `GUIDE_HUBS`.
 
 ### 5.5 Proxy, Foto-Proxy, Karten-API
@@ -242,7 +327,8 @@ nicht sofort deaktivieren. OSM halbjährlich neu abgleichen (nur `quelle: "osm"`
 - `/api/guide-karte`: Zweig `hub=spielplaetze` mit eigener Punktfunktion (5.2).
 
 ### 5.6 Einbaustellen außerhalb des Hubs
-`/guides`-Kachel `fertig: true` (Zahl aus den Daten), `GUIDE_LINKS`, Popover-/Mobilmenü, Footer (Spalte Guides), `EXTRA_LINKS.familie`
+`/guides`-Kachel `fertig: true` (Zahl aus den Daten), `GUIDE_LINKS`, Popover-/Mobilmenü, Footer-Spalte Guides **und** der Markenabsatz
+im Footer (`web/components/rahmen.tsx`, heute „Restaurants, Cafés, Kneipen, Bars und Clubs“), `EXTRA_LINKS.familie`
 = „Spielplätze“, Event-Seite (E16, Linktext `Spielplätze ${inStadtteil(st)}`), `/stadtteil/[slug]` (automatisch über `GUIDE_HUBS`),
 `llms.txt` (Abschnitt umbenennen in „Guides“ + Spielplätze-Zeile), Guide-Übersichtstext + FAQ „Welche Guides kommen noch dazu?“
 (neue Antwort: „Neu ist der Spielplatz-Guide … in Arbeit sind Ausflüge und Wochenend-Trips“), Datenschutz (6.4).
@@ -265,7 +351,9 @@ Skateanlagen und Indoor-Spielplätze sind nicht dabei.“
 2. „Welcher Spielplatz eignet sich für Kleinkinder?“
 3. „Wo finde ich Waldspielplätze?“
 4. „Was bedeutet die Nummer auf dem Spielplatzschild?“
-5. „Gibt es rollstuhlgerechte Spielplätze?“ (nur wenn E11 greift; sonst „Welche Spielplätze haben eine Toilette in der Nähe?“)
+5. „Gibt es rollstuhlgerechte Spielplätze?“ – oder „Welche Spielplätze haben eine Toilette in der Nähe?“. Die Wahl fällt **einmal
+   beim Festschreiben der Texte** nach dem OSM-Bericht (Schritt 2): FAQ-Texte sind Konstanten, keine Laufzeit-Bedingung.
+FAQ 1 und 3 verlinken auf den Typ-Filter (`?typ=wasser` bzw. `?typ=wald`, noindex mit Canonical auf den Hub – zulässig).
 
 ### 6.3 Notfallnummer (Detailseite)
 „**Notfallnummer 9601** – das ist keine Telefonnummer. Im Notfall die 112 wählen und diese Nummer nennen; sie steht auch auf dem
@@ -273,10 +361,11 @@ Schild am Spielplatz.“ Quelle: Stadt Düsseldorf. Fehlt die Nummer (4.1 Schrit
 
 ### 6.4 Datenschutz (freigegeben, korrigierter Wortlaut)
 In `/datenschutz` neuer Punkt:
-> **Standortfunktion im Spielplatz-Guide.** Wenn Sie im Spielplatz-Guide auf „In der Nähe“ tippen, fragt Ihr Browser, ob die
-> Website Ihren Standort verwenden darf. Nur wenn Sie zustimmen, berechnet Ihr Browser auf Ihrem Gerät die Entfernung zu den
-> Spielplätzen. Die Website erhält Ihren Standort dabei nicht und speichert ihn nicht. Die Freigabe können Sie jederzeit in den
-> Einstellungen Ihres Browsers widerrufen.
+> **Standortfunktion im Spielplatz-Guide.** Wenn Sie auf der Übersichtsseite des Spielplatz-Guides bei der Sortierung auf
+> „In der Nähe“ tippen, fragt Ihr Browser, ob die Website Ihren Standort verwenden darf. Nur wenn Sie zustimmen, berechnet
+> Ihr Browser auf Ihrem Gerät die Entfernung zu den Spielplätzen. Die Website erhält Ihren Standort dabei nicht und speichert
+> ihn nicht. Die Freigabe können Sie jederzeit in den Einstellungen Ihres Browsers widerrufen. Der Link „In der Nähe“ auf
+> einer Spielplatz-Seite springt nur zu den schon geladenen Angaben weiter unten und fragt den Standort nicht ab.
 
 Zusätzlich im bestehenden Google-Maps-Absatz: „… und der Knopf ‚Route planen‘ im Spielplatz-Guide …“ ergänzen.
 
@@ -288,15 +377,25 @@ Zusätzlich im bestehenden Google-Maps-Absatz: „… und der Knopf ‚Route pla
 ## 7. Tests
 
 **Python:** WGS84-Pflicht/Koordinaten-Rechteck (Abbruch), Objektart-Text, Komma-Größe, Leerzeilen; Zusammenführung (9777 ×3 am selben
-Punkt → 1; Hanielpark 127 m → 1; konstruierter Fall > 150 m → 2 Plätze, Nummer unterdrückt; Bolzplatz mit gleicher Nummer zählt nicht);
-Namen (GW mit Komma, Ksp/Wsp/Waldksp, Apostroph, „Str.“, unauflösbare Abkürzung → inaktiv); Ray-Casting (MultiPolygon, Loch, Rand);
+Punkt → 1; konstruierter Fall 40 m → 2 Plätze, Nummer behalten; Hanielpark 127 m → 2 Plätze, Nummer behalten; konstruierter Fall
+> 150 m → 2 Plätze, Nummer unterdrückt; Bolzplatz mit gleicher Nummer zählt nicht; gleiche Größe → kleinerer Objektschlüssel);
+Namen (GW mit Komma, Ksp/Wsp/Waldksp, Apostroph, „Str.“, `a.d.` → „an der“, `ggü.` → „gegenüber“, „Fritz./Mörsenb.“ → inaktiv);
+Wiederholungsimport (Schnittmenge trifft eine Zeile; ein Schlüssel fehlt → `fehlende_teile`, Slug bleibt; Schlüssel wechseln die
+Gruppe → Prüf-CSV, nichts automatisch teilen); gemischte Gruppe (10 m + 100 m → Teilgruppe + Einzelplatz, Code `gruppe_gemischt`);
+`korrekturen.csv` (Anzeigename ersetzt Normalisierung und löscht `name_unklar`; `ausschliessen` hält inaktiv; Eintrag am kleinsten
+Schlüssel einer Gruppe; `abenteuer:`-Zeilen); Slug ändert sich bei inaktiver Zeile mit neuem Namen, bei aktiver nicht;
+Prüf-Codes (welche sperren die Freischaltung); Score-Teilwerte und Top = 20 % der indexierbaren; Ray-Casting (MultiPolygon, Loch, Rand);
 Flingern Nord/Süd-Mapping; Bezirk aus `Nummer[:2]` (leer = kein Fehler, abweichend = Prüf-CSV); Adresse bleibt leer ohne `strasse_hausnr`;
-OSM-Mapping; Alter vermutlich (alle Regeln, < 2 Geräte → keins); Belegprüfung; Score; Top-Badge nur bei indexierbar.
+OSM-Mapping inkl. `fee` → `eintritt`; Alter in der Reihenfolge von 4.5 (weniger als zwei Geräte → keins; Kleinkind und Schulkind im
+Namen → belegt „alle“; vermutet ersetzt keine Geräte); Belegprüfung; Score; Top-Badge nur bei indexierbar.
 
-**Web (vitest):** Filter (UND, „alle“, unbekanntes Alter, Chip-Schwelle 4/5, Rollstuhl `limited` zählt nicht), Sichtbarkeit ohne
-Qualitäts-Score, `istIndexierbar`, Karten-Punkte ohne Bewertung/OSM-Tags, JSON-LD ohne `aggregateRating`, `isAccessibleForFree`,
-Pfadentscheidungen (neue Fälle statt `null`), Sitemap-Liste, Event-Link nur bei Familie mit `inStadtteil`, Saison-Hinweis nur bei Wasser
-mit Beleg, Notfallnummer-Zeile entfällt ohne Nummer, Texte (5 FAQs, nur interne Links, keine Score-Zahl, ihr/euch).
+**Web (vitest):** Filter (UND, „alle“, unbekanntes Alter, Chip-Schwelle 4/5, Rollstuhl `limited` zählt nicht, X = mindestens ein
+Gerät, Typ-Filter ODER inkl. Abenteuer), Titel „{Name} {inStadtteil}“, Sichtbarkeit ohne Qualitäts-Score, `istIndexierbar` (Beschreibung + 2 Geräte + vermutetes Alter → indexierbar;
+Beschreibung + vermutetes Alter + 1 Gerät → nicht), Karten-Punkte ohne Bewertung/OSM-Tags, JSON-LD ohne `aggregateRating`,
+`isAccessibleForFree` (nur `eintritt=ja` setzt es auf falsch), Pfadentscheidungen (neue Fälle statt `null`), Sitemap-Liste,
+Stadtteilseite ab 5 sichtbaren inklusive dünner, dünnes Detail ohne Canonical, Filter-URL mit Canonical auf den Hub,
+Event-Link nur bei Familie mit `inStadtteil`, Saison-Hinweis nur für den Wasserbereich, Notfallnummer-Zeile entfällt ohne Nummer,
+Texte (5 FAQs, nur interne Links, keine Score-Zahl, ihr/euch).
 
 ---
 
@@ -304,12 +403,12 @@ mit Beleg, Notfallnummer-Zeile entfällt ohne Nummer, Texte (5 FAQs, nur interne
 
 | Schritt | Inhalt | Freigabe / Ergebnis |
 |---|---|---|
-| 1 | Stadt-Import (inaktiv), Prüf-CSV | Auftraggeber sichtet CSV (Namen, Abkürzungen, Grenzfälle) |
+| 1 | Stadt-Import (inaktiv) direkt per Skript wie beim Club-Import – **Freigabe des Auftraggebers für diesen Schreibweg vor dem ersten Lauf**; Prüf-CSV | Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein; Import erneut |
 | 2 | OSM-Abgleich + Bericht (Abdeckung) | Entscheidung, ob Runde 2 der Profile nötig ist |
 | 3 | Abenteuer-Liste | Auftraggeber bestätigt |
 | 4 | Google Runde 1 (Kosten vorher) + Foto-Sichtung | Foto-SQL |
 | 5 | Profile: Probe 10 → Bericht → Rest Runde 1 | Gegenlesen |
-| 6 | Score, Top-Badge, Freischaltungs-SQL (`aktiv=true`, Slugs fest) | Auftraggeber führt SQL aus |
+| 6 | Score, Top-Badge, Freischaltungs-SQL: `aktiv=true` nur für Zeilen ohne sperrenden Prüf-Code (`name_unklar`, `kein_stadtteil`, `access_private`, `gruppe_gemischt`) und ohne `ausschliessen` in `korrekturen.csv`; ab da ist der Slug fest | Auftraggeber führt SQL aus |
 | 7 | Website, Texte (6.1/6.2 zur Freigabe), Illustrationen eingebaut | Cursor-Check |
 | 8 | Tests, Build, Browser (Desktop/Mobil, hell/dunkel) | Deploy nur nach OK |
 | 9 | IndexNow (Hub, Stadtteilseiten, indexierbare Details), Sitemap-Kontrolle | Bericht |
@@ -318,8 +417,8 @@ mit Beleg, Notfallnummer-Zeile entfällt ohne Nummer, Texte (5 FAQs, nur interne
 Nicht in dieser Runde: Meldefunktion für Nutzer, Neuss/Ratingen, Bolzplätze/Skaten, Indoor-Spielplätze, Clustering der Karte.
 
 ## 9. Kosten (Schätzung, vor dem Lauf konkret nennen)
-Stadt, Stadtteilgrenzen, OSM: 0 $. Google Runde 1: Umkreissuche 109 × Places-Satz (grob 2–4 $) + Foto-Sichtung (≈ 60 Plätze × 10 Fotos,
-grob 4 $). Profile: 109 × 0,05–0,10 $ ≈ 6–11 $. **Gesamt ≈ 12–19 $**, Runde 2 (85 Plätze) zusätzlich ≈ 5–9 $. Rahmen E14: 40 $.
+Stadt, Stadtteilgrenzen, OSM: 0 $. Google Runde 1: Umkreissuche 108 × Places-Satz (grob 2–4 $) + Foto-Sichtung (≈ 60 Plätze × 10 Fotos,
+grob 4 $). Profile: 108 × 0,05–0,10 $ ≈ 6–11 $. **Gesamt ≈ 12–19 $**, Runde 2 (74 Plätze) zusätzlich ≈ 4–8 $. Rahmen E14: 40 $.
 
 ## 10. Risiken und Gegenmaßnahmen
 | Risiko | Gegenmaßnahme |
@@ -330,7 +429,7 @@ grob 4 $). Profile: 109 × 0,05–0,10 $ ≈ 6–11 $. **Gesamt ≈ 12–19 $**,
 | Falsche Notruf-Info | Zusammenführung + Unterdrückung bei > 150 m, Wortlaut 6.3, Quelle |
 | Kinder auf Fotos | nur Sichtprüfung, sonst Illustration |
 | Falscher Stadtteil | Punkt-in-Polygon mit Prüf-CSV |
-| Name falsch aufgelöst | Prüf-CSV, unklare Plätze inaktiv |
+| Name falsch aufgelöst | Prüf-CSV, unklare Plätze inaktiv, Korrektur über `korrekturen.csv` (Schlüssel statt Name) |
 | Slug-Änderung nach Livegang | Slugs vor Freischaltung fest |
 | Abmahnrisiko durch Wertungen | keine Score-Zahl, „nein“ nur belegt, Haftungssatz |
 | ODbL | Nur Eigenschaften, Namensnennung, Rohdaten/Karten-API ohne OSM-Tags |
@@ -350,7 +449,8 @@ Prüfung vor dem Einbau: keine Person (auch nicht im Hintergrund), keine Schrift
 links/unten lesbar (hell und dunkel).
 
 ## 12. Abnahmekriterien
-- 343 Spielplätze (bzw. Zahl nach Ausschlüssen) korrekt importiert; Stichprobe von 30: Name, Stadtteil, Notfallnummer stimmen.
+- 344 Spielplätze (bzw. Zahl nach Ausschlüssen) korrekt importiert; Stichprobe von 30: Name, Stadtteil, Notfallnummer stimmen.
+  Hanielpark ist zwei Plätze, die sechs Gruppen auf einem Punkt sind je einer.
 - Alle Wasser- und Waldspielplätze mit Profil; ≥ 60 Plätze mit ≥ 2 belegten Geräten und Altersangabe (belegt oder vermutlich).
 - Keine Fotos mit Personen; jedes Foto mit Urheber; Illustrationen eingebaut.
 - Hub, Detail, Stadtteilseiten: Inhalt im ersten HTML; Index-/Canonical-Regeln wie 5.4; JSON-LD valide, ohne Bewertungen; Proxy 404 für
@@ -370,6 +470,15 @@ Keine offenen Entscheidungen. Texte 6.1/6.2 und die Abenteuer-Liste werden vor d
   Notfallnummer-Statistik, Bezirk aus `Nummer[:2]`, Google-Umfang 109, eigene Sitemap-Liste, eigene Karten-Punkte, Event-Link nur
   Familie mit `inStadtteil`, Handoff-Abweichungen (Stadtmitte, WC-Kreuz), Datenschutz-Wortlaut + Maps-Absatz, Tests, Bild-Prompts,
   weitere Einbaustellen, `extras` laden.
-- Konsolidierung (Claude, 12.11.): Dubletten sind Teilflächen → **Zusammenführung 351 → 343**; vermutetes Alter für Filter/Pin;
+- Konsolidierung (Claude, 12.11.): Dubletten sind Teilflächen → Zusammenführung 351 → 343 bei 150 m; vermutetes Alter für Filter/Pin;
   Chip-Schwelle 5; Slugs vor Freischaltung fest; Rücknahme-Weg; Datenmodell; Titel/Description-Muster; Hinweis „X von Y erfasst“;
   `OrtLinkListe` mit allen; kein Stadtteil-Block unten; Quellen-Fuß; Ablauf mit Freigaben; Abnahme-Stichprobe.
+- Cursor-Prüfung 3: 150 m fasst Hanielpark (127 m) zu weit → Zusammenführung nur ≤ 30 m, **351 → 344**, Nummer dort behalten;
+  Runde 1 an den zusammengeführten Plätzen = **108** (9 + 20 + 79), nicht 109; Altersformel mit fester Reihenfolge; Wiederholungsimport
+  über Schlüssel-Schnittmenge; `eintritt`, Koordinate je Teil, `fehlende_teile`; Freischalt-SQL mit Ausschlüssen; DELETE nur vor der
+  Freischaltung; Filter-Canonical nicht über `seitenMetadaten`; Stadtteil-ItemList nur indexierbar; X/Y definiert; Datenschutz-Satz nur
+  für den Sortier-Knopf; Titel „{Name} – {inStadtteil}“; Footer-Markenabsatz; Tests nachgezogen.
+- Vierte Durchsicht (Claude, 12.11.): Runde 2 nach Zusammenführung = **74** (nicht 85); Rückweg der Prüf-CSV über eingecheckte
+  `korrekturen.csv` (Schlüssel statt Name, ersetzt `NICHT_IM_HUB`), Slug bis zur Freischaltung neu, danach fest; Prüf-Codes
+  `extras.spielplatz.pruefung` als Grundlage der Freischalt-SQL; Typ `abenteuer` mit Öffnungszeiten; Typ-Filter Wasser/Wald/Abenteuer;
+  gemischte Gruppen; Score-Formel und Top-Grundmenge; FAQ 5 beim Festschreiben; Titel ohne Gedankenstrich; Freigabe des Schreibwegs.
