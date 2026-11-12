@@ -3,10 +3,9 @@ import { stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
-import { Suspense } from "react";
 import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
-import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, SkeletonKarten, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
+import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
 import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
@@ -49,12 +48,13 @@ export async function generateMetadata(props: PageProps<"/">): Promise<Metadata>
   });
 }
 
-export default function Startseite(props: PageProps<"/">) {
-  return (
-    <Suspense fallback={<StartSkeleton />}>
-      <StartInhalt searchParams={props.searchParams} />
-    </Suspense>
-  );
+// Ohne äußere Suspense-Grenze (SEO-/GEO-Plan, Maßnahme 1): Die Seite liest searchParams oben und rendert direkt –
+// H1 und die Event-Liste stehen im ersten HTML, auch für Crawler ohne JavaScript (GPTBot, ClaudeBot …). instant = false
+// erlaubt das blockierende Lesen (wie auf der Eventseite); die Daten kommen aus dem Cache, die Antwort bleibt schnell.
+export const instant = false;
+
+export default async function Startseite(props: PageProps<"/">) {
+  return <StartInhalt searchParams={props.searchParams} />;
 }
 
 async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
@@ -398,23 +398,5 @@ function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
         </div>
       </div>
     </article>
-  );
-}
-
-function StartSkeleton() {
-  return (
-    <>
-      <section className="hero">
-        <div className="container">
-          <h1 className="hero__claim d">
-            Was geht <span className="claim-wort">heute</span> in Düsseldorf?
-          </h1>
-          <div className="skeleton" style={{ height: 72, marginTop: 18, opacity: 0.15 }} />
-        </div>
-      </section>
-      <div className="container sektion">
-        <SkeletonKarten anzahl={4} />
-      </div>
-    </>
   );
 }

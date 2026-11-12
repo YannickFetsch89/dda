@@ -3,8 +3,7 @@ import { stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
-import { Suspense } from "react";
-import { Icon, ListenZeile, SkeletonKarten } from "@/components/karten";
+import { Icon, ListenZeile } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { filtern, nachBezirken } from "@/lib/ableitungen";
 import { zeitraumAuflösen } from "@/lib/datum";
@@ -28,15 +27,18 @@ const ZEITRAEUME = [
   { key: "monat", label: "30 Tage" },
 ];
 
-export default function Stadtteile(props: PageProps<"/stadtteile">) {
+// Ohne äußere Suspense-Grenze (SEO-/GEO-Plan, Maßnahme 1): Die Seite liest searchParams oben und rendert direkt –
+// H1 und die Event-Liste stehen im ersten HTML, auch für Crawler ohne JavaScript (GPTBot, ClaudeBot …). instant = false
+// erlaubt das blockierende Lesen (wie auf der Eventseite); die Daten kommen aus dem Cache, die Antwort bleibt schnell.
+export const instant = false;
+
+export default async function Stadtteile(props: PageProps<"/stadtteile">) {
   return (
     <div className="container">
       <div className="seitentitel">
         <h1 className="d">Nach Stadtteil</h1>
       </div>
-      <Suspense fallback={<div className="sektion"><SkeletonKarten anzahl={4} /></div>}>
-        <StadtteileInhalt searchParams={props.searchParams} />
-      </Suspense>
+      <StadtteileInhalt searchParams={props.searchParams} />
     </div>
   );
 }

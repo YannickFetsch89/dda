@@ -2,8 +2,7 @@
 import type { Metadata } from "next";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
-import { Suspense } from "react";
-import { Bild, EventKarte, Icon, KatBadge, Leer, SkeletonKarten, eventPfad } from "@/components/karten";
+import { Bild, EventKarte, Icon, KatBadge, Leer, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { OrtKartenGrid } from "@/components/ort-karten";
 import { orteLaden } from "@/lib/orte";
@@ -53,23 +52,15 @@ function url(aktuell: Params, aenderung: Params): string {
   return qs ? `/entdecken?${qs}` : "/entdecken";
 }
 
-export default function Entdecken(props: PageProps<"/entdecken">) {
+// Ohne äußere Suspense-Grenze (SEO-/GEO-Plan, Maßnahme 1): Die Seite liest searchParams oben und rendert direkt –
+// H1 und die Event-Liste stehen im ersten HTML, auch für Crawler ohne JavaScript (GPTBot, ClaudeBot …). instant = false
+// erlaubt das blockierende Lesen (wie auf der Eventseite); die Daten kommen aus dem Cache, die Antwort bleibt schnell.
+export const instant = false;
+
+export default async function Entdecken(props: PageProps<"/entdecken">) {
   return (
     <div className="container">
-      <Suspense
-        fallback={
-          <>
-            <div className="seitentitel">
-              <h1 className="d">Entdecken</h1>
-            </div>
-            <div className="sektion">
-              <SkeletonKarten anzahl={8} />
-            </div>
-          </>
-        }
-      >
-        <EntdeckenInhalt searchParams={props.searchParams} />
-      </Suspense>
+      <EntdeckenInhalt searchParams={props.searchParams} />
     </div>
   );
 }
