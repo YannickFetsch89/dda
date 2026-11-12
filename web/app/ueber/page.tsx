@@ -54,6 +54,8 @@ const F: Record<string, Foto> = {
   food2: { src: "/ueber/food-2.jpg", alt: "Dampfende Schüssel Ramen mit Ei und Chashu", w: 1200, h: 1500 },
   food3: { src: "/ueber/food-3.jpg", alt: "Brunch-Tisch mit Avocado-Toast, Pancakes und Kaffee", w: 1300, h: 1300 },
   team1: { src: "/ueber/team-1.jpg", alt: "Zwei aus dem Team planen im Café mit Stadtplan und Notizzetteln", w: 1254, h: 1254 },
+  feier1: { src: "/ueber/feier-1.jpg", alt: "Live-Musik mit Gitarre, Geige und Kontrabass unter Lichterketten", w: 1600, h: 900 },
+  feier2: { src: "/ueber/feier-2.jpg", alt: "Freunde stoßen abends im Biergarten unter Lichterketten an", w: 1600, h: 900 },
   team2: { src: "/ueber/team-2.jpg", alt: "Gespräch mit einem Koch an der Theke eines Restaurants", w: 1300, h: 1300 },
 };
 
@@ -111,7 +113,7 @@ export default async function Ueber() {
       </section>
 
       {/* Jedes Foto steht genau einmal auf der Seite (nur das Laufband wiederholt seine eigene Reihe für die Endlosschleife) */}
-      <Laufband richtung="links" fotos={[F.kultur2, F.cocktail, F.freunde2, F.club, F.food2, F.altbier1]} />
+      <Laufband richtung="links" fotos={[F.kultur2, F.cocktail, F.freunde2, F.club, F.feier2, F.food2, F.altbier1]} />
 
       {/* ── Wie es anfing ── */}
       <section className="container ue-abschnitt ue-anfang">
@@ -147,7 +149,7 @@ export default async function Ueber() {
           </div>
           <div className="ue-mosaik" aria-hidden>
             <Bild f={F.flohmarkt} className="ue-mosaik__a ue-parallaxe" />
-            <Bild f={F.indie} className="ue-mosaik__b ue-parallaxe ue-parallaxe--schnell" />
+            <Bild f={F.party4} className="ue-mosaik__b ue-parallaxe ue-parallaxe--schnell" />
             <Bild f={F.party2} className="ue-mosaik__d ue-parallaxe" />
             <Bild f={F.rhein} className="ue-mosaik__c ue-parallaxe" />
           </div>
@@ -176,7 +178,7 @@ export default async function Ueber() {
         </div>
       </section>
 
-      <Laufband richtung="rechts" fotos={[F.kultur3, F.party3, F.food3, F.kultur4, F.freunde3, F.party4]} />
+      <Laufband richtung="rechts" fotos={[F.kultur3, F.party3, F.food3, F.kultur4, F.feier1, F.freunde3, F.indie]} />
 
       {/* ── Wer dahintersteht: Polaroid-Stapel ── */}
       <section className="container ue-abschnitt ue-team">
