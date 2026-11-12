@@ -29,13 +29,13 @@ QUELLE_STADTTEIL: dict[str, str] = {
     "Stahlwerk Düsseldorf": "Lierenfeld",
     "Rudas Studios": "Lierenfeld",
     "Kulturschlachthof R25": "Lierenfeld",
-    "d-live": "Stockum",
-    "d.live": "Stockum",
-    "Mitsubishi Electric HALLE": "Stockum",
+    # d.live betreibt mehrere Hallen in verschiedenen Stadtteilen (Arena Stockum, Mitsubishi Electric Halle Oberbilk,
+    # PSD Bank Dome Rath, Castello Reisholz) – deshalb KEIN Pauschalwert für die Quelle, die Halle entscheidet (Venue-Liste)
+    "Mitsubishi Electric HALLE": "Oberbilk",
     "STARTPLATZ Düsseldorf": "Hafen",
     "Messe Düsseldorf": "Stockum",
     "Fortuna Düsseldorf": "Stockum",
-    "DEG Eishockey": "Stockum",
+    "DEG Eishockey": "Rath",  # Heimspiele im PSD Bank Dome
 }
 
 # Priorität 1: Bekannte Venues → Stadtteil
@@ -130,13 +130,17 @@ VENUE_STADTTEIL: dict[str, str] = {
     "KIT": "Unterbilk",
     "KIT – Kunst im Tunnel": "Unterbilk",
     # --- Stockum ---
-    "Mitsubishi Electric HALLE": "Stockum",
-    "Mitsubishi Electric Halle": "Stockum",
-    "PSD BANK DOME": "Stockum",
     "Merkur Spiel-Arena": "Stockum",
-    "ISS DOME": "Stockum",
     "ESPRIT arena": "Stockum",
     "Messe Düsseldorf": "Stockum",
+    # --- Oberbilk: Mitsubishi Electric Halle, Siegburger Straße 15 (bis 2026-11-12 fälschlich Stockum) ---
+    "Mitsubishi Electric HALLE": "Oberbilk",
+    "Mitsubishi Electric Halle": "Oberbilk",
+    # --- Rath: PSD Bank Dome (früher ISS Dome), Theodorstraße ---
+    "PSD BANK DOME": "Rath",
+    "ISS DOME": "Rath",
+    # --- Reisholz: Castello ---
+    "CASTELLO": "Reisholz",
     # --- Heerdt ---
     "Areal Böhler": "Heerdt",
     "Böhler-Areal": "Heerdt",
