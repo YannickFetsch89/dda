@@ -75,8 +75,11 @@ def _datum(tag: str, monat: str, jahr: str) -> Optional[date]:
 
 
 def _jahreswechsel(von: Optional[date], bis: Optional[date]) -> tuple[Optional[date], Optional[date]]:
-    """„31.12.26 – 01.01.26“: Endmonat vor Startmonat meint das nächste Jahr, nicht einen rückwärts laufenden Bereich."""
-    if not von or not bis or bis >= von or bis.month >= von.month:
+    """
+    „31.12.26 – 01.01.26“: Ende im Januar nach Start im Dezember meint das nächste Jahr. Andere rückwärts laufende
+    Bereiche („01.06.26 – 01.05.26“) sind Tippfehler und bleiben rückwärts – titel_parsen verwirft sie dann.
+    """
+    if not von or not bis or bis >= von or not (von.month == 12 and bis.month == 1):
         return von, bis
     try:
         return von, bis.replace(year=bis.year + 1)

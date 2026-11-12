@@ -34,6 +34,8 @@ class TitelTest(unittest.TestCase):
         self.assertEqual(d["datum_bis"], date(2027, 1, 1))
         # gleicher Monat, Ende vor Start: kein stilles Jahr+1
         self.assertIsNone(titel_parsen("31.-01.10.26 – Rückwärts"))
+        # Tippfehler über Monate (nicht Dezember → Januar): verworfen, nicht ins nächste Jahr verlegt
+        self.assertIsNone(titel_parsen("01.06.26 – 01.05.26 – Tippfehler"))
 
     def test_woechentlich_und_ohne_datum(self):
         self.assertEqual(titel_parsen("Jeden Freitag – Freak Friday"), {"woechentlich": "freitag", "titel": "Freak Friday"})

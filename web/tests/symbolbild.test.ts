@@ -69,6 +69,8 @@ describe("Saisonale Symbolbilder", () => {
 
   it("keine Fehlzuordnung bei Osteria, Neujahrskonzert, Pride and Prejudice, Winter-Biergarten", () => {
     expect(symbolMotiv(ev("Dinner in der Osteria", "2026-03-28"))).not.toBe("ostern");
+    expect(symbolMotiv(ev("Flohmarkt in Osterath", "2026-03-28"))).not.toBe("ostern");
+    expect(symbolMotiv(ev("Ostermarkt im Park", "2026-03-28"))).toBe("ostern");
     expect(symbolMotiv(ev("Neujahrskonzert", "2027-01-01"))).not.toBe("silvester");
     expect(symbolMotiv(ev("Neujahrsfeier", "2027-01-01"))).toBe("silvester");
     expect(symbolMotiv(ev("Pride and Prejudice", "2026-06-15"))).not.toBe("csd-pride");

@@ -67,8 +67,8 @@ const SAISON: Saison[] = [
   { motiv: "valentinstag", stichworte: /valentin/i, zeitfenster: (d) => zwischen(d, "02-01", "02-14") },
   {
     motiv: "ostern",
-    // „Osteria“ ist ein Restaurantname, kein Osterfest
-    stichworte: /\boster(?!ia)|\beaster\b/i,
+    // „Osteria“ ist ein Restaurantname, „Osterath“ ein Ortsteil von Meerbusch – beides kein Osterfest
+    stichworte: /\boster(?!ia|ath)|\beaster\b/i,
     zeitfenster: (d) => {
       const o = ostersonntag(Number(d.slice(0, 4)));
       return d >= plus(o, -21) && d <= plus(o, 1);

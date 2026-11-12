@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const WT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -152,6 +152,8 @@ const ZEITRAUM_LINKS = [
   { key: "alle", label: "60 Tage" },
 ];
 
+const keinAbo = () => () => {};
+
 function heuteLokal(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
@@ -159,10 +161,9 @@ function heuteLokal(): string {
 export function DatumPill() {
   const [offen, setOffen] = useState(false);
   const [kalender, setKalender] = useState(false);
-  const [heute, setHeute] = useState("");
+  // Heutiges Datum erst im Browser (Server liefert ""), ohne setState im Effect
+  const heute = useSyncExternalStore(keinAbo, heuteLokal, () => "");
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setHeute(heuteLokal()); }, []);
 
   useEffect(() => {
     if (!offen) return;
