@@ -135,6 +135,41 @@ def _sql_text(wert: str) -> str:
     return "'" + wert.replace("'", "''") + "'"
 
 
+def umbenennungen(events: list[dict]) -> tuple[dict[str, str], list[dict]]:
+    """
+    Welche Events bekommen welchen neuen Ortsnamen? (rein, testbar)
+
+    Die Tabelle erlaubt (titel, datum, ort, uhrzeit) nur einmal (Constraint events_titel_datum_ort_uhrzeit_key).
+    Ein ausgeblendeter Dubletten-Eintrag (abgelehnt, mit 301-Weiterleitung) kann nach dem Umbenennen denselben
+    Schlüssel bekommen wie sein Original – dann bleibt er beim alten Namen. Reihenfolge: sichtbare Events zuerst,
+    ausgeblendete zuletzt. Ohne Uhrzeit gibt es keine Kollision (NULL ist in Postgres nie gleich).
+
+    Rückgabe: (event_id → neuer Name, ausgelassene Events)
+    """
+    def schluessel_von(e: dict, ort: str):
+        return (e.get("titel"), e.get("datum"), ort, e.get("uhrzeit")) if e.get("uhrzeit") else None
+
+    kandidaten = [e for e in events if e.get("ort") and einheitlicher_name(e["ort"]) != e["ort"]]
+    kandidaten_ids = {e["id"] for e in kandidaten}
+    # Belegt sind die Schlüssel aller Events, die ihren Namen behalten
+    belegt = {k for e in events if e["id"] not in kandidaten_ids and (k := schluessel_von(e, e.get("ort")))}
+    zuweisung: dict[str, str] = {}
+    ausgelassen: list[dict] = []
+    for e in sorted(kandidaten, key=lambda x: (bool(x.get("abgelehnt")), x["id"])):
+        neu = einheitlicher_name(e["ort"])
+        k = schluessel_von(e, neu)
+        if k and k in belegt:
+            ausgelassen.append(e)
+            # Bleibt beim alten Namen – dessen Schlüssel ist damit belegt
+            if (alt := schluessel_von(e, e["ort"])):
+                belegt.add(alt)
+            continue
+        if k:
+            belegt.add(k)
+        zuweisung[e["id"]] = neu
+    return zuweisung, ausgelassen
+
+
 def sql_erzeugen(pfad: str) -> int:
     """
     Schreibt SQL, das gespeicherte Ortsnamen vereinheitlicht (Events und Reihen). Schreibt selbst nichts in die DB.
@@ -171,12 +206,17 @@ def sql_erzeugen(pfad: str) -> int:
             if len(seite) < 1000:
                 return zeilen
 
-    events = alle("events", "id,titel,ort,reihe_id")
+    events = alle("events", "id,titel,datum,uhrzeit,ort,reihe_id,abgelehnt")
     reihen = alle("reihen", "id,slug,schluessel,ort")
 
-    # Ortsnamen → neuer Name (nur, wo sich etwas ändert)
+    # Events: je Event-ID, unter Beachtung der Eindeutigkeitsregel (siehe umbenennungen)
+    zuweisung, ausgelassen = umbenennungen(events)
+    ids_je_name: dict[str, list[str]] = defaultdict(list)
+    for eid, neu in zuweisung.items():
+        ids_je_name[neu].append(eid)
+    # Reihen: Ortsnamen → neuer Name (Reihen haben keine solche Eindeutigkeitsregel auf dem Ort)
     umbenennen: dict[str, list[str]] = defaultdict(list)
-    for alt in sorted({e["ort"] for e in events if e.get("ort")} | {r["ort"] for r in reihen if r.get("ort")}):
+    for alt in sorted({e["ort"] for e in events if e["id"] in zuweisung} | {r["ort"] for r in reihen if r.get("ort")}):
         neu = einheitlicher_name(alt)
         if neu and neu != alt:
             umbenennen[neu].append(alt)
@@ -185,9 +225,9 @@ def sql_erzeugen(pfad: str) -> int:
     schluessel_vorhanden = {r["schluessel"] for r in reihen}
     reihen_neu: dict[str, str] = {}
     for e in events:
-        if not e.get("reihe_id") or not e.get("ort"):
+        if not e.get("reihe_id") or e["id"] not in zuweisung:
             continue
-        neu = einheitlicher_name(e["ort"])
+        neu = zuweisung[e["id"]]
         alt_k, neu_k = reihen_schluessel(e["titel"], e["ort"]), reihen_schluessel(e["titel"], neu)
         if neu != e["ort"] and alt_k and neu_k and alt_k != neu_k:
             reihen_neu[e["reihe_id"]] = neu_k
@@ -209,9 +249,20 @@ def sql_erzeugen(pfad: str) -> int:
         "BEGIN;",
         "",
     ]
+    if ausgelassen:
+        zeilen.append(f"-- {len(ausgelassen)} Einträge behalten ihren alten Namen, weil sie sonst mit einem anderen Termin")
+        zeilen.append("-- (gleicher Titel, Tag, Ort und Uhrzeit) zusammenfielen – meist ausgeblendete Dubletten mit Weiterleitung:")
+        for e in ausgelassen:
+            zeilen.append(f"--   {e['datum']} {e.get('uhrzeit') or ''} „{(e.get('titel') or '')[:50]}“ @ {e['ort']}"
+                          f"{' (ausgeblendet)' if e.get('abgelehnt') else ''}")
+        zeilen.append("")
+    for neu, ids in sorted(ids_je_name.items()):
+        for i in range(0, len(ids), 200):
+            liste = ", ".join(_sql_text(x) for x in sorted(ids[i:i + 200]))
+            zeilen.append(f"UPDATE public.events SET ort = {_sql_text(neu)} WHERE id IN ({liste});")
+    zeilen.append("")
     for neu, alte in sorted(umbenennen.items()):
         liste = ", ".join(_sql_text(a) for a in alte)
-        zeilen.append(f"UPDATE public.events SET ort = {_sql_text(neu)} WHERE ort IN ({liste});")
         zeilen.append(f"UPDATE public.reihen SET ort = {_sql_text(neu)} WHERE ort IN ({liste});")
     if reihen_neu:
         zeilen += ["", "-- Reihen-Schlüssel (titel|ort) an die neuen Ortsnamen anpassen – Slugs bleiben"]
@@ -221,21 +272,20 @@ def sql_erzeugen(pfad: str) -> int:
         "",
         "COMMIT;",
         "",
-        "-- Kontrolle 1: alte Schreibweisen – erwartet: KEINE Zeile",
-        "SELECT ort, COUNT(*) AS anzahl FROM public.events WHERE ort IN ("
-        + ", ".join(_sql_text(a) for alte in umbenennen.values() for a in alte) + ") GROUP BY ort;",
+        f"-- Kontrolle 1: alte Schreibweisen – erwartet: KEINE Zeile außer den {len(ausgelassen)} oben genannten Einträgen",
+        "SELECT ort, abgelehnt, COUNT(*) AS anzahl FROM public.events WHERE ort IN ("
+        + ", ".join(_sql_text(a) for a in sorted({e['ort'] for e in events if e['id'] in zuweisung})) + ") GROUP BY ort, abgelehnt;",
         "",
         "-- Kontrolle 2: neue Namen mit Anzahl",
         "SELECT ort, COUNT(*) AS anzahl FROM public.events WHERE ort IN ("
-        + ", ".join(_sql_text(n) for n in sorted(umbenennen)) + ") GROUP BY ort ORDER BY anzahl DESC;",
+        + ", ".join(_sql_text(n) for n in sorted(ids_je_name)) + ") GROUP BY ort ORDER BY anzahl DESC;",
         "",
     ]
     with open(pfad, "w", encoding="utf-8") as f:
         f.write("\n".join(zeilen))
-    anzahl = sum(len(v) for v in umbenennen.values())
-    logger.info("Ortsnamen: SQL geschrieben (%s) – %d Schreibweisen → %d Namen, %d Reihen-Schlüssel",
-                pfad, anzahl, len(umbenennen), len(reihen_neu))
-    return anzahl
+    logger.info("Ortsnamen: SQL geschrieben (%s) – %d Events → %d Namen, %d ausgelassen, %d Reihen-Schlüssel",
+                pfad, len(zuweisung), len(ids_je_name), len(ausgelassen), len(reihen_neu))
+    return len(zuweisung)
 
 
 def main():

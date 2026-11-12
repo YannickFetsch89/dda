@@ -64,6 +64,23 @@ class OrtsnamenTest(unittest.TestCase):
         self.assertNotEqual(ort_basis(einheitlicher_name("D'haus — Central")), ort_basis("Central"))
         self.assertEqual(ort_basis(einheitlicher_name("zakk Halle")), ort_basis("zakk – Halle"))
 
+    def test_eindeutigkeit_beim_umbenennen(self):
+        # Original (sichtbar) und ausgeblendete Dublette werden beide zu „Jazz-Schmiede“ → die Dublette bleibt beim alten Namen
+        from pipeline.ortsnamen import umbenennungen
+        original = {"id": "a", "titel": "D.Now", "datum": "2026-11-11", "uhrzeit": "20:30:00", "ort": "Jazz-Schmiede Düsseldorf", "abgelehnt": False}
+        dublette = {"id": "b", "titel": "D.Now", "datum": "2026-11-11", "uhrzeit": "20:30:00", "ort": "Jazz Schmiede", "abgelehnt": True}
+        zuweisung, ausgelassen = umbenennungen([dublette, original])
+        self.assertEqual(zuweisung, {"a": "Jazz-Schmiede"})
+        self.assertEqual([e["id"] for e in ausgelassen], ["b"])
+        # Ein Event, das schon den neuen Namen trägt, belegt den Schlüssel
+        schon_neu = {**original, "id": "c", "ort": "Jazz-Schmiede"}
+        zuweisung, ausgelassen = umbenennungen([schon_neu, original])
+        self.assertEqual(zuweisung, {})
+        self.assertEqual([e["id"] for e in ausgelassen], ["a"])
+        # Ohne Uhrzeit keine Kollision (NULL ist nie gleich)
+        ohne = [{**original, "uhrzeit": None}, {**dublette, "uhrzeit": None}]
+        self.assertEqual(set(umbenennungen(ohne)[0]), {"a", "b"})
+
 
 if __name__ == "__main__":
     unittest.main()
