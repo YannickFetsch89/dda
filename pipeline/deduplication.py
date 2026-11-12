@@ -15,6 +15,8 @@ import logging
 import re
 from typing import Optional
 
+from pipeline.ortsnamen import ortsname_vereinheitlichen
+
 logger = logging.getLogger(__name__)
 
 # Felder die bei Duplikaten ergänzt werden dürfen (wenn None/leer)
@@ -435,6 +437,8 @@ def deduplizieren(events: list[dict]) -> list[dict]:
     angereichert_anzahl = 0
 
     for event in events:
+        # Eine Schreibweise pro Spielstätte (pipeline/ortsnamen.py) – vor allen Vergleichen
+        ortsname_vereinheitlichen(event)
         titel_status_bereinigen(event)
         titel = event.get("titel") or ""
         datum = event.get("datum") or ""
