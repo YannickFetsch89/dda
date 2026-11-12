@@ -11,10 +11,11 @@
 BEGIN;
 
 UPDATE public.events SET adresse = 'Theodorstraße 281, 40472 Düsseldorf', stadtteil = 'Rath'
-WHERE ort ILIKE '%psd bank dome%' AND adresse = 'Siegburger Straße 15, 40591 Düsseldorf';
+WHERE ort ILIKE '%psd bank dome%' AND adresse IN ('Siegburger Straße 15, 40591 Düsseldorf', 'Siegburger Str. 15, 40591 Düsseldorf');
 
+-- Eng gefasst (Cursor-Review 12.11.): nur d.live-Zeilen mit der falschen Hennekamp-Adresse
 UPDATE public.events SET adresse = 'Karl-Hohmann-Straße 1, 40599 Düsseldorf', stadtteil = 'Reisholz'
-WHERE ort ILIKE '%castello%' AND (adresse = 'Auf''m Hennekamp 71, 40225 Düsseldorf' OR stadtteil = 'Bilk');
+WHERE ort ILIKE '%castello%' AND quelle_name = 'd-live' AND adresse = 'Auf''m Hennekamp 71, 40225 Düsseldorf';
 
 UPDATE public.events SET stadtteil = 'Oberbilk'
 WHERE regexp_replace(ort, '\s+', ' ', 'g') ILIKE '%mitsubishi electric halle%' AND stadtteil IS DISTINCT FROM 'Oberbilk';

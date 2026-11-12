@@ -22,6 +22,8 @@ class DliveTest(unittest.TestCase):
         self.assertEqual(adressen["PSD BANK DOME"], "Theodorstraße 281, 40472 Düsseldorf")
         self.assertEqual(adressen["CASTELLO Düsseldorf"], "Karl-Hohmann-Straße 1, 40599 Düsseldorf")
         self.assertNotEqual(adressen["PSD BANK DOME"], adressen["Mitsubishi Electric HALLE"])
+        from scraper.tier3 import deg
+        self.assertEqual(deg.ADRESSE_STANDARD, adressen["PSD BANK DOME"])
 
     def test_quelle_mit_stadt_anhang(self):
         # Fallback über die Quelle greift auch, wenn der Scraper „ Düsseldorf“ anhängt

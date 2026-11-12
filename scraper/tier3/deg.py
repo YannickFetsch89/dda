@@ -18,7 +18,7 @@ Strategie:
    Fällt das aus, wird das Vereinskürzel über eine statische Tabelle aufgelöst.
 
 URL: https://www.deg-eishockey.de/saison/spielplan/
-Adresse: Siegburger Str. 15, 40591 Düsseldorf
+Adresse: Theodorstraße 281, 40472 Düsseldorf (PSD Bank Dome)
 Erstellt: 2026-03-06 · Überarbeitet: 2026-11-04 (Domainwechsel, neues HTML)
 """
 import asyncio
@@ -40,7 +40,8 @@ LISTE_URL = "https://www.deg-eishockey.de/saison/spielplan/"
 BASE_URL = "https://www.deg-eishockey.de"
 QUELLE_NAME = "DEG Eishockey Düsseldorf"
 ORT_STANDARD = "PSD BANK DOME Düsseldorf"
-ADRESSE_STANDARD = "Siegburger Str. 15, 40591 Düsseldorf"
+# PSD Bank Dome (Rath) – bis 12.11.2026 stand hier die Adresse der Mitsubishi Electric Halle
+ADRESSE_STANDARD = "Theodorstraße 281, 40472 Düsseldorf"
 KATEGORIE = "sport"
 PREIS_FALLBACK = "ab 10€"
 HEIMTEAM = "Düsseldorfer EG"
