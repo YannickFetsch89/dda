@@ -265,12 +265,6 @@ function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechst
             </section>
           ))
         )}
-        <p className="cl-hinweis muted">
-          Musikrichtungen, Reihen und Preise stammen aus den Websites der Clubs, Stadtmagazinen und unserem Eventkalender –
-          jede Angabe mit Quelle geprüft. Die Einteilung folgt unserem Club-Score aus Programm, Szene, Profil und
-          Beliebtheit: Top-Empfehlungen haben wir zusätzlich selbst geprüft (Score ab 7 von 10), „Ebenfalls zu empfehlen“
-          ab 5, darunter stehen die weiteren Clubs.
-        </p>
       </div>
     </>
   );
