@@ -49,6 +49,18 @@ class StueckeTest(unittest.TestCase):
                          _seiten_pfad("https://www.kunsthalle-duesseldorf.de/kalender/x/?stamp=2"))
 
 
+class StueckBearbeitenTest(unittest.TestCase):
+    def test_fehlgeschlagene_umschrift_bleibt_offen(self):
+        from unittest import mock
+        import pipeline.beschreibung_quellen as bq
+        stueck = [ev(1, "BLUTBUCH", "Kleines Haus", "https://www.dhaus.de/programm/spielplan/2026-11/blutbuch/3072/")]
+        seite = "<main>" + "BLUTBUCH von Kim de l'Horizon. " * 20 + "</main>"
+        with mock.patch.object(bq, "_gesperrt", return_value=False), mock.patch.object(bq, "robots_erlaubt", return_value=True),                 mock.patch.object(bq, "seite_laden", return_value=seite),                 mock.patch.object(bq, "umschreiben", side_effect=RuntimeError("API nicht erreichbar")):
+            eintrag = bq.stueck_bearbeiten(None, stueck)
+        self.assertEqual(eintrag["abruf"], "fehler")  # nicht als gesucht markieren
+        self.assertIn("API", eintrag["fehler"])
+
+
 class ErsetzenTest(unittest.TestCase):
     def test_regeln(self):
         lang = "Neuer Text aus der Quelle. " * 20

@@ -658,7 +658,10 @@ def stueck_bearbeiten(client, stueck: list[dict]) -> dict:
         try:
             eintrag.update(umschreiben(client, event, url, text))
         except Exception as e:
+            # KI-Aufruf gescheitert (z. B. API-Fehler): Stück offen lassen, der nächste Lauf versucht es erneut
             eintrag["fehler"] = f"{type(e).__name__}: {e}"
+            eintrag["abruf"] = "fehler"
+            logger.warning("Umschreiben für '%s' fehlgeschlagen – bleibt offen: %s", event["titel"][:40], e)
         break
     return eintrag
 
