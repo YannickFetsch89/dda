@@ -6,9 +6,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd, Krumen, LinkChips } from "./landing";
 import { Icon, Leer } from "./karten";
-import { OrtKartenGrid, ortPfad } from "./ort-karten";
+import { ClubKarte } from "./club-karte";
+import { OrtKartenGrid } from "./ort-karten";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
-import { hubOrte, orteImStadtteil, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { hubOrtPfad, hubOrte, orteImStadtteil, stadtteileImHub, zaehltFuerIndex } from "@/lib/guide-stadtteile";
+import { clubsSortieren, nachStufen } from "@/lib/clubs";
 import { STADTTEIL_TEXTE } from "@/lib/landing-texte";
 import { GUIDE_HUBS, MIN_EINTRAEGE, inStadtteil, bezirkSatz, guideStadtteilPfad, stadtteilAusSlug, stadtteilPfad, type GuideHub } from "@/lib/landing";
 import { seitenMetadaten } from "@/lib/seo";
@@ -21,7 +23,11 @@ async function laden(hub: GuideHub, slug: string) {
   const st = stadtteilAusSlug(slug, true);
   if (!st) return null;
   const alle = await hubOrte(hub);
-  return { st, alle, orte: orteImStadtteil(alle, st) };
+  const imStadtteil = orteImStadtteil(alle, st);
+  // Club-Hub: Top-Empfehlungen zuerst (A, B, C), sonst die Reihenfolge des Hubs
+  const orte = hub === "clubs" ? nachStufen(clubsSortieren(imStadtteil, "empfohlen")).flatMap((g) => g.orte) : imStadtteil;
+  // Für Index-Schwelle und ItemList zählen im Club-Hub nur indexierbare Orte (Stufe A/B)
+  return { st, alle, orte, indexOrte: orte.filter(zaehltFuerIndex(hub)) };
 }
 
 export async function guideStadtteilMetadaten(hub: GuideHub, slug: string): Promise<Metadata> {
@@ -33,11 +39,11 @@ export async function guideStadtteilMetadaten(hub: GuideHub, slug: string): Prom
     pfad: guideStadtteilPfad(hub, d.st),
     titel: `${h.name} ${imOrt}`,
     beschreibung: `${d.orte.length} ausgewählte ${h.mehrzahl} ${imOrt}. ${STADTTEIL_TEXTE[d.st] ?? bezirkSatz(d.st)}`.slice(0, 300),
-    noindex: d.orte.length < MIN_EINTRAEGE,
+    noindex: d.indexOrte.length < MIN_EINTRAEGE,
   });
 }
 
-function ortListeJsonLd(name: string, orte: DddOrt[]): Record<string, unknown> | null {
+function ortListeJsonLd(hub: GuideHub, name: string, orte: DddOrt[]): Record<string, unknown> | null {
   if (!orte.length) return null;
   const liste = orte.slice(0, 30);
   return {
@@ -45,14 +51,14 @@ function ortListeJsonLd(name: string, orte: DddOrt[]): Record<string, unknown> |
     "@type": "ItemList",
     name,
     numberOfItems: liste.length,
-    itemListElement: liste.map((o, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE_URL}${ortPfad(o)}`, name: o.name })),
+    itemListElement: liste.map((o, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE_URL}${hubOrtPfad(hub, o)}`, name: o.name })),
   };
 }
 
 export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: string }) {
   const d = await laden(hub, slug);
   if (!d) notFound();
-  const { st, alle, orte } = d;
+  const { st, alle, orte, indexOrte } = d;
   const h = GUIDE_HUBS[hub];
   const name = stadtteilName(st);
   const imOrt = inStadtteil(st);
@@ -65,10 +71,10 @@ export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: strin
     { name: h.name, pfad: hubPfad },
     { name, pfad },
   ];
-  const liste = ortListeJsonLd(`${h.name} ${imOrt}`, orte);
+  const liste = ortListeJsonLd(hub, `${h.name} ${imOrt}`, indexOrte);
   const jsonLd = [brotkrumenJsonLd(SITE_URL, krumen), ...(liste ? [liste] : [])];
 
-  const andere = stadtteileMitOrten(alle)
+  const andere = stadtteileImHub(hub, alle)
     .filter((x) => x.stadtteil !== st)
     .map((x) => ({ name: stadtteilName(x.stadtteil), pfad: guideStadtteilPfad(hub, x.stadtteil), anzahl: x.anzahl }));
   const eventSeite = stadtteilPfad(st);
@@ -85,7 +91,13 @@ export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: strin
       <p className="tagesatz">{satz}</p>
       {orte.length ? (
         <div className="sektion">
-          <OrtKartenGrid orte={orte} />
+          {hub === "clubs" ? (
+            <div className="cl-grid" role="list">
+              {orte.map((o) => <ClubKarte key={o.id} o={o} />)}
+            </div>
+          ) : (
+            <OrtKartenGrid orte={orte} />
+          )}
         </div>
       ) : (
         <div className="sektion">
@@ -110,7 +122,7 @@ export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: strin
 
 /** Auf dem Hub: Links auf die Guide-Stadtteilseiten (nur Stadtteile ab fünf Orten – die indexierten). */
 export function GuideStadtteilLinks({ hub, orte }: { hub: GuideHub; orte: DddOrt[] }) {
-  const links = stadtteileMitOrten(orte).map((x) => ({ name: stadtteilName(x.stadtteil), pfad: guideStadtteilPfad(hub, x.stadtteil), anzahl: x.anzahl }));
+  const links = stadtteileImHub(hub, orte).map((x) => ({ name: stadtteilName(x.stadtteil), pfad: guideStadtteilPfad(hub, x.stadtteil), anzahl: x.anzahl }));
   if (!links.length) return null;
   return (
     <div className="container">

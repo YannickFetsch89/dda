@@ -20,7 +20,7 @@ import { seitenMetadaten } from "@/lib/seo";
 import { kategorie as kategorieInfo } from "@/lib/kategorien";
 import { GUIDE_HUBS, guideStadtteilPfad, inStadtteil, kanonischerStadtteil, kategoriePfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
 import { unterkategorieIndexierbar } from "@/lib/landing-listen";
-import { hubOrte, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { hubOrte, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { clubProfil } from "@/lib/clubs";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { ortPfad } from "@/components/ort-karten";
@@ -103,7 +103,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
   const [hubListen, clubs] = await Promise.all([st && !online ? Promise.all(hubs.map((h) => hubOrte(h))) : Promise.resolve([]), clubsLaden()]);
   const guideLinks = st
-    ? hubs.flatMap((h, i) => (hubListen[i] && stadtteileMitOrten(hubListen[i]).some((x) => x.stadtteil === st) ? [{ name: `${GUIDE_HUBS[h].name} ${inStadtteil(st)}`, pfad: guideStadtteilPfad(h, st) }] : []))
+    ? hubs.flatMap((h, i) => (hubListen[i] && stadtteileImHub(h, hubListen[i]).some((x) => x.stadtteil === st) ? [{ name: `${GUIDE_HUBS[h].name} ${inStadtteil(st)}`, pfad: guideStadtteilPfad(h, st) }] : []))
     : [];
   // Guide-Ort: nur echte Clubs (typ club), exakt über die gepflegten Schreibweisen – auch_club-Orte haben eine andere Haupt-URL
   const club = clubs.find((o) => o.typ === "club" && (clubProfil(o)?.eventOrte ?? []).includes(e.ort)) ?? null;

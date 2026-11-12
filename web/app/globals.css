@@ -1663,7 +1663,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .cl-stufe__punkt { display: inline-block; flex: none; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; border: 1.5px solid #ffffff; box-shadow: 0 0 0 1px rgba(27, 37, 64, 0.25); vertical-align: middle; }
 .cl-stufe__punkt--a { background: #c9a84c; }
 .cl-stufe__punkt--b { background: #457b9d; }
-.cl-stufe__punkt--c { background: #8a94a6; }
+.cl-stufe__punkt--c { background: #5f6b7d; }
 .cl-stufe-gruppe { margin-top: 28px; }
 .cl-stufe-gruppe:first-of-type { margin-top: 8px; }
 .cl-stufe-gruppe__kopf h2 { display: flex; align-items: center; gap: 4px; font-size: 26px; margin: 0; }
@@ -1685,6 +1685,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .gd-pin.gd-pin--stufe-a .icon { color: #1b2540; }
 .gd-pin.gd-pin--stufe-b { background: #457b9d; }
 .gd-pin.gd-pin--stufe-b .icon { color: #ffffff; }
-.gd-pin.gd-pin--stufe-c { background: #8a94a6; width: 28px; height: 28px; }
+.gd-pin.gd-pin--stufe-c { background: #5f6b7d; width: 28px; height: 28px; }
 .gd-pin.gd-pin--stufe-c .icon { color: #ffffff; font-size: 14px; }
 .gd-pin.gd-pin--stufe.gd-pin--an { box-shadow: 0 0 0 3px #1b2540, 0 6px 14px rgba(27, 37, 64, 0.45); }
+:root[data-theme="dark"] .gd-pin.gd-pin--stufe.gd-pin--an { box-shadow: 0 0 0 3px #f7f8fa, 0 6px 14px rgba(0, 0, 0, 0.6); }

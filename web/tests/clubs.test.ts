@@ -163,3 +163,20 @@ describe("Daten und JSON-LD", () => {
     expect(urls[2]).toBe("https://diesdas.events/guides/clubs/schlager-cafe"); // Restaurant-Seite nicht sichtbar
   });
 });
+
+describe("Guide-Stadtteilseiten im Club-Hub", () => {
+  it("Stufe C füllt die Index-Schwelle nicht, zählt aber in der Anzahl mit", async () => {
+    const { stadtteileImHub, hubOrtPfad } = await import("@/lib/guide-stadtteile");
+    const c = (n: number) => ort(`C${n}`, { club: profil(), club_score: { gesamt: 3 } }, { stadtteil: "Altstadt" });
+    const nurC = [1, 2, 3, 4, 5].map(c);
+    expect(stadtteileImHub("clubs", nurC)).toEqual([]);
+    // Im Kneipen-Hub zählt jeder Ort (dort gibt es keine Stufen)
+    expect(stadtteileImHub("kneipen-bars", nurC)).toEqual([{ stadtteil: "Altstadt", anzahl: 5 }]);
+    const a = (n: number) => ort(`A${n}`, { club: profil(), club_score: { gesamt: 8 }, club_freigegeben: "2026-11-11" });
+    expect(stadtteileImHub("clubs", [...[1, 2, 3, 4, 5].map(a), ...nurC])).toEqual([{ stadtteil: "Altstadt", anzahl: 10 }]);
+    // Kanonische URL: Bar nur als Club sichtbar → Club-Seite
+    const giselle = ort("Giselle", { auch_club: true, club: profil(), club_score: { gesamt: 7 } }, { typ: "kneipe", qualitaets_score: 4 });
+    expect(hubOrtPfad("clubs", giselle)).toBe("/guides/clubs/giselle");
+    expect(hubOrtPfad("kneipen-bars", { ...giselle, qualitaets_score: 8 })).toBe("/guides/kneipen-bars/giselle");
+  });
+});

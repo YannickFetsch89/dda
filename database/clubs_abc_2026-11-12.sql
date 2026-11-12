@@ -4,7 +4,7 @@
 --    - aus dem Club-Hub: auch_club entfernen, kein_club setzen (der Club-Import markiert den Ort nie wieder)
 --    - im Bar-Hub sichtbar: qualitaets_score 7 (Schwelle der Website), redaktionell festgelegt (score_manuell –
 --      die automatische Neubewertung lässt den Wert dann stehen)
---    Die alte Club-URL /guides/clubs/konvex-flingern leitet danach dauerhaft (301) auf /guides/kneipen-bars/konvex-flingern.
+--    Die alte Club-URL /guides/clubs/konvex-flingern leitet danach dauerhaft (308, über den Proxy) auf /guides/kneipen-bars/konvex-flingern.
 UPDATE public.orte
 SET qualitaets_score = 7,
     extras = (extras - 'auch_club')

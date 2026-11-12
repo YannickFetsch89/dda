@@ -9,7 +9,7 @@ import { Icon } from "@/components/karten";
 import { filtern, nachZeit } from "@/lib/ableitungen";
 import { eventPoolLaden } from "@/lib/daten";
 import { plusTage } from "@/lib/datum";
-import { hubOrte, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { hubOrte, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { STADTTEIL_TEXTE } from "@/lib/landing-texte";
 import {
   GUIDE_HUBS, LANDING_TAGE, inStadtteil, MIN_EINTRAEGE, bezirkSatz, guideStadtteilPfad, nachbarStadtteile, stadtteilAusSlug, stadtteilPfad, type GuideHub,
@@ -71,7 +71,7 @@ export default async function StadtteilSeite({ params }: Props) {
   const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
   const orteJeHub = await Promise.all(hubs.map((h) => hubOrte(h)));
   const guideLinks = hubs.flatMap((h, i) => {
-    const treffer = stadtteileMitOrten(orteJeHub[i]).find((x) => x.stadtteil === st);
+    const treffer = stadtteileImHub(h, orteJeHub[i]).find((x) => x.stadtteil === st);
     return treffer ? [{ name: `${GUIDE_HUBS[h].name} ${imOrt}`, pfad: guideStadtteilPfad(h, st), anzahl: treffer.anzahl }] : [];
   });
 

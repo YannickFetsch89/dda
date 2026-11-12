@@ -13,7 +13,7 @@ import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
 import { BEZIRKE } from "@/lib/stadtteile";
-import { hubOrte, orteImStadtteil, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { hubOrte, orteImStadtteil, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { GUIDE_HUBS, LANDING_TAGE, MIN_EINTRAEGE, guideStadtteilPfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
@@ -148,7 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
   const hubListen = await Promise.all(hubs.map((h) => hubOrte(h)));
   const guideStadtteile: MetadataRoute.Sitemap = hubs.flatMap((h, i) =>
-    stadtteileMitOrten(hubListen[i]).map((x) => ({
+    stadtteileImHub(h, hubListen[i]).map((x) => ({
       url: `${SITE_URL}${guideStadtteilPfad(h, x.stadtteil)}`,
       ...mit(geaendert(orteImStadtteil(hubListen[i], x.stadtteil))),
       changeFrequency: "weekly" as const,
