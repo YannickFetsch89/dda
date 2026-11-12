@@ -156,6 +156,7 @@ export async function Fuss() {
           <Link href="/guides/restaurants-cafes">Restaurants & Cafés</Link>
           <Link href="/guides/kneipen-bars">Kneipen & Bars</Link>
           <Link href="/guides/clubs">Clubs</Link>
+          <Link href="/guides">Alle Guides</Link>
         </div>
         <div className="fuss__spalte">
           <b>Service</b>

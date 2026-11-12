@@ -123,7 +123,7 @@ function ScorePanel({ ort }: { ort: DddOrt }) {
   return (
     <div className="cl-score">
       <div className="cl-score__kopf">
-        <h2>Club-Score</h2>
+        <h2>Unser Club-Score</h2>
         <span className="cl-score__wert">{s.gesamt}<small>/10</small></span>
       </div>
       {teile.map((t) => (
