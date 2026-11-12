@@ -13,10 +13,16 @@ Beschreibung suchen wir deshalb die Seite des Veranstalters:
 
 Überall gilt: robots.txt wird geprüft, mindestens 2 s zwischen Abrufen.
 
+Veranstalter-Events (Schauspielhaus, Oper, Stadtbüchereien, Kunstpalast …, seit 12.11.2026): Die Event-Seite ist
+schon bekannt (quelle_url) – keine Suche nötig. Ein Text pro Stück (gleicher Titel am gleichen Ort), übertragen
+auf alle Termine. Ersetzt wird nur ein fehlender, kurzer (< 200 Zeichen) oder kürzerer Text.
+
 Aufruf:
-    python -m pipeline.beschreibung_quellen --probe 20        # Probelauf, schreibt nichts in die Datenbank
-    python -m pipeline.beschreibung_quellen --nachziehen 400  # offene Events bearbeiten (mit Sicherung)
-Im täglichen Lauf: beschreibungen_nachziehen(limit=40) nach der Kategorisierung (main.py).
+    python -m pipeline.beschreibung_quellen --probe 20                 # Probelauf Rausgegangen, schreibt nichts
+    python -m pipeline.beschreibung_quellen --probe-veranstalter 20    # Probelauf Veranstalter-Events, schreibt nichts
+    python -m pipeline.beschreibung_quellen --nachziehen 400           # offene Rausgegangen-Events (mit Sicherung)
+    python -m pipeline.beschreibung_quellen --veranstalter 800         # offene Veranstalter-Stücke (mit Sicherung)
+Im Lauf: beschreibungen_nachziehen(...) und veranstalter_nachziehen(...) nach der Kategorisierung (main.py).
 """
 import argparse
 import json
@@ -512,6 +518,170 @@ def beschreibungen_nachziehen(limit: int = 40, sicherung: bool = False) -> int:
     return neu
 
 
+# ── Veranstalter-Events: Quelle ist die eigene Event-Seite ────────────────────────────────────────────
+
+# Ein vorhandener Text wird nur ersetzt, wenn er fehlt, kurz ist oder der neue länger ist
+KURZ = 200
+
+
+def _seiten_pfad(url: str) -> str:
+    """Event-Seite ohne Abfrage und ohne Monats-Segment: /programm/spielplan/2026-11/blutbuch/3072/ → …/blutbuch/3072"""
+    teile = urlparse(url or "")
+    pfad = "/".join(t for t in teile.path.split("/") if t and not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", t))
+    return f"{teile.netloc.removeprefix('www.')}/{pfad}"
+
+
+def _stueck_schluessel(event: dict) -> tuple[str, str, str]:
+    """
+    Ein Stück = gleicher Titel am gleichen Ort UND dieselbe Seite beim Veranstalter. Allgemeine Titel wie
+    „Öffentliche Führung“ (Kunstpalast: eine Seite je Ausstellung) bleiben so getrennt; Termine desselben Stücks
+    in verschiedenen Monaten (Schauspielhaus) landen zusammen.
+    """
+    return (" ".join(_woerter(event.get("titel") or "")), " ".join(_woerter(event.get("ort") or "")),
+            _seiten_pfad(event.get("quelle_url") or ""))
+
+
+def stuecke_bilden(events: list[dict]) -> list[list[dict]]:
+    """Gruppiert Termine nach Stück, früheste Stücke zuerst; innerhalb des Stücks nach Datum. (rein, testbar)"""
+    gruppen: dict[tuple[str, str, str], list[dict]] = {}
+    for e in events:
+        if not e.get("quelle_url") or not _stueck_schluessel(e)[0]:
+            continue
+        gruppen.setdefault(_stueck_schluessel(e), []).append(e)
+    stuecke = [sorted(g, key=lambda e: (e.get("datum") or "", e.get("uhrzeit") or "")) for g in gruppen.values()]
+    return sorted(stuecke, key=lambda g: g[0].get("datum") or "")
+
+
+def ersetzen_erlaubt(alt: str | None, neu: str) -> bool:
+    """Neuer Quellentext ersetzt den bisherigen, wenn der fehlt, kurz ist (meist geratener KI-Text) oder kürzer ist."""
+    alt = (alt or "").strip()
+    return bool(neu.strip()) and (len(alt) < KURZ or len(neu.strip()) > len(alt))
+
+
+def offene_veranstalter_events(db) -> list[dict]:
+    """
+    Künftige Events, die nicht von Rausgegangen stammen (dort ist die Detailseite gesperrt), eine eigene Event-URL
+    haben, noch keinen Quellentext tragen und noch nicht gesucht wurden.
+    """
+    from datetime import date
+
+    events, start = [], 0
+    while True:
+        seite = (
+            db.table("events")
+            .select("id,titel,ort,datum,uhrzeit,slug,beschreibung,quelle_name,quelle_url")
+            .gte("datum", date.today().isoformat())
+            .eq("abgelehnt", False)
+            .is_("beschreibung_gesucht_am", "null")
+            .is_("beschreibung_quelle", "null")
+            .not_.is_("quelle_url", "null")
+            .not_.ilike("quelle_name", "*rausgegangen*")
+            .not_.ilike("quelle_url", "*rausgegangen.de*")
+            .order("datum")
+            .range(start, start + 999)
+            .execute()
+        ).data or []
+        events += seite
+        start += 1000
+        if len(seite) < 1000:
+            return events
+
+
+def stueck_bearbeiten(client, stueck: list[dict]) -> dict:
+    """Erste abrufbare Event-URL des Stücks laden und umschreiben. Ergebnis wie event_bearbeiten."""
+    event = stueck[0]
+    eintrag = {"id": event["id"], "titel": event["titel"], "datum": event["datum"], "ort": event.get("ort"),
+               "bisher": event.get("beschreibung"), "weg": "Event-Seite des Veranstalters", "termine": len(stueck)}
+    woerter = titel_woerter(event["titel"])
+    for url in list(dict.fromkeys(e["quelle_url"] for e in stueck))[:2]:
+        html = seite_laden(url)
+        if not html:
+            continue
+        text = seiten_text(html)
+        # Zu wenig Text oder Titel nicht auf der Seite: nicht dieses Event (z. B. nur ein Kalender per JavaScript)
+        if len(text) < 200 or (woerter and titel_treffer(text, woerter) < 0.5):
+            continue
+        eintrag["quelle_url"] = url
+        eintrag["quelltext"] = text[:9000]
+        try:
+            eintrag.update(umschreiben(client, event, url, text))
+        except Exception as e:
+            eintrag["fehler"] = f"{type(e).__name__}: {e}"
+        break
+    return eintrag
+
+
+def veranstalter_nachziehen(max_stuecke: int = 150, sicherung: bool = False, probe: bool = False,
+                            max_sekunden: int | None = None) -> int:
+    """
+    Beschreibungen für Veranstalter-Events aus der eigenen Event-Seite – ein Text pro Stück, für alle Termine.
+    probe=True: nichts schreiben, nur Bericht (data/beschreibung_quellen/probe_veranstalter.md).
+    max_sekunden: Zeitbudget (im Scraper-Lauf, der Workflow hat insgesamt 45 Minuten) – danach aufhören,
+    der Rest kommt im nächsten Lauf (noch nicht gesuchte Termine bleiben offen).
+
+    Returns:
+        Anzahl der Termine mit neuer Beschreibung
+    """
+    import anthropic
+    from datetime import datetime, timezone
+
+    from database.client import get_supabase_client
+
+    db = get_supabase_client()
+    stuecke = stuecke_bilden(offene_veranstalter_events(db))
+    if probe:
+        # Breite Stichprobe: je Quelle höchstens zwei Stücke
+        gewaehlt, je_quelle = [], {}
+        for st in stuecke:
+            q = st[0].get("quelle_name")
+            if je_quelle.get(q, 0) < 2:
+                gewaehlt.append(st)
+                je_quelle[q] = je_quelle.get(q, 0) + 1
+        stuecke = gewaehlt
+    stuecke = stuecke[:max_stuecke]
+    if not stuecke:
+        logger.info("Beschreibungen: keine offenen Veranstalter-Events")
+        return 0
+    client = anthropic.Anthropic()
+    sicherungsdatei = ORDNER / f"sicherung_veranstalter_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
+    ergebnisse, neu = [], 0
+    beginn = time.monotonic()
+    for nr, stueck in enumerate(stuecke, 1):
+        if max_sekunden and time.monotonic() - beginn > max_sekunden:
+            logger.info("Beschreibungen (Veranstalter): Zeitbudget erreicht nach %d Stücken", nr - 1)
+            break
+        logger.info("Stück [%d/%d]: %s (%s, %d Termine)", nr, len(stuecke), stueck[0]["titel"][:50],
+                    stueck[0].get("ort"), len(stueck))
+        try:
+            eintrag = stueck_bearbeiten(client, stueck)
+        except Exception as e:
+            logger.error("Beschreibung für '%s' fehlgeschlagen: %s", stueck[0]["titel"][:40], e)
+            continue
+        eintrag["quelle_name"] = stueck[0].get("quelle_name")
+        ergebnisse.append(eintrag)
+        if probe:
+            continue
+        jetzt = datetime.now(timezone.utc).isoformat()
+        for e in stueck:
+            update = {"beschreibung_gesucht_am": jetzt}
+            if eintrag.get("freigegeben") and ersetzen_erlaubt(e.get("beschreibung"), eintrag["beschreibung"]):
+                update["beschreibung"] = eintrag["beschreibung"].strip()
+                update["beschreibung_quelle"] = eintrag["quelle_url"]
+            try:
+                if sicherung and "beschreibung" in update:
+                    ORDNER.mkdir(parents=True, exist_ok=True)
+                    with sicherungsdatei.open("a", encoding="utf-8") as f:
+                        f.write(json.dumps({"id": e["id"], "beschreibung": e.get("beschreibung")}, ensure_ascii=False) + "\n")
+                db.table("events").update(update).eq("id", e["id"]).execute()
+                neu += "beschreibung" in update
+            except Exception as ex:
+                logger.error("Speichern der Beschreibung für '%s' fehlgeschlagen: %s", e["titel"][:40], ex)
+    if probe:
+        bericht_schreiben(ergebnisse, datei="probe_veranstalter.md", art="Veranstalter-Stücke")
+    logger.info("Beschreibungen (Veranstalter): %d Termine mit neuem Text aus %d Stücken", neu, len(stuecke))
+    return neu
+
+
 def nur_umschreiben() -> None:
     """Gefundene Quellen aus probe.json erneut umschreiben (ohne neue Suche/Abrufe)."""
     import anthropic
@@ -530,16 +700,19 @@ def nur_umschreiben() -> None:
     bericht_schreiben(ergebnisse)
 
 
-def bericht_schreiben(ergebnisse: list[dict]) -> None:
+def bericht_schreiben(ergebnisse: list[dict], datei: str = "probe.md", art: str = "Rausgegangen-Events") -> None:
     """Markdown zum Gegenlesen: alter Text, Quelle, neuer Text, Prüfwerte."""
+    ORDNER.mkdir(parents=True, exist_ok=True)
     frei = [e for e in ergebnisse if e.get("freigegeben")]
-    zeilen = [f"# Probelauf Event-Beschreibungen ({len(ergebnisse)} Rausgegangen-Events)\n",
+    zeilen = [f"# Probelauf Event-Beschreibungen ({len(ergebnisse)} {art})\n",
               f"- Quelle gefunden: {sum(1 for e in ergebnisse if e.get('quelle_url'))}",
               f"  - über Website des Orts: {sum(1 for e in ergebnisse if e.get('weg') == 'Website des Orts')}",
               f"  - über Websuche: {sum(1 for e in ergebnisse if e.get('weg') == 'Websuche')}",
+              f"  - Event-Seite des Veranstalters: {sum(1 for e in ergebnisse if e.get('quelle_url') and e.get('weg') == 'Event-Seite des Veranstalters')}",
               f"- Neuer Text freigegeben (passt, belegt, eigener Wortlaut): {len(frei)}\n"]
     for e in ergebnisse:
-        zeilen.append(f"## {e['titel']}\n{e['datum']} · {e['ort']}\n")
+        zeilen.append(f"## {e['titel']}\n{e['datum']} · {e['ort']}" + (f" · {e['quelle_name']}" if e.get("quelle_name") else "")
+                      + (f" · {e['termine']} Termine" if e.get("termine") else "") + "\n")
         zeilen.append(f"**Bisher:** {e.get('bisher') or '–'}\n")
         if not e.get("quelle_url"):
             zeilen.append(f"**Keine Quelle gefunden** (Website des Orts: {e.get('ort_website') or 'keine'})\n")
@@ -553,9 +726,9 @@ def bericht_schreiben(ergebnisse: list[dict]) -> None:
                       f"längste wörtliche Übernahme: {e.get('uebernahme_woerter')} Wörter. {e.get('grund') or ''}\n")
         if e.get("beschreibung"):
             zeilen.append("**Neu:**\n\n" + "\n".join("> " + z for z in e["beschreibung"].splitlines()) + "\n")
-    (ORDNER / "probe.md").write_text("\n".join(zeilen), encoding="utf-8")
-    print("\n".join(zeilen[:5]))
-    print(f"Bericht: {ORDNER / 'probe.md'}")
+    (ORDNER / datei).write_text("\n".join(zeilen), encoding="utf-8")
+    print("\n".join(zeilen[:6]))
+    print(f"Bericht: {ORDNER / datei}")
 
 
 def main() -> None:
@@ -564,11 +737,18 @@ def main() -> None:
     parser.add_argument("--nur-umschreiben", action="store_true", help="Quellen des letzten Probelaufs neu umschreiben")
     parser.add_argument("--nachziehen", type=int, metavar="N",
                         help="N offene Rausgegangen-Events bearbeiten und in die Datenbank schreiben (mit Sicherung)")
+    parser.add_argument("--probe-veranstalter", type=int, metavar="N", help="Probelauf: N Veranstalter-Stücke, schreibt nichts")
+    parser.add_argument("--veranstalter", type=int, metavar="N",
+                        help="N offene Veranstalter-Stücke bearbeiten und in die Datenbank schreiben (mit Sicherung)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     for laut in ("httpx", "anthropic"):
         logging.getLogger(laut).setLevel(logging.WARNING)
-    if args.nachziehen:
+    if args.probe_veranstalter:
+        veranstalter_nachziehen(max_stuecke=args.probe_veranstalter, probe=True)
+    elif args.veranstalter:
+        veranstalter_nachziehen(max_stuecke=args.veranstalter, sicherung=True)
+    elif args.nachziehen:
         beschreibungen_nachziehen(limit=args.nachziehen, sicherung=True)
     elif args.nur_umschreiben:
         nur_umschreiben()

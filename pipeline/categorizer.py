@@ -75,7 +75,10 @@ def _event_kategorisieren_und_beschreiben(
     preis = event.get("preis", "")
     datum = event.get("datum", "")
 
-    prompt = f"""Du kategorisierst und beschreibst Events für einen Düsseldorf Stadtguide.
+    # Keine Beschreibung mehr aus Titel/Ort/Preis erfinden (bis 12.11.2026: „ein intensives Theatererlebnis …“).
+    # Echte Texte kommen aus der Veranstalter-Seite (pipeline/beschreibung_quellen.py). Hier nur Kategorie und
+    # Wiederkehrend; die Beschreibung bleibt leer ("" = kategorisiert, noch ohne Quellentext).
+    prompt = f"""Du kategorisierst Events für einen Düsseldorf Stadtguide.
 
 Event-Daten:
 - Titel: {titel}
@@ -88,18 +91,16 @@ Aufgabe:
 1. Bestimme die beste Kategorie aus dieser Liste: kultur, musik, food, sport, outdoor, stadtfuehrung, community, nightlife, family, dating, sonstiges
    (stadtfuehrung = geführte Stadt-, Viertel-, kulinarische und Kneipentouren, Stadtrundgänge und -rundfahrten;
    Führungen durch eine Ausstellung im Museum bleiben kultur)
-2. Schreibe eine kurze, einladende Beschreibung auf Deutsch (max. 300 Zeichen)
-3. Ist das ein wiederkehrendes oder langfristiges Event? (z.B. Ausstellung, Dauerveranstaltung, Konzertreihe, wöchentlicher Markt → ja | Einzelkonzert, einmaliges Event → nein)
+2. Ist das ein wiederkehrendes oder langfristiges Event? (z.B. Ausstellung, Dauerveranstaltung, Konzertreihe, wöchentlicher Markt → ja | Einzelkonzert, einmaliges Event → nein)
 
-Antworte NUR in diesem Format (drei Zeilen):
+Antworte NUR in diesem Format (zwei Zeilen):
 KATEGORIE: [eine Kategorie aus der Liste]
-BESCHREIBUNG: [kurze Beschreibung auf Deutsch, max. 300 Zeichen]
 WIEDERKEHREND: ja/nein"""
 
     try:
         antwort = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=250,
+            max_tokens=60,
             messages=[
                 {"role": "user", "content": prompt}
             ]
@@ -109,7 +110,8 @@ WIEDERKEHREND: ja/nein"""
         zeilen = antwort_text.split("\n")
 
         kategorie = None
-        beschreibung = None
+        # Leer statt None: markiert „kategorisiert“ (sonst wählte kategorisieren() das Event bei jedem Lauf erneut aus)
+        beschreibung = ""
         ist_wiederkehrend = False
 
         for zeile in zeilen:
@@ -123,20 +125,12 @@ WIEDERKEHREND: ja/nein"""
                         rohe_kategorie, aktuelle_kategorie
                     )
                     kategorie = aktuelle_kategorie
-            elif zeile.startswith("BESCHREIBUNG:"):
-                beschreibung = zeile.replace("BESCHREIBUNG:", "").strip()
-                # Auf max. 300 Zeichen kürzen
-                if len(beschreibung) > 300:
-                    beschreibung = beschreibung[:297] + "..."
             elif zeile.startswith("WIEDERKEHREND:"):
                 wiederkehrend_text = zeile.replace("WIEDERKEHREND:", "").strip().lower()
                 ist_wiederkehrend = wiederkehrend_text in ("ja", "yes", "true", "1")
 
         if not kategorie or aktuelle_kategorie in FESTE_KATEGORIEN:
             kategorie = aktuelle_kategorie
-        if not beschreibung:
-            logger.warning("Keine Beschreibung von KI erhalten für Event: %s", titel)
-            return None, None, None
 
         return kategorie, beschreibung, ist_wiederkehrend
 

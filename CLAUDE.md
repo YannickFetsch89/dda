@@ -40,7 +40,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
   "ort": "string (Venue-Name)",
   "adresse": "string oder null",
   "kategorie": "enum (siehe unten)",
-  "beschreibung": "string (max. 300 Zeichen)",
+  "beschreibung": "string oder leer – Text aus der Veranstalter-Quelle in eigenen Worten (pipeline/beschreibung_quellen.py, bis etwa 1200 Zeichen); nie aus dem Titel erfunden",
   "preis": "string oder null (z.B. 'kostenlos', 'ab 12€')",
   "quelle_name": "string (z.B. 'Rausgegangen')",
   "quelle_url": "string (Original-URL des Events)",

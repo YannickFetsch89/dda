@@ -241,9 +241,11 @@ async def _schritte_ausfuehren(report: LaufReport):
     # Schritt 3b: Beschreibungen für Rausgegangen-Events aus Veranstalter-Quellen (umgeschrieben)
     logger.info("--- Schritt 3b: Beschreibungen aus Veranstalter-Quellen ---")
     try:
-        from pipeline.beschreibung_quellen import beschreibungen_nachziehen
+        from pipeline.beschreibung_quellen import beschreibungen_nachziehen, veranstalter_nachziehen
         # Nur ins Log – Kennzahlen sind Spalten in scraper_laeufe, eine neue bräuchte erst eine DB-Spalte
         beschreibungen_nachziehen(limit=40)
+        # Veranstalter-Events: Text aus der eigenen Event-Seite, ein Text pro Stück (Zeitbudget 10 Minuten)
+        veranstalter_nachziehen(max_stuecke=300, max_sekunden=600)
     except Exception as e:
         logger.error("Beschreibungen aus Veranstalter-Quellen fehlgeschlagen: %s", e)
 
