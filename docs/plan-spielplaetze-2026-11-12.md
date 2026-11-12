@@ -59,9 +59,17 @@ Hero-Foto mit Kindern, Zahl im Hero aus den Daten (nicht „230“).
 | Haftung | Geräte werden gesperrt/umgebaut | Fuß der Detailseite: „Angaben ohne Gewähr, Stand …; vor Ort kann es Abweichungen geben.“ |
 | Erfolgsmessung | – | Nach 4 Wochen Suchanfragen in Bing/Google prüfen (Spielplatz + Stadtteil, Wasserspielplatz, Waldspielplatz) und die FAQ danach nachschärfen |
 
-**Offene Fragen an den Auftraggeber:** (1) Bedeutung „GW“ bekannt? (2) Typ-Illustrationen selbst erzeugen (Prompts von uns)?
-(3) Datenschutz-Satz zur Standortfunktion freigeben? (4) Filter „rollstuhlgerecht/inklusiv“ zeigen, sobald mindestens fünf
-Plätze das belegt haben?
+**Entscheidungen des Auftraggebers (12.11.2026):**
+1. **„GW“ ist unbekannt.** Regel: Präfix „GW“ entfällt im Anzeigenamen, der Rest wird normal gebildet
+   („GW TANNENHOF, Wsp Tannenhof“ → „Wasserspielplatz Tannenhof“; „GW RATH/ELLER, Ksp Gutenbergstr.“ → „Spielplatz
+   Gutenbergstraße (Rath/Eller)“). 43 Einträge der Datei tragen „GW“; abgekürzte Straßen wie „Fritz./Mörsenb.“ nicht
+   auflösen, sondern in die Prüf-CSV. `objektbezeichnung` bleibt unverändert in `extras.spielplatz.stadt_name`. Alle GW-Fälle
+   stehen in der Prüf-CSV; keine Deutung des Kürzels im Text.
+2. **Typ-Illustrationen** erzeugt der Auftraggeber selbst; die Prompts stehen in Abschnitt 10.
+3. **Datenschutz-Satz freigegeben** (Wortlaut in Abschnitt 11); Einbau in `/datenschutz` zusammen mit dem Livegang.
+4. **Filter „Rollstuhlgerecht“** (Extras-Zeile) erscheint, sobald mindestens fünf sichtbare Plätze das belegt haben
+   (OSM `wheelchair=yes` oder Zitat). „Teilweise“ (`wheelchair=limited`) zählt nicht für den Filter, steht aber auf der
+   Detailseite.
 
 ---
 
@@ -189,7 +197,7 @@ Web: Filter (UND, „alle“, unbekannte Altersgruppe), Sichtbarkeit ohne Qualit
 
 | Schritt | Ergebnis |
 |---|---|
-| 0 | Offene Fragen aus 0.3 klären (GW, Illustrationen, Datenschutz-Satz, Inklusions-Filter) |
+| 0 | Entscheidungen aus 0.3 sind getroffen; Illustrationen (Abschnitt 10) vom Auftraggeber anfordern |
 | 1 | Import der 351 Plätze, inaktiv, Prüf-CSV für Namen, Grenz-Stadtteile, Bezirks-Abweichungen, doppelte Notfallnummern und Adressen „nahe …“ |
 | 2 | OSM-Bericht: wie viele haben Geräte, Liste der OSM-Plätze ohne Stadt-Treffer |
 | 3 | Manuelle Abenteuer-Liste, soweit öffentlich belegbar |
@@ -228,3 +236,33 @@ Stadt, OSM, Stadtteilflächen und Adressliste kosten nichts. Erste Runde (≈ 11
 - Hub, Detail und Stadtteilseiten liefern den Inhalt in der ersten HTML-Antwort. Canonical und noindex wie in 4.4. JSON-LD ohne Google-Bewertung.
 - Filter und Karte funktionieren mobil ohne horizontales Scrollen.
 - Tests grün. Deploy erst, wenn die Gegenprüfung keine kritischen oder mittleren Befunde mehr hat.
+
+---
+
+## 10. Bild-Prompts (Auftraggeber erzeugt die Bilder)
+
+Gemeinsame Regeln: **keine Personen, keine Kinder, keine Gesichter, keine Logos oder Schriftzüge**, keine erkennbaren
+Marken-Spielgeräte. Freundlich und hell, natürliches Licht, leicht warmer Ton passend zu `#FFF6E6`. Fotorealistisch wie
+die übrigen Guide-Bilder (`/guides/*.webp`). Ablage als WebP in `web/public/guides/`.
+
+| Datei | Format | Prompt (englisch, für den Bildgenerator) |
+|---|---|---|
+| `spielplaetze.webp` (Hero, rechts 46 %, läuft nach links aus) | 16:9, mind. 1600 × 900 | *Empty modern public playground in a leafy city park in Düsseldorf on a sunny late-summer morning, wooden climbing tower with a slide, swings and a sandpit with a few colourful buckets, soft golden light through tall plane trees, fresh green lawn, calm and inviting atmosphere, no people, no children, no text, no logos, photorealistic, shallow depth of field, main subject placed on the right third, left side calm and slightly blurred for text overlay* |
+| `spielplatz-typ-kinder.webp` (Ersatzbild Kinderspielplatz) | 4:3, mind. 1200 × 900 | *Close-up of an empty colourful city playground: a red slide, a rope climbing net and a sandpit with small toy shovels, sunny afternoon, green bushes in the background, cheerful but natural colours, no people, no children, no text, no logos, photorealistic* |
+| `spielplatz-typ-wald.webp` (Ersatzbild Waldspielplatz) | 4:3, mind. 1200 × 900 | *Empty natural forest playground made of raw tree trunks and wooden balancing beams, a log climbing structure and a rope bridge between oak trees, dappled sunlight on the forest floor with leaves, peaceful and adventurous mood, no people, no children, no text, no logos, photorealistic* |
+| `spielplatz-typ-wasser.webp` (Ersatzbild Wasserspielplatz) | 4:3, mind. 1200 × 900 | *Empty water playground in a city park on a hot summer day, water pump and small wooden channels with water running into a sandy play area, sparkling water droplets in the sunlight, splash pad stones, green trees around, no people, no children, no text, no logos, photorealistic* |
+
+Prüfung vor dem Einbau: keine Person im Bild (auch nicht im Hintergrund), keine Schrift, Bildausschnitt funktioniert bei
+4:3 und als 80 × 80-Thumb.
+
+## 11. Datenschutz-Satz (freigegeben am 12.11.2026)
+
+Einbau in `/datenschutz`, Abschnitt zu Funktionen der Website:
+
+Die Datenschutzerklärung spricht die Leser mit „Sie“ an; der Satz folgt dieser Anrede (die Guides bleiben bei ihr/euch).
+
+> **Standortfunktion im Spielplatz-Guide.** Wenn Sie im Spielplatz-Guide auf „In der Nähe“ tippen, fragt Ihr Browser,
+> ob die Website Ihren Standort verwenden darf. Nur wenn Sie zustimmen, berechnet der Browser auf Ihrem Gerät die
+> Entfernung zu den Spielplätzen. Ihr Standort wird dabei nicht an uns oder Dritte übertragen und nicht gespeichert.
+> Die Freigabe können Sie jederzeit in den Einstellungen Ihres Browsers widerrufen.
+
