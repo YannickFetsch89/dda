@@ -120,7 +120,7 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
         titel: "Rheinisch essen: Halve Hahn, Sauerbraten, Senf",
         absaetze: [
           "Wer Düsseldorf schmecken will, geht ins Brauhaus. Dort gibt es zum Alt die Klassiker der rheinischen Küche: " +
-            "den Halven Hahn – ein Roggenbrötchen mit mittelaltem Gouda, Zwiebeln und Senf –, Rheinischen Sauerbraten, " +
+            "den Halve Hahn – ein Roggenbrötchen mit mittelaltem Gouda, Zwiebeln und Senf –, Rheinischen Sauerbraten, " +
             "Himmel un Ääd mit Blutwurst und im Winter Reibekuchen. Der scharfe Düsseldorfer Senf gehört fast immer dazu.",
           "Die Brauhäuser aus unserem [Kneipen-Guide](/guides/kneipen-bars) stehen deshalb auch hier – etwa die " +
             "[Brauerei Schumacher](/guides/kneipen-bars/brauerei-schumacher-stadtmitte) an der Oststraße oder das " +
@@ -141,8 +141,8 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         titel: "Cafés, Frühstück und Kuchen",
         absaetze: [
-          "Über hundert Cafés gehören zum Guide – vom Spezialitäten-Kaffee über Brunch-Lokale bis zur Konditorei. Stellt " +
-            "im Filter „Art“ auf Café, um nur sie zu sehen, und kombiniert das mit eurem Stadtteil. Die Karte zeigt auf " +
+          "Über hundert Cafés gehören zum Guide – vom Spezialitäten-Kaffee über Brunch-Lokale bis zur Konditorei. Wählt " +
+            "oben den Reiter „Cafés“, um nur sie zu sehen, und kombiniert das mit eurem Stadtteil. Die Karte zeigt auf " +
             "einen Blick, was in der Nähe liegt.",
         ],
       },
@@ -165,15 +165,15 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         frage: "Was ist typisch Düsseldorfer Essen?",
         antwort:
-          "Rheinische Brauhausküche: Halver Hahn, Rheinischer Sauerbraten, Himmel un Ääd und Reibekuchen, dazu " +
+          "Rheinische Brauhausküche: Halve Hahn, Rheinischer Sauerbraten, Himmel un Ääd und Reibekuchen, dazu " +
           "Düsseldorfer Senf und ein frisch gezapftes Alt. Am besten in einer Hausbrauerei wie dem " +
           "[Uerige](/guides/kneipen-bars/uerige-obergaerige-hausbrauerei-altstadt) in der Altstadt.",
       },
       {
         frage: "Wo kann man in Düsseldorf gut frühstücken oder brunchen?",
         antwort:
-          "In vielen der Cafés aus diesem Guide – besonders in Pempelfort, Unterbilk und Flingern. Filtert nach „Café“ und " +
-          "eurem Stadtteil; auf jeder Detailseite stehen die Öffnungszeiten.",
+          "In vielen der Cafés aus diesem Guide – besonders in Pempelfort, Unterbilk und Flingern. Wählt den Reiter „Cafés“ und " +
+          "euren Stadtteil; auf jeder Detailseite stehen die Öffnungszeiten.",
       },
       {
         frage: "Gibt es auch günstige Restaurants?",
@@ -280,9 +280,9 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
         titel: "Altstadt: viele Clubs auf kurzen Wegen",
         absaetze: [
           "Fast die Hälfte der Clubs liegt in der Altstadt, oft nur ein paar Schritte voneinander entfernt. Die meisten " +
-            "spielen Charts, House und Hip-Hop; Latin und Reggaeton laufen etwa im " +
-            "[Rio Arriba](/guides/clubs/rio-arriba-altstadt) und im [The Eight](/guides/clubs/the-eight) am Rheinufer. " +
-            "Ganz anders der [Salon des Amateurs](/guides/clubs/salon-des-amateurs-altstadt) am Grabbeplatz: ein kleiner " +
+            "spielen Charts, House und Hip-Hop. Latin, Salsa und Reggaeton sind das Programm im " +
+            "[Rio Arriba](/guides/clubs/rio-arriba-altstadt), das auch Tanzkurse anbietet; am Rheinufer lädt das " +
+            "[The Eight](/guides/clubs/the-eight) zu elektronischen Sunset-Abenden. Ganz anders der [Salon des Amateurs](/guides/clubs/salon-des-amateurs-altstadt) am Grabbeplatz: ein kleiner " +
             "Club im Gebäude der Kunsthalle mit elektronischer und experimenteller Musik. Alle Clubs des Viertels stehen unter " +
             "[Clubs in der Altstadt](/guides/clubs/stadtteil/altstadt).",
         ],
@@ -290,11 +290,12 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         titel: "Techno und elektronische Musik",
         absaetze: [
-          "Wer Techno und House sucht, wird im [Kulturschlachthof R25](/guides/clubs/kulturschlachthof-r25) an der " +
-            "Rather Straße fündig, in der [Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort) und im " +
-            "[Ampere](/guides/clubs/ampere-flingern). Die [Schleuse Zwei](/guides/clubs/schleuse-zwei-s2-hafen) im " +
-            "Medienhafen verbindet elektronische Abende mit Jazz und Poetry. Mit dem Genre-Filter „Techno“ oder " +
-            "„Elektro/Experimental“ seht ihr alle Adressen auf einen Blick.",
+          "Wer Techno sucht, wird im [Kulturschlachthof R25](/guides/clubs/kulturschlachthof-r25) an der Rather Straße " +
+            "fündig, in der [Giselle Bar](/guides/clubs/giselle-bar-stadtmitte) mit Techno und House und im " +
+            "[Ampere](/guides/clubs/ampere-flingern), wo auch Drum & Bass läuft. Die " +
+            "[Schleuse Zwei](/guides/clubs/schleuse-zwei-s2-hafen) an der Aachener Straße setzt auf elektronische und " +
+            "experimentelle Abende, mal mit House, mal mit Hip-Hop. Mit der Musikrichtung „Techno“ oder " +
+            "„Elektro/Experimental“ im Filter seht ihr alle Adressen auf einen Blick.",
         ],
       },
       {
@@ -303,16 +304,18 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
           "Ein Teil des Düsseldorfer Nachtlebens spielt in Kulturhäusern: Das [zakk](/guides/clubs/zakk-flingern) an der " +
             "Fichtenstraße mischt Konzerte, Lesungen und Partys, der [Ratinger Hof](/guides/clubs/ratinger-hof-duesseldorf-altstadt) " +
             "war Ende der 1970er-Jahre Treffpunkt der Punk- und New-Wave-Szene und steht bis heute für Rock und Indie. " +
-            "Härter wird es im [Pitcher](/guides/clubs/pitcher-flingern) mit Rock und Metal. Für große Partynächte – etwa " +
-            "Ü30-Hip-Hop – sind das [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) an der " +
-            "Ronsdorfer Straße und das [Tor 3](/guides/clubs/tor-3-flingern) die bekanntesten Adressen.",
+            "Härter wird es im [Pitcher](/guides/kneipen-bars/pitcher-flingern) mit Rock und Metal. Große Partynächte gibt " +
+            "es im [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) an der Ronsdorfer Straße – mit Hits der " +
+            "80er, 90er und 2000er und einer eigenen Ü30-Hip-Hop-Party – und im [Tor 3](/guides/clubs/tor-3-flingern) " +
+            "mit elektronischen und gemischten Abenden.",
         ],
       },
       {
         titel: "Auf der anderen Rheinseite: Neuss",
         absaetze: [
           "Auch in Neuss wird gefeiert, und die Nachbarstadt ist mit S-Bahn und Straßenbahn schnell erreicht. Der " +
-            "[Revolution Nachtpalast](/guides/clubs/revolution-nachtpalast-neuss) setzt auf Latin, Reggaeton und R&B; " +
+            "[Revolution Nachtpalast](/guides/clubs/revolution-nachtpalast-neuss) mischt R&B und Latin mit Mottopartys wie " +
+            "einer Abba-Nacht; " +
             "dazu kommen weitere Clubs, die ihr über den Stadtteil-Filter „Neuss“ findet.",
         ],
       },
@@ -329,24 +332,26 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         frage: "Welche Clubs in Düsseldorf spielen Techno?",
         antwort:
-          "Techno und House laufen unter anderem im [Kulturschlachthof R25](/guides/clubs/kulturschlachthof-r25), in der " +
-          "[Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort), im [Ampere](/guides/clubs/ampere-flingern) " +
-          "und in der [Schleuse Zwei](/guides/clubs/schleuse-zwei-s2-hafen); elektronisch-experimentell wird es im " +
-          "[Salon des Amateurs](/guides/clubs/salon-des-amateurs-altstadt).",
+          "Techno ist das Hauptprogramm im [Kulturschlachthof R25](/guides/clubs/kulturschlachthof-r25), im " +
+          "[Salon des Amateurs](/guides/clubs/salon-des-amateurs-altstadt), in der " +
+          "[Giselle Bar](/guides/clubs/giselle-bar-stadtmitte) und im [Ampere](/guides/clubs/ampere-flingern). Die " +
+          "Musikrichtung „Techno“ im Filter zeigt alle Clubs, in denen er regelmäßig läuft.",
       },
       {
         frage: "Wo gibt es Hip-Hop und R&B?",
         antwort:
-          "Im [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) – dort auch als Ü30-Party –, im " +
-          "[Tor 3](/guides/clubs/tor-3-flingern) und in mehreren Clubs der Altstadt; R&B spielt unter anderem die " +
-          "[Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort). Die Genre-Filter „Hip-Hop“ und „R&B“ zeigen alle.",
+          "R&B und House sind das Hauptprogramm der [Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort). " +
+          "Hip-Hop läuft oft als Teil gemischter Abende, etwa im [Tor 3](/guides/clubs/tor-3-flingern) oder im " +
+          "[Ampere](/guides/clubs/ampere-flingern); das [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) hat " +
+          "eine eigene Ü30-Hip-Hop-Party. Die Musikrichtungen „Hip-Hop“ und „R&B“ im Filter zeigen alle Clubs.",
       },
       {
         frage: "Wo tanzt man in Düsseldorf Latin und Reggaeton?",
         antwort:
-          "In der Altstadt im [Rio Arriba](/guides/clubs/rio-arriba-altstadt) und im [The Eight](/guides/clubs/the-eight), " +
-          "außerdem in der [Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort) und im " +
-          "[Revolution Nachtpalast](/guides/clubs/revolution-nachtpalast-neuss) in Neuss.",
+          "Vor allem im [Rio Arriba](/guides/clubs/rio-arriba-altstadt) in der Altstadt – dort gibt es auch Tanzkurse für " +
+          "Salsa und Bachata. Latin-Nächte stehen außerdem in der " +
+          "[Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort) und im " +
+          "[Revolution Nachtpalast](/guides/clubs/revolution-nachtpalast-neuss) in Neuss auf dem Programm.",
       },
       {
         frage: "Wie finde ich heute Abend eine Party?",

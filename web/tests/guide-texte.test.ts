@@ -34,6 +34,19 @@ describe("Guide-Texte", () => {
     }
   });
 
+  it("erklärt die Club-Einteilung nicht und verlinkt keine Club-Ansicht von Orten mit Haupt-Seite", () => {
+    for (const s of SEITEN) {
+      const t = GUIDE_TEXTE[s];
+      const alles = [t.einleitung, ...t.abschnitte.flatMap((a) => a.absaetze), ...t.faq.flatMap((f) => [f.frage, f.antwort])].join(" ");
+      expect(alles, s).not.toMatch(/Stufe|Score|A\/B\/C|Top-Empfehlung/);
+    }
+    // auch_club-Orte mit sichtbarer Kneipen-/Restaurant-Seite: Club-Ansicht ist noindex → Haupt-URL verlinken
+    const MIT_HAUPTSEITE = ["pitcher-flingern", "schlager-cafe-duesseldorf-altstadt"];
+    for (const s of SEITEN) for (const z of linkZiele(GUIDE_TEXTE[s])) {
+      for (const slug of MIT_HAUPTSEITE) expect(z, `${s}: ${z}`).not.toBe(`/guides/clubs/${slug}`);
+    }
+  });
+
   it("Platzhalter und FAQ-JSON-LD", () => {
     expect(textFuellen("{anzahl} Clubs", { anzahl: "35" })).toBe("35 Clubs");
     const ld = faqJsonLd([{ frage: "F?", antwort: "Siehe [Clubs](/guides/clubs)." }]);

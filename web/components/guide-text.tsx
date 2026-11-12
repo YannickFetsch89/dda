@@ -50,7 +50,7 @@ export function GuideSeoText({ seite, werte = {} }: { seite: GuideSeite; werte?:
         <h2 className="d">Häufige Fragen</h2>
         {faq.map((f) => (
           <details key={f.frage} className="gd-faq__eintrag">
-            <summary><h3>{f.frage}</h3><span className="icon" aria-hidden data-icon="expand_more" /></summary>
+            <summary><span className="gd-faq__frage">{f.frage}</span><span className="icon" aria-hidden data-icon="expand_more" /></summary>
             <p><TextMitLinks text={f.antwort} /></p>
           </details>
         ))}

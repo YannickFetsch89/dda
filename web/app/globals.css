@@ -1702,7 +1702,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .gd-faq__eintrag:last-child { border-bottom: 1px solid var(--ddd-border); }
 .gd-faq__eintrag summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; cursor: pointer; list-style: none; }
 .gd-faq__eintrag summary::-webkit-details-marker { display: none; }
-.gd-faq__eintrag summary h3 { margin: 0; font-size: 17px; line-height: 1.35; color: var(--ddd-text); }
+.gd-faq__frage { margin: 0; font-weight: 700; font-size: 17px; line-height: 1.35; color: var(--ddd-text); }
 .gd-faq__eintrag summary .icon { flex: none; transition: transform 0.2s; color: var(--ddd-text-muted); }
 .gd-faq__eintrag[open] summary .icon { transform: rotate(180deg); }
 .gd-faq__eintrag p { padding-bottom: 6px; }
