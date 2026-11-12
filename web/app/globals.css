@@ -1512,6 +1512,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .cl-score__wert small { font-size: 16px; color: rgba(255, 255, 255, 0.6); }
 .cl-score__zeile { display: grid; grid-template-columns: 92px 1fr 32px; align-items: center; gap: 10px; font-size: 13px; }
 .cl-score__zeile b { text-align: right; }
+.cl-score__keine { grid-column: 2 / -1; font-size: 13px; font-style: italic; color: rgba(255, 255, 255, 0.6); }
 .cl-score__balken { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
 .cl-score__balken span { display: block; height: 100%; border-radius: 3px; background: var(--ddd-gold); }
 :root[data-theme="dark"] .cl-karte { border-color: var(--ddd-border); }

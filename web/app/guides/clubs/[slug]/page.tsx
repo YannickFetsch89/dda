@@ -126,13 +126,21 @@ function ScorePanel({ ort }: { ort: DddOrt }) {
         <h2>Unser Club-Score</h2>
         <span className="cl-score__wert">{s.gesamt}<small>/10</small></span>
       </div>
-      {teile.map((t) => (
-        <div key={t.label} className="cl-score__zeile" title={t.hilfe}>
-          <span>{t.label}</span>
-          <span className="cl-score__balken" aria-hidden><span style={{ width: `${Math.max(4, t.wert * 10)}%` }} /></span>
-          <b>{t.wert.toLocaleString("de-DE")}</b>
-        </div>
-      ))}
+      {teile.map((t) =>
+        // 0 heißt „nichts belegt“, nicht „schlecht“ – deshalb kein leerer Balken, sondern „noch keine Angaben“
+        t.wert > 0 ? (
+          <div key={t.label} className="cl-score__zeile" title={t.hilfe}>
+            <span>{t.label}</span>
+            <span className="cl-score__balken" aria-hidden><span style={{ width: `${Math.max(4, t.wert * 10)}%` }} /></span>
+            <b>{t.wert.toLocaleString("de-DE")}</b>
+          </div>
+        ) : (
+          <div key={t.label} className="cl-score__zeile cl-score__zeile--leer" title={t.hilfe}>
+            <span>{t.label}</span>
+            <span className="cl-score__keine">noch keine Angaben</span>
+          </div>
+        ),
+      )}
     </div>
   );
 }
