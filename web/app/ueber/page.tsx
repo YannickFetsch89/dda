@@ -233,9 +233,6 @@ export default async function Ueber() {
               <a href={`mailto:${KONTAKT_MAIL}?subject=Tipp für dies.das.düsseldorf`} className="btn btn--hell btn--gross">
                 <Icon name="mail" /> Schreib uns
               </a>
-              <a href="https://www.instagram.com/dies.das.duesseldorf/" target="_blank" rel="noopener" className="btn btn--hell btn--gross">
-                Instagram
-              </a>
             </div>
           </div>
           <Bild f={F.spritz} className="ue-cta__bild ue-parallaxe" />

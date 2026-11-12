@@ -22,7 +22,7 @@ export function markeJsonLd(siteUrl: string): Record<string, unknown> {
         url: `${siteUrl}/`,
         logo: `${siteUrl}/icon.svg`,
         description: MARKE_SATZ,
-        sameAs: ["https://www.instagram.com/dies.das.duesseldorf/"],
+        // sameAs (Social-Media-Profile) erst wieder, wenn Instagram aktiv bespielt wird (12.11.2026)
       },
       {
         "@type": "WebSite",
