@@ -507,6 +507,11 @@ def bestehende_aktualisieren(dry_run: bool = False) -> dict:
             continue
 
         details = _detail_felder(place)
+        # Von Hand gewähltes Foto (extras.foto_manuell, z. B. Club-Fotos 12.11.2026) nicht durch das erste
+        # Google-Foto ersetzen – auch „kein Foto“ bleibt so
+        if (ort.get("extras") or {}).get("foto_manuell"):
+            details["extras"].pop("google_foto", None)
+            details.pop("bild_attribution", None)
         update: dict = {
             "google_rating": place.get("rating"),
             "google_bewertungen_anzahl": place.get("userRatingCount"),
