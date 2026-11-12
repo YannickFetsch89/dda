@@ -524,11 +524,25 @@ def beschreibungen_nachziehen(limit: int = 40, sicherung: bool = False) -> int:
 KURZ = 200
 
 
+# Abfrageparameter, die nur Datum/Zeit oder Tracking tragen – alles andere (zakk ?event=…, Tonhalle ?productId=…)
+# kennzeichnet die Veranstaltung und bleibt Teil der Seite
+_NUR_TERMIN_PARAMETER = {"date", "datum", "time", "uhrzeit", "zeit", "stamp", "timestamp", "acontext", "ref", "fbclid"}
+
+
 def _seiten_pfad(url: str) -> str:
-    """Event-Seite ohne Abfrage und ohne Monats-Segment: /programm/spielplan/2026-11/blutbuch/3072/ → …/blutbuch/3072"""
+    """
+    Event-Seite ohne Termin-Anteile: ohne YYYY-MM(-DD)-Segmente und ohne Datums-/Zeit-/Tracking-Parameter.
+    /programm/spielplan/2026-11/blutbuch/3072/ → …/blutbuch/3072; kunstpalast …/open-studio/?date=…&time=… → …/open-studio;
+    zakk /event-detail?event=16368 bleibt mit ?event=16368 (die Kennung steckt dort in der Abfrage).
+    """
+    from urllib.parse import parse_qsl
+
     teile = urlparse(url or "")
     pfad = "/".join(t for t in teile.path.split("/") if t and not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", t))
-    return f"{teile.netloc.removeprefix('www.')}/{pfad}"
+    abfrage = sorted((k, v) for k, v in parse_qsl(teile.query)
+                     if k.lower() not in _NUR_TERMIN_PARAMETER and not k.lower().startswith("utm_"))
+    zusatz = ("?" + "&".join(f"{k}={v}" for k, v in abfrage)) if abfrage else ""
+    return f"{teile.netloc.removeprefix('www.')}/{pfad}{zusatz}"
 
 
 def _stueck_schluessel(event: dict) -> tuple[str, str, str]:
@@ -539,6 +553,21 @@ def _stueck_schluessel(event: dict) -> tuple[str, str, str]:
     """
     return (" ".join(_woerter(event.get("titel") or "")), " ".join(_woerter(event.get("ort") or "")),
             _seiten_pfad(event.get("quelle_url") or ""))
+
+
+def sammel_pfade(events: list[dict]) -> set[str]:
+    """
+    Seiten, auf die Termine mit VERSCHIEDENEN Titeln verlinken – Kalender, Spielpläne, Programmübersichten (z. B. die
+    Rückfall-URL eines Scrapers ohne Einzel-Link: d.live /events/eventkalender, Schauspielhaus-Spielplan). Das ist
+    keine Event-Seite; daraus wird kein Text geschrieben (Cursor-Review 12.11.2026). (rein, testbar)
+    """
+    titel_je_pfad: dict[str, set[str]] = {}
+    for e in events:
+        if e.get("quelle_url"):
+            # Nur der Titel vor einem „|“ zählt („PINK FLAMINGOS | Stationen der Filmgeschichte“ = „PINK FLAMINGOS“)
+            kopf = re.split(r"\s+\|\s+", e.get("titel") or "")[0]
+            titel_je_pfad.setdefault(_seiten_pfad(e["quelle_url"]), set()).add(" ".join(_woerter(kopf)))
+    return {pfad for pfad, titel in titel_je_pfad.items() if len(titel) > 1 or pfad.endswith("/")}
 
 
 def stuecke_bilden(events: list[dict]) -> list[list[dict]]:
@@ -587,16 +616,39 @@ def offene_veranstalter_events(db) -> list[dict]:
             return events
 
 
+def alle_event_seiten(db) -> list[dict]:
+    """Titel und quelle_url aller künftigen Events (für sammel_pfade)."""
+    from datetime import date
+
+    zeilen, start = [], 0
+    while True:
+        seite = (
+            db.table("events").select("titel,quelle_url")
+            .gte("datum", date.today().isoformat()).not_.is_("quelle_url", "null")
+            .range(start, start + 999).execute()
+        ).data or []
+        zeilen += seite
+        start += 1000
+        if len(seite) < 1000:
+            return zeilen
+
+
 def stueck_bearbeiten(client, stueck: list[dict]) -> dict:
     """Erste abrufbare Event-URL des Stücks laden und umschreiben. Ergebnis wie event_bearbeiten."""
     event = stueck[0]
     eintrag = {"id": event["id"], "titel": event["titel"], "datum": event["datum"], "ort": event.get("ort"),
                "bisher": event.get("beschreibung"), "weg": "Event-Seite des Veranstalters", "termine": len(stueck)}
     woerter = titel_woerter(event["titel"])
+    eintrag["abruf"] = "fehler"
     for url in list(dict.fromkeys(e["quelle_url"] for e in stueck))[:2]:
+        if _gesperrt(url) or not robots_erlaubt(url):
+            # Endgültig: robots.txt oder Sperrliste – das Stück gilt als gesucht
+            eintrag["abruf"] = "gesperrt" if eintrag["abruf"] == "fehler" else eintrag["abruf"]
+            continue
         html = seite_laden(url)
         if not html:
-            continue
+            continue  # Netzfehler o. Ä. – bleibt „fehler“, das Stück bleibt offen
+        eintrag["abruf"] = "gelesen"
         text = seiten_text(html)
         # Zu wenig Text oder Titel nicht auf der Seite: nicht dieses Event (z. B. nur ein Kalender per JavaScript)
         if len(text) < 200 or (woerter and titel_treffer(text, woerter) < 0.5):
@@ -629,6 +681,7 @@ def veranstalter_nachziehen(max_stuecke: int = 150, sicherung: bool = False, pro
 
     db = get_supabase_client()
     stuecke = stuecke_bilden(offene_veranstalter_events(db))
+    sammel = sammel_pfade(alle_event_seiten(db))
     if probe:
         # Breite Stichprobe: je Quelle höchstens zwei Stücke
         gewaehlt, je_quelle = [], {}
@@ -652,14 +705,24 @@ def veranstalter_nachziehen(max_stuecke: int = 150, sicherung: bool = False, pro
             break
         logger.info("Stück [%d/%d]: %s (%s, %d Termine)", nr, len(stuecke), stueck[0]["titel"][:50],
                     stueck[0].get("ort"), len(stueck))
-        try:
-            eintrag = stueck_bearbeiten(client, stueck)
-        except Exception as e:
-            logger.error("Beschreibung für '%s' fehlgeschlagen: %s", stueck[0]["titel"][:40], e)
-            continue
+        if _seiten_pfad(stueck[0]["quelle_url"]) in sammel:
+            # Kalender/Spielplan statt Event-Seite: kein Text, aber als gesucht markieren (ändert sich nicht)
+            eintrag = {"id": stueck[0]["id"], "titel": stueck[0]["titel"], "datum": stueck[0]["datum"],
+                       "ort": stueck[0].get("ort"), "bisher": stueck[0].get("beschreibung"), "termine": len(stueck),
+                       "weg": "Sammel-Seite (übersprungen)", "abruf": "sammelseite"}
+        else:
+            try:
+                eintrag = stueck_bearbeiten(client, stueck)
+            except Exception as e:
+                logger.error("Beschreibung für '%s' fehlgeschlagen: %s", stueck[0]["titel"][:40], e)
+                continue
         eintrag["quelle_name"] = stueck[0].get("quelle_name")
         ergebnisse.append(eintrag)
         if probe:
+            continue
+        if eintrag.get("abruf") == "fehler":
+            # Netzfehler: nichts markieren, der nächste Lauf versucht es erneut
+            logger.info("Seite nicht erreichbar – Stück bleibt offen: %s", stueck[0]["titel"][:50])
             continue
         jetzt = datetime.now(timezone.utc).isoformat()
         for e in stueck:

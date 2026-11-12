@@ -210,6 +210,9 @@ def captions_generieren(limit: int = 10) -> int:
             .select("id, titel, ort, datum, uhrzeit, kategorie, beschreibung, preis, quelle_url")
             .eq("status", "neu")
             .not_.is_("beschreibung", "null")
+            # "" = kategorisiert, aber noch ohne Quellentext (seit 12.11.2026) – erst Caption, wenn ein Text da ist;
+            # Events ohne Text bleiben „neu“, damit ein späterer Quellentext die Caption auslöst
+            .neq("beschreibung", "")
             .limit(limit)
             .execute()
         )
