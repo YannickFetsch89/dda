@@ -252,7 +252,8 @@ def stadtteil_ermitteln(ort: str, adresse: str | None = None, quelle_name: str |
     if not ort:
         return None
 
-    ort_lower = ort.lower()
+    # Mehrfache Leerzeichen vereinheitlichen („Mitsubishi Electric  Halle“ aus AllEvents fiel sonst durch die Venue-Liste)
+    ort_lower = re.sub(r"\s+", " ", ort).lower()
 
     # Priorität 1: Venue-Name Lookup (längster Match zuerst)
     for venue_key in _VENUE_KEYS_SORTED:

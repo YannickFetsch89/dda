@@ -13,6 +13,16 @@ class DliveTest(unittest.TestCase):
         self.assertEqual(stadtteil_ermitteln("Merkur Spiel-Arena", None, "d-live"), "Stockum")
         self.assertEqual(stadtteil_ermitteln("Messe Düsseldorf", None, "Messe Düsseldorf"), "Stockum")
 
+    def test_mehrfache_leerzeichen(self):
+        self.assertEqual(stadtteil_ermitteln("Mitsubishi Electric  Halle Düsseldorf", None, "AllEvents.in Düsseldorf"), "Oberbilk")
+
+    def test_scraper_adressen(self):
+        from scraper.tier2.dlive import VENUE_MAP
+        adressen = {name: adresse for name, adresse in VENUE_MAP.values()}
+        self.assertEqual(adressen["PSD BANK DOME"], "Theodorstraße 281, 40472 Düsseldorf")
+        self.assertEqual(adressen["CASTELLO Düsseldorf"], "Karl-Hohmann-Straße 1, 40599 Düsseldorf")
+        self.assertNotEqual(adressen["PSD BANK DOME"], adressen["Mitsubishi Electric HALLE"])
+
     def test_kein_pauschalwert_fuer_dlive(self):
         # Unbekannte d.live-Spielstätte: nicht mehr pauschal Stockum
         self.assertIsNone(stadtteil_ermitteln("Rheinterrasse", None, "d-live"))

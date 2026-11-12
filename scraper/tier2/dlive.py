@@ -52,9 +52,11 @@ QUELLE_NAME = "d-live"
 # Venue-ID → (Venue-Name, Adresse)
 VENUE_MAP: dict[str, tuple[str, str]] = {
     "venue_1":  ("Merkur Spiel-Arena", "Arena-Straße 1, 40474 Düsseldorf"),
-    "venue_2":  ("PSD BANK DOME", "Siegburger Straße 15, 40591 Düsseldorf"),
+    # Bis 12.11.2026 standen hier für Dome und Castello falsche Adressen (Dome mit der Adresse der Mitsubishi Electric
+    # Halle, Castello mit einer Bilker Adresse) – die Karte auf der Eventseite zeigte dann den falschen Ort
+    "venue_2":  ("PSD BANK DOME", "Theodorstraße 281, 40472 Düsseldorf"),
     "venue_3":  ("Mitsubishi Electric HALLE", "Siegburger Straße 15, 40591 Düsseldorf"),
-    "venue_4":  ("CASTELLO Düsseldorf", "Auf'm Hennekamp 71, 40225 Düsseldorf"),
+    "venue_4":  ("CASTELLO Düsseldorf", "Karl-Hohmann-Straße 1, 40599 Düsseldorf"),
     "venue_14": ("OPEN AIR PARK Düsseldorf", "Arena-Straße 1, 40474 Düsseldorf"),
     "venue_19": ("Rheinterrasse", "Joseph-Beuys-Ufer 33, 40479 Düsseldorf"),
 }
