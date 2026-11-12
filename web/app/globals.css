@@ -1669,7 +1669,6 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .cl-stufe-gruppe__kopf h2 { display: flex; align-items: center; gap: 4px; font-size: 26px; margin: 0; }
 .cl-stufe-gruppe__kopf h2 .cl-stufe__punkt { width: 14px; height: 14px; margin-right: 8px; }
 .cl-stufe-gruppe__zahl { margin-left: 8px; font-family: var(--font-body, inherit); font-size: 15px; font-weight: 700; color: var(--ddd-text-muted); }
-.cl-stufe-gruppe__kopf p { margin: 4px 0 0; font-size: 14px; }
 .cl-stufe-gruppe--c .cl-karte__bild { aspect-ratio: 16 / 7; }
 .cl-top { display: inline-flex; align-items: center; gap: 3px; background: #c9a84c; color: #1b2540; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; }
 .cl-top .icon { font-size: 15px; }

@@ -10,17 +10,17 @@ import type { DddOrt } from "./typen";
  * Seit 12.11.2026 zeigt der Hub ALLE Clubs mit passendem Profil, gestuft nach A/B/C (siehe clubStufe).
  */
 export const MIN_CLUB_SCORE = 7;
-/** Ab diesem Club-Score: „Ebenfalls zu empfehlen“ (Stufe B); darunter „Weitere Clubs“ (Stufe C). */
+/** Ab diesem Club-Score: „Weitere Empfehlungen“ (Stufe B); darunter „Sonstige Clubs“ (Stufe C). */
 export const MIN_CLUB_SCORE_B = 5;
 /** Ab diesem qualitaets_score ist die Haupt-Seite eines Orts aus einem anderen Hub sichtbar (wie MIN_QUALITAETS_SCORE). */
 const MIN_SCORE_HAUPT_HUB = 7;
 const HAUPT_HUB_TYPEN = ["restaurant", "imbiss", "cafe", "kneipe"];
 
 export type ClubStufe = "a" | "b" | "c";
-export const CLUB_STUFEN: { wert: ClubStufe; label: string; titel: string; text: string }[] = [
-  { wert: "a", label: "Top-Empfehlung", titel: "Top-Empfehlungen", text: "Von uns geprüft – die stärksten Programme der Stadt." },
-  { wert: "b", label: "Ebenfalls zu empfehlen", titel: "Ebenfalls zu empfehlen", text: "Regelmäßige Partys und ein klares Profil." },
-  { wert: "c", label: "Weiterer Club", titel: "Weitere Clubs", text: "Alle übrigen Clubs und Partyorte – mit weniger belegten Angaben." },
+export const CLUB_STUFEN: { wert: ClubStufe; label: string; titel: string }[] = [
+  { wert: "a", label: "Top-Empfehlung", titel: "Top-Empfehlungen" },
+  { wert: "b", label: "Weitere Empfehlung", titel: "Weitere Empfehlungen" },
+  { wert: "c", label: "Sonstiger Club", titel: "Sonstige Clubs" },
 ];
 
 export type ClubArt = "club" | "kulturhaus" | "partylocation";

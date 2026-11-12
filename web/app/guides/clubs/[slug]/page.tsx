@@ -3,7 +3,7 @@
 // Öffnungszeiten (Wochentag), nächste Events und ähnliche Clubs werden nachgeladen.
 // Orte mit Haupt-URL in einem anderen Hub (auch_club, z. B. Pitcher) haben hier eine Club-Ansicht mit
 // Canonical auf die Haupt-URL und noindex – jede Seite erscheint so nur einmal im Index. Ist ihre Haupt-Seite
-// nicht sichtbar (Score dort < 7), ist die Club-Seite kanonisch. Stufe C („Weitere Clubs“): noindex, kein Canonical.
+// nicht sichtbar (Score dort < 7), ist die Club-Seite kanonisch. Stufe C („Sonstige Clubs“): noindex, kein Canonical.
 export const instant = false;
 import { guideStadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";

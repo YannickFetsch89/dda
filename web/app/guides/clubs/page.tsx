@@ -1,7 +1,7 @@
 // Guide-Hub Clubs (Design-Handoff v2, Ansicht 22; Plan docs/plan-clubs-2026-11-11.md)
 //
 // Seit 12.11.2026: ALLE Clubs mit passendem Profil, gruppiert nach Empfehlung – A „Top-Empfehlungen“ (geprüft,
-// Club-Score ≥ 7), B „Ebenfalls zu empfehlen“ (Score ≥ 5), C „Weitere Clubs“. Filter nach Stufe in Grid und Karte;
+// Club-Score ≥ 7), B „Weitere Empfehlungen“ (Score ≥ 5), C „Sonstige Clubs“. Filter nach Stufe in Grid und Karte;
 // Grid ist Standard, die Karte (Pins in Stufen-Farben) optional über ?ansicht=karte.
 //
 // Erste HTML-Antwort mit Inhalt (SEO/GEO): Hero und die UNGEFILTERTE Ansicht stehen im statischen Shell.
@@ -258,7 +258,6 @@ function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechst
                   <span className={`cl-stufe__punkt cl-stufe__punkt--${stufe.wert}`} aria-hidden />
                   {stufe.titel}<span className="cl-stufe-gruppe__zahl">{zahl(orte.length)}</span>
                 </h2>
-                <p className="muted">{stufe.text}</p>
               </div>
               <div className="cl-grid" role="list">
                 {orte.map((o) => <ClubKarte key={o.id} o={o} naechstes={naechste.get(o.id)} />)}

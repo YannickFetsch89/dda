@@ -126,7 +126,11 @@ export async function Fuss() {
       <div className="container fuss__raster">
         <div className="fuss__marke">
           <Wortmarke gross />
-          <p>Alle Events in Düsseldorf, jeden Tag neu gesammelt.</p>
+          <p>
+            Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Theater, Comedy, Partys und Familienprogramm.
+            Dazu unsere Guides mit den besten Restaurants, Cafés, Kneipen, Bars und Clubs der Stadt – nach Stadtteil
+            sortiert. So seht ihr auf einen Blick, was ihr heute, morgen oder am Wochenende unternehmen könnt.
+          </p>
         </div>
         <div className="fuss__spalte">
           <b>Kategorien</b>
