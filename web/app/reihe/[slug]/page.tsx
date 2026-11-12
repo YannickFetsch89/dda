@@ -45,7 +45,7 @@ async function ReiheInhalt({ params }: Props) {
   const jsonLd = reiheJsonLd(SITE_URL, reihe, kommende);
 
   return (
-    <div className="container sektion reihe">
+    <div className="container sektion reihe-seite">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
       <nav className="gd-krumen" aria-label="Brotkrumen">
         <Link href="/">Start</Link>
@@ -54,7 +54,8 @@ async function ReiheInhalt({ params }: Props) {
         <span>/</span>
         <span aria-current="page">{reihe.titel}</span>
       </nav>
-      <KatBadge slug={reihe.kategorie} />
+      {/* Kategorie des nächsten Termins (aktueller als die beim Anlegen der Reihe gespeicherte) */}
+      <KatBadge slug={naechster?.kategorie ?? letzter?.kategorie ?? reihe.kategorie} />
       <h1 className="d">{reihe.titel}</h1>
       <p className="reihe__unterzeile">
         <Icon name="event_repeat" /> Wiederkehrendes Event · {reihe.ort}

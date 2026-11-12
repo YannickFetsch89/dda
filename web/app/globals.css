@@ -1256,7 +1256,8 @@ a.gd-hub:hover .gd-hub__motiv { transform: scale(1.05); }
 .abgelaufen-hinweis .link { display: inline; white-space: normal; font-size: inherit; }
 
 /* ---------- Reihen-Seite ---------- */
-.reihe h1 { margin: 10px 0 6px; }
+/* Eigener Block-Name: „.reihe“ ist das horizontale Karussell (components/client.tsx) */
+.reihe-seite h1 { margin: 10px 0 6px; }
 .reihe__unterzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--ddd-text-muted); font-size: 14px; }
 .reihe__unterzeile .icon { font-size: 18px; }
 .reihe__abschnitt { margin-top: 28px; }
