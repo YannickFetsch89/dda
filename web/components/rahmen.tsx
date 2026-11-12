@@ -131,6 +131,7 @@ export async function Fuss() {
             Dazu unsere Guides mit den besten Restaurants, Cafés, Kneipen, Bars und Clubs der Stadt – nach Stadtteil
             sortiert. So seht ihr auf einen Blick, was ihr heute, morgen oder am Wochenende unternehmen könnt.
           </p>
+          <Link href="/ueber" className="fuss__mehr">Mehr über uns</Link>
         </div>
         <div className="fuss__spalte">
           <b>Kategorien</b>
@@ -139,6 +140,7 @@ export async function Fuss() {
               {k.name}
             </Link>
           ))}
+          <Link href="/entdecken">Alle Events</Link>
         </div>
         <div className="fuss__spalte">
           <b>Stadtteile</b>
@@ -162,10 +164,10 @@ export async function Fuss() {
           <Link href="/#newsletter">Newsletter</Link>
           <Link href="/merkliste">Merkliste</Link>
         </div>
-        <div className="fuss__spalte">
-          <b>DDD</b>
-          <a href="https://www.instagram.com/dies.das.duesseldorf/" target="_blank" rel="noopener">Instagram</a>
-          <Link href="/ueber">Über uns</Link>
+      </div>
+      {/* Rechtliches mittig ganz unten, mit schmaler Trennlinie darüber */}
+      <div className="container">
+        <div className="fuss__unten">
           <Link href="/impressum">Impressum</Link>
           <Link href="/datenschutz">Datenschutz</Link>
         </div>

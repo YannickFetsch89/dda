@@ -541,6 +541,11 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .fuss__spalte b { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ddd-gold); margin-bottom: 4px; }
 .fuss__spalte a, .fuss__spalte span { font-size: 14px; color: var(--ddd-on-navy-muted); }
 .fuss__spalte a:hover { color: var(--ddd-on-navy); }
+.fuss__mehr { align-self: flex-start; font-size: 14px; font-weight: 600; color: var(--ddd-gold); text-decoration: underline; text-underline-offset: 3px; }
+.fuss__mehr:hover { color: var(--ddd-on-navy); }
+.fuss__unten { display: flex; justify-content: center; gap: 24px; margin-top: 32px; padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, 0.14); }
+.fuss__unten a { font-size: 13px; color: var(--ddd-on-navy-muted); }
+.fuss__unten a:hover { color: var(--ddd-on-navy); }
 @media (min-width: 768px) { .fuss { padding-bottom: 48px; } .fuss__raster { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; gap: 32px; } .fuss__marke { grid-column: auto; } }
 @media (min-width: 1200px) { .fuss { padding: 48px 0; } }
 
