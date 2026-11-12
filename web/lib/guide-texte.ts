@@ -304,7 +304,7 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
           "Ein Teil des Düsseldorfer Nachtlebens spielt in Kulturhäusern: Das [zakk](/guides/clubs/zakk-flingern) an der " +
             "Fichtenstraße mischt Konzerte, Lesungen und Partys, der [Ratinger Hof](/guides/clubs/ratinger-hof-duesseldorf-altstadt) " +
             "war Ende der 1970er-Jahre Treffpunkt der Punk- und New-Wave-Szene und steht bis heute für Rock und Indie. " +
-            "Härter wird es im [Pitcher](/guides/kneipen-bars/pitcher-flingern) mit Rock und Metal. Große Partynächte gibt " +
+            "Große Partynächte gibt " +
             "es im [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) an der Ronsdorfer Straße – mit Hits der " +
             "80er, 90er und 2000er und einer eigenen Ü30-Hip-Hop-Party – und im [Tor 3](/guides/clubs/tor-3-flingern) " +
             "mit elektronischen und gemischten Abenden.",
@@ -354,10 +354,10 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
           "[Revolution Nachtpalast](/guides/clubs/revolution-nachtpalast-neuss) in Neuss auf dem Programm.",
       },
       {
-        frage: "Wie finde ich heute Abend eine Party?",
+        frage: "Welche Partys gibt es heute Abend in Düsseldorf?",
         antwort:
-          "Auf jeder Club-Karte steht das nächste Event aus unserem Kalender. Alle Partys und Konzerte der nächsten Tage " +
-          "findet ihr unter [Nightlife](/kategorie/nightlife) und für den Abend unter [heute](/heute).",
+          "Alle Partys und Konzerte des Abends stehen in unserem Eventkalender unter [heute](/heute), die der nächsten " +
+          "Tage unter [Nightlife](/kategorie/nightlife). Auf jeder Club-Karte seht ihr außerdem das nächste Event des Clubs.",
       },
     ],
   },

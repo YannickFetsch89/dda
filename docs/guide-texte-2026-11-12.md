@@ -153,7 +153,7 @@ Wer Techno sucht, wird im [Kulturschlachthof R25](/guides/clubs/kulturschlachtho
 
 ### Kulturhäuser, Rock und große Hallen
 
-Ein Teil des Düsseldorfer Nachtlebens spielt in Kulturhäusern: Das [zakk](/guides/clubs/zakk-flingern) an der Fichtenstraße mischt Konzerte, Lesungen und Partys, der [Ratinger Hof](/guides/clubs/ratinger-hof-duesseldorf-altstadt) war Ende der 1970er-Jahre Treffpunkt der Punk- und New-Wave-Szene und steht bis heute für Rock und Indie. Härter wird es im [Pitcher](/guides/kneipen-bars/pitcher-flingern) mit Rock und Metal. Große Partynächte gibt es im [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) an der Ronsdorfer Straße – mit Hits der 80er, 90er und 2000er und einer eigenen Ü30-Hip-Hop-Party – und im [Tor 3](/guides/clubs/tor-3-flingern) mit elektronischen und gemischten Abenden.
+Ein Teil des Düsseldorfer Nachtlebens spielt in Kulturhäusern: Das [zakk](/guides/clubs/zakk-flingern) an der Fichtenstraße mischt Konzerte, Lesungen und Partys, der [Ratinger Hof](/guides/clubs/ratinger-hof-duesseldorf-altstadt) war Ende der 1970er-Jahre Treffpunkt der Punk- und New-Wave-Szene und steht bis heute für Rock und Indie. Große Partynächte gibt es im [Stahlwerk](/guides/clubs/stahlwerk-duesseldorf-lierenfeld) an der Ronsdorfer Straße – mit Hits der 80er, 90er und 2000er und einer eigenen Ü30-Hip-Hop-Party – und im [Tor 3](/guides/clubs/tor-3-flingern) mit elektronischen und gemischten Abenden.
 
 ### Auf der anderen Rheinseite: Neuss
 
@@ -173,5 +173,5 @@ Auch in Neuss wird gefeiert, und die Nachbarstadt ist mit S-Bahn und Straßenbah
 4. **Wo tanzt man in Düsseldorf Latin und Reggaeton?**  
    Vor allem im [Rio Arriba](/guides/clubs/rio-arriba-altstadt) in der Altstadt – dort gibt es auch Tanzkurse für Salsa und Bachata. Latin-Nächte stehen außerdem in der [Nachtresidenz](/guides/clubs/nachtresidenz-duesseldorf-pempelfort) und im [Revolution Nachtpalast](/guides/clubs/revolution-nachtpalast-neuss) in Neuss auf dem Programm.
 
-5. **Wie finde ich heute Abend eine Party?**  
-   Auf jeder Club-Karte steht das nächste Event aus unserem Kalender. Alle Partys und Konzerte der nächsten Tage findet ihr unter [Nightlife](/kategorie/nightlife) und für den Abend unter [heute](/heute).
+5. **Welche Partys gibt es heute Abend in Düsseldorf?**  
+   Alle Partys und Konzerte des Abends stehen in unserem Eventkalender unter [heute](/heute), die der nächsten Tage unter [Nightlife](/kategorie/nightlife). Auf jeder Club-Karte seht ihr außerdem das nächste Event des Clubs.
