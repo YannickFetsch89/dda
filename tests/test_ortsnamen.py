@@ -45,6 +45,25 @@ class OrtsnamenTest(unittest.TestCase):
         self.assertEqual(len(ergebnis), 1)
         self.assertEqual(ergebnis[0]["ort"], "Mitsubishi Electric Halle")
 
+    def test_ohne_gemeinsames_kernwort(self):
+        # Alter Name in der DB, neuer im Lauf (zwischen Deploy und SQL): trotzdem dasselbe Event
+        from pipeline.deduplication import aehnliches_event
+        alt = {"titel": "Poetry Slam", "ort": "Zentrum für Aktion, Kultur und Kommunikation", "datum": "2026-11-20", "uhrzeit": "20:00", "quelle_name": "zakk"}
+        neu = {"titel": "Poetry Slam", "ort": "zakk", "datum": "2026-11-20", "uhrzeit": "20:00", "quelle_name": "Rausgegangen"}
+        self.assertTrue(aehnliches_event(alt, neu))
+        stadt = {"titel": "Stadtfest", "ort": "Dusseldorf, Germany", "datum": "2026-11-20", "uhrzeit": "12:00", "quelle_name": "AllEvents.in Düsseldorf"}
+        self.assertTrue(aehnliches_event(stadt, {**stadt, "ort": "Düsseldorf", "quelle_name": "Rausgegangen"}))
+
+    def test_reihen_basis_der_namen(self):
+        # Namen ohne Trenner, damit die Reihen den ganzen Ort zählen – einzige Ausnahme: „zakk – Halle“
+        from pipeline.reihen_zuordnen import ort_basis
+        trenner = (" – ", " — ", " - ", " / ", "(", ")")
+        mit_trenner = [n for n in SPIELSTAETTEN if any(t in n for t in trenner)]
+        self.assertEqual(mit_trenner, ["zakk – Halle"])
+        self.assertEqual(ort_basis(einheitlicher_name("D'haus — Central")), "dhaus im central")
+        self.assertNotEqual(ort_basis(einheitlicher_name("D'haus — Central")), ort_basis("Central"))
+        self.assertEqual(ort_basis(einheitlicher_name("zakk Halle")), ort_basis("zakk – Halle"))
+
 
 if __name__ == "__main__":
     unittest.main()

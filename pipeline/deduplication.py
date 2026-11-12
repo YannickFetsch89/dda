@@ -15,7 +15,7 @@ import logging
 import re
 from typing import Optional
 
-from pipeline.ortsnamen import ortsname_vereinheitlichen
+from pipeline.ortsnamen import einheitlicher_name, ortsname_vereinheitlichen
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +134,10 @@ def _teile_passen(a: set[str], b: set[str]) -> bool:
 
 def _ort_passt(a: dict, b: dict) -> bool:
     """Gemeinsamer Ortskern („zakk – Studio“ ~ „zakk - Zentrum für …“); ohne Kern muss der Ortsname gleich sein."""
+    # Gleicher einheitlicher Name (pipeline/ortsnamen.py) = gleicher Ort – auch ohne gemeinsames Kernwort
+    # („Zentrum für Aktion, Kultur und Kommunikation“ ~ „zakk“, „Dusseldorf, Germany“ ~ „Düsseldorf“)
+    if einheitlicher_name(a.get("ort")) and einheitlicher_name(a.get("ort")) == einheitlicher_name(b.get("ort")):
+        return True
     ort_a, ort_b = ort_kern(a.get("ort") or ""), ort_kern(b.get("ort") or "")
     if ort_a and ort_b:
         return bool(ort_a & ort_b)

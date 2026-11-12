@@ -14,6 +14,9 @@ Grundsätze:
   ausdrücklich in der Liste.
 - Allgemein für alle Orte: mehrfache Leerzeichen zusammenfassen, AllEvents-Anhang entfernen.
 
+Namen links ohne Trenner („ – “, „ — “, „ - “, „ / “, Klammern) wählen: pipeline/reihen_zuordnen.py ort_basis schneidet
+dort, sonst zählt für die Reihen nur das erste Stück. Ausnahme mit Absicht: „zakk – Halle“ (siehe dort).
+
 Neue Variante gefunden? Unten bei der Spielstätte ergänzen und den Bestand per SQL nachziehen
 (python -m pipeline.ortsnamen --sql). Den Namen links nie ohne Not ändern – er steht dann in der Datenbank.
 """
@@ -52,9 +55,12 @@ SPIELSTAETTEN: dict[str, list[str]] = {
     "Maxhaus": ["maxhaus"],
     "KaBARett FLiN": ["Kabarett FLiN"],
     "R25 Kulturschlachthof": ["R25-Kulturschlachthof"],
-    "Central – D'haus": ["D'haus — Central", "D'haus im Central"],
+    # Ohne Trenner: „Central – D'haus“ hätte für die Reihen nur „Central“ als Ort gezählt und mit dem Ort „Central“
+    # vermischt (ort_basis schneidet am Strich – Cursor-Review 12.11.)
+    "D'haus im Central": ["D'haus — Central"],
     "Jazz-Schmiede": ["Jazz-Schmiede Düsseldorf", "Jazz Schmiede", "Jazz-Schmiede Düsseldorf | Jazzclub"],
-    # zakk: Räume bleiben getrennt, nur der lange Name des Hauses wird zum Kurznamen
+    # zakk: Räume bleiben getrennt, nur der lange Name des Hauses wird zum Kurznamen. „zakk – Halle“ (mit Strich) ist die
+    # bestehende Schreibweise der Reihen (Ort-Basis „zakk“); die eine Zeile „zakk Halle“ folgt ihr bewusst.
     "zakk": ["zakk - Zentrum für Aktion, Kultur und Kommunikation", "Zentrum für Aktion, Kultur und Kommunikation"],
     "zakk – Halle": ["zakk Halle"],
     # Clubs und Bars
@@ -136,7 +142,7 @@ def sql_erzeugen(pfad: str) -> int:
     beim nächsten Lauf keine zweite Reihe anlegt.
     """
     import os
-    from collections import defaultdict
+    from collections import Counter, defaultdict
     from datetime import date
 
     import httpx
@@ -188,6 +194,10 @@ def sql_erzeugen(pfad: str) -> int:
     konflikte = [rid for rid, k in reihen_neu.items() if k in schluessel_vorhanden]
     if konflikte:
         raise RuntimeError(f"Ortsnamen: Reihen-Schlüssel existiert schon für {len(konflikte)} Reihen – erst klären")
+    # Zwei Reihen, die in diesem Lauf auf denselben neuen Schlüssel laufen würden, wären ebenfalls ein Zusammenfallen
+    doppelt = [k for k, n in Counter(reihen_neu.values()).items() if n > 1]
+    if doppelt:
+        raise RuntimeError(f"Ortsnamen: {len(doppelt)} neue Reihen-Schlüssel würden mehrfach vergeben – erst klären")
 
     zeilen = [
         f"-- Ortsnamen vereinheitlichen – DiesDasDüsseldorf, erzeugt am {date.today().isoformat()} von pipeline/ortsnamen.py",
@@ -211,7 +221,11 @@ def sql_erzeugen(pfad: str) -> int:
         "",
         "COMMIT;",
         "",
-        "-- Kontrolle: Spielstätten aus der Liste mit Anzahl (je Name genau eine Zeile erwartet)",
+        "-- Kontrolle 1: alte Schreibweisen – erwartet: KEINE Zeile",
+        "SELECT ort, COUNT(*) AS anzahl FROM public.events WHERE ort IN ("
+        + ", ".join(_sql_text(a) for alte in umbenennen.values() for a in alte) + ") GROUP BY ort;",
+        "",
+        "-- Kontrolle 2: neue Namen mit Anzahl",
         "SELECT ort, COUNT(*) AS anzahl FROM public.events WHERE ort IN ("
         + ", ".join(_sql_text(n) for n in sorted(umbenennen)) + ") GROUP BY ort ORDER BY anzahl DESC;",
         "",
