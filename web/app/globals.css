@@ -1689,3 +1689,23 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .gd-pin.gd-pin--stufe-c .icon { color: #ffffff; font-size: 14px; }
 .gd-pin.gd-pin--stufe.gd-pin--an { box-shadow: 0 0 0 3px #1b2540, 0 6px 14px rgba(27, 37, 64, 0.45); }
 :root[data-theme="dark"] .gd-pin.gd-pin--stufe.gd-pin--an { box-shadow: 0 0 0 3px #f7f8fa, 0 6px 14px rgba(0, 0, 0, 0.6); }
+
+/* Guide-Seiten: Einleitung und SEO-Text mit häufigen Fragen (12.11.2026) */
+.gd-einleitung { max-width: 72ch; margin: 20px 0 0; font-size: 17px; line-height: 1.6; color: var(--ddd-text-body); text-wrap: pretty; }
+.gd-seotext { padding-top: 40px; padding-bottom: 48px; max-width: none; }
+.gd-seotext > h2, .gd-faq > h2 { font-size: 30px; margin: 0 0 8px; color: var(--ddd-text); }
+.gd-seotext__abschnitt { max-width: 72ch; }
+.gd-seotext__abschnitt h3 { font-size: 19px; margin: 22px 0 6px; color: var(--ddd-text); }
+.gd-seotext p { margin: 0 0 10px; font-size: 16px; line-height: 1.65; color: var(--ddd-text-body); text-wrap: pretty; }
+.gd-faq { margin-top: 36px; max-width: 72ch; }
+.gd-faq__eintrag { border-top: 1px solid var(--ddd-border); }
+.gd-faq__eintrag:last-child { border-bottom: 1px solid var(--ddd-border); }
+.gd-faq__eintrag summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; cursor: pointer; list-style: none; }
+.gd-faq__eintrag summary::-webkit-details-marker { display: none; }
+.gd-faq__eintrag summary h3 { margin: 0; font-size: 17px; line-height: 1.35; color: var(--ddd-text); }
+.gd-faq__eintrag summary .icon { flex: none; transition: transform 0.2s; color: var(--ddd-text-muted); }
+.gd-faq__eintrag[open] summary .icon { transform: rotate(180deg); }
+.gd-faq__eintrag p { padding-bottom: 6px; }
+.gd-entdecken .gd-einleitung { margin: 0; max-width: 640px; font-size: 16px; line-height: 1.5; }
+.gd-textlink { color: var(--ddd-link); font: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+.gd-textlink:hover { color: var(--ddd-text); }

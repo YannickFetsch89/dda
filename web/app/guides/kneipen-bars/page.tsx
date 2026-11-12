@@ -14,6 +14,7 @@ import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
+import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { SEITE, SORTIERUNGEN, sortieren, stadtteileText, zaehlen, zahl } from "@/lib/guide-filter";
 import {
@@ -271,10 +272,14 @@ export default async function KneipenBars(props: { searchParams: Promise<SP> }) 
         dangerouslySetInnerHTML={{ __html: jsonLdText(kneipenListeJsonLd(alle.slice(0, 30), SITE_URL, BASIS)) }}
       />
       <Hero orte={alle} />
+      <div className="container">
+        <GuideEinleitung seite="kneipen-bars" werte={{ anzahl: zahl(alle.length) }} />
+      </div>
       <Suspense fallback={<Ansicht alle={alle} f={STANDARD} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />
       </Suspense>
       <GuideStadtteilLinks hub="kneipen-bars" orte={alle} />
+      <GuideSeoText seite="kneipen-bars" />
     </div>
   );
 }

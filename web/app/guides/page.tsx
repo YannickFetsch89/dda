@@ -3,7 +3,8 @@
 // Kachelbilder: KI-generiert, liegen als WebP unter public/guides/<slug>.webp
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+
+import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
 import { Icon } from "@/components/karten";
 import { zahl } from "@/lib/guide-filter";
 import { orteLaden } from "@/lib/orte";
@@ -94,17 +95,18 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
   );
 }
 
-/** Kacheln mit echten Zahlen (Daten gecached über orteLaden). */
-async function Kacheln() {
-  // Jede Kachel zählt genau das, was ihr Hub zeigt (Restaurant-Hub inkl. Brauhäuser, Kneipen-Hub
-  // inkl. Restaurants mit auch_kneipe)
+/** Anzahl je Hub (Daten gecached über orteLaden) – jede Kachel zählt genau das, was ihr Hub zeigt
+ * (Restaurant-Hub inkl. Brauhäuser, Kneipen-Hub inkl. Restaurants mit auch_kneipe). */
+async function anzahlLaden(): Promise<Record<string, number>> {
   const [restaurants, brauhaeuser, kneipen, clubs] = await Promise.all([
     orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(), clubsLaden(),
   ]);
-  return <KachelListe anzahl={{ "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length, clubs: clubs.length }} />;
+  return { "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length, clubs: clubs.length };
 }
 
-export default function GuidesUebersicht() {
+export default async function GuidesUebersicht() {
+  const anzahl = await anzahlLaden();
+  const werte = { restaurants: zahl(anzahl["restaurants-cafes"] ?? 0), kneipen: zahl(anzahl["kneipen-bars"] ?? 0), clubs: zahl(anzahl.clubs ?? 0) };
   return (
     <div className="gd-seite">
       <header className="gd-entdecken container">
@@ -113,13 +115,12 @@ export default function GuidesUebersicht() {
         </nav>
         <h1 className="d">Düsseldorf entdecken</h1>
         <div className="gd-entdecken__linie" aria-hidden />
-        <p>Kuratierte Tipps für Restaurants, Cafés, Kneipen, Clubs, Spielplätze und Ausflüge – von uns für euch.</p>
+        <GuideEinleitung seite="uebersicht" werte={werte} />
       </header>
       <div className="container">
-        <Suspense fallback={<KachelListe anzahl={{}} />}>
-          <Kacheln />
-        </Suspense>
+        <KachelListe anzahl={anzahl} />
       </div>
+      <GuideSeoText seite="uebersicht" />
     </div>
   );
 }

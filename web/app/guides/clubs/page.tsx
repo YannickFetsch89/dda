@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import { BildImg } from "@/components/client";
 import { ClubKarte, clubPfad } from "@/components/club-karte";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
+import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
 import { Icon } from "@/components/karten";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { ScrollReihe } from "@/components/scroll-reihe";
@@ -288,10 +289,14 @@ export default async function Clubs(props: { searchParams: Promise<SP> }) {
     <div className="gd-seite gd-seite--abend cl-seite">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(clubsListeJsonLd(fuerJsonLd, SITE_URL, BASIS)) }} />
       <Hero orte={alle} />
+      <div className="container">
+        <GuideEinleitung seite="clubs" werte={{ anzahl: zahl(alle.length) }} />
+      </div>
       <Suspense fallback={<Ansicht alle={alle} f={CLUB_STANDARD} naechste={naechste} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} naechste={naechste} />
       </Suspense>
       <GuideStadtteilLinks hub="clubs" orte={alle} />
+      <GuideSeoText seite="clubs" />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 // Guide-Hub Restaurants & Cafés (Design-Handoff v2, Ansichten 12, 14, 15)
 import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
+import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -282,6 +283,9 @@ export default async function RestaurantsCafes(props: { searchParams: Promise<SP
   return (
     <div className="gd-seite gd-seite--leiste">
       <Hero orte={alle} />
+      <div className="container">
+        <GuideEinleitung seite="restaurants-cafes" werte={{ anzahl: zahl(alle.length) }} />
+      </div>
       {/* Schmale Leiste „dies.das empfiehlt dir was“ – bleibt beim Scrollen oben, öffnet den Fragebogen */}
       <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} />
       <Suspense
@@ -294,6 +298,7 @@ export default async function RestaurantsCafes(props: { searchParams: Promise<SP
         <Inhalt searchParams={props.searchParams} alle={alle} />
       </Suspense>
       <GuideStadtteilLinks hub="restaurants-cafes" orte={alle} />
+      <GuideSeoText seite="restaurants-cafes" />
     </div>
   );
 }
