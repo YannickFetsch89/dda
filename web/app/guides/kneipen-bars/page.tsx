@@ -4,7 +4,6 @@
 // (Daten über orteLaden, "use cache"). Nur die filterabhängige Ansicht wartet in <Suspense> auf
 // searchParams – ihr Fallback ist genau diese ungefilterte Ansicht. Standard ist die Kartenansicht;
 // die Karte selbst entsteht im Browser, darunter stehen alle Orte als Linkliste im HTML.
-import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -278,7 +277,6 @@ export default async function KneipenBars(props: { searchParams: Promise<SP> }) 
       <Suspense fallback={<Ansicht alle={alle} f={STANDARD} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />
       </Suspense>
-      <GuideStadtteilLinks hub="kneipen-bars" orte={alle} />
       <GuideSeoText seite="kneipen-bars" />
     </div>
   );
