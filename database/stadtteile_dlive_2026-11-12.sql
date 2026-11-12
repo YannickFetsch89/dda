@@ -21,7 +21,9 @@ WHERE stadtteil = 'Stockum' AND ort ILIKE '%castello%';
 
 UPDATE public.events SET stadtteil = NULL
 WHERE stadtteil = 'Stockum' AND quelle_name = 'd-live'
-  AND ort NOT ILIKE '%merkur spiel-arena%' AND ort NOT ILIKE '%messe%';
+  AND ort NOT ILIKE '%merkur spiel-arena%' AND ort NOT ILIKE '%esprit arena%' AND ort NOT ILIKE '%messe%';
+-- (Nachtrag Cursor-Review 12.11.: „ESPRIT arena“ ausgenommen wie in der Venue-Liste. Beim ersten Lauf gab es keine
+--  solche Zeile – die Kontrollabfrage zeigte nur Merkur Spiel-Arena und Messe unter Stockum.)
 
 COMMIT;
 

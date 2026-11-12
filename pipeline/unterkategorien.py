@@ -171,18 +171,45 @@ def nachtragen(limit: int | None = 600, dry_run: bool = False) -> int:
     return gespeichert
 
 
-def _titel_schluessel(titel: str) -> str:
-    """Titel für den Vergleich gleicher Stücke/Reihen: Kleinschreibung, nur Buchstaben und Ziffern."""
-    return re.sub(r"[^a-z0-9äöüß]+", " ", (titel or "").lower()).strip()
+def _schluessel_text(text: str) -> str:
+    """Für den Vergleich: Kleinschreibung, nur Buchstaben und Ziffern, einfache Leerzeichen."""
+    return re.sub(r"[^a-z0-9äöüß]+", " ", (text or "").lower()).strip()
+
+
+def angleichungen(zeilen: list[dict]) -> list[tuple[str, str]]:
+    """
+    Welche Termine bekommen welche Unterkategorie? (rein, ohne Datenbank – testbar)
+
+    Gruppe = gleiche Kategorie, gleicher Titel UND gleicher Ort (jeweils normalisiert). So bleibt „Der Hobbit“ im
+    selben Haus über alle Termine einheitlich, während allgemeine Titel wie „Öffentliche Führung“ an verschiedenen
+    Orten getrennt bleiben (Cursor-Review 12.11.2026). Innerhalb einer Gruppe gewinnt die klare Mehrheit;
+    bei Gleichstand bleibt alles, wie es ist. „keine“ zählt mit und gewinnt nur als echte Mehrheit.
+    """
+    from collections import Counter, defaultdict
+
+    gruppen: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
+    for z in zeilen:
+        titel = _schluessel_text(z.get("titel") or "")
+        ort = _schluessel_text(z.get("ort") or "")
+        if titel and ort:
+            gruppen[(z.get("kategorie") or "", titel, ort)].append(z)
+    aenderungen: list[tuple[str, str]] = []
+    for gruppe in gruppen.values():
+        if len(gruppe) < 2:
+            continue
+        haeufig = Counter(z["unterkategorie"] for z in gruppe).most_common()
+        if len(haeufig) < 2 or haeufig[0][1] == haeufig[1][1]:
+            continue  # schon einheitlich oder keine klare Mehrheit
+        sieger = haeufig[0][0]
+        aenderungen += [(z["id"], sieger) for z in gruppe if z["unterkategorie"] != sieger]
+    return aenderungen
 
 
 def vereinheitlichen(dry_run: bool = False) -> int:
     """
-    Gleiche Titel derselben Kategorie bekommen dieselbe Unterkategorie (Mehrheit der Zuordnungen).
-    Die KI ordnet in Bündeln zu – „Der Hobbit“ landete so mal unter Theater, mal unter Comedy. Gibt es keine klare
-    Mehrheit (Gleichstand), bleibt alles, wie es ist. „keine“ zählt mit, gewinnt aber nur als echte Mehrheit.
+    Gleiche Titel am selben Ort (derselben Kategorie) bekommen dieselbe Unterkategorie – die KI ordnet in Bündeln zu,
+    „Der Hobbit“ landete so mal unter Theater, mal unter Comedy. Regel siehe angleichungen().
     """
-    from collections import Counter, defaultdict
     from database.client import get_supabase_client
 
     db = get_supabase_client()
@@ -192,7 +219,7 @@ def vereinheitlichen(dry_run: bool = False) -> int:
         try:
             antwort = (
                 db.table("events")
-                .select("id,titel,kategorie,unterkategorie")
+                .select("id,titel,ort,kategorie,unterkategorie")
                 .not_.is_("unterkategorie", "null")
                 .eq("abgelehnt", False)
                 .gte("datum", date.today().isoformat())
@@ -208,18 +235,7 @@ def vereinheitlichen(dry_run: bool = False) -> int:
         if len(daten) < 1000:
             break
 
-    gruppen: dict[tuple[str, str], list[dict]] = defaultdict(list)
-    for z in zeilen:
-        gruppen[(z.get("kategorie") or "", _titel_schluessel(z.get("titel") or ""))].append(z)
-    aenderungen: list[tuple[str, str]] = []
-    for (_, schluessel), gruppe in gruppen.items():
-        if not schluessel or len(gruppe) < 2:
-            continue
-        haeufig = Counter(z["unterkategorie"] for z in gruppe).most_common()
-        if len(haeufig) < 2 or haeufig[0][1] == haeufig[1][1]:
-            continue  # schon einheitlich oder keine klare Mehrheit
-        sieger = haeufig[0][0]
-        aenderungen += [(z["id"], sieger) for z in gruppe if z["unterkategorie"] != sieger]
+    aenderungen = angleichungen(zeilen)
     logger.info("Unterkategorien vereinheitlichen: %d Termine angeglichen", len(aenderungen))
     if dry_run:
         return 0

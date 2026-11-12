@@ -23,6 +23,12 @@ class DliveTest(unittest.TestCase):
         self.assertEqual(adressen["CASTELLO Düsseldorf"], "Karl-Hohmann-Straße 1, 40599 Düsseldorf")
         self.assertNotEqual(adressen["PSD BANK DOME"], adressen["Mitsubishi Electric HALLE"])
 
+    def test_quelle_mit_stadt_anhang(self):
+        # Fallback über die Quelle greift auch, wenn der Scraper „ Düsseldorf“ anhängt
+        self.assertEqual(stadtteil_ermitteln("Heimspiel", None, "DEG Eishockey Düsseldorf"), "Rath")
+        self.assertEqual(stadtteil_ermitteln("Sonderausstellung", None, "Kunstpalast Düsseldorf"), "Pempelfort")
+        self.assertIsNone(stadtteil_ermitteln("Irgendwo", None, "Unbekannte Quelle"))
+
     def test_kein_pauschalwert_fuer_dlive(self):
         # Unbekannte d.live-Spielstätte: nicht mehr pauschal Stockum
         self.assertIsNone(stadtteil_ermitteln("Rheinterrasse", None, "d-live"))

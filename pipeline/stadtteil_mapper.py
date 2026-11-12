@@ -260,9 +260,14 @@ def stadtteil_ermitteln(ort: str, adresse: str | None = None, quelle_name: str |
         if venue_key.lower() in ort_lower:
             return VENUE_STADTTEIL[venue_key]
 
-    # Priorität 2: Quelle = Venue (Tier-2-Scraper)
-    if quelle_name and quelle_name in QUELLE_STADTTEIL:
-        return QUELLE_STADTTEIL[quelle_name]
+    # Priorität 2: Quelle = Venue (Tier-2-Scraper). Die Scraper hängen oft „ Düsseldorf“ an („DEG Eishockey
+    # Düsseldorf“, „Kunstpalast Düsseldorf“) – deshalb auch Präfix-Treffer, längster Schlüssel zuerst.
+    if quelle_name:
+        if quelle_name in QUELLE_STADTTEIL:
+            return QUELLE_STADTTEIL[quelle_name]
+        for schluessel in sorted(QUELLE_STADTTEIL, key=len, reverse=True):
+            if quelle_name.startswith(schluessel):
+                return QUELLE_STADTTEIL[schluessel]
 
     # Priorität 3: PLZ aus Adresse
     if adresse:
