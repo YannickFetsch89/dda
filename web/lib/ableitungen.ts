@@ -26,9 +26,14 @@ function hash(text: string): number {
   return Math.abs(h);
 }
 
+/** Abzug für Events ohne eigenes Bild (auch mit Symbolbild): größer als jede einzelne Redaktions-Markierung (max. 40). */
+export const OHNE_BILD_ABZUG = 60;
+
 /**
  * Beliebtheits-Score als Platzhalter, bis es eine Spalte `beliebtheit` gibt:
  * Redaktions-Markierungen, Bild, Beschreibung, Uhrzeit. Deterministisch.
+ * Events ohne eigenes Bild (sie zeigen höchstens ein Symbolbild) gelten als schlecht gepflegt und kommen erst, wenn es
+ * nichts mit Bild gibt – auch in Tipps, Picks und Highlights (Auftraggeber 12.11.2026).
  */
 export function beliebtheit(e: DddEvent): number {
   // Abgesagte Events landen in jeder Beliebtheits-Sortierung ganz hinten
@@ -37,7 +42,7 @@ export function beliebtheit(e: DddEvent): number {
   if (e.top_event_des_monats) s += 40;
   if (e.highlight_der_woche) s += 35;
   if (e.tipp_des_tages) s += 30;
-  if (e.bild_url) s += 12;
+  s += e.bild_url ? 12 : -OHNE_BILD_ABZUG;
   if ((e.beschreibung?.length ?? 0) > 80) s += 6;
   if (e.uhrzeit) s += 3;
   if (e.stadtteil) s += 2;
@@ -235,22 +240,29 @@ export function nachBezirken(events: DddEvent[]): { bezirke: BezirkCluster[]; oh
 
 // ---------- Kuratierte Auswahl ----------
 
-/** Wählt n Events mit möglichst verschiedenen Kategorien. */
+/**
+ * Wählt n Events mit möglichst verschiedenen Kategorien. Events mit eigenem Bild haben Vorrang vor der Vielfalt:
+ * erst verschiedene Kategorien mit Bild, dann weitere mit Bild, erst danach Events ohne Bild (Auftraggeber 12.11.2026).
+ */
 export function vielfaeltig(events: DddEvent[], n: number, ausschliessen = new Set<string>()): DddEvent[] {
   const kandidaten = events.filter((e) => !e.abgesagt && !ausschliessen.has(e.id)).sort(nachBeliebtheit);
   const gewaehlt: DddEvent[] = [];
   const kats = new Set<string>();
-  for (const e of kandidaten) {
-    if (gewaehlt.length >= n) break;
-    if (!kats.has(e.kategorie)) {
-      gewaehlt.push(e);
-      kats.add(e.kategorie);
+  const auswaehlen = (liste: DddEvent[]) => {
+    for (const e of liste) {
+      if (gewaehlt.length >= n) return;
+      if (!kats.has(e.kategorie)) {
+        gewaehlt.push(e);
+        kats.add(e.kategorie);
+      }
     }
-  }
-  for (const e of kandidaten) {
-    if (gewaehlt.length >= n) break;
-    if (!gewaehlt.includes(e)) gewaehlt.push(e);
-  }
+    for (const e of liste) {
+      if (gewaehlt.length >= n) return;
+      if (!gewaehlt.includes(e)) gewaehlt.push(e);
+    }
+  };
+  auswaehlen(kandidaten.filter((e) => e.bild_url));
+  auswaehlen(kandidaten.filter((e) => !e.bild_url));
   return gewaehlt;
 }
 
@@ -284,9 +296,15 @@ export function highlights(pool: EventPool) {
   const aktiv = pool.events.filter((e) => !e.abgesagt);
   const woche = filtern(aktiv, { von: pool.heute, bis: plusTage(pool.heute, 6) });
   const monat = filtern(aktiv, { von: pool.heute, bis: plusTage(pool.heute, 29) });
-  const highlight = woche.find((e) => e.highlight_der_woche) ?? [...woche].filter((e) => e.bild_url).sort(nachBeliebtheit)[0] ?? woche.sort(nachBeliebtheit)[0] ?? null;
+  // Redaktions-Markierung nur mit eigenem Bild bevorzugt; ohne Bild erst, wenn es sonst nichts gibt
+  const highlight =
+    woche.find((e) => e.highlight_der_woche && e.bild_url) ??
+    [...woche].filter((e) => e.bild_url).sort(nachBeliebtheit)[0] ??
+    woche.find((e) => e.highlight_der_woche) ??
+    [...woche].sort(nachBeliebtheit)[0] ??
+    null;
   const top =
-    monat.find((e) => e.top_event_des_monats && e.id !== highlight?.id) ??
+    monat.find((e) => e.top_event_des_monats && e.bild_url && e.id !== highlight?.id) ??
     [...monat].sort(nachBeliebtheit).find((e) => e.id !== highlight?.id) ??
     null;
   return { highlight, top };

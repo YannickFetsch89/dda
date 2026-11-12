@@ -397,7 +397,19 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .kennzahl { display: flex; flex-direction: column; }
 .kennzahl b { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 28px; line-height: 1; color: var(--ddd-gold); }
 .kennzahl span { font-size: 11px; color: var(--ddd-on-navy-muted); }
-.datumsleiste { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 18px calc(-1 * var(--rand)) 0; padding: 0 var(--rand); }
+/* Tagesleiste: scrollbar mit Pfeilen (components/datumsleiste.tsx), gewählter Tag wird in die Mitte gerollt */
+.datumsleiste-huelle { display: flex; align-items: center; gap: 6px; margin: 18px calc(-1 * var(--rand)) 0; padding: 0 var(--rand); }
+.datumsleiste { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.datumsleiste__pfeil { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 64px; border-radius: var(--r-md); border: 1px solid rgba(247, 248, 250, 0.14); background: rgba(247, 248, 250, 0.06); color: var(--ddd-on-navy); cursor: pointer; }
+.datumsleiste__pfeil:hover:not(:disabled) { border-color: rgba(247, 248, 250, 0.4); }
+.datumsleiste__pfeil:disabled { opacity: 0.3; cursor: default; }
+.datumsleiste__pfeil .icon { font-size: 22px; }
+.datumsleiste-huelle .kalender-toggle { flex: none; }
+/* Handy: Wischen statt Pfeile, Kalender nur als Symbol – damit mehrere Tage sichtbar bleiben */
+@media (max-width: 767px) {
+  .datumsleiste__pfeil { display: none; }
+  .datumsleiste-huelle .kalender-toggle .chip { font-size: 0; gap: 0; padding: 0 12px; }
+}
 .datumsleiste::-webkit-scrollbar { display: none; }
 .datumsleiste a {
   flex: 0 0 58px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 0; border-radius: var(--r-md);
@@ -420,8 +432,9 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .kennzahl { align-items: flex-end; }
   .kennzahl b { font-size: 36px; }
   .kennzahl span { font-size: 12px; }
-  .datumsleiste { display: grid; grid-template-columns: repeat(14, 1fr); margin: 24px 0 0; padding: 0; overflow: visible; }
-  .datumsleiste a { padding: 10px 0; gap: 2px; }
+  .datumsleiste-huelle { margin: 24px 0 0; padding: 0; }
+  /* 14 Tage sichtbar, der Rest per Pfeil oder Wischen */
+  .datumsleiste a { flex: 0 0 calc((100% - 13 * 6px) / 14); padding: 10px 0; gap: 2px; }
   .datumsleiste__tag { font-size: 24px; }
 }
 

@@ -5,10 +5,11 @@ import Link from "next/link";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
+import { Datumsleiste } from "@/components/datumsleiste";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
-import { WT_KURZ, plusTage, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
+import { MONATE, WT_KURZ, plusTage, tageZwischen, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddEvent } from "@/lib/typen";
@@ -73,14 +74,33 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
 
   // Hero
   const neu = neuSeit(pool.events, pool.jetzt).sort(nachNeu);
-  const kennzahlLabel = istHeute ? "Events heute" : z.von === z.bis ? `Events ${tagKurz(z.von)}` : `Events ${z.label.toLowerCase()}`;
-  const tage = Array.from({ length: 14 }, (_, i) => {
+  // Zeitraum-Label klein beginnend, Rest unverändert („dieses Wochenende“, nicht „dieses wochenende“)
+  const zeitraumKlein = z.label.charAt(0).toLowerCase() + z.label.slice(1);
+  const kennzahlLabel = istHeute ? "Events heute" : z.von === z.bis ? `Events ${tagKurz(z.von)}` : `Events ${zeitraumKlein}`;
+  const kostenlosLabel = istHeute ? "kostenlos heute" : z.von === z.bis ? `kostenlos am ${tagKurz(z.von)}` : `kostenlos ${zeitraumKlein}`;
+  // Tagesleiste: 60 Tage, bei einem weiter entfernten Tag bis 14 Tage danach (höchstens ein Jahr)
+  const tageAnzahl = Math.min(366, Math.max(60, tageZwischen(heute, z.von) + 15));
+  const tage = Array.from({ length: tageAnzahl }, (_, i) => {
     const tag = plusTage(heute, i);
-    return { tag, anzahl: filtern(pool.events, { von: tag, bis: tag }).length };
+    return {
+      tag,
+      wochentag: i === 0 ? "Heute" : WT_KURZ[wochentag(tag)],
+      tagNr: Number(tag.slice(8, 10)),
+      monat: i > 0 && tag.endsWith("-01") ? MONATE[Number(tag.slice(5, 7)) - 1].slice(0, 3) : undefined,
+      anzahl: filtern(pool.events, { von: tag, bis: tag }).length,
+      href: startHref(tag, heute),
+      aktiv: z.von === tag && z.bis === tag,
+    };
   });
 
   // Tipp + Picks
-  const tipp = imZeitraum.find((e) => e.tipp_des_tages) ?? beliebtSortiert.find((e) => e.bild_url) ?? beliebtSortiert[0] ?? null;
+  // Tipp: Redaktions-Tipp nur mit eigenem Bild; Events ohne Bild nur, wenn es sonst nichts gibt
+  const tipp =
+    imZeitraum.find((e) => e.tipp_des_tages && e.bild_url) ??
+    beliebtSortiert.find((e) => e.bild_url) ??
+    imZeitraum.find((e) => e.tipp_des_tages) ??
+    beliebtSortiert[0] ??
+    null;
   const picks = vielfaeltig(imZeitraum, 4, new Set(tipp ? [tipp.id] : []));
   const beliebt = auffuellen(beliebtSortiert, wocheBeliebt, 5);
 
@@ -112,7 +132,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
               </div>
               <div className="kennzahl">
                 <b>{imZeitraum.filter(istKostenlos).length}</b>
-                <span>kostenlos</span>
+                <span>{kostenlosLabel}</span>
               </div>
               <div className="kennzahl">
                 <b>{neu.length}</b>
@@ -120,19 +140,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
               </div>
             </div>
           </div>
-          <nav className="datumsleiste" aria-label="Tag wählen">
-            {tage.map((t, i) => (
-              <Link key={t.tag} href={startHref(t.tag, heute)} aria-current={z.von === t.tag && z.bis === t.tag ? "true" : undefined} scroll={false}>
-                <span className="datumsleiste__wt">{i === 0 ? "Heute" : WT_KURZ[wochentag(t.tag)]}</span>
-                <span className="datumsleiste__tag">{Number(t.tag.slice(8, 10))}</span>
-                <span className="datumsleiste__anz">
-                  {t.anzahl}
-                  <span className="nur-desktop"> Events</span>
-                </span>
-              </Link>
-            ))}
-            <KalenderToggle heute={heute} ziel="/" />
-          </nav>
+          <Datumsleiste tage={tage} nachher={<KalenderToggle heute={heute} ziel="/" />} />
           <div className="schnellfilter nur-mobil" aria-label="Zeitraum">
             {SCHNELLFILTER.map((s) => (
               <Link key={s.key} href={startHref(s.key, heute)} className="chip chip--navy" aria-current={z.key === s.key ? "true" : undefined} scroll={false}>

@@ -17,6 +17,7 @@ QUELLE_STADTTEIL: dict[str, str] = {
     "Kunstpalast": "Pempelfort",
     "NRW-Forum Düsseldorf": "Pempelfort",
     "zakk": "Flingern",
+    "Kasematten Düsseldorf": "Altstadt",
     "Capitol Theater Düsseldorf": "Flingern",
     "Tanzhaus NRW": "Flingern",
     "Jazz-Schmiede Düsseldorf": "Bilk",

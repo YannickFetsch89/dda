@@ -64,6 +64,7 @@ from scraper.tier3 import (
     ihk,
     startupdorf,
     street_food_thursday,
+    kasematten,
     auf_ins_viertel,
 )
 
@@ -128,6 +129,7 @@ QUELLEN = [
     ("IHK Düsseldorf", 3, ihk.scrape),
     ("StartupDorf Meetup", 3, startupdorf.scrape),
     ("Street Food Thursday", 3, street_food_thursday.scrape),
+    ("Kasematten Düsseldorf", 3, kasematten.scrape),  # 5 Locations an der Rheinuferpromenade, nur datierte Events
     ("Auf ins Viertel", 3, auf_ins_viertel.scrape),  # kulinarische Stadtführungen (bookingkit)
     # Rausgegangen zuletzt: Events, die eine andere Quelle schon liefert, behalten diese als Quelle –
     # Rausgegangen ergänzt nur noch fehlende Felder (Vorrang-Regel in pipeline/deduplication.py)
