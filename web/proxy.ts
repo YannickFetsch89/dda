@@ -60,5 +60,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Eventseiten (auch /event/<uuid>), Tage, Reihen, Guide-Orte, Landingpages und /entdecken (301 für Einzelfilter)
-  matcher: ["/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug", "/stadtteil/:slug", "/entdecken"],
+  matcher: ["/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug", "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken"],
 };
