@@ -26,14 +26,14 @@ function hash(text: string): number {
   return Math.abs(h);
 }
 
-/** Abzug für Events ohne eigenes Bild (auch mit Symbolbild): größer als jede einzelne Redaktions-Markierung (max. 40). */
+/** Abzug für Events ohne eigenes Bild (auch mit Symbolbild), innerhalb dieser Gruppe. Die Reihenfolge „mit Bild vor ohne Bild“ erzwingt nachBeliebtheit, nicht dieser Abzug: mehrere Markierungen zusammen sind größer als 60. */
 export const OHNE_BILD_ABZUG = 60;
 
 /**
  * Beliebtheits-Score als Platzhalter, bis es eine Spalte `beliebtheit` gibt:
  * Redaktions-Markierungen, Bild, Beschreibung, Uhrzeit. Deterministisch.
- * Events ohne eigenes Bild (sie zeigen höchstens ein Symbolbild) gelten als schlecht gepflegt und kommen erst, wenn es
- * nichts mit Bild gibt – auch in Tipps, Picks und Highlights (Auftraggeber 12.11.2026).
+ * Events ohne eigenes Bild (sie zeigen höchstens ein Symbolbild) gelten als schlecht gepflegt. Dass sie hinter jedem
+ * Event mit Bild stehen, stellt nachBeliebtheit sicher (Auftraggeber 12.11.2026).
  */
 export function beliebtheit(e: DddEvent): number {
   // Abgesagte Events landen in jeder Beliebtheits-Sortierung ganz hinten
@@ -95,7 +95,12 @@ export function nachZeit(a: DddEvent, b: DddEvent): number {
 }
 
 export function nachBeliebtheit(a: DddEvent, b: DddEvent): number {
-  return beliebtheit(b) - beliebtheit(a) || nachZeit(a, b);
+  // Abgesagte bleiben hinter allen aktiven. Unter den aktiven steht jedes Event mit Bild vor jedem ohne Bild,
+  // auch wenn Markierungen, Beschreibung und Uhrzeit den Score darüber heben.
+  const abgesagt = Number(!!a.abgesagt) - Number(!!b.abgesagt);
+  if (abgesagt) return abgesagt;
+  const bild = Number(!!b.bild_url) - Number(!!a.bild_url);
+  return bild || beliebtheit(b) - beliebtheit(a) || nachZeit(a, b);
 }
 
 export function nachNeu(a: DddEvent, b: DddEvent): number {
@@ -305,6 +310,8 @@ export function highlights(pool: EventPool) {
     null;
   const top =
     monat.find((e) => e.top_event_des_monats && e.bild_url && e.id !== highlight?.id) ??
+    [...monat].filter((e) => e.bild_url && e.id !== highlight?.id).sort(nachBeliebtheit)[0] ??
+    monat.find((e) => e.top_event_des_monats && e.id !== highlight?.id) ??
     [...monat].sort(nachBeliebtheit).find((e) => e.id !== highlight?.id) ??
     null;
   return { highlight, top };

@@ -9,7 +9,7 @@ import { Datumsleiste } from "@/components/datumsleiste";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
-import { MONATE, WT_KURZ, plusTage, tageZwischen, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
+import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddEvent } from "@/lib/typen";
@@ -77,9 +77,9 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   // Zeitraum-Label klein beginnend, Rest unverändert („dieses Wochenende“, nicht „dieses wochenende“)
   const zeitraumKlein = z.label.charAt(0).toLowerCase() + z.label.slice(1);
   const kennzahlLabel = istHeute ? "Events heute" : z.von === z.bis ? `Events ${tagKurz(z.von)}` : `Events ${zeitraumKlein}`;
-  const kostenlosLabel = istHeute ? "kostenlos heute" : z.von === z.bis ? `kostenlos am ${tagKurz(z.von)}` : `kostenlos ${zeitraumKlein}`;
+  const kostenlosLabel = kostenlosKennzahl(z, heute);
   // Tagesleiste: 60 Tage, bei einem weiter entfernten Tag bis 14 Tage danach (höchstens ein Jahr)
-  const tageAnzahl = Math.min(366, Math.max(60, tageZwischen(heute, z.von) + 15));
+  const tageAnzahl = tagesleistenLaenge(heute, z.von);
   const tage = Array.from({ length: tageAnzahl }, (_, i) => {
     const tag = plusTage(heute, i);
     return {

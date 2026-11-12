@@ -108,7 +108,7 @@ export function KalenderToggle({ heute, ziel }: { heute: string; ziel?: string }
   const [offen, setOffen] = useState(false);
   return (
     <div className="kalender-toggle">
-      <button type="button" className="chip chip--navy" onClick={() => setOffen(!offen)}>
+      <button type="button" className="chip chip--navy" onClick={() => setOffen(!offen)} aria-label={offen ? "Schließen" : "Kalender"}>
         <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon="calendar_month" />
         {offen ? "Schließen" : "Kalender"}
       </button>

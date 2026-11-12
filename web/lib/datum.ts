@@ -34,6 +34,11 @@ export function tageZwischen(von: string, bis: string): number {
   return Math.round((alsUtc(bis).getTime() - alsUtc(von).getTime()) / 86_400_000);
 }
 
+/** Tagesleiste der Startseite: 60 Tage, bei einem ferneren Tag 14 Tage darüber hinaus, höchstens ein Jahr. */
+export function tagesleistenLaenge(heute: string, von: string): number {
+  return Math.min(366, Math.max(60, tageZwischen(heute, von) + 15));
+}
+
 export function wochentag(tag: string): number {
   return alsUtc(tag).getUTCDay();
 }
@@ -72,9 +77,12 @@ export function tagMonat(tag: string): string {
   return `${t}. ${MONATE[m - 1]}`;
 }
 
-/** Laufende Events länger als eine Woche (Ausstellungen etc.) */
+/** Party und Food laufen an jedem Tag der Spanne (Kasematten-Oktoberfest). Ausstellungen nicht: die würden jede Tagesliste füllen. */
+const LAEUFT_JEDEN_TAG = new Set<DddEvent["kategorie"]>(["nightlife", "food"]);
+
+/** Laufende Events länger als eine Woche, die in Tageslisten nur am Starttag zählen. */
 export function istLanglaeufer(e: DddEvent): boolean {
-  return !!e.datum_bis && tageZwischen(e.datum, e.datum_bis) > 7;
+  return !!e.datum_bis && tageZwischen(e.datum, e.datum_bis) > 7 && !LAEUFT_JEDEN_TAG.has(e.kategorie);
 }
 
 /** Meta-Zeile der Cards, z.B. "Fr 30.10. · 20:00" oder "bis 12.01." bei laufenden Events. */
@@ -134,6 +142,16 @@ export function zeitraumAuflösen(eingabe: string | undefined, heute: string): Z
     default:
       return { key: "heute", label: "Heute", von: heute, bis: heute };
   }
+}
+
+/** Kennzahl unter der Event-Zahl: „kostenlos heute“, „kostenlos am Do 03.12.“, „kostenlos dieses Wochenende“. */
+export function kostenlosKennzahl(z: Zeitraum, heute: string): string {
+  if (z.von === heute && z.bis === heute) return "kostenlos heute";
+  if (z.von === z.bis) return `kostenlos am ${tagKurz(z.von)}`;
+  if (z.key === "monat") return "kostenlos in den nächsten 30 Tagen";
+  if (z.key === "alle") return "kostenlos in 60 Tagen";
+  const klein = z.label.charAt(0).toLowerCase() + z.label.slice(1);
+  return `kostenlos ${klein}`;
 }
 
 /**

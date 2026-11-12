@@ -35,8 +35,11 @@ ORT = "Kasematten Düsseldorf"
 ADRESSE = "Untere Rheinwerft, 40213 Düsseldorf"
 MAX_DETAILSEITEN = 10
 
-# Wochen-Reihen ohne Datum anlegen? Aus, bis der Auftraggeber entscheidet (Saison unbekannt)
+# Wochen-Reihen ohne Datum anlegen? Aus, bis der Auftraggeber entscheidet (Saison unbekannt).
+# True erzeugt nur Termine im Vorschaufenster, keine historische Saison.
 WOECHENTLICH = False
+
+_WOCHENTAGE = ["montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag"]
 
 # „31.12.26“, „11.10.2026“, auch mit Bereich „19.09.26 – 18.10.26“
 _DATUM = r"(\d{1,2})\.(\d{1,2})\.(\d{2}(?:\d{2})?)"
@@ -71,6 +74,28 @@ def _datum(tag: str, monat: str, jahr: str) -> Optional[date]:
         return None
 
 
+def _jahreswechsel(von: Optional[date], bis: Optional[date]) -> tuple[Optional[date], Optional[date]]:
+    """„31.12.26 – 01.01.26“: Endmonat vor Startmonat meint das nächste Jahr, nicht einen rückwärts laufenden Bereich."""
+    if not von or not bis or bis >= von or bis.month >= von.month:
+        return von, bis
+    try:
+        return von, bis.replace(year=bis.year + 1)
+    except ValueError:
+        return von, None
+
+
+def wochen_termine(wochentag: str, von: date, bis: date) -> list[date]:
+    """Jeden passenden Wochentag im Fenster, Grenzen inklusive."""
+    ziel = _WOCHENTAGE.index(wochentag)
+    tage = []
+    tag = von
+    while tag <= bis:
+        if tag.weekday() == ziel:
+            tage.append(tag)
+        tag += timedelta(days=1)
+    return tage
+
+
 def titel_parsen(titel_roh: str) -> Optional[dict]:
     """
     Zerlegt den Kartentitel in Datum, Enddatum und Titel. (rein, testbar)
@@ -85,24 +110,33 @@ def titel_parsen(titel_roh: str) -> Optional[dict]:
         return {"woechentlich": w.group(1).lower(), "titel": rest[1].strip() if len(rest) > 1 else titel_roh}
     m = TAGBEREICH_REGEX.match(titel_roh)
     if m:
-        von = _datum(m.group(1), m.group(3), m.group(4))
-        bis = _datum(m.group(2), m.group(3), m.group(4))
+        von, bis = _jahreswechsel(_datum(m.group(1), m.group(3), m.group(4)), _datum(m.group(2), m.group(3), m.group(4)))
         return {"datum": von, "datum_bis": bis, "titel": m.group(5).strip(" -–")} if von and bis and bis >= von else None
     m = TITEL_REGEX.match(titel_roh)
     if not m:
         return None
-    von = _datum(m.group(1), m.group(2), m.group(3))
-    bis = _datum(m.group(4), m.group(5), m.group(6)) if m.group(4) else None
+    von, bis = _jahreswechsel(
+        _datum(m.group(1), m.group(2), m.group(3)),
+        _datum(m.group(4), m.group(5), m.group(6)) if m.group(4) else None,
+    )
     if not von or (bis and bis < von):
         return None
     return {"datum": von, "datum_bis": bis if bis and bis != von else None, "titel": m.group(7).strip(" -–")}
 
 
+# „Öffnungszeiten von 11 bis 23 Uhr“ ist nicht die Startzeit der Veranstaltung
+_OEFFNUNG = re.compile(r"öffnungszeiten\b.{0,180}?uhr", re.I)
+
+
 def uhrzeit_finden(text: str) -> Optional[str]:
-    """Erste plausible Startzeit aus dem Detailtext (HH:MM), sonst None. (rein, testbar)"""
+    """Erste plausible Startzeit aus dem Detailtext (HH:MM), sonst None. (rein, testbar)
+
+    Öffnungszeiten werden ausgelassen. „von 24 …“ ist keine Startzeit; dann gilt der nächste Treffer
+    desselben Musters („ab 19 Uhr“).
+    """
+    text = _OEFFNUNG.sub(" ", text)
     for regex in UHRZEIT_REGEXE:
-        m = regex.search(text)
-        if m:
+        for m in regex.finditer(text):
             stunde, minute = int(m.group(1)), int(m.group(2) or 0)
             if 0 <= stunde <= 23 and 0 <= minute <= 59:
                 return f"{stunde:02d}:{minute:02d}"
@@ -186,10 +220,15 @@ async def scrape() -> list[dict]:
         if "woechentlich" in daten:
             if not WOECHENTLICH:
                 logger.info("Kasematten: Wochen-Reihe nicht angelegt (Saison unbekannt): %s", karte["titel_roh"])
-            continue
-        # Mehrtägige Events zählen, solange sie noch laufen
-        letzter_tag = daten["datum_bis"] or daten["datum"]
-        if letzter_tag < heute or daten["datum"] > enddatum:
+                continue
+            termine = [(tag, None) for tag in wochen_termine(daten["woechentlich"], heute, enddatum)]
+        else:
+            # Mehrtägige Events zählen, solange sie noch laufen
+            letzter_tag = daten["datum_bis"] or daten["datum"]
+            if letzter_tag < heute or daten["datum"] > enddatum:
+                continue
+            termine = [(daten["datum"], daten["datum_bis"])]
+        if not termine:
             continue
 
         beschreibung, uhrzeit = karte["auszug"][:300], None
@@ -201,25 +240,26 @@ async def scrape() -> list[dict]:
             except Exception as fehler:
                 logger.warning("Kasematten: Detailseite %s nicht lesbar: %s", karte["url"], str(fehler))
 
-        events.append({
-            "titel": daten["titel"],
-            "datum": daten["datum"].isoformat(),
-            "datum_bis": daten["datum_bis"].isoformat() if daten["datum_bis"] else None,
-            "uhrzeit": uhrzeit,
-            "ort": ORT,
-            "adresse": ADRESSE,
-            "kategorie": kategorie_erkennen(daten["titel"], beschreibung),
-            "beschreibung": beschreibung,
-            "preis": None,
-            "quelle_name": QUELLE_NAME,
-            "quelle_url": karte["url"],
-            "bild_url": karte["bild_url"],
-            "bild_generiert": False,
-            "post_typ": "feed",
-            "instagram_caption": None,
-            "instagram_location_id": None,
-            "status": "neu",
-        })
+        for datum, datum_bis in termine:
+            events.append({
+                "titel": daten["titel"],
+                "datum": datum.isoformat(),
+                "datum_bis": datum_bis.isoformat() if datum_bis else None,
+                "uhrzeit": uhrzeit,
+                "ort": ORT,
+                "adresse": ADRESSE,
+                "kategorie": kategorie_erkennen(daten["titel"], beschreibung),
+                "beschreibung": beschreibung,
+                "preis": None,
+                "quelle_name": QUELLE_NAME,
+                "quelle_url": karte["url"],
+                "bild_url": karte["bild_url"],
+                "bild_generiert": False,
+                "post_typ": "feed",
+                "instagram_caption": None,
+                "instagram_location_id": None,
+                "status": "neu",
+            })
 
     logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
     return events

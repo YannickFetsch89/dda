@@ -62,11 +62,13 @@ const SAISON: Saison[] = [
   { motiv: "nikolaus", stichworte: /nikolaus/i, zeitfenster: (d) => zwischen(d, "12-01", "12-06") },
   { motiv: "advent-weihnachtsmarkt", stichworte: /weihnachtsmarkt|advent|glühwein|eisbahn|winterwelt/i, zeitfenster: (d) => zwischen(d, "11-15", "12-23") },
   { motiv: "weihnachten", stichworte: /weihnacht|christmas|krippenspiel|christmette|xmas/i, zeitfenster: (d) => zwischen(d, "12-01", "12-26") },
-  { motiv: "silvester", stichworte: /silvester|new year|neujahr|jahreswechsel/i, zeitfenster: (d) => zwischen(d, "12-27", "12-31") || zwischen(d, "01-01", "01-01") },
+  // „Neujahrskonzert“ bleibt beim Konzert-Motiv; Neujahrsfeier und Silvesterparty nicht
+  { motiv: "silvester", stichworte: /silvester|\bnew year\b|jahreswechsel|\bneujahr(?!skonzert)/i, zeitfenster: (d) => zwischen(d, "12-27", "12-31") || zwischen(d, "01-01", "01-01") },
   { motiv: "valentinstag", stichworte: /valentin/i, zeitfenster: (d) => zwischen(d, "02-01", "02-14") },
   {
     motiv: "ostern",
-    stichworte: /oster|easter/i,
+    // „Osteria“ ist ein Restaurantname, kein Osterfest
+    stichworte: /\boster(?!ia)|\beaster\b/i,
     zeitfenster: (d) => {
       const o = ostersonntag(Number(d.slice(0, 4)));
       return d >= plus(o, -21) && d <= plus(o, 1);
@@ -79,7 +81,7 @@ const SAISON: Saison[] = [
   },
   { motiv: "nacht-der-museen", stichworte: /nacht der museen|museumsnacht/i, zeitfenster: (d) => zwischen(d, "03-01", "05-31") },
   { motiv: "japan-tag", stichworte: /japan-?tag/i, zeitfenster: (d) => zwischen(d, "05-01", "06-30") },
-  { motiv: "csd-pride", stichworte: /\bcsd\b|pride|christopher street/i, zeitfenster: (d) => zwischen(d, "05-01", "08-31") },
+  { motiv: "csd-pride", stichworte: /\bcsd\b|\bpride\b(?!\s*(?:and|&)\s+prejudice)|christopher street/i, zeitfenster: (d) => zwischen(d, "05-01", "08-31") },
   { motiv: "rheinkirmes", stichworte: /kirmes|schützenfest|riesenrad/i, zeitfenster: (d) => zwischen(d, "06-01", "08-31") },
   { motiv: "sommer-openair", stichworte: /open[- ]?air|biergarten|sommerfest|sommerkino/i, zeitfenster: (d) => zwischen(d, "06-01", "08-31") },
   { motiv: "oktoberfest", stichworte: /oktoberfest|wiesn/i, zeitfenster: (d) => zwischen(d, "09-15", "10-15") },

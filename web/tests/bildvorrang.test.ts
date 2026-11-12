@@ -9,9 +9,22 @@ describe("Events ohne eigenes Bild sind nachrangig", () => {
   const tippOhneBild = ev({ id: "b", titel: "Tipp ohne Bild", bild_url: null, tipp_des_tages: true, top_event_des_monats: true, datum: "2026-11-20" });
   const ohneBild = ev({ id: "c", titel: "Ohne Bild", bild_url: null, datum: "2026-11-20" });
 
-  it("Beliebtheit: jedes Event mit Bild vor jedem ohne Bild – auch mit einer Redaktions-Markierung", () => {
+  it("Beliebtheit: jedes Event mit Bild vor jedem ohne Bild – auch mit allen Redaktions-Markierungen", () => {
+    const vollOhneBild = ev({
+      id: "e",
+      titel: "Alles gesetzt, kein Bild",
+      bild_url: null,
+      tipp_des_tages: true,
+      top_event_des_monats: true,
+      highlight_der_woche: true,
+      beschreibung: "x".repeat(90),
+      uhrzeit: "20:00",
+      stadtteil: "Altstadt",
+      datum: "2026-11-20",
+    });
     expect(beliebtheit(mitBild)).toBeGreaterThan(beliebtheit(ohneBild));
-    expect([ohneBild, tippOhneBild, mitBild].sort(nachBeliebtheit)[0].id).toBe("a");
+    expect(beliebtheit(vollOhneBild)).toBeGreaterThan(beliebtheit(mitBild));
+    expect([ohneBild, tippOhneBild, vollOhneBild, mitBild].sort(nachBeliebtheit)[0].id).toBe("a");
   });
 
   it("Auswahl greift auf Events ohne Bild nur zurück, wenn es sonst nichts gibt", () => {
@@ -20,10 +33,32 @@ describe("Events ohne eigenes Bild sind nachrangig", () => {
   });
 
   it("Top-Event des Monats ohne Bild verliert gegen ein Event mit Bild", () => {
-    const pool = { events: [tippOhneBild, mitBild, ev({ id: "d", titel: "Noch eins", bild_url: "https://x/2.jpg", datum: "2026-11-21" })], heute: "2026-11-19" } as unknown as EventPool;
+    const vollOhneBild = ev({
+      id: "e",
+      bild_url: null,
+      tipp_des_tages: true,
+      top_event_des_monats: true,
+      highlight_der_woche: true,
+      beschreibung: "x".repeat(90),
+      uhrzeit: "20:00",
+      stadtteil: "Altstadt",
+      datum: "2026-11-20",
+    });
+    const pool = {
+      events: [vollOhneBild, mitBild, ev({ id: "d", titel: "Noch eins", bild_url: "https://x/2.jpg", datum: "2026-11-21" })],
+      heute: "2026-11-19",
+    } as unknown as EventPool;
     const { highlight, top } = highlights(pool);
     expect(highlight?.bild_url).toBeTruthy();
     expect(top?.bild_url).toBeTruthy();
+    expect(top?.id).not.toBe(highlight?.id);
+  });
+
+  it("ohne jedes Bild bleibt die Redaktions-Markierung der Fallback und wirft nicht", () => {
+    const pool = { events: [tippOhneBild], heute: "2026-11-19" } as unknown as EventPool;
+    const { highlight, top } = highlights(pool);
+    expect(highlight?.id).toBe("b");
+    expect(top).toBeNull();
   });
 });
 

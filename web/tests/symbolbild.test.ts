@@ -50,4 +50,30 @@ describe("Saisonale Symbolbilder", () => {
     expect(symbolMotiv(ev("Halloween Party", "2026-10-31"))).toBe("halloween");
     expect(symbolMotiv(ev("Halloween Party", "2026-11-01"))).not.toBe("halloween");
   });
+
+  it("neue Saison-Motive im jeweiligen Fenster", () => {
+    expect(symbolMotiv(ev("Nikolausfeier", "2026-12-06"))).toBe("nikolaus");
+    expect(symbolMotiv(ev("Weihnachtsmarkt Altstadt", "2026-12-01"))).toBe("advent-weihnachtsmarkt");
+    expect(symbolMotiv(ev("Weihnachtsgottesdienst", "2026-12-24"))).toBe("weihnachten");
+    expect(symbolMotiv(ev("Silvesterparty", "2026-12-31"))).toBe("silvester");
+    expect(symbolMotiv(ev("Valentinstag Dinner", "2026-02-14"))).toBe("valentinstag");
+    expect(symbolMotiv(ev("Osterbrunch", "2026-04-05"))).toBe("ostern");
+    expect(symbolMotiv(ev("Tanz in den Mai", "2026-04-30"))).toBe("tanz-in-den-mai");
+    expect(symbolMotiv(ev("Nacht der Museen", "2026-04-18"))).toBe("nacht-der-museen");
+    expect(symbolMotiv(ev("Japan-Tag am Rhein", "2026-05-16"))).toBe("japan-tag");
+    expect(symbolMotiv(ev("CSD Düsseldorf", "2026-07-04"))).toBe("csd-pride");
+    expect(symbolMotiv(ev("Open-Air-Kino", "2026-07-10"))).toBe("sommer-openair");
+    expect(symbolMotiv(ev("Rheinkirmes", "2026-07-18"))).toBe("rheinkirmes");
+    expect(symbolMotiv(ev("Oktoberfest", "2026-09-20"))).toBe("oktoberfest");
+  });
+
+  it("keine Fehlzuordnung bei Osteria, Neujahrskonzert, Pride and Prejudice, Winter-Biergarten", () => {
+    expect(symbolMotiv(ev("Dinner in der Osteria", "2026-03-28"))).not.toBe("ostern");
+    expect(symbolMotiv(ev("Neujahrskonzert", "2027-01-01"))).not.toBe("silvester");
+    expect(symbolMotiv(ev("Neujahrsfeier", "2027-01-01"))).toBe("silvester");
+    expect(symbolMotiv(ev("Pride and Prejudice", "2026-06-15"))).not.toBe("csd-pride");
+    expect(symbolMotiv(ev("Pride Parade", "2026-07-04"))).toBe("csd-pride");
+    expect(symbolMotiv(ev("Winterbiergarten", "2026-12-20"))).not.toBe("sommer-openair");
+    expect(symbolMotiv(ev("Kirmes", "2026-11-01"))).not.toBe("rheinkirmes");
+  });
 });
