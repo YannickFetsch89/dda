@@ -1,220 +1,230 @@
 # Plan: Guide „Spielplätze“ (`/guides/spielplaetze`)
 
-Stand 12.11.2026 · Entwurf zur Gegenprüfung (Cursor) · noch nichts umgesetzt
+Stand 12.11.2026 · Gegenprüfung (Cursor) und zweite Durchsicht (Claude, Abschnitt 0.3) eingearbeitet · noch nichts umgesetzt
 
-Ziel: Eltern finden schnell den passenden Spielplatz – nach Alter des Kindes, Ausstattung, Stadtteil und Nähe –
-mit ehrlichen, belegten Angaben. Gleiche Qualitätsregeln wie bei Restaurants, Kneipen und Clubs: nur belegte Daten,
-eine URL pro Ort, erste HTML-Antwort mit Inhalt, SEO-/GEO-Texte, Deploy nur mit OK, SQL führt der Auftraggeber aus.
+Ziel: Eltern finden den passenden städtischen Spielplatz nach Alter, Ausstattung, Stadtteil und Nähe. Dieselben Qualitätsregeln wie bei den anderen Guides: nur belegte Angaben, eine URL pro Ort, Inhalt in der ersten HTML-Antwort, SEO-Text mit fünf FAQs, Deploy nur nach OK. SQL führt der Auftraggeber aus.
 
----
-
-## 1. Ausgangslage (geprüft am 12.11.2026)
-
-### 1.1 Daten, die es schon gibt
-| Quelle | Inhalt | Lizenz | Bewertung |
-|---|---|---|---|
-| **Stadt Düsseldorf, Open Data** „Notfallnummern auf städtischen Spielplätzen“ (Garten-, Friedhofs- und Forstamt), CSV/GeoJSON (WGS84 + ETRS89)/KML, aktualisiert 11.11.2026 | **433 Anlagen** mit Punktkoordinaten: 322 Kinderspielplätze, 20 Waldkinderspielplätze, 9 Wasserspielplätze, 71 Bolzplätze, 5 Waldbolzplätze, 3 Skateranlagen, 3 Freizeitanlagen. Felder: `objektbezeichnung` (z. B. „HOFGARTEN, Ksp Oederallee“), `strasse_hausnr` (oft leer), `stadtbezirk` (1–10), `objektart`, `groesse` (m²), `4stellige_nr` (Notfallnummer), `objektschluessel` | Portal: **Datenlizenz Deutschland – Zero 2.0** (dl-de/zero-2-0). Achtung: der NRW-Spiegel (ckan.open.nrw) zeigt „Andere geschlossene Lizenz“ → vor dem Import klären (s. Risiken) | Rückgrat des Guides: vollständig, amtlich, kostenlos. **Keine** Ausstattung, kein Alter, keine Fotos. 413 Leerzeilen in der Datei (beim Import verwerfen) |
-| **OpenStreetMap** `leisure=playground` | Teilweise Ausstattung (`playground=swing/slide/sandpit/climbingframe/zipwire/water…`), `min_age`/`max_age`, `surface`, `wheelchair`, Name | ODbL – Namensnennung „© OpenStreetMap-Mitwirkende“ (haben wir an der Karte schon) | Ergänzung für Ausstattung. Abdeckung in Düsseldorf noch prüfen (Overpass war beim Test überlastet) |
-| **Google Places** (Typ `playground`) | Bewertung, Anzahl Bewertungen, Fotos, teils Öffnungszeiten | Google-Bedingungen, Fotos nur über API mit Urhebernennung | Für „Beliebtheit“ und Fotos; viele kleine Plätze fehlen bei Google. Kostet Geld |
-| Neuss: Liste aller Kinderspielplätze (PDF, Stand 11/2023) und NRW-Datensatz „Stadt Neuss: Kinderspielplätze“ (kuratierte Auswahl) | Namen/Standorte | prüfen | Für C3 (Neuss) |
-| Ratingen | keine offenen Geodaten gefunden | – | nur OSM/Google |
-
-### 1.2 Website – vorhanden und wiederverwendbar
-- Typ `spielplatz` ist in der Tabelle `orte` (CHECK-Constraint) und in `OrtTyp` schon vorgesehen.
-- Kachel „Spielplätze“ auf `/guides` (noch `fertig: false`), Text „In Arbeit …“ in den Guide-FAQs.
-- Bausteine aus den anderen Hubs: Karte (MapLibre + eigene PMTiles, `GuideKarteLazy`, `/api/guide-karte`), Filter-Chips (`gd-zeile`),
-  Guide-Stadtteilseiten (`/guides/{hub}/stadtteil/{slug}`), `GuideEinleitung`/`GuideSeoText` mit 5 FAQs, Proxy-Prüfung
-  (`pfad-pruefung.ts`), Sitemap, IndexNow, Foto-Proxy `/ort-foto/[slug]` inkl. `foto_manuell`.
-- Event-Kategorie „Familie“ für „Familien-Events in der Nähe“.
-
-### 1.3 Design (Handoff `design_v2/ddd_handoff_v2/14_spielplaetze`, Ansichten 23 + 25)
-- Hell und freundlich (Hero `#FFF6E6`), **Karte ist die Hauptansicht** (Grid 55/45 Karte/Liste, mobil Karte oben).
-- Altersgruppen 0–3 / 3–6 / 6–12 / alle mit festen Farben; Ausstattung (Sandkasten, Schaukel, Rutsche, Kletterwand,
-  Wasserspiel, Seilbahn) mit UND-Filter; Extras Schatten / WC / eingezäunt / Picknick; Sortierung „In der Nähe“ (Geolocation)
-  und „Beste Ausstattung“.
-- Detail: Alters-Badge, Ausstattung vorhanden/fehlt, Extras ja/nein/teilweise, Mini-Karte, „Route planen“,
-  „In der Nähe“ (weitere Spielplätze, Cafés, Familien-Events).
-- Eigene SVG-Icons nötig für Schaukel, Rutsche, Sandkasten (keine passenden Material-Icons).
+Die Entscheidungen S1–S9 sind damit getroffen. Abweichungen stehen in Abschnitt 0 und gelten vor dem ursprünglichen Entwurf.
 
 ---
 
-## 2. Entscheidungen (vom Auftraggeber zu treffen – Vorschlag fett)
+## 0. Verbindlich nach der Gegenprüfung
 
-| Nr. | Frage | Vorschlag |
+### 0.1 Daten, die der Entwurf falsch beschreibt
+
+Geprüft an der Datei der Stadt (Open Data Düsseldorf, Datensatz „Notfallnummern auf städtischen Spielplätzen“, Lizenz auf dem Portal: Datenlizenz Deutschland – Zero – Version 2.0):
+
+| Behauptung im Entwurf | Befund |
+|---|---|
+| Datei vom 11.11.2026, monatliches Diff | Die Ressourcen (CSV, GeoJSON) sind seit **25.09.2020** unverändert. Das Portal nennt das Intervall **jährlich**. Der Datensatz-Stempel 09.06.2026 ist nur Metadaten. Kein monatlicher Abgleich. |
+| 413 Leerzeilen | Stimmt für das **GeoJSON**: 846 Features, davon 413 ohne Eigenschaften und 433 Punkte. Die CSV hat 433 Datenzeilen und keine Leerzeilen. |
+| Filter auf Objektart-Codes `336`, `536`, `337` | Der Wert ist Text: `336 Kinderspielplatz`, `536 Waldkinderspielplatz`, `337 Wasserspielplatz`, dazu `338 Bolzplatz` (71), `538 Waldbolzplatz` (5), `335 Skateranlage` (3), `333 Freizeitanlage` (3). Ein Zahlenvergleich trifft nichts. |
+| Koordinaten aus CSV oder aus `latitude`/`xkoord` | In der CSV sind Breite und Länge durch Tausenderpunkte zerstört (`5.123.280.449` statt `51.23280449`). Im GeoJSON sind `xkoord`/`ykoord` ebenfalls unbrauchbar. **Einzige Quelle: `geometry.coordinates` der WGS84-Datei.** Jeder Punkt muss in 6,6–7,0 °O und 51,1–51,4 °N liegen, sonst Abbruch. |
+| Größe als Zahl | `groesse` ist ein Text mit Komma (`664,1`). |
+
+Lizenzfrage: maßgeblich ist das Portal der Stadt, nicht der NRW-Spiegel. Die FAQ der Stadt erlaubt die kommerzielle Nutzung unter dl-de/zero-2.0. Vor dem Import die URL und den Lizenznamen in `extras.spielplatz.lizenz` festhalten. Den Import nicht auf eine Rückfrage an den NRW-Spiegel warten lassen.
+
+ODbL: Die Koordinate bleibt die der Stadt. OSM liefert nur Eigenschaften. Auf jeder Seite mit OSM-Angaben „Ausstattung: © OpenStreetMap-Mitwirkende“. Den OSM-Rohauszug nicht veröffentlichen und kein öffentliches API, das diese Felder ausliefert. Einzelne Tags anzuzeigen ist damit ein Produced Work und reicht.
+
+### 0.2 Was der Code heute noch nicht kann
+
+`/guides/spielplaetze/…` ist absichtlich noch keine Route: `routeVon` gibt `null` zurück, die Tests in `seo-a1.test.ts` und `seo-b.test.ts` halten das fest. `GuideHub` kennt den Hub nicht. `orteLaden` und `ortLaden` verlangen `qualitaets_score >= 7`. Der Foto-Proxy lädt über `ortLaden` und danach nur Clubs. Wer den Spielplatz-Score in `qualitaets_score` schreibt, lässt die Plätze in anderen Abfragen auftauchen oder, wenn der Score unter 7 liegt, unsichtbar bleiben. Der Score bleibt in `extras.spielplatz.score`.
+
+Stadtteilseiten, Sitemap und die Links auf Event- und Stadtteilseiten hängen an `GUIDE_HUBS` und `hubOrte`. Der neue Hub muss dort einen Zweig bekommen, sonst zieht ein Eintrag in `GUIDE_HUBS` die falschen Orte. Die Karten auf Stadtteilseiten sind Restaurant-Karten. Für Spielplätze eine eigene, schmale Karte (Name, Typ, Altersangabe), nicht die Restaurant-Karte.
+
+`instant = false` auf Hub, Detail und Stadtteilseite, sonst fehlt der Inhalt in der ersten HTML-Antwort. Unbekannte Slugs mit einer direkten 404 im Proxy beantworten, nicht mit `notFound()` in der Seite und nicht mit Rewrite.
+
+Der Handoff-Ordner liegt **außerhalb des Repos**, aber lokal vor: `C:\Claude_DDD\design_v2\ddd_handoff_v2\14_spielplaetze\`
+(`README.md` mit Ansicht 23/25, `data/spielplaetze.json` mit Altersfarben, Ausstattungs-Icons und Extras). Er ist die
+Design-Vorlage; ergänzend `DESIGN_PROMPTS_GUIDES.md` (Repo), Abschnitt 10. Korrekturen gegenüber beiden: MapLibre statt
+Leaflet, Anrede **ihr/euch** wie die anderen Guides (Hero-Subline nicht „finde den perfekten für dein Kind“), kein
+Hero-Foto mit Kindern, Zahl im Hero aus den Daten (nicht „230“).
+
+### 0.3 Zweite Durchsicht (Claude, 12.11.2026) – geprüft an Daten und Code
+
+| Punkt | Befund | Folge für den Plan |
 |---|---|---|
-| **S1** | Welche Anlagen? | **Kinderspielplätze, Waldspielplätze, Wasserspielplätze** der Stadt. Bolzplätze/Skateranlagen erst später (eigener Filter „Bolzen & Skaten“), Indoor-Spielplätze (kommerziell) **nicht** in diesem Hub |
-| **S2** | Alle zeigen oder nur Empfehlungen? | **Alle Spielplätze mit Koordinaten zeigen** (die Karte lebt von Vollständigkeit), dazu eine sichtbare Stufe **„Top-Spielplatz“** (wie bei Clubs, aber ohne Erklärung der Einteilung). Detailseiten indexierbar nur mit genug Inhalt (s. 4.4) |
-| **S3** | Gebiet | **Düsseldorf zuerst**; Neuss/Ratingen in Phase 2, wenn die Datenlage es trägt |
-| **S4** | Woher kommen Ausstattung und Alter? | **Kombination**: OSM-Tags → belegtes KI-Profil aus öffentlichen Quellen (Stadt, Presse, Spielplatz-Portale; nur Fakten mit Zitat, wie bei Clubs) → später Meldungen von Nutzern („Angabe falsch / ergänzen“). Was nicht belegt ist, heißt „noch keine Angaben“ – nie „fehlt“ |
-| **S5** | Fotos | **Nur Fotos ohne erkennbare Kinder** (Persönlichkeitsrechte, Kinder sind auf Spielplatzfotos fast immer drauf). Google-Fotos nur nach Sichtprüfung (wie Club-Fotos, `foto_manuell`), sonst freundliches Illustrations-Motiv je Typ (Wald/Wasser/Spielplatz). **Kein Street View** (Kosten, oft unbrauchbar) |
-| **S6** | Notfallnummer anzeigen? | **Ja**, auf der Detailseite als Infozeile: „Notfallnummer 9601 – bei einem Notruf (112) angeben“. Echter Mehrwert für Eltern, amtliche Angabe |
-| **S7** | Standardansicht | **Karte** (laut Design), Liste daneben; „Grid“-Ansicht nicht nötig |
-| **S8** | Geolocation „In der Nähe“ | **Nur auf Klick**, nur im Browser berechnet, nichts gespeichert oder gesendet; ohne Freigabe Fallback Stadtmitte |
-| **S9** | Budget Google + KI | **bis ca. 40 $** für den Erstaufbau (Details s. Abschnitt 7) |
+| Stadtteilflächen | Datensatz **„Stadtteilgrenzen Düsseldorf 2025“** (Open Data, dl-de/zero-2.0) existiert; dazu „Zuordnung der Stadtteile zu den Stadtbezirken“ (dl-de/zero-2.0) | Quelle für 3.1 Schritt 4. Plausibilitätsprüfung: Stadtbezirk aus dem Punkt-in-Polygon muss zum Feld `stadtbezirk` der Spielplatzdatei passen, sonst Prüf-CSV |
+| Notfallnummern | Alle 351 Plätze haben eine Nummer, aber **8 Nummern sind doppelt** vergeben | Doppelte nur anzeigen, wenn beide Plätze im selben Park liegen (≤ 150 m); sonst Prüf-CSV und Zeile weglassen, bis geklärt. Eine falsche Notruf-Angabe ist schlimmer als keine. Text: „Die Nummer steht auch auf dem Schild am Spielplatz.“ |
+| Mehrere Plätze je Park | Hofgarten, Rheinpark, Zoopark, Volksgarten, Alter Gerresheimer Friedhof u. a. haben je 3+ Plätze | Name „Spielplatz Hofgarten (Oederallee)“; auf der Detailseite zuerst „Weitere Spielplätze im Hofgarten“, dann die nächsten. Überlappende Pins: bei 351 DOM-Markern ohne Clustering akzeptabel; Clustering erst, wenn es im Browser stört |
+| Unklare Abkürzungen | Präfix **„GW“** (z. B. „GW RATH/ELLER“, „GW TANNENHOF“, „GW GARATH SW“) | Bedeutung nicht raten → Frage an den Auftraggeber bzw. Stadt; bis dahin Name ohne Präfix aus dem Teil nach dem Komma bilden und in die Prüf-CSV |
+| Typ vs. Name | „VOR DEM DEICH, Ksp 'Wind,Wasser,Sonne'“ ist als Wasserspielplatz geführt | Typ immer aus `objektart`, nie aus dem Namen |
+| Auswahl für Google/Profile | 9 Wasser, 20 Wald, 86 Plätze ≥ 3.000 m², 171 ≥ 1.500 m² | Erste Runde: Wasser + Wald + ≥ 3.000 m² (≈ 110 Plätze); 1.500–3.000 m² erst nach Bericht. Damit bleiben Google und KI deutlich unter S9 |
+| Wasserspielplätze saisonal | Die Stadt schaltet das Wasser per Pressemitteilung frei und bei Trockenheit auch ab | Feld `saison` nur mit Beleg („laut Stadt in der Regel Mai bis September“), sonst Hinweis „Wasser nur in der warmen Jahreszeit, Betrieb kann ruhen“. Eine FAQ dazu |
+| Eigene Icons | Handoff verlangt eigene SVGs für Schaukel, Rutsche, Sandkasten | In 4.6 aufgenommen (Outline, 2 px, 24er Raster, mit Label) |
+| Typ-Illustrationen (S5) | Für Plätze ohne freigegebenes Foto | Drei Motive (Spielplatz, Waldspielplatz, Wasserspielplatz) ohne Personen; Bild-Prompts liefern wie bei „Über uns“, der Auftraggeber erzeugt die Bilder |
+| Dunkles Design | Heller Hero `#FFF6E6` ist nur hell definiert | Farben als Tokens mit Dark-Variante, Pins/Legende in beiden Modi prüfen |
+| Datenschutz | „In der Nähe“ nutzt die Standortfreigabe des Browsers (nur lokal) | Ein Satz in der Datenschutzerklärung (Text vom Auftraggeber freigeben) |
+| Interne Links | Familien-Events haben Stadtteil, aber keine Koordinate | Event-Seiten der Kategorie Familie verlinken „Spielplätze in {Stadtteil}“, sobald die Stadtteilseite existiert (über `stadtteileImHub`, neuer Zweig `zaehltFuerIndex` = alle sichtbaren) |
+| Haftung | Geräte werden gesperrt/umgebaut | Fuß der Detailseite: „Angaben ohne Gewähr, Stand …; vor Ort kann es Abweichungen geben.“ |
+| Erfolgsmessung | – | Nach 4 Wochen Suchanfragen in Bing/Google prüfen (Spielplatz + Stadtteil, Wasserspielplatz, Waldspielplatz) und die FAQ danach nachschärfen |
+
+**Offene Fragen an den Auftraggeber:** (1) Bedeutung „GW“ bekannt? (2) Typ-Illustrationen selbst erzeugen (Prompts von uns)?
+(3) Datenschutz-Satz zur Standortfunktion freigeben? (4) Filter „rollstuhlgerecht/inklusiv“ zeigen, sobald mindestens fünf
+Plätze das belegt haben?
 
 ---
 
-## 3. Datengrundlage und Pipeline
+## 1. Ausgangslage
 
-Neues Paket `scraper/spielplaetze/` (Muster wie `scraper/orte/clubs*.py`), alles mit `--dry-run`, Logs auf Deutsch,
-Rate-Limit ≥ 2 s für Websites, robots.txt beachten.
+### 1.1 Daten
 
-### 3.1 Import Stadt (`stadt_import.py`)
-1. GeoJSON (WGS84) laden, Leerzeilen verwerfen, nach S1 filtern (`objektart` 336, 536, 337).
-2. **Name normalisieren**: „HOFGARTEN, Ksp Oederallee“ → „Spielplatz Hofgarten (Oederallee)“, „Wsp“ → Wasserspielplatz,
-   „Waldksp“ → Waldspielplatz; Großschreibung, Apostrophe („SPEE`SCHER GRABEN“). Regeln als reine Funktion mit Tests;
-   unklare Namen in eine CSV zur Sichtprüfung.
-3. **Stadtteil per Punkt-in-Polygon** mit den offiziellen Stadtteilgrenzen (Open Data Düsseldorf, dl-de/zero) – neue
-   reine Funktion `stadtteil_aus_koordinate()`, Abgleich mit unseren kanonischen Stadtteilnamen (`ortsnamen`/`stadtteile.ts`).
-4. **Adresse**: `strasse_hausnr`, sonst Reverse-Geocoding nur bei Bedarf (Nominatim, 1 req/s, eigener User-Agent ohne
-   persönliche Daten) oder „nahe <Straße aus dem Namen>“.
-5. Speichern in `orte`: `typ='spielplatz'`, `aktiv=false` (Freischaltung nach Sichtprüfung), `slug` = Name + Stadtteil,
-   `latitude/longitude`, `extras.spielplatz = { quelle:'stadt', objektschluessel, notfallnummer, objektart, groesse_m2, stadtbezirk }`.
-   Eindeutigkeit über `objektschluessel` (wiederholbarer Import, ändert nur Stadtfelder).
+| Quelle | Was sie trägt | Nutzung |
+|---|---|---|
+| Stadt Düsseldorf, GeoJSON WGS84, dl-de/zero-2.0, Dateistand 25.09.2020 | 322 Kinderspielplätze, 20 Waldkinderspielplätze, 9 Wasserspielplätze, plus Bolz-, Skater- und Freizeitanlagen | Rückgrat. Koordinate, Name, Stadtbezirk, Größe, Notfallnummer, Objektschlüssel. Keine Ausstattung, kein Alter, keine Fotos. |
+| OpenStreetMap `leisure=playground` | Geräte, `min_age`/`max_age`, Belag, Rollstuhl, Eintritt | Nur Eigenschaften, Zuordnung über die Stadt-Koordinate. Plätze nur in OSM (neu seit 2020, Abenteuerspielplätze) in eine Prüf-CSV, nicht automatisch anlegen. |
+| Google Places, Typ `playground` | Bewertung, Fotos | Nur für die Profil-Auswahl, über den vorhandenen Places-Client. Kein flächiges Gitter. |
+| Neuss, Ratingen | PDF 2023 bzw. keine offenen Daten | Nicht in dieser Runde. |
 
-### 3.2 OSM-Abgleich (`osm_abgleich.py`)
-- Overpass-Abfrage `leisure=playground` im Stadtgebiet (einmal, Zwischenspeicher `data/spielplaetze/osm.json`, gitignored).
-- Zuordnung Stadt ↔ OSM über Distanz (≤ 60 m, Fläche enthält Punkt) – Mehrdeutigkeiten in die Prüf-CSV.
-- Übernehmen: `playground=*` (auch `playground:*`-Unterobjekte im Umkreis), `min_age`/`max_age`, `surface`, `wheelchair`,
-  `fee`, `lit`, `access`. Mapping auf unsere Ausstattungsliste (Tabelle im Code, getestet).
+Abenteuerspielplätze des Jugendamts stehen nicht in der Gartenamt-Datei. Eine kurze manuelle Liste (Name, Koordinate, Quelle) kommt vor dem Livegang dazu, sonst fehlen die Plätze, die Eltern dem Namen nach suchen. Das blockiert den Import der 351 städtischen Plätze nicht.
 
-### 3.3 Google (optional, `google_abgleich.py`)
-- Nur für Plätze ab z. B. 1.500 m² und Wasser-/Waldspielplätze (die „Ausflugsziele“), Nearby Search Typ `playground`
-  im Umkreis 80 m um die Koordinate → Bewertung, Anzahl, Foto-Kandidaten. Kein Flächengitter über die ganze Stadt.
-- Fotos: Kandidaten wie bei den Clubs sichten, **nur ohne Kinder**; Auswahl per SQL mit `foto_manuell`.
+### 1.2 Wiederverwenden
 
-### 3.4 Profil (`profil.py`, KI + Websuche, wie Club-Profil)
-- Für Top-Kandidaten (Wasser-/Wald-/große Spielplätze, Google-Bewertungen) Quellen suchen: duesseldorf.de, Pressemitteilungen
-  (Neugestaltungen nennen oft Geräte und Altersgruppe), Bezirksvertretungs-Vorlagen, Spielplatz-Portale (nur Fakten, nichts kopieren).
-- Ergebnis je Platz: `ausstattung[]`, `altersgruppe` (0–3/3–6/6–12/alle), `extras` (schatten/wc/eingezaeunt/picknick, je ja/nein/teilweise
-  + Notiz), `beschreibung` (eigene Worte, 2–4 Sätze), `highlight`. **Jede Angabe mit wörtlichem Beleg** (Code prüft wie bei Clubs),
-  `stand` = Datum der Quelle (Spielplätze werden umgebaut!).
-- Altersgruppe ohne Beleg: aus der Ausstattung **ableiten** (Sandkasten/Babyschaukel/Federwippe → 0–3 bzw. 3–6; Kletterturm/Seilbahn → 6–12;
-  beides → „alle“) und als „abgeleitet“ markieren; im Text „geeignet vor allem für …“.
+Karte (MapLibre, PMTiles, `GuideKarteLazy`, `/api/guide-karte`), Filterchips, `GuideEinleitung` / `GuideSeoText`, Stadtteil-Mechanik, Sitemap, IndexNow, Foto-Proxy. Die Event-Kategorie Familie für den Block auf der Detailseite.
 
-### 3.5 Spielplatz-Score (intern, für Sortierung und „Top-Spielplatz“)
-Nicht als Note anzeigen (Abmahnrisiko, siehe Club-Score) – höchstens „Top-Spielplatz“-Badge.
-- Ausstattung (Anzahl belegter Geräte, Vielfalt) 35 %
-- Größe (m² aus Stadtdaten) 20 %
-- Besonderheit (Wasser, Wald, Thema, Inklusion/rollstuhlgerecht) 20 %
-- Beliebtheit (Google, Bayes-Mittel; ohne Google neutral) 15 %
-- Extras (WC, Schatten, Picknick in der Nähe) 10 %
+---
 
-### 3.6 Kuration und Freischaltung
-CSV zur Sichtprüfung (Name, Stadtteil, Typ, Größe, Ausstattung + Belege, Altersgruppe, Score, Foto) →
-`--freigeben`/`--freischalten` wie bei Clubs. Unpassende Einträge (Schulhof, nicht öffentlich, abgerissen) über eine
-Ausschlussliste `NICHT_IM_HUB` mit Grund.
+## 2. Entscheidungen
 
-### 3.7 Aktualisierung
-- Stadtdaten monatlich (Datei ändert sich, z. B. neue Notfallnummern) – Diff-Protokoll, keine Löschung ohne Prüfung.
-- OSM vierteljährlich; Profile nur bei Hinweis/Umbau neu.
+| Nr. | Entscheidung |
+|---|---|
+| S1 | Kinderspielplätze, Waldkinderspielplätze, Wasserspielplätze (351). Bolzplätze, Waldbolzplätze, Skateranlagen und Freizeitanlagen nicht. Keine Indoor- oder kommerziellen Spielplätze. Der Einleitungssatz sagt das, damit die Karte nicht vollständig wirkt, wo sie es nicht ist. |
+| S2 | Jeder Platz aus S1 mit gültiger Koordinate kommt auf die Karte. `aktiv=true` nach einer Stichprobe der Namen-CSV, nicht nach einer Einzel-Freigabe wie bei Clubs. `NICHT_IM_HUB` nur für Schulhöfe ohne öffentlichen Zugang, Dubletten und nachweislich abgebaute Plätze. Der interne Score steht nicht in `qualitaets_score`. |
+| S3 | Düsseldorf. Neuss und Ratingen später. |
+| S4 | Ausstattung nur belegt: OSM-Tag oder wörtliches Zitat. Ohne Beleg „keine Angabe“, nie „fehlt“. „Fehlt“ nur bei belegter Abwesenheit. Alter aus der Ausstattung ist „vermutlich“ und zählt nicht als Beleg für die Indexierung. |
+| S5 | Keine Fotos mit erkennbaren Kindern. Google-Fotos nur nach Sichtprüfung (`foto_manuell`). Sonst eine Illustration je Typ. Kein Street View. |
+| S6 | Notfallnummer als Hinweis: „Bei einem Notruf (112) die Nummer 9601 angeben.“ Kein `tel:`-Link. Fehlt die Nummer, entfällt die Zeile. Die drei Skateranlagen haben laut Stadt keine Nummer; sie sind ohnehin nicht im Hub. |
+| S7 | Karte ist die Standardansicht, Liste daneben. Keine Grid-Ansicht. |
+| S8 | „In der Nähe“ nur nach Klick, nur im Browser, nichts speichern oder senden. Ohne Standortfreigabe bleibt die Standardsortierung und ein Satz sagt das. Nicht still auf die Stadtmitte springen. |
+| S9 | Bis etwa 40 $ für den Erstaufbau, über den vorhandenen Places-Client. Kosten vor dem Google-Lauf nennen. |
+
+---
+
+## 3. Pipeline (`scraper/spielplaetze/`)
+
+Muster wie die Club-Skripte: `--dry-run`, Logs auf Deutsch, Pause vor fremden Websites, robots.txt.
+
+### 3.1 Stadt-Import
+
+1. Nur das WGS84-GeoJSON. Features ohne `objektart` verwerfen. S1 über den Text der Objektart, nicht über eine nackte Zahl.
+2. Größe mit Komma-Dezimaltrenner. Koordinate ausschließlich aus `geometry`.
+3. Namen als reine, getestete Funktion: `Ksp` → Spielplatz, `Waldksp` → Waldspielplatz, `Wsp` → Wasserspielplatz, Großschreibung, Apostroph in `SPEE'SCHER GRABEN`. Unklare Namen in die Prüf-CSV, nicht raten.
+4. Stadtteil per Punkt-in-Polygon gegen „Stadtteilgrenzen Düsseldorf 2025“ (Open Data, dl-de/zero-2.0); Stadtbezirk zur Kontrolle gegen das Feld `stadtbezirk`. Reines Python, Ray-Casting, Multipolygone und Löcher. Keine neue Bibliothek. Grenzlage: der kleinere Treffer, und die Zeile in die Prüf-CSV. Ergebnis auf die Namen in `web/lib/stadtteile.ts` abbilden, Anzeige „Hafen“ bleibt „Medienhafen“. Flingern-Nord und Flingern-Süd nicht zu „Flingern“ zusammenziehen; beide haben eine eigene Seite.
+5. Adresse aus `strasse_hausnr`. Für die **78 der 351 Plätze ohne Adresse** die nächste Hausadresse aus der städtischen
+   „Adressliste Düsseldorf“ (Open Data, dl-de/zero-2.0, lokal, ≤ 150 m) als „nahe Musterstraße 12“ – kein Nominatim.
+   Ohne Treffer bleibt die Adresse leer. „Route planen“ immer aus der Koordinate.
+6. Speichern: `typ='spielplatz'`, Slug aus Name und Stadtteil, bei Kollision `slug_mit_suffix`. Identität ist `objektschluessel`. Ein erneuter Import ändert nur Stadtfelder und mischt `extras` (`extras_mergen`), er ersetzt weder Profil noch Foto noch `aktiv`.
+
+### 3.2 OSM
+
+Eine Overpass-Abfrage, Zwischenspeicher `data/spielplaetze/osm.json` (gitignored), Wiederholung mit Pause. Zuordnung bis 60 m oder wenn die Stadt-Koordinate in der OSM-Fläche liegt. Mehrdeutiges in die CSV. Übernehmen: `playground`, `min_age`/`max_age`, `surface`, `wheelchair`, `fee`, `access`, jeweils mit Quelle `osm`. Mapping-Tabelle mit Tests. Plätze nur in OSM nicht anlegen, sondern auflisten (Kandidaten für die Zeit nach 2020 und für Abenteuerspielplätze).
+
+### 3.3 Google
+
+Nur Wasser-, Wald- und große Plätze (ab etwa 1.500 m²), Umkreis 80 m, Typ `playground`. Bewertung nur intern für den Score. Fotos als Kandidaten, Freigabe per SQL und `foto_manuell`, nur ohne erkennbare Kinder.
+
+### 3.4 Profil
+
+Zuerst zehn Plätze, Bericht, dann der Rest der Auswahl (Wasser, Wald, groß, plus die manuelle Abenteuer-Liste). Quellen: duesseldorf.de, Vorlagen der Bezirksvertretung, Pressemitteilungen. Portale nur als Fakt mit Zitat, nichts übernehmen. Je Platz: belegte Ausstattung, Altersgruppe, Extras (Schatten, WC, Zaun, Picknick, rollstuhlgerecht) mit ja/nein/teilweise und Notiz, zwei bis vier eigene Sätze, Highlight, `stand`. Jede Aussage mit wörtlichem Beleg, Prüfung wie bei den Clubs. Eine aus den Stadtfeldern gebaute Schablone („Spielplatz X in Y, Z m²“) ist keine Beschreibung.
+
+### 3.5 Score und Badge
+
+Intern, keine Zahl auf der Seite. Gewichte wie vorgeschlagen (Ausstattung 35, Größe 20, Besonderheit 20, Google 15, Extras 10). Ohne Google bleibt Beliebtheit neutral, der Platz wird nicht abgewertet. „Top-Spielplatz“ nur für Profile mit Belegen, die im obersten Fünftel dieses Scores liegen. Nicht auf dünnen Seiten.
+
+### 3.6 Aktualisierung
+
+Die Stadtdatei ist jährlich und seit 2020 unverändert. Ein monatlicher Job lohnt nicht. Beim nächsten veröffentlichten Stand: Diff, fehlende Objektschlüssel als `stadt_fehlt_seit` markieren, nicht sofort abschalten. OSM-only-Liste ist der Weg für neuere Plätze. Profile neu nur bei Hinweis oder Umbau.
 
 ---
 
 ## 4. Website
 
-### 4.1 Daten- und Logikschicht
-- `web/lib/spielplaetze.ts`: Profil aus `extras.spielplatz` lesen (nur bekannte Werte), Altersgruppen/Ausstattung/Extras
-  als Konstanten (Farben aus dem Handoff), Filter lesen/schreiben (`alter`, `geraet` (UND), `extra`, `stadtteil`, `sort`),
-  Sortierung „Beste Ausstattung“/„In der Nähe“ (Haversine im Browser), `istSichtbarerSpielplatz`.
-- `web/lib/spielplaetze-daten.ts`: Laden mit `"use cache"` (wie `clubOrteLaden`, paginiert).
+### 4.1 Logik
 
-### 4.2 Hub `/guides/spielplaetze` (Ansicht 23)
-- Heller Hero mit Zahl aus den Daten, darunter **Einleitung** (2–3 Sätze, `GuideEinleitung`).
-- Filter: Altersgruppe (groß, Einzelauswahl, Farbpunkte), Ausstattung (UND), Extras (Schalter), Stadtteil, Sortierung.
-- **Karte + Liste** (Karte Standard): Pins in Altersfarbe, Legende, Hover-Puls, „Mein Standort“ (nur auf Klick, S8).
-  Kartenpunkte über `/api/guide-karte?hub=spielplaetze` (erste HTML-Antwort bleibt klein); darunter `OrtLinkListe` für Crawler.
-- Liste mit kompakten Cards (Thumb 80×80, Alters-Badge, Ausstattungs-Icons mit `title`, Schatten/WC/Zaun).
-- Unten **SEO-Text + 5 FAQs** (FAQPage-JSON-LD), eigene Texte (z. B. „Wo gibt es Wasserspielplätze in Düsseldorf?“,
-  „Welcher Spielplatz eignet sich für Kleinkinder?“, „Gibt es Spielplätze mit Toilette?“, „Was bedeutet die Notfallnummer
-  am Spielplatz?“, „Wo finde ich Waldspielplätze?“).
-- Filter-URLs `noindex, follow`, Canonical auf den Hub (wie die anderen Hubs).
+`web/lib/spielplaetze.ts`: Profil nur aus bekannten Werten. Filter `alter` (eine Altersgruppe), `geraet` (UND, nur „belegt vorhanden“), `extra`, `stadtteil`, `sort`. Plätze mit Altersgruppe „alle“ passen zu jedem Altersfilter (Handoff). Ohne Altersangabe erscheint ein Platz bei „Alle Alter“, nicht bei 0–3, 3–6 oder 6–12. Unbekannt bekommt einen neutralen Pin, nicht die Farbe von „alle“. Chips für Geräte erst, wenn mindestens ein Platz das Gerät belegt hat. Leere Filterlage erklärt, dass die Ausstattung noch nicht überall erfasst ist.
 
-### 4.3 Detail `/guides/spielplaetze/[slug]` (Ansicht 25)
-- Brotkrumen, Bild (oder Typ-Illustration), H1, Stadtteil + Adresse, Alters-Badge, Beschreibung.
-- **Ausstattung**: vorhanden (grün) – **nicht belegt** (neutral „keine Angabe“ statt rot „fehlt“, Lehre aus dem Club-Score);
-  „fehlt“ in Rot nur bei belegter Abwesenheit.
-- Extras mit Ja/Nein/Teilweise + Notiz, **Notfallnummer** (S6), Größe („ca. 3.800 m²“), „Stand der Angaben: …“, Quellen.
-- Rechts sticky: Mini-Karte, Adresse, „Route planen“ (Google-Maps-Link ohne API), „In der Nähe“.
-- **In der Nähe**: 3 weitere Spielplätze (Haversine), 2 Cafés aus dem Restaurant-Guide (Typ café, Haversine ≤ 1 km),
-  3 Familien-Events (Kategorie Familie, gleicher Stadtteil/Nachbarstadtteile – Events haben keine Koordinaten).
-- JSON-LD `Playground` (schema.org, CivicStructure) mit `geo`, `address`, `isAccessibleForFree: true`, BreadcrumbList.
-  Kein `aggregateRating` aus Google.
+`web/lib/spielplaetze-daten.ts`: `"use cache"`, seitenweise, `aktiv=true`, `typ=spielplatz`, **ohne** die Score-Schwelle von `orteLaden`. Sichtbar ist, was S1 entspricht und nicht auf der Ausschlussliste steht.
+
+Sortierung standardmäßig nach Score, dann Name. „In der Nähe“ ist kein URL-Parameter: die Koordinate bleibt im Browser (Haversine).
+
+### 4.2 Hub
+
+Heller Hero, eine H1 „Spielplätze in Düsseldorf“, Zahl aus den Daten, Einleitung mit zwei bis drei Sätzen und dem Satz, was nicht im Hub ist. Karte und Liste, Pins nach Alter plus neutral, Legende mit Text, nicht nur Farbe. Punkte über `/api/guide-karte?hub=spielplaetze`. Darunter `OrtLinkListe`, damit die Links im ersten HTML stehen. Unten SEO-Text und fünf FAQs. Brotkrumen: Start / Düsseldorf entdecken / Spielplätze.
+
+Filter-URLs: `noindex, follow`, Canonical auf `/guides/spielplaetze`, wie die anderen Hubs.
+
+### 4.3 Detail
+
+Brotkrumen bis zum Namen, Bild oder Typ-Illustration, H1, Stadtteil, Adresse falls vorhanden, Alters-Badge mit dem Zusatz „vermutlich“, wenn abgeleitet. Ausstattung: belegt, keine Angabe, oder belegt fehlend. Extras, Notfallnummer, Größe als „1.200 m² laut Stadt“, Stand, Quellen. Mini-Karte, „Route planen“ als normaler Google-Maps-Link aus der Koordinate.
+
+„Weitere Spielplätze“: die drei nächsten mit Koordinate. Cafés: bis zu zwei aus dem Restaurant-Guide, Typ Café, höchstens 1 km, kanonische URL; der Block entfällt, wenn keiner in der Nähe liegt. Familien-Events: Überschrift „Familien-Events in {Stadtteil}“, nicht „in der Nähe“, weil Events keine Koordinate haben.
+
+JSON-LD `Playground` mit `geo` und `address`. `isAccessibleForFree` nur, wenn OSM nicht `fee=yes` sagt. Kein `aggregateRating`. BreadcrumbList aus derselben Kette wie die sichtbaren Brotkrumen.
 
 ### 4.4 Indexierung
-- Hub und Guide-Stadtteilseiten (`/guides/spielplaetze/stadtteil/{slug}`, ab 5 Spielplätzen) indexierbar.
-- Detailseiten indexierbar nur mit **eigenem Inhalt** (Beschreibung + mind. 2 belegte Ausstattungsmerkmale oder Typ
-  Wasser/Wald); sonst `noindex, follow` und nicht in der Sitemap (sonst Hunderte dünne Seiten → Qualitätssignal leidet).
-- Proxy (`pfad-pruefung.ts`): Hub `spielplaetze` in `routeVon`/`ortEntscheidung`, 404 für unbekannte/inaktive Slugs.
-- Sitemap, IndexNow (einmalige Meldung nach Livegang), `llms.txt`, `/guides`-Kachel `fertig: true`, Footer-Link,
-  Guide-Übersichtstext und FAQ „Welche Guides kommen noch dazu?“ anpassen.
 
-### 4.5 Barrierefreiheit und Mobil
-Farbpunkte immer mit Text (nicht nur Farbe), Icons mit Label/`title`, Karte mit Liste als Alternative,
-Touch-Ziele ≥ 44 px, kein horizontales Scrollen bei 375 px.
+- Hub indexierbar.
+- Detail indexierbar nur mit eigener Profil-Beschreibung **und** mindestens zwei belegten Ausstattungsmerkmalen. Wasser- und Waldspielplätze zusätzlich nur mit dieser Beschreibung, nicht allein wegen des Typs. Abgeleitetes Alter zählt nicht. Sonst `noindex, follow`, nicht in der Sitemap.
+- Stadtteilseiten ab fünf **sichtbaren** Plätzen indexierbar. Hier zählen auch die dünnen mit, weil die Seite die vollständige Liste des Viertels ist. Die verlinkte URL ist die Spielplatz-URL.
+- Sitemap: `lastModified` aus `aktualisiert_am`, nicht aus der Uhrzeit des Abrufs.
+- Nach dem Livegang einmal IndexNow. `llms.txt`, die Kachel auf `/guides`, der Footer und die FAQ „Welche Guides kommen noch dazu?“ werden mitgezogen.
 
-### 4.6 Tests
-- Python: Namensnormalisierung, Stadtteil aus Koordinate, OSM-Mapping, Belegprüfung, Score, Altersableitung.
-- Web (vitest): Filter (UND-Logik, „alle“ passt zu jedem Alter), Sortierung/Haversine, Sichtbarkeit/Indexierbarkeit,
-  JSON-LD, Pfadentscheidungen, Texte (5 FAQs, nur interne Links, keine Score-Erklärung).
+### 4.5 Foto-Proxy
 
----
+`/ort-foto/[slug]` muss einen aktiven Spielplatz auch ohne `qualitaets_score` finden. Sonst bleiben freigegebene Fotos unsichtbar.
 
-## 5. Ablauf und Meilensteine
+### 4.6 Barrierefreiheit
 
-| Schritt | Inhalt | Ergebnis / Freigabe |
-|---|---|---|
-| 0 | Entscheidungen S1–S9, Lizenzfrage Stadtdaten klären | Freigabe Auftraggeber |
-| 1 | Stadt-Import + Namen + Stadtteile (inaktiv) | SQL/Import, Prüf-CSV „Namen & Stadtteile“ |
-| 2 | OSM-Abgleich | Abdeckungsbericht: wie viele Plätze haben Ausstattung aus OSM? |
-| 3 | Google-Abgleich (nur Auswahl) + Foto-Sichtung | Kosten vorher nennen, Foto-SQL |
-| 4 | KI-Profile für Top-Kandidaten (Probelauf 10 → Bericht → Rest) | Probe-Bericht zum Gegenlesen |
-| 5 | Score, Sichtprüfung, Freischaltung | Freigabe-CSV |
-| 6 | Website (Hub, Detail, Karte, Filter, Stadtteilseiten, Texte) | Cursor-Check |
-| 7 | Tests, Build, Browser-Prüfung (Desktop/Mobil, hell/dunkel) | Deploy nur mit OK |
-| 8 | IndexNow, Sitemap-Kontrolle, Bing/Google | Bericht |
+Farbpunkte mit Text, Icons mit `title`, Liste als Alternative zur Karte, Touch-Ziele mindestens 44 px, bei 375 px kein horizontales Scrollen. Pin-Kontrast auf der hellen und der dunklen Karte, der gewählte Pin mit einem Ring, der auf der dunklen Karte hell ist. Eigene Outline-SVGs für Schaukel, Rutsche und Sandkasten (2 px Strich, 24er Raster, immer mit Text-Label). Farben des hellen Heros als Tokens mit Dark-Variante.
+
+### 4.7 Tests
+
+Python: Namen, Komma-Größe, Ablehnung von Koordinaten außerhalb des Rechtecks, Objektart-Text, Ray-Casting inklusive Loch, OSM-Mapping, Belegprüfung, Score, „vermutlich“ zählt nicht als Beleg.
+
+Web: Filter (UND, „alle“, unbekannte Altersgruppe), Sichtbarkeit ohne Qualitäts-Score, Indexregel, JSON-LD ohne `aggregateRating`, Pfadentscheidung inklusive der bisher auf `null` festgelegten Tests, fünf FAQs, nur interne Links, keine Score-Zahl, Anrede ihr/euch.
 
 ---
 
-## 6. SEO/GEO-Chancen
-- Suchanfragen mit klarer Absicht: „Spielplatz Düsseldorf“, „Wasserspielplatz Düsseldorf“, „Waldspielplatz Düsseldorf“,
-  „Spielplatz Kleinkinder Düsseldorf“, „Spielplatz <Stadtteil>“, „Spielplatz mit Toilette Düsseldorf“.
-- Eigene Stadtteilseiten je Viertel; interne Links aus Familien-Events (Event-Seite „Vorher oder nachher“) und aus
-  Café-Seiten („Spielplatz in der Nähe“).
-- FAQ-Antworten in kurzen, zitierfähigen Sätzen (KI-Suchen).
+## 5. Ablauf
 
-## 7. Kosten (Schätzung)
-| Posten | Menge | Kosten |
-|---|---|---|
-| Stadt-Open-Data, OSM, Nominatim | – | 0 $ |
-| Google Nearby (Umkreis je Platz, nur Auswahl ~120) | ~120 × 0,032 $ | ~4 $ |
-| Google Fotos zur Sichtung (~60 Plätze × 10) | ~600 × 0,007 $ | ~4 $ |
-| KI-Profile (Claude + Websuche, ~150 Top-Kandidaten) | 150 × 0,05–0,10 $ | 8–15 $ |
-| **Summe** | | **ca. 16–25 $** (Puffer bis 40 $, S9) |
+| Schritt | Ergebnis |
+|---|---|
+| 0 | Offene Fragen aus 0.3 klären (GW, Illustrationen, Datenschutz-Satz, Inklusions-Filter) |
+| 1 | Import der 351 Plätze, inaktiv, Prüf-CSV für Namen, Grenz-Stadtteile, Bezirks-Abweichungen, doppelte Notfallnummern und Adressen „nahe …“ |
+| 2 | OSM-Bericht: wie viele haben Geräte, Liste der OSM-Plätze ohne Stadt-Treffer |
+| 3 | Manuelle Abenteuer-Liste, soweit öffentlich belegbar |
+| 4 | Google nur für die Auswahl, Kosten vorher, Foto-SQL |
+| 5 | Zehn Profile zum Gegenlesen, dann der Rest |
+| 6 | Score, Stichprobe, `aktiv=true` für den sauberen Bestand |
+| 7 | Website, Cursor-Check |
+| 8 | Tests, Build, Browser Desktop und Mobil, hell und dunkel |
+| 9 | IndexNow und Sitemap-Kontrolle |
 
-## 8. Risiken
-- **Lizenz der Stadtdaten**: Portal sagt dl-de/zero-2-0, NRW-Spiegel „geschlossene Lizenz“ → vor Import beim
-  Open-Data-Team bestätigen lassen bzw. Portalangabe dokumentieren.
-- **Kinder auf Fotos** (Persönlichkeitsrecht) → strikte Foto-Regel S5.
-- **Veraltete Ausstattung** (Umbauten, gesperrte Geräte) → „Stand der Angaben“, Meldefunktion, keine Gewähr-Hinweis.
-- **Dünne Detailseiten** → Indexierungsregel 4.4.
-- **Falsche Stadtteile** bei Grenzlagen → Punkt-in-Polygon statt Adress-Raten; Prüf-CSV.
-- **Overpass-Auslastung** → Zwischenspeicher, Wiederholung mit Pause.
-- **„Fehlt“-Darstellung** als Tatsachenbehauptung → nur bei belegter Abwesenheit.
-- Bewertungen als Note → kein öffentlicher Score (nur „Top-Spielplatz“).
+Eine Melde-Funktion für falsche Angaben ist nicht Teil dieser Runde. Bis dahin reicht der bestehende Kontakt.
 
-## 9. Abnahmekriterien
-- Mindestens 300 Düsseldorfer Spielplätze auf der Karte, korrekt im Stadtteil.
-- Mindestens 60 Spielplätze mit belegter Ausstattung und Altersgruppe; alle Wasser- und Waldspielplätze mit Profil.
-- Keine Fotos mit erkennbaren Kindern; jedes Foto mit Urheber.
-- Hub, Detail, Stadtteilseiten: erste HTML-Antwort mit Inhalt, Canonical/noindex-Regeln wie oben, JSON-LD valide.
-- Filter (Alter, Ausstattung UND, Extras, Stadtteil, Nähe) funktionieren in Karte und Liste, mobil ohne horizontales Scrollen.
-- Tests grün, Cursor-Check ohne kritische/mittlere Befunde, Deploy nach OK.
+---
 
-## 10. Offene Fragen an Cursor (Gegenprüfung)
-1. Reicht dl-de/zero-2-0 laut Portal, oder muss der Widerspruch zum NRW-Spiegel vorher geklärt sein?
-2. Ist die Indexierungsregel für Detailseiten (4.4) streng genug / zu streng?
-3. Punkt-in-Polygon: eigene Implementierung (Shapely ist nicht installiert – keine neue Bibliothek ohne Freigabe) vs. Ray-Casting
-   in reinem Python – genügt das für ~350 Punkte?
-4. ODbL: Ist die Übernahme einzelner OSM-Tags in unsere Datenbank und die Anzeige als „Produced Work“ mit Namensnennung ausreichend?
-5. Fehlt eine Datenquelle (z. B. Abenteuer-/Bauspielplätze der Jugendhilfe, die nicht beim Gartenamt geführt werden)?
+## 6. Kosten
+
+Stadt, OSM, Stadtteilflächen und Adressliste kosten nichts. Erste Runde (≈ 110 Plätze, siehe 0.3): Google-Umkreissuche + Foto-Sichtung grob 3–6 $, Profile (KI + Websuche, 0,05–0,10 $ je Platz) grob 6–11 $. Zusammen deutlich unter S9 (40 $); den genauen Google-Satz des vorhandenen Places-Clients vor dem Lauf nennen.
+
+---
+
+## 7. Risiken, die bleiben
+
+- Die Stadtliste ist von 2020. Neuere Plätze fehlen, bis die OSM-only-Liste oder ein neuer Stadtstand sie nachzieht.
+- Fotos mit Kindern bleiben draußen, auch wenn der alte Design-Prompt ein Kinderfoto im Hero vorsieht.
+- Ausstattung veraltet. Deshalb Stand der Angaben, und keine Gewähr im Fuß der Detailseite.
+- Dünne Detailseiten bleiben noindex. Eine Schablone aus Name und Größe macht sie nicht indexierbar.
+- „Fehlt“ nur bei Beleg. Keine öffentliche Score-Zahl.
+
+---
+
+## 8. Abnahme
+
+- Die 351 Plätze aus S1 mit gültiger Koordinate sind importiert; auf der Karte stehen die, die nicht ausgeschlossen wurden. Stadtteil stimmt in der Stichprobe.
+- Alle Wasser- und Waldspielplätze haben ein Profil. Mindestens 60 Plätze haben belegte Ausstattung und eine Altersangabe.
+- Kein Foto mit erkennbaren Kindern. Jedes Foto mit Urheber.
+- Hub, Detail und Stadtteilseiten liefern den Inhalt in der ersten HTML-Antwort. Canonical und noindex wie in 4.4. JSON-LD ohne Google-Bewertung.
+- Filter und Karte funktionieren mobil ohne horizontales Scrollen.
+- Tests grün. Deploy erst, wenn die Gegenprüfung keine kritischen oder mittleren Befunde mehr hat.
