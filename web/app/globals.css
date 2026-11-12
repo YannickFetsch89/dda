@@ -1417,17 +1417,6 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 @media (min-width: 1200px) { .cl-hero h1 { font-size: 64px; } }
 
 /* Große Genre-Chips (Mehrfachauswahl, ODER) */
-.cl-genres { padding-bottom: 4px; }
-.cl-genre-chip {
-  display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 18px; border-radius: var(--r-pill);
-  background: var(--ddd-surface); border: 1px solid #cbd5e0; color: var(--ddd-text);
-  font-size: 15px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
-}
-.cl-genre-chip .icon { font-size: 20px; }
-.cl-genre-chip:hover { border-color: var(--ddd-navy); color: var(--ddd-text); }
-.cl-genre-chip--an, .cl-genre-chip--an:hover { background: var(--ddd-navy); border-color: var(--ddd-navy); color: var(--ddd-gold); }
-.cl-genre-chip .gd-chip__zahl { letter-spacing: 0; }
-@media (max-width: 767px) { .cl-genre-chip { height: 44px; padding: 0 14px; font-size: 13px; } }
 
 /* Grid und Card */
 .cl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 14px; }
@@ -1522,8 +1511,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .cl-score__balken span { display: block; height: 100%; border-radius: 3px; background: var(--ddd-gold); }
 :root[data-theme="dark"] .cl-karte { border-color: var(--ddd-border); }
 :root[data-theme="dark"] .cl-karte__art { color: #c9a84c; }
-:root[data-theme="dark"] .cl-genre-chip, :root[data-theme="dark"] .cl-chip { border-color: var(--ddd-border); }
-
+:root[data-theme="dark"] 
 /* Tages-Satz aus echten Daten unter der Kopfzeile von /heute und /tag/… (SEO-/GEO-Plan, Maßnahme 4) */
 .tagesatz { margin: 16px 0 0; font-size: 15px; line-height: 1.5; color: var(--ddd-text-body); max-width: 70ch; }
 .tagesatz__stand { margin: 4px 0 0; font-size: 12px; }
@@ -1690,13 +1678,15 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 :root[data-theme="dark"] .gd-pin.gd-pin--stufe.gd-pin--an { box-shadow: 0 0 0 3px #f7f8fa, 0 6px 14px rgba(0, 0, 0, 0.6); }
 
 /* Guide-Seiten: Einleitung und SEO-Text mit häufigen Fragen (12.11.2026) */
-.gd-einleitung { max-width: 72ch; margin: 20px 0 0; font-size: 17px; line-height: 1.6; color: var(--ddd-text-body); text-wrap: pretty; }
-.gd-seotext { padding-top: 40px; padding-bottom: 48px; max-width: none; }
-.gd-seotext > h2, .gd-faq > h2 { font-size: 30px; margin: 0 0 8px; color: var(--ddd-text); }
-.gd-seotext__abschnitt { max-width: 72ch; }
+.gd-einleitung { max-width: 72ch; margin: 20px 0; font-size: 17px; line-height: 1.6; color: var(--ddd-text-body); text-wrap: pretty; }
+/* Text-Block mittig, breit (weniger Zeilen, weniger Scrollen) – Text selbst linksbündig */
+.gd-seotext { padding-top: 40px; padding-bottom: 48px; }
+.gd-seotext > * { max-width: 1000px; margin-left: auto; margin-right: auto; }
+.gd-seotext > h2, .gd-faq > h2 { font-size: 30px; margin-top: 0; margin-bottom: 8px; color: var(--ddd-text); }
+
 .gd-seotext__abschnitt h3 { font-size: 19px; margin: 22px 0 6px; color: var(--ddd-text); }
 .gd-seotext p { margin: 0 0 10px; font-size: 16px; line-height: 1.65; color: var(--ddd-text-body); text-wrap: pretty; }
-.gd-faq { margin-top: 36px; max-width: 72ch; }
+.gd-seotext > .gd-faq { margin-top: 36px; }
 .gd-faq__eintrag { border-top: 1px solid var(--ddd-border); }
 .gd-faq__eintrag:last-child { border-bottom: 1px solid var(--ddd-border); }
 .gd-faq__eintrag summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; cursor: pointer; list-style: none; }

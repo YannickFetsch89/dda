@@ -75,9 +75,9 @@ function Hero({ orte }: { orte: DddOrt[] }) {
   );
 }
 
-function Chip({ href, aktiv, children, icon, gross = false }: { href: string; aktiv: boolean; children: React.ReactNode; icon?: string; gross?: boolean }) {
+function Chip({ href, aktiv, children, icon }: { href: string; aktiv: boolean; children: React.ReactNode; icon?: string }) {
   return (
-    <Link href={href} scroll={false} className={`${gross ? "cl-genre-chip" : "gd-chip gd-chip--gross"} ${aktiv ? (gross ? "cl-genre-chip--an" : "gd-chip--an") : ""}`} aria-current={aktiv || undefined}>
+    <Link href={href} scroll={false} className={`gd-chip gd-chip--gross ${aktiv ? "gd-chip--an" : ""}`} aria-current={aktiv || undefined}>
       {icon && <Icon name={icon} />}
       {children}
     </Link>
@@ -159,13 +159,17 @@ function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechst
             </ScrollReihe>
           </div>
 
-          <ScrollReihe className="cl-genres" label="Musikrichtung">
-            {genres.map((g) => (
-              <Chip key={g.slug} gross href={href({ genres: umschalten(f.genres, g.slug) })} aktiv={f.genres.includes(g.slug)} icon={g.icon}>
-                {g.name}<span className="gd-chip__zahl">{g.anzahl}</span>
-              </Chip>
-            ))}
-          </ScrollReihe>
+          <div className="gd-zeile">
+            <span className="gd-zeile__label">Musik</span>
+            <ScrollReihe className="gd-zeile__chips" label="Musikrichtung">
+              <Chip href={href({ genres: [] })} aktiv={!f.genres.length}>Alle</Chip>
+              {genres.map((g) => (
+                <Chip key={g.slug} href={href({ genres: umschalten(f.genres, g.slug) })} aktiv={f.genres.includes(g.slug)} icon={g.icon}>
+                  {g.name}<span className="gd-chip__zahl">{g.anzahl}</span>
+                </Chip>
+              ))}
+            </ScrollReihe>
+          </div>
 
           {artTabs.length > 2 && (
             <ScrollReihe className="gd-typen" label="Art">
