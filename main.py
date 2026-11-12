@@ -231,8 +231,10 @@ async def _schritte_ausfuehren(report: LaufReport):
     # Schritt 3a: Unterkategorien (Feinfilter, z.B. Musik → Klassik/Jazz/DJ) per KI, gebündelt je 25 Events
     logger.info("--- Schritt 3a: Unterkategorien ---")
     try:
-        from pipeline.unterkategorien import nachtragen
+        from pipeline.unterkategorien import nachtragen, vereinheitlichen
         nachtragen(limit=600)
+        # Gleiche Titel einer Kategorie auf dieselbe Unterkategorie bringen (die KI arbeitet in Bündeln)
+        vereinheitlichen()
     except Exception as e:
         logger.error("Unterkategorien fehlgeschlagen: %s", e)
 

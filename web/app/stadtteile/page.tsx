@@ -1,14 +1,15 @@
 // Stadtteil-Clustering: schematische Karte der 10 Stadtbezirke + Stadtteile mit Event-Anzahl
-import { stadtteilPfad } from "@/lib/landing";
+import { inStadtteil, stadtteilPfad } from "@/lib/landing";
+import { stadtteileSatz } from "@/lib/tagestext";
 import type { Metadata } from "next";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
 import { Icon, ListenZeile } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
-import { filtern, nachBezirken } from "@/lib/ableitungen";
+import { filtern, nachBezirken, stadtteileZaehlen } from "@/lib/ableitungen";
 import { zeitraumAuflösen } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
-import { OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
+import { OHNE_ZUORDNUNG, bezirkVon, stadtteilName } from "@/lib/stadtteile";
 import { zeitKurz } from "@/lib/termine";
 
 export async function generateMetadata(props: PageProps<"/stadtteile">): Promise<Metadata> {
@@ -52,9 +53,15 @@ async function StadtteileInhalt({ searchParams }: Pick<PageProps<"/stadtteile">,
   const max = Math.max(1, ...bezirke.map((b) => b.anzahl));
   const radius = (anzahl: number) => 3 + Math.sqrt(anzahl / max) * 6.5;
   const zugeordnet = events.length - ohneZuordnung;
+  // Sachsatz nur auf der indexierbaren Standardansicht (diese Woche, ohne Parameter): Zahl und die drei stärksten
+  // Düsseldorfer Stadtteile – ohne Zuordnungsquote, ohne „Ohne Zuordnung“ und ohne Umland (Feinschliff, Paket 2)
+  const ohneParameter = !Object.values(sp).some((v) => v !== undefined && v !== "");
+  const top = stadtteileZaehlen(events).filter((s) => bezirkVon(s.name)).sort((a, b) => b.anzahl - a.anzahl).slice(0, 3);
+  const satz = ohneParameter && pool.quelle === "supabase" ? stadtteileSatz(events.length, top.map((s) => inStadtteil(s.name))) : null;
 
   return (
     <>
+      {satz && <p className="tagesatz">{satz}</p>}
       <div className="filterleiste" aria-label="Zeitraum">
         {ZEITRAEUME.map((o) => (
           <Link key={o.key} href={`/stadtteile?datum=${o.key}`} className="chip" aria-current={z.key === o.key ? "true" : undefined} scroll={false}>
@@ -62,9 +69,9 @@ async function StadtteileInhalt({ searchParams }: Pick<PageProps<"/stadtteile">,
           </Link>
         ))}
       </div>
-      <p className="zuordnungs-hinweis" style={{ marginTop: 12 }}>
+      {!satz && <p className="zuordnungs-hinweis" style={{ marginTop: 12 }}>
         {events.length} Events {z.label.toLowerCase()}, davon {zugeordnet} einem Stadtteil zugeordnet ({events.length ? Math.round((zugeordnet / events.length) * 100) : 0} %).
-      </p>
+      </p>}
 
       <div className="sektion stadtteil-raster">
         <div className="karte-schema">

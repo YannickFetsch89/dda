@@ -82,3 +82,29 @@ export const STADTTEIL_TEXTE: Record<string, string> = {
   Neuss: "Neuss, die Nachbarstadt auf der linken Rheinseite, mit Innenstadt rund um das Quirinus-Münster.",
   Ratingen: "Ratingen, die Nachbarstadt im Nordosten, mit Altstadt rund um den Marktplatz und dem Blauen See.",
 };
+
+/** /kostenlos: ein bis zwei feste Sätze (Zeitraum und Zahl kommen live dazu). */
+export const KOSTENLOS_TEXTE: string[] = [
+  "Konzerte, Führungen, Lesungen, Workshops und Treffen, für die du in Düsseldorf keinen Eintritt zahlst.",
+  "Kostenlos heißt: Die Quelle nennt freien Eintritt. Manche Angebote brauchen trotzdem eine Anmeldung beim Veranstalter.",
+];
+
+/**
+ * Unterkategorie-Seiten /kategorie/{kategorie}/{unter}. Schlüssel „kategorie/unter“.
+ * Nur Einträge hier dürfen indexiert werden (zusätzlich mindestens MIN_EINTRAEGE Events) – ein Text pro freigegebener
+ * Unterkategorie, kein Platzhalter. Vor dem Freigeben die KI-Zuordnung dieser Unterkategorie stichprobenartig prüfen.
+ */
+export const UNTERKATEGORIE_TEXTE: Record<string, string[]> = {
+  "kultur/theater": [
+    "Schauspiel, Musical, Figurentheater und Performance: vom Düsseldorfer Schauspielhaus über das FFT bis zu kleinen freien Bühnen.",
+  ],
+  "kultur/comedy": [
+    "Comedy, Kabarett, Stand-up und Impro – im Kom(m)ödchen, im zakk, im Savoy und auf vielen kleinen Bühnen der Stadt.",
+  ],
+  "musik/klassik": [
+    "Orchesterkonzerte, Kammermusik, Chor und Liederabende – in der Tonhalle, der Deutschen Oper am Rhein, in Kirchen und kleineren Sälen.",
+  ],
+  "food/maerkte": [
+    "Wochen-, Street-Food-, Bauern- und Weihnachtsmärkte in Düsseldorf – mit Datum und Ort.",
+  ],
+};

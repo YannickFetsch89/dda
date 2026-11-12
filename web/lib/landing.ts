@@ -49,6 +49,16 @@ export function kategoriePfad(slug: string): string | null {
   return kategorieGueltig(slug) ? `/kategorie/${slug}` : null;
 }
 
+/** Unterkategorie gehört zur Kategorie? „keine“ (geprüft, nichts passt) ist nie eine Unterkategorie. */
+export function unterkategorieGueltig(kategorie: string, unter: string): boolean {
+  if (!kategorieGueltig(kategorie) || unter === "keine") return false;
+  return KATEGORIEN.find((k) => k.slug === kategorie)!.unterkategorien.some((u) => u.slug === unter);
+}
+
+export function unterkategoriePfad(kategorie: string, unter: string): string {
+  return `/kategorie/${kategorie}/${unter}`;
+}
+
 export type GuideHub = "restaurants-cafes" | "kneipen-bars" | "clubs";
 export const GUIDE_HUBS: Record<GuideHub, { name: string; mehrzahl: string; icon: string }> = {
   "restaurants-cafes": { name: "Restaurants & Cafés", mehrzahl: "Restaurants und Cafés", icon: "restaurant" },

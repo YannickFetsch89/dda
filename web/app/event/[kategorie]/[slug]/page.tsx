@@ -18,7 +18,14 @@ import { BeschreibungText } from "@/components/beschreibung-text";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { seitenMetadaten } from "@/lib/seo";
 import { kategorie as kategorieInfo } from "@/lib/kategorien";
-import { inStadtteil, kategoriePfad, stadtteilPfad } from "@/lib/landing";
+import { GUIDE_HUBS, guideStadtteilPfad, inStadtteil, kanonischerStadtteil, kategoriePfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
+import { unterkategorieIndexierbar } from "@/lib/landing-listen";
+import { hubOrte, stadtteileMitOrten } from "@/lib/guide-stadtteile";
+import { clubProfil } from "@/lib/clubs";
+import { clubsLaden } from "@/lib/clubs-daten";
+import { ortPfad } from "@/components/ort-karten";
+import { Krumen } from "@/components/landing";
+import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -79,7 +86,27 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   const adresse = e.adresse ?? `${e.ort}, Düsseldorf`;
   const zeitText = e.datum_bis && e.datum_bis !== e.datum ? `${tagLang(e.datum, false)} bis ${kurzDatum(e.datum_bis)}` : tagLang(e.datum);
   const pfad = eventPfad(e);
-  const jsonLd = eventJsonLd(e, `${SITE_URL}${pfad}`, SITE_URL);
+  const kat = kategorieInfo(e.kategorie);
+  const katPfad = kategoriePfad(e.kategorie);
+
+  // Brotkrume (Feinschliff-Roadmap, Paket 1): immer Start › Kategorie › Eventtitel, bei „Sonstiges“ Start › Eventtitel.
+  // Nie mit Unterkategorie oder Stadtteil – die stehen als eigene Links daneben.
+  const krumen = [{ name: "Start", pfad: "/" }, ...(katPfad ? [{ name: kat.name, pfad: katPfad }] : []), { name: titel, pfad }];
+  const jsonLd = [eventJsonLd(e, `${SITE_URL}${pfad}`, SITE_URL), brotkrumenJsonLd(SITE_URL, krumen)];
+
+  // Unterkategorie-Seite nur verlinken, wenn sie indexierbar ist (Text freigegeben, genug Termine)
+  const unter = e.unterkategorie && kat.unterkategorien.find((u) => u.slug === e.unterkategorie);
+  const unterLink = unter && unterkategorieIndexierbar(pool, e.kategorie, unter.slug) ? { name: unter.name, pfad: unterkategoriePfad(e.kategorie, unter.slug) } : null;
+
+  // Guide-Stadtteile, die es für den Stadtteil des Events gibt (nur indexierbare, ab fünf Orten)
+  const st = kanonischerStadtteil(e.stadtteil);
+  const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
+  const [hubListen, clubs] = await Promise.all([st && !online ? Promise.all(hubs.map((h) => hubOrte(h))) : Promise.resolve([]), clubsLaden()]);
+  const guideLinks = st
+    ? hubs.flatMap((h, i) => (hubListen[i] && stadtteileMitOrten(hubListen[i]).some((x) => x.stadtteil === st) ? [{ name: `${GUIDE_HUBS[h].name} ${inStadtteil(st)}`, pfad: guideStadtteilPfad(h, st) }] : []))
+    : [];
+  // Guide-Ort: nur echte Clubs (typ club), exakt über die gepflegten Schreibweisen – auch_club-Orte haben eine andere Haupt-URL
+  const club = clubs.find((o) => o.typ === "club" && (clubProfil(o)?.eventOrte ?? []).includes(e.ort)) ?? null;
 
   return (
     <article>
@@ -99,6 +126,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
         <div className="container detail-raster">
           <div style={{ display: "flex", flexDirection: "column", gap: 28, minWidth: 0 }}>
             <header>
+              <Krumen teile={krumen} />
               <AbgelaufenHinweis abgelaufen={abgelaufen} />
               {abgelaufen && (kategoriePfad(e.kategorie) || stadtteilPfad(e.stadtteil)) && (
                 <p className="abgelaufen-links">
@@ -121,6 +149,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                 </Link>
               ) : (
                 <KatBadge slug={e.kategorie} />
+              )}
+              {unterLink && (
+                <Link href={unterLink.pfad} className="chip chip--tint unter-link">
+                  {unterLink.name} in Düsseldorf
+                </Link>
               )}
               <h1 className="detail__titel d">{titel}</h1>
               {e.abgesagt && (
@@ -241,8 +274,25 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
             )}
             {e.stadtteil && (
               <Link className="link" href={stadtteilPfad(e.stadtteil) ?? `/entdecken?stadtteil=${encodeURIComponent(e.stadtteil)}&datum=woche`}>
-                Mehr {inStadtteil(e.stadtteil)} <Icon name="arrow_forward" />
+                Was {inStadtteil(e.stadtteil)} los ist <Icon name="arrow_forward" />
               </Link>
+            )}
+            {club && (
+              <Link className="link" href={ortPfad(club)}>
+                Mehr über {club.name} im Club-Guide <Icon name="arrow_forward" />
+              </Link>
+            )}
+            {guideLinks.length > 0 && (
+              <section className="detail__abschnitt" aria-labelledby="guide-links">
+                <h2 className="d" id="guide-links" style={{ fontSize: 22 }}>
+                  Vorher oder nachher
+                </h2>
+                {guideLinks.map((g) => (
+                  <Link key={g.pfad} className="link" href={g.pfad}>
+                    {g.name} <Icon name="arrow_forward" />
+                  </Link>
+                ))}
+              </section>
             )}
           </aside>
         </div>
@@ -251,7 +301,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           <section className="container sektion" aria-labelledby="kommende-events">
             <div className="sektionskopf">
               <h2 className="d" id="kommende-events">Kommende Events</h2>
-              <Link href="/entdecken">Alle</Link>
+              <Link href="/entdecken">Alle kommenden Events</Link>
             </div>
             <Reihe breite={200} label="Kommende Events">
               {empfehlungen.map((x) => (
@@ -265,7 +315,9 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           <section className="container sektion">
             <div className="sektionskopf">
               <h2 className="d">Ähnliche Events</h2>
-              <Link href={kategoriePfad(e.kategorie) ?? `/entdecken?kategorie=${e.kategorie}&datum=woche`}>Alle</Link>
+              <Link href={katPfad ?? `/entdecken?kategorie=${e.kategorie}&datum=woche`}>
+                {katPfad ? `Alle ${kat.name}-Events in Düsseldorf` : "Alle"}
+              </Link>
             </div>
             <Reihe breite={200} label="Ähnliche Events">
               {aehnliche.map((x) => (

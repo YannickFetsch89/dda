@@ -1651,3 +1651,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .ue-collage .ue-foto, .ue-band__spur { animation: none; }
 }
+
+/* Eventseite: Unterkategorie-Link neben dem Badge, Guide-Links „Vorher oder nachher“ (Feinschliff, Paket 1) */
+.unter-link { margin-left: 8px; vertical-align: middle; }
+.detail-raster .gd-krumen { margin-bottom: 12px; }
+.detail__abschnitt > .link { display: flex; margin-top: 6px; }

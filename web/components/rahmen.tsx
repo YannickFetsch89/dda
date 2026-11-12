@@ -93,7 +93,7 @@ export async function KategorieLeiste() {
             <span className="katitem__anzahl">{zaehler[k.slug]}</span>
           </Link>
         ))}
-        <Link href="/entdecken?preis=kostenlos&datum=woche" className="katitem katitem--gratis">
+        <Link href="/kostenlos" className="katitem katitem--gratis">
           <span className="katitem__kreis">
             <Icon name="savings" />
           </span>

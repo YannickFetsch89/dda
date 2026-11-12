@@ -8,7 +8,7 @@
 import { istSichtbarerClub } from "./clubs";
 import { istGueltigerTag } from "./datum";
 import { kategorieAusDb } from "./kategorien";
-import { kategorieGueltig, kategoriePfad, stadtteilAusSlug, stadtteilPfad } from "./landing";
+import { kategorieGueltig, kategoriePfad, stadtteilAusSlug, stadtteilPfad, unterkategorieGueltig } from "./landing";
 import { eventPfad } from "./pfade";
 import type { DddOrt, KategorieSlug } from "./typen";
 
@@ -26,6 +26,7 @@ export type Route =
   | { typ: "reihe"; slug: string }
   | { typ: "ort"; hub: OrtHub; slug: string }
   | { typ: "kategorie"; slug: string }
+  | { typ: "unterkategorie"; kategorie: string; unter: string }
   | { typ: "stadtteil"; slug: string }
   | { typ: "guide-stadtteil"; hub: OrtHub; slug: string };
 
@@ -53,6 +54,7 @@ export function routeVon(pfad: string): Route | null {
   if (a === "guides" && b && c && !d && (HUBS as string[]).includes(b)) return { typ: "ort", hub: b as OrtHub, slug: c };
   if (a === "guides" && b && c === "stadtteil" && d && !e && (HUBS as string[]).includes(b)) return { typ: "guide-stadtteil", hub: b as OrtHub, slug: d };
   if (a === "kategorie" && b && !c) return { typ: "kategorie", slug: b };
+  if (a === "kategorie" && b && c && !d) return { typ: "unterkategorie", kategorie: b, unter: c };
   if (a === "stadtteil" && b && !c) return { typ: "stadtteil", slug: b };
   return null;
 }
@@ -187,6 +189,9 @@ export async function pfadPruefen(pfad: string): Promise<Pruefung> {
     // Landingpages: rein aus dem Katalog entschieden, ohne Netz
     case "kategorie":
       return kategorieGueltig(route.slug) ? WEITER : FEHLT;
+    case "unterkategorie":
+      // Die Unterkategorie muss zur Kategorie gehören (/kategorie/musik/theater ist 404), „keine“ ist nie gültig
+      return unterkategorieGueltig(route.kategorie, route.unter) ? WEITER : FEHLT;
     case "stadtteil":
       return stadtteilAusSlug(route.slug) ? WEITER : FEHLT;
     case "guide-stadtteil":
@@ -208,5 +213,7 @@ export function entdeckenZiel(sp: URLSearchParams): string | null {
   const [schluessel, wert] = gesetzt[0];
   if (schluessel === "kategorie") return kategoriePfad(wert);
   if (schluessel === "stadtteil") return stadtteilPfad(wert);
+  // Nur der bekannte Wert – „preis=sonstwas“ bleibt Filteransicht
+  if (schluessel === "preis" && wert === "kostenlos") return "/kostenlos";
   return null;
 }

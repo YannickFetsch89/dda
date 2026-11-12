@@ -66,3 +66,21 @@ export function standText(iso: string | null | undefined): string | null {
   const w = (typ: string) => teile.find((t) => t.type === typ)?.value ?? "";
   return `Stand: ${w("day")}.${w("month")}.${w("year")}, ${w("hour")}:${w("minute")} Uhr`;
 }
+
+/** /entdecken (Standardansicht, sieben Tage): „In den nächsten sieben Tagen stehen in Düsseldorf 465 Events an, die meisten aus …“ */
+export function entdeckenSatz(events: Pick<DddEvent, "kategorie">[]): string {
+  const n = events.length;
+  if (n === 0) return "In den nächsten sieben Tagen sind in Düsseldorf noch keine Events eingetragen.";
+  const top = n >= 3 ? topKategorien(events) : [];
+  return `In den nächsten sieben Tagen ${n === 1 ? "steht" : "stehen"} in Düsseldorf ${n === 1 ? "ein Event" : `${n} Events`} an${top.length ? `, die meisten aus ${aufzaehlung(top)}` : ""}.`;
+}
+
+/**
+ * /stadtteile (Standardansicht): Zahl plus die drei stärksten Stadtteile, schon mit Artikel („in der Altstadt“).
+ * Keine Zuordnungsquote – das ist eine Angabe zur Datenqualität, keine Aussage für Leser.
+ */
+export function stadtteileSatz(anzahl: number, topMitArtikel: string[]): string {
+  if (anzahl === 0) return "In den nächsten sieben Tagen sind in Düsseldorf noch keine Events eingetragen.";
+  const basis = `In den nächsten sieben Tagen ${anzahl === 1 ? "steht" : "stehen"} in Düsseldorf ${anzahl === 1 ? "ein Event" : `${anzahl} Events`} an`;
+  return topMitArtikel.length >= 2 ? `${basis}, die meisten ${aufzaehlung(topMitArtikel)}.` : `${basis}.`;
+}

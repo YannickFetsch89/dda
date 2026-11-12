@@ -1,4 +1,5 @@
 // Entdecken (Design-Ansicht 02): alle Events mit Filtern und Sortierung als URL-Parameter
+import { entdeckenSatz } from "@/lib/tagestext";
 import type { Metadata } from "next";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
@@ -92,6 +93,8 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   const stadtteilListe = stadtteileZaehlen(filtern(pool.events, { ...basisFilter, kategorie: p.kategorie, preis, tageszeit: tz }));
 
   const gezeigt = treffer.slice(0, seite * PRO_SEITE);
+  // Sachsatz nur auf der indexierbaren Standardansicht (ohne Parameter), nicht bei Beispieldaten (Feinschliff, Paket 2)
+  const satz = !Object.values(p).some(Boolean) && pool.quelle === "supabase" ? entdeckenSatz(treffer) : null;
   const ohneFilter = !p.kategorie && !p.stadtteil && !p.bezirk && !preis && !tz && !p.q && !p.thema && !unter;
   const { highlight, top } = highlights(pool);
   const zeigeHighlights = ohneFilter && seite === 1;
@@ -114,6 +117,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
         <h1 className="d">Entdecken</h1>
         <span>{ortTreffer.length > 0 && `${ortTreffer.length} ${ortTreffer.length === 1 ? "Ort" : "Orte"} · `}{treffer.length} Events</span>
       </div>
+      {satz && <p className="tagesatz">{satz}</p>}
 
       <form id="suche" className="suchfeld" action="/entdecken" role="search">
         <Icon name="search" />

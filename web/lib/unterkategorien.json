@@ -1,7 +1,7 @@
 {
   "_hinweis": "Feinfilter je Kategorie. Eine Quelle für Website (lib/kategorien.ts) und Pipeline (pipeline/unterkategorien.py). Slugs nie umbenennen – sie stehen in der DB-Spalte events.unterkategorie.",
   "kultur": [
-    { "slug": "theater", "name": "Theater", "hinweis": "Schauspiel, Musical, Figurentheater, Performance" },
+    { "slug": "theater", "name": "Theater", "hinweis": "Schauspiel, Musical, Figurentheater, Performance – nur Bühnenstücke; NICHT Konzerte von Sänger*innen, Lesungen, Gespräche, Kochkurse oder Treffen" },
     { "slug": "oper-tanz", "name": "Oper & Tanz", "hinweis": "Oper, Operette, Ballett, zeitgenössischer Tanz" },
     { "slug": "ausstellungen", "name": "Ausstellungen", "hinweis": "Ausstellungen, Vernissagen, Museumsführungen, Kunstworkshops im Museum" },
     { "slug": "film", "name": "Film", "hinweis": "Kino, Filmreihen, Screenings" },

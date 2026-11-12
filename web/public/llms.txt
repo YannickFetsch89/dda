@@ -14,6 +14,8 @@ Wichtig: Die Eventdaten ändern sich täglich. Bitte für konkrete Termine immer
 ## Nach Kategorie
 
 - [Musik](https://diesdas.events/kategorie/musik), [Kultur](https://diesdas.events/kategorie/kultur), [Nightlife](https://diesdas.events/kategorie/nightlife), [Food](https://diesdas.events/kategorie/food), [Community](https://diesdas.events/kategorie/community), [Stadtführungen](https://diesdas.events/kategorie/stadtfuehrung), [Familie](https://diesdas.events/kategorie/familie), [Sport](https://diesdas.events/kategorie/sport), [Outdoor](https://diesdas.events/kategorie/outdoor), [Dating](https://diesdas.events/kategorie/dating)
+- Ausgewählte Themen: [Theater](https://diesdas.events/kategorie/kultur/theater), [Comedy & Kabarett](https://diesdas.events/kategorie/kultur/comedy), [Klassik](https://diesdas.events/kategorie/musik/klassik)
+- [Kostenlose Events](https://diesdas.events/kostenlos): Termine ohne Eintritt in den nächsten 30 Tagen
 
 ## Nach Stadtteil
 

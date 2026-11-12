@@ -36,7 +36,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!st) return { title: "Seite nicht gefunden" };
   const pool = await eventPoolLaden();
   const anzahl = kommende(pool, st).length;
-  const name = stadtteilName(st);
   const imOrt = inStadtteil(st);
   return seitenMetadaten({
     pfad: `/stadtteil/${slug}`,

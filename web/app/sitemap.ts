@@ -1,5 +1,6 @@
 // sitemap.xml: feste Seiten, Tagesansichten der nächsten 14 Tage und alle aktuellen Events.
 // Nutzt denselben Event-Pool wie die Seiten (Cache 10 min).
+import { kostenlosEvents, kostenlosIndexierbar, unterkategorieEvents, unterkategorieIndexierbar } from "@/lib/landing-listen";
 import type { MetadataRoute } from "next";
 import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
@@ -11,7 +12,7 @@ import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
 import { BEZIRKE } from "@/lib/stadtteile";
 import { hubOrte, orteImStadtteil, stadtteileMitOrten } from "@/lib/guide-stadtteile";
-import { GUIDE_HUBS, LANDING_TAGE, MIN_EINTRAEGE, guideStadtteilPfad, stadtteilPfad, type GuideHub } from "@/lib/landing";
+import { GUIDE_HUBS, LANDING_TAGE, MIN_EINTRAEGE, guideStadtteilPfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -126,6 +127,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           return ev.length >= MIN_EINTRAEGE ? [{ url: `${SITE_URL}${stadtteilPfad(st)}`, ...mit(juengstes(ev)), changeFrequency: "daily" as const, priority: 0.6 }] : [];
         })
       : [];
+  // Unterkategorie-Seiten (Feinschliff, Paket 4): nur mit freigegebenem Text und mindestens MIN_EINTRAEGE Events
+  const unterkategorien: MetadataRoute.Sitemap = KATEGORIEN.flatMap((k) =>
+    k.unterkategorien
+      .filter((u) => unterkategorieIndexierbar(pool, k.slug, u.slug))
+      .map((u) => ({
+        url: `${SITE_URL}${unterkategoriePfad(k.slug, u.slug)}`,
+        ...mit(juengstes(unterkategorieEvents(pool, k.slug, u.slug))),
+        changeFrequency: "daily" as const,
+        priority: 0.6,
+      })),
+  );
+  // /kostenlos (Feinschliff, Paket 3): nur indexierbar ab MIN_EINTRAEGE, lastModified aus dem Inhalt
+  const kostenlos: MetadataRoute.Sitemap = kostenlosIndexierbar(pool)
+    ? [{ url: `${SITE_URL}/kostenlos`, ...mit(juengstes(kostenlosEvents(pool))), changeFrequency: "daily" as const, priority: 0.7 }]
+    : [];
   const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
   const hubListen = await Promise.all(hubs.map((h) => hubOrte(h)));
   const guideStadtteile: MetadataRoute.Sitemap = hubs.flatMap((h, i) =>
@@ -137,5 +153,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   );
 
-  return [...feste, ...tage, ...kategorien, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile];
+  return [...feste, ...tage, ...kategorien, ...unterkategorien, ...kostenlos, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile];
 }

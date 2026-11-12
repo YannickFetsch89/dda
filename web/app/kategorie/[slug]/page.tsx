@@ -6,16 +6,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventListe, JsonLd, Krumen, LinkChips } from "@/components/landing";
 import { Icon } from "@/components/karten";
-import { filtern, nachZeit, unterkategorienZaehlen } from "@/lib/ableitungen";
+import { unterkategorienZaehlen } from "@/lib/ableitungen";
 import { eventPoolLaden } from "@/lib/daten";
-import { plusTage } from "@/lib/datum";
 import { KATEGORIEN, kategorie, katStil } from "@/lib/kategorien";
 import { KATEGORIE_TEXTE } from "@/lib/landing-texte";
-import { LANDING_TAGE, MIN_EINTRAEGE, kategorieGueltig } from "@/lib/landing";
+import { LANDING_TAGE, MIN_EINTRAEGE, kategorieGueltig, unterkategoriePfad } from "@/lib/landing";
+import { kategorieEvents, unterkategorieIndexierbar } from "@/lib/landing-listen";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { seitenMetadaten } from "@/lib/seo";
 import { aufzaehlung } from "@/lib/tagestext";
-import type { EventPool, KategorieSlug } from "@/lib/typen";
+import type { KategorieSlug } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -31,9 +31,7 @@ const EXTRA_LINKS: Partial<Record<KategorieSlug, { name: string; pfad: string }[
   musik: [{ name: "Club-Guide", pfad: "/guides/clubs" }],
 };
 
-function kommende(pool: EventPool, slug: KategorieSlug) {
-  return filtern(pool.events, { von: pool.heute, bis: plusTage(pool.heute, LANDING_TAGE - 1), kategorie: slug }).sort(nachZeit);
-}
+const kommende = kategorieEvents;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -94,7 +92,8 @@ export default async function KategorieSeite({ params }: Props) {
       {unter.length > 0 && (
         <div className="filterleiste" aria-label="Feinfilter">
           {unter.map((u) => (
-            <Link key={u.slug} href={`/entdecken?kategorie=${slug}&unter=${u.slug}&datum=monat`} className="chip chip--tint">
+            // Indexierbare Unterkategorie: eigene Seite; sonst der Filter (noindex)
+            <Link key={u.slug} href={unterkategorieIndexierbar(pool, slug, u.slug) ? unterkategoriePfad(slug, u.slug) : `/entdecken?kategorie=${slug}&unter=${u.slug}&datum=monat`} className="chip chip--tint">
               {u.name} <small>{u.anzahl}</small>
             </Link>
           ))}
