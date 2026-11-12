@@ -903,26 +903,30 @@ def ist_freigegeben(o: dict) -> bool:
 
 
 def soll_aktiv(o: dict) -> bool:
-    """typ = club: aktiv nur mit passendem Profil UND Freigabe."""
-    profil = (o.get("extras") or {}).get("club") or {}
-    return bool(profil.get("passt")) and ist_freigegeben(o)
+    """
+    typ = club: aktiv mit passendem Profil (seit 12.11.2026 zeigt der Hub ALLE Clubs, gestuft nach A/B/C –
+    die Freigabe entscheidet nur noch über die Top-Empfehlung, siehe web/lib/clubs.ts clubStufe).
+    Raus: „passt“ = False (auch über NICHT_IM_HUB) oder extras.kein_club.
+    """
+    ex = o.get("extras") or {}
+    return bool((ex.get("club") or {}).get("passt")) and not ex.get("kein_club")
 
 
 def umtypen_erlaubt(o: dict) -> bool:
     """
-    Inaktiven Ort eines anderen Hubs zu typ = club machen? Nur mit Freigabe, passendem Profil und
+    Inaktiven Ort eines anderen Hubs zu typ = club machen? Nur mit Freigabe (ist_freigegeben), passendem Profil und
     Club-Score ≥ 7 – so ist er danach unter /guides/clubs/<slug> erreichbar. Aktive Orte anderer Hubs
     (Pitcher, Schlager Cafe …) werden nie umgetypt (eine URL pro Ort).
     """
     ex = o.get("extras") or {}
-    return (o.get("typ") != "club" and not o.get("aktiv") and soll_aktiv(o)
+    return (o.get("typ") != "club" and not o.get("aktiv") and soll_aktiv(o) and ist_freigegeben(o)
             and (ex.get("club_score") or {}).get("gesamt", 0) >= 7)
 
 
 def freischalten(dry_run: bool) -> None:
     """
-    Club-Orte sichtbar machen (die Website zeigt nur Freigegebene mit Score ≥ 7, lib/clubs.ts):
-      - typ = club: aktiv = passt UND freigegeben,
+    Club-Orte sichtbar machen (die Website zeigt alle passenden, Stufe A = Freigabe + Score ≥ 7, lib/clubs.ts):
+      - typ = club: aktiv = passt (und nicht kein_club),
       - inaktive auch_club-Orte: umtypen nach umtypen_erlaubt(); die alte Haupt-URL leitet auf die Club-Seite
         um (extras.vorher_typ, siehe Restaurant-/Kneipen-Detailseite),
       - aktive auch_club-Orte bleiben unverändert.
@@ -972,9 +976,8 @@ def freigeben(namen: str, entziehen: bool, dry_run: bool) -> None:
         if dry_run:
             continue
         if entziehen:
-            # Sofort unsichtbar – auch für Routen, die die Freigabe nicht kennen (ortLaden → /ort-foto)
-            spalten = {"aktiv": False} if o["typ"] == "club" else {}
-            extras_mergen(db, o["id"], spalten=spalten, entfernen=("club_freigegeben",))
+            # Nur keine Top-Empfehlung mehr (Stufe B/C) – ganz aus dem Hub nimmt ein Ort NICHT_IM_HUB bzw. kein_club
+            extras_mergen(db, o["id"], entfernen=("club_freigegeben",))
         else:
             extras_mergen(db, o["id"], {"club_freigegeben": heute})
 

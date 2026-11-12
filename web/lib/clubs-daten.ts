@@ -1,5 +1,5 @@
-// Daten für den Club-Hub: Clubs (typ = club) plus Orte anderer Hubs mit extras.auch_club (Pitcher, Konvex,
-// Schlager Cafe …). Sichtbar ist nur, was laut Profil passt und einen Club-Score ≥ 7 hat.
+// Daten für den Club-Hub: Clubs (typ = club) plus Orte anderer Hubs mit extras.auch_club (Pitcher, Schlager Cafe …).
+// Sichtbar ist alles, was laut Profil passt (istSichtbarerClub); die Empfehlung zeigt die Stufe A/B/C.
 import { clubProfil, istSichtbarerClub } from "./clubs";
 import { clubOrteLaden } from "./orte";
 import type { DddEvent, DddOrt, EventPool } from "./typen";

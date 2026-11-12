@@ -1,14 +1,17 @@
 // Strukturierte Daten (schema.org) für den Club-Hub: NightClub bzw. MusicVenue, BreadcrumbList, ItemList.
 // Keine aggregateRating aus Google-Daten (Fremdbewertungen dürfen nicht als eigene ausgezeichnet werden).
 import { ortPfad } from "@/components/ort-karten";
-import { clubArt, clubBeschreibung, clubProfil } from "./clubs";
+import { clubArt, clubBeschreibung, clubProfil, eigeneClubSeite } from "./clubs";
 import { kurzBeschreibung } from "./beschreibung";
 import { brotkrumenJsonLd, oeffnungszeitenSpec } from "./kneipen-json-ld";
 import { ortBildUrl, sichereUrl } from "./orte";
 import type { DddOrt } from "./typen";
 
-/** Kanonische URL: eigene Club-Seite, bei auch_club die Haupt-URL im anderen Hub (dort ist die Club-Ansicht noindex). */
-export const clubKanonischerPfad = (o: DddOrt) => (o.typ === "club" ? `/guides/clubs/${encodeURIComponent(o.slug)}` : ortPfad(o));
+/**
+ * Kanonische URL: eigene Club-Seite; bei auch_club mit sichtbarer Haupt-Seite die Haupt-URL im anderen Hub (dort ist
+ * die Club-Ansicht noindex). Ist die Haupt-Seite nicht sichtbar (Score < 7), ist die Club-Seite kanonisch.
+ */
+export const clubKanonischerPfad = (o: DddOrt) => (eigeneClubSeite(o) ? `/guides/clubs/${encodeURIComponent(o.slug)}` : ortPfad(o));
 const clubUrl = (o: DddOrt, siteUrl: string) => `${siteUrl}${clubKanonischerPfad(o)}`;
 
 export function clubJsonLd(o: DddOrt, siteUrl: string): Record<string, unknown> {

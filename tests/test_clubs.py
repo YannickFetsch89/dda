@@ -5,7 +5,7 @@ from datetime import date
 
 from scraper.orte.clubs import ausgeschlossen, name_passt, unterart_regel
 from scraper.orte.clubs_profil import (anzeige_belegt, club_score, event_orte, link_pruefen, ort_schluessel, pruefen,
-                                       umtypen_erlaubt)
+                                       soll_aktiv, umtypen_erlaubt)
 
 
 def place(name, primaer="night_club", adresse="Ronsdorfer Str. 134, 40233 Düsseldorf, Deutschland", **mehr):
@@ -185,6 +185,14 @@ class CursorBefundeTest(unittest.TestCase):
         self.assertFalse(umtypen_erlaubt(ohne))
         schwach = {**basis, "extras": {**basis["extras"], "club_score": {"gesamt": 5}}}
         self.assertFalse(umtypen_erlaubt(schwach))
+
+    def test_soll_aktiv_alle_passenden_clubs(self):
+        # Seit 12.11.2026: alle Clubs mit passendem Profil sichtbar (Stufe A/B/C) – Freigabe nur für die Top-Empfehlung
+        self.assertTrue(soll_aktiv({"extras": {"club": {"passt": True}}}))
+        self.assertTrue(soll_aktiv({"extras": {"club": {"passt": True}, "club_freigegeben": "2026-11-11"}}))
+        self.assertFalse(soll_aktiv({"extras": {"club": {"passt": False}}}))
+        self.assertFalse(soll_aktiv({"extras": {"club": {"passt": True}, "kein_club": "Bar"}}))
+        self.assertFalse(soll_aktiv({"extras": {}}))
 
     def test_links(self):
         quelle = "Folgt uns!\nLinks: https://www.instagram.com/echterclub/ https://ra.co/clubs/15478"

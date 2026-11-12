@@ -22,6 +22,9 @@ export interface KartenOrt {
   href: string;
   lat: number;
   lng: number;
+  /** Nur Club-Hub: Empfehlungsstufe → Pin-Farbe (a = Top, b = empfohlen, c = weitere) */
+  stufe?: "a" | "b" | "c";
+  stufeLabel?: string;
 }
 
 const START = { center: [6.7735, 51.2277] as [number, number], zoom: 12 };
@@ -52,8 +55,8 @@ function istDunkel(): boolean {
 function pinElement(o: KartenOrt): HTMLButtonElement {
   const pin = document.createElement("button");
   pin.type = "button";
-  pin.className = "gd-pin";
-  pin.setAttribute("aria-label", o.name);
+  pin.className = o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}` : "gd-pin";
+  pin.setAttribute("aria-label", o.stufeLabel ? `${o.name} (${o.stufeLabel})` : o.name);
   const icon = document.createElement("span");
   icon.className = "icon";
   icon.textContent = o.icon;
@@ -77,7 +80,7 @@ function popupInhalt(o: KartenOrt): HTMLElement {
   text.className = "ddd-pop__text";
   const typ = document.createElement("span");
   typ.className = "ddd-pop__typ";
-  typ.textContent = o.typLabel;
+  typ.textContent = o.stufeLabel ? `${o.typLabel} · ${o.stufeLabel}` : o.typLabel;
   const name = document.createElement("span");
   name.className = "ddd-pop__name d";
   name.textContent = o.name;
@@ -276,7 +279,10 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
                 )}
               </span>
               <span className="gd-kompakt__text">
-                <span className="gd-typ"><span className="icon" aria-hidden data-icon={o.icon} />{o.typLabel}</span>
+                <span className="gd-typ">
+                  {o.stufe ? <span className={`cl-stufe__punkt cl-stufe__punkt--${o.stufe}`} aria-hidden /> : <span className="icon" aria-hidden data-icon={o.icon} />}
+                  {o.stufeLabel ?? o.typLabel}
+                </span>
                 <span className="gd-kompakt__name d">{o.name}</span>
                 <span className="gd-kompakt__meta">
                   {o.rating && <span className="gd-bewertung"><span className="icon is-active" aria-hidden data-icon="star" /><b>{o.rating}</b>{o.anzahl && <span className="muted">({o.anzahl})</span>}</span>}

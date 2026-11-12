@@ -6,7 +6,9 @@ import { istAbgelaufen } from "@/lib/abgelaufen";
 import { eventPoolLaden } from "@/lib/daten";
 import { findetStatt, plusTage, zeitraumAuflösen } from "@/lib/datum";
 import { kneipenLaden } from "@/lib/kneipen-daten";
+import { clubIndexierbar, eigeneClubSeite } from "@/lib/clubs";
 import { clubsLaden } from "@/lib/clubs-daten";
+import { clubKanonischerPfad } from "@/lib/clubs-json-ld";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
@@ -70,8 +72,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
   // Jeder Ort genau einmal (URL nach typ über ortPfad) – auch Brauhäuser, die in zwei Hubs erscheinen
   const [orte, kneipen, clubsAlle] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden(), clubsLaden()]);
-  // Club-Hub: nur Orte mit typ = club bekommen hier ihre URL (auch_club-Orte haben noindex und ihre Haupt-URL)
-  const clubs = clubsAlle.filter((o) => o.typ === "club");
+  // Club-Hub: nur Club-Seiten, die selbst kanonisch und indexierbar sind (Stufe A/B; auch_club-Orte mit sichtbarer
+  // Haupt-Seite haben hier noindex und stehen mit ihrer Haupt-URL in der Sitemap)
+  const clubs = clubsAlle.filter((o) => eigeneClubSeite(o) && clubIndexierbar(o));
   // Hub-URL, sobald der Kneipen-Hub etwas zeigt – auch wenn es nur Restaurants mit auch_kneipe sind
   const hatKneipen = kneipen.length > 0;
   // Hub-Datum = jüngste Änderung eines seiner Orte
@@ -83,8 +86,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: `${SITE_URL}/guides/restaurants-cafes`, ...mit(geaendert(restaurants)), changeFrequency: "weekly", priority: 0.7 },
         ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, ...mit(geaendert(kneipen)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
         ...(clubsAlle.length ? [{ url: `${SITE_URL}/guides/clubs`, ...mit(geaendert(clubsAlle)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
-        ...[...orte, ...clubs].map((o) => ({
-          url: `${SITE_URL}${ortPfad(o)}`,
+        ...[...orte.map((o) => ({ o, pfad: ortPfad(o) })), ...clubs.map((o) => ({ o, pfad: clubKanonischerPfad(o) }))].map(({ o, pfad }) => ({
+          url: `${SITE_URL}${pfad}`,
           ...mit(geaendert([o])),
           changeFrequency: "monthly" as const,
           priority: 0.4,

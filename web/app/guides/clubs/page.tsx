@@ -1,19 +1,25 @@
 // Guide-Hub Clubs (Design-Handoff v2, Ansicht 22; Plan docs/plan-clubs-2026-11-11.md)
 //
+// Seit 12.11.2026: ALLE Clubs mit passendem Profil, gruppiert nach Empfehlung – A „Top-Empfehlungen“ (geprüft,
+// Club-Score ≥ 7), B „Ebenfalls zu empfehlen“ (Score ≥ 5), C „Weitere Clubs“. Filter nach Stufe in Grid und Karte;
+// Grid ist Standard, die Karte (Pins in Stufen-Farben) optional über ?ansicht=karte.
+//
 // Erste HTML-Antwort mit Inhalt (SEO/GEO): Hero und die UNGEFILTERTE Ansicht stehen im statischen Shell.
 // Nur die filterabhängige Ansicht wartet in <Suspense> auf searchParams – ihr Fallback ist die ungefilterte.
-// Wenige Orte → alle Karten auf einer Seite (kein „Weitere laden“), keine Kartenansicht.
 import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BildImg } from "@/components/client";
-import { ClubKarte } from "@/components/club-karte";
+import { ClubKarte, clubPfad } from "@/components/club-karte";
+import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { Icon } from "@/components/karten";
+import { OrtLinkListe } from "@/components/ort-karten";
 import { ScrollReihe } from "@/components/scroll-reihe";
 import {
-  CLUB_ARTEN, CLUB_SORTIERUNGEN, CLUB_STANDARD, EINTRITT_STUFEN, clubArt, clubFilterHref, clubFilterLesen,
-  clubHatParameter, clubsFiltern, clubsSortieren, eintrittStufe, genreName, genresZaehlen, type ClubArt, type ClubFilter,
+  CLUB_ARTEN, CLUB_SORTIERUNGEN, CLUB_STANDARD, CLUB_STUFEN, EINTRITT_STUFEN, clubArt, clubArtInfo, clubFilterHref,
+  clubFilterLesen, clubHatParameter, clubIndexierbar, clubStufe, clubsFiltern, clubsSortieren, eintrittStufe, genreName,
+  genresZaehlen, hauptGenres, nachStufen, type ClubArt, type ClubFilter, type ClubStufe,
 } from "@/lib/clubs";
 import { clubsLaden, naechsteEvents } from "@/lib/clubs-daten";
 import { clubsListeJsonLd } from "@/lib/clubs-json-ld";
@@ -27,7 +33,7 @@ const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 type SP = Record<string, string | string[] | undefined>;
 
 const BESCHREIBUNG =
-  "Clubs, Kulturhäuser und Partylocations in Düsseldorf, Neuss und Ratingen – mit Musikrichtungen, Partyreihen, Eintritt und den nächsten Events.";
+  "Alle Clubs, Kulturhäuser und Partylocations in Düsseldorf, Neuss und Ratingen – mit unseren Top-Empfehlungen, Musikrichtungen, Partyreihen und den nächsten Events.";
 /** Eintritts-Filter erst, wenn genug Orte einen belegten Preis haben. */
 const MIN_FUER_EINTRITT = 6;
 
@@ -43,6 +49,13 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
 }
 
 function Hero({ orte }: { orte: DddOrt[] }) {
+  const top = orte.filter((o) => clubStufe(o) === "a").length;
+  const rest = orte.length - top;
+  const zeile = !orte.length
+    ? "Kuratierte Empfehlungen – bald verfügbar"
+    : top && rest
+      ? `${zahl(top)} Top-Empfehlungen und ${zahl(rest)} ${rest === 1 ? "weiterer Club" : "weitere Clubs und Partyorte"} – mit Musik, Partyreihen und den nächsten Events`
+      : `${zahl(orte.length)} Clubs und Partyorte – mit Musik, Partyreihen und den nächsten Events`;
   return (
     <section className="gd-hero cl-hero">
       <div className="gd-hero__bild">
@@ -55,7 +68,7 @@ function Hero({ orte }: { orte: DddOrt[] }) {
           <span aria-current="page">Clubs</span>
         </nav>
         <h1 className="d">Clubs in Düsseldorf</h1>
-        <p>{orte.length ? `${zahl(orte.length)} Clubs und Partyorte – mit Musik, Partyreihen und den nächsten Events` : "Kuratierte Empfehlungen – bald verfügbar"}</p>
+        <p>{zeile}</p>
       </div>
     </section>
   );
@@ -70,9 +83,29 @@ function Chip({ href, aktiv, children, icon, gross = false }: { href: string; ak
   );
 }
 
+/** Legende der Pin-Farben (Karte) – dieselben Punkte wie an den Stufen-Chips. */
+function Legende() {
+  return (
+    <ul className="cl-legende" aria-label="Farben auf der Karte">
+      {CLUB_STUFEN.map((s) => (
+        <li key={s.wert}><span className={`cl-stufe__punkt cl-stufe__punkt--${s.wert}`} aria-hidden />{s.titel}</li>
+      ))}
+    </ul>
+  );
+}
+
 function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechste: Map<string, DddEvent> }) {
   const href = (a: Partial<ClubFilter>) => clubFilterHref(BASIS, f, a);
   const ergebnis = clubsSortieren(clubsFiltern(alle, f), f.sort);
+
+  // Stufen-Chips (Mehrfachauswahl; alle drei gewählt = alle)
+  const fuerStufe = clubsFiltern(alle, f, ["stufen"]);
+  const stufeUmschalten = (w: ClubStufe) => {
+    const neu = umschalten(f.stufen, w);
+    return neu.length === CLUB_STUFEN.length ? [] : neu;
+  };
+  const stufenChips = CLUB_STUFEN.map((s) => ({ ...s, anzahl: fuerStufe.filter((o) => clubStufe(o) === s.wert).length }))
+    .filter((s) => s.anzahl > 0 || f.stufen.includes(s.wert));
 
   const fuerArt = clubsFiltern(alle, f, ["arten"]);
   const artUmschalten = (w: ClubArt) => {
@@ -93,17 +126,38 @@ function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechst
 
   const status = [
     `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${stadtteileText(f.stadtteile, stadtteilName)}`,
+    ...(f.stufen.length ? [CLUB_STUFEN.filter((s) => f.stufen.includes(s.wert)).map((s) => s.titel).join(" & ")] : []),
     ...(f.arten.length ? [CLUB_ARTEN.filter((a) => f.arten.includes(a.wert)).map((a) => a.mehrzahl).join(" & ")] : []),
     ...(f.genres.length ? [f.genres.map(genreName).join(" oder ")] : []),
     ...(f.eintritt ? [EINTRITT_STUFEN.find((s) => s.wert === f.eintritt)!.label] : []),
   ].join(" · ");
-  const gefiltert = f.arten.length > 0 || f.genres.length > 0 || f.stadtteile.length > 0 || f.eintritt !== null;
+  const gefiltert = f.stufen.length > 0 || f.arten.length > 0 || f.genres.length > 0 || f.stadtteile.length > 0 || f.eintritt !== null;
   const sortLabel = CLUB_SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
+  // Die Ansicht (Grid/Karte) bleibt beim Zurücksetzen der Filter erhalten
+  const zuruecksetzen = f.ansicht === "karte" ? `${BASIS}?ansicht=karte` : BASIS;
+  const abfrage = href({}).split("?")[1] ?? "";
+  const ansichten = [
+    { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
+    { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
+  ];
 
   return (
     <>
       <div className="gd-filter gd-filter--abend cl-filter" id="gd-filter" tabIndex={-1}>
         <div className="container gd-filter__innen">
+          <div className="gd-zeile">
+            <span className="gd-zeile__label">Empfehlung</span>
+            <ScrollReihe className="gd-zeile__chips" label="Empfehlung">
+              <Chip href={href({ stufen: [] })} aktiv={!f.stufen.length}>Alle</Chip>
+              {stufenChips.map((s) => (
+                <Chip key={s.wert} href={href({ stufen: stufeUmschalten(s.wert) })} aktiv={f.stufen.includes(s.wert)}>
+                  <span className={`cl-stufe__punkt cl-stufe__punkt--${s.wert}`} aria-hidden />
+                  {s.titel}<span className="gd-chip__zahl">{s.anzahl}</span>
+                </Chip>
+              ))}
+            </ScrollReihe>
+          </div>
+
           <ScrollReihe className="cl-genres" label="Musikrichtung">
             {genres.map((g) => (
               <Chip key={g.slug} gross href={href({ genres: umschalten(f.genres, g.slug) })} aktiv={f.genres.includes(g.slug)} icon={g.icon}>
@@ -161,6 +215,13 @@ function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechst
                 ))}
               </div>
             </details>
+            <div className="gd-umschalter" role="group" aria-label="Ansicht">
+              {ansichten.map((a) => (
+                <Link key={a.label} href={a.href} scroll={false} className={a.aktiv ? "is-aktiv" : ""} aria-current={a.aktiv || undefined}>
+                  <Icon name={a.icon} /><span className="gd-umschalter__label">{a.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -168,21 +229,47 @@ function Ansicht({ alle, f, naechste }: { alle: DddOrt[]; f: ClubFilter; naechst
       <div className="container">
         <div className="gd-status">
           <span>{status}</span>
-          {gefiltert && <Link href={BASIS} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>}
+          {gefiltert && <Link href={zuruecksetzen} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>}
         </div>
         {ergebnis.length === 0 ? (
           <div className="gd-leer">
-            Kein Club mit diesen Filtern. <Link href={BASIS} scroll={false}>Filter zurücksetzen</Link>
+            Kein Club mit diesen Filtern. <Link href={zuruecksetzen} scroll={false}>Filter zurücksetzen</Link>
           </div>
+        ) : f.ansicht === "karte" ? (
+          <>
+            <Legende />
+            {/* Kartenpunkte lädt die Karte selbst nach (/api/guide-karte) */}
+            <GuideKarteLazy quelle={`/api/guide-karte?hub=clubs${abfrage ? `&${abfrage}` : ""}`} />
+            <OrtLinkListe
+              orte={nachStufen(ergebnis).flatMap((g) => g.orte)}
+              alleHref={href({ ansicht: "grid" })}
+              pfad={clubPfad}
+              typLabel={(o) => clubArtInfo(o).label}
+              zusatz={(o) => hauptGenres(o).slice(0, 2).join(" / ")}
+              einheit="Clubs"
+            />
+          </>
         ) : (
-          <div className="cl-grid" role="list">
-            {ergebnis.map((o) => <ClubKarte key={o.id} o={o} naechstes={naechste.get(o.id)} />)}
-          </div>
+          nachStufen(ergebnis).map(({ stufe, orte }) => (
+            <section key={stufe.wert} className={`cl-stufe-gruppe cl-stufe-gruppe--${stufe.wert}`} aria-labelledby={`stufe-${stufe.wert}`}>
+              <div className="cl-stufe-gruppe__kopf">
+                <h2 className="d" id={`stufe-${stufe.wert}`}>
+                  <span className={`cl-stufe__punkt cl-stufe__punkt--${stufe.wert}`} aria-hidden />
+                  {stufe.titel}<span className="cl-stufe-gruppe__zahl">{zahl(orte.length)}</span>
+                </h2>
+                <p className="muted">{stufe.text}</p>
+              </div>
+              <div className="cl-grid" role="list">
+                {orte.map((o) => <ClubKarte key={o.id} o={o} naechstes={naechste.get(o.id)} />)}
+              </div>
+            </section>
+          ))
         )}
         <p className="cl-hinweis muted">
           Musikrichtungen, Reihen und Preise stammen aus den Websites der Clubs, Stadtmagazinen und unserem Eventkalender –
-          jede Angabe mit Quelle geprüft. Die Reihenfolge „Empfohlen“ folgt unserem Club-Score aus Programm, Szene,
-          Profil und Beliebtheit.
+          jede Angabe mit Quelle geprüft. Die Einteilung folgt unserem Club-Score aus Programm, Szene, Profil und
+          Beliebtheit: Top-Empfehlungen haben wir zusätzlich selbst geprüft (Score ab 7 von 10), „Ebenfalls zu empfehlen“
+          ab 5, darunter stehen die weiteren Clubs.
         </p>
       </div>
     </>
@@ -201,9 +288,11 @@ export default async function Clubs(props: { searchParams: Promise<SP> }) {
     const [e] = naechsteEvents(o, pool, 1);
     if (e) naechste.set(o.id, e);
   }
+  // Strukturierte Liste nur mit indexierbaren Clubs (Stufe A/B), in Empfehlungsreihenfolge
+  const fuerJsonLd = nachStufen(alle).flatMap((g) => g.orte).filter(clubIndexierbar);
   return (
     <div className="gd-seite gd-seite--abend cl-seite">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(clubsListeJsonLd(alle, SITE_URL, BASIS)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(clubsListeJsonLd(fuerJsonLd, SITE_URL, BASIS)) }} />
       <Hero orte={alle} />
       <Suspense fallback={<Ansicht alle={alle} f={CLUB_STANDARD} naechste={naechste} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} naechste={naechste} />

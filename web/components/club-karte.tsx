@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon, eventPfad } from "./karten";
-import { clubArtInfo, hauptGenres, istSichtbarerClub } from "@/lib/clubs";
+import { clubArtInfo, clubStufe, hauptGenres, istSichtbarerClub } from "@/lib/clubs";
 import { tagKurz } from "@/lib/datum";
 import { ortBildFokus, ortBildUrl } from "@/lib/orte";
 import type { DddEvent, DddOrt } from "@/lib/typen";
@@ -15,16 +15,18 @@ export function ClubKarte({ o, naechstes }: { o: DddOrt; naechstes?: DddEvent | 
   const bild = ortBildUrl(o);
   const art = clubArtInfo(o);
   const genres = hauptGenres(o);
+  const top = clubStufe(o) === "a";
   return (
     <article className="cl-karte" role="listitem">
       <Link href={clubPfad(o)} className="cl-karte__link">
         <div className="cl-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
           <BildImg src={bild} alt="" icon={art.icon} fokus={ortBildFokus(o)} />
-          {/* Nur das Genre – Preis-Badges sind auf Wunsch entfernt (Eintritt steht auf der Detailseite) */}
-          {genres[0] && (
+          {/* Genre und ggf. „Top-Empfehlung“ – Preis-Badges sind auf Wunsch entfernt (Eintritt steht auf der Detailseite) */}
+          {(genres[0] || top) && (
             <span className="cl-badges">
-              <span className="cl-genre">{genres[0]}</span>
+              {genres[0] && <span className="cl-genre">{genres[0]}</span>}
+              {top && <span className="cl-eintritt cl-top"><Icon name="star" />Top</span>}
             </span>
           )}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}

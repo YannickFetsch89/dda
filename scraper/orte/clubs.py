@@ -290,7 +290,9 @@ def importieren(dry_run: bool) -> dict:
     nach_id = {o["google_place_id"]: o for o in bestehend if o.get("google_place_id")}
     slugs = {o["slug"] for o in bestehend}
     neu = [p for p in liste if p["id"] not in nach_id]
-    markieren = [p for p in liste if p["id"] in nach_id and nach_id[p["id"]]["typ"] != "club"]
+    # Vom Auftraggeber aus dem Club-Hub genommene Orte (extras.kein_club, z. B. Konvex) nie wieder markieren
+    markieren = [p for p in liste if p["id"] in nach_id and nach_id[p["id"]]["typ"] != "club"
+                 and not (nach_id[p["id"]].get("extras") or {}).get("kein_club")]
     logger.info("%d neue Clubs (Details ca. %.2f $), %d vorhandene Orte bekommen auch_club%s",
                 len(neu), len(neu) * PREIS_DETAILS / 1000, len(markieren), " [Dry-Run]" if dry_run else "")
     if dry_run:

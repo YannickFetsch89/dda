@@ -5,8 +5,23 @@
 import { slugify } from "./kueche";
 import type { DddOrt } from "./typen";
 
-/** Ab diesem Club-Score erscheint ein Ort im Club-Hub (Entscheidung C2). */
+/**
+ * Ab diesem Club-Score (und mit Freigabe nach Sichtprüfung) ist ein Ort eine Top-Empfehlung (Stufe A, Entscheidung C2).
+ * Seit 12.11.2026 zeigt der Hub ALLE Clubs mit passendem Profil, gestuft nach A/B/C (siehe clubStufe).
+ */
 export const MIN_CLUB_SCORE = 7;
+/** Ab diesem Club-Score: „Ebenfalls zu empfehlen“ (Stufe B); darunter „Weitere Clubs“ (Stufe C). */
+export const MIN_CLUB_SCORE_B = 5;
+/** Ab diesem qualitaets_score ist die Haupt-Seite eines Orts aus einem anderen Hub sichtbar (wie MIN_QUALITAETS_SCORE). */
+const MIN_SCORE_HAUPT_HUB = 7;
+const HAUPT_HUB_TYPEN = ["restaurant", "imbiss", "cafe", "kneipe"];
+
+export type ClubStufe = "a" | "b" | "c";
+export const CLUB_STUFEN: { wert: ClubStufe; label: string; titel: string; text: string }[] = [
+  { wert: "a", label: "Top-Empfehlung", titel: "Top-Empfehlungen", text: "Von uns geprüft – die stärksten Programme der Stadt." },
+  { wert: "b", label: "Ebenfalls zu empfehlen", titel: "Ebenfalls zu empfehlen", text: "Regelmäßige Partys und ein klares Profil." },
+  { wert: "c", label: "Weiterer Club", titel: "Weitere Clubs", text: "Alle übrigen Clubs und Partyorte – mit weniger belegten Angaben." },
+];
 
 export type ClubArt = "club" | "kulturhaus" | "partylocation";
 export const CLUB_ARTEN: { wert: ClubArt; label: string; mehrzahl: string; icon: string }[] = [
@@ -134,12 +149,36 @@ export function clubScore(o: DddOrt): ClubScore | null {
 /** Nach der Sichtprüfung freigegeben? („passt“ der KI ist nur ein Vorschlag) */
 export const istFreigegeben = (o: DddOrt) => typeof o.extras.club_freigegeben === "string";
 
-/** Gehört der Ort sichtbar in den Club-Hub? (passt laut Profil, freigegeben und Club-Score ≥ 7) */
+/** Vom Auftraggeber aus dem Club-Hub genommen (z. B. Konvex: Bar mit DJ-Nächten, kein Club). */
+export const istKeinClub = (o: DddOrt) => typeof o.extras.kein_club === "string";
+
+/**
+ * Gehört der Ort sichtbar in den Club-Hub? Seit 12.11.2026 alle Clubs mit passendem Profil und Club-Score –
+ * die Empfehlung zeigt die Stufe (clubStufe). Typ = club oder Ort eines anderen Hubs mit auch_club.
+ */
 export function istSichtbarerClub(o: DddOrt): boolean {
   const p = clubProfil(o);
-  const s = clubScore(o);
-  return !!p?.passt && istFreigegeben(o) && !!s && s.gesamt >= MIN_CLUB_SCORE && (o.typ === "club" || o.extras.auch_club === true);
+  return !!p?.passt && !!clubScore(o) && !istKeinClub(o) && (o.typ === "club" || o.extras.auch_club === true);
 }
+
+/** A = Top-Empfehlung (Freigabe + Score ≥ 7), B = Score ≥ 5, C = alle übrigen. */
+export function clubStufe(o: DddOrt): ClubStufe {
+  const gesamt = clubScore(o)?.gesamt ?? 0;
+  if (istFreigegeben(o) && gesamt >= MIN_CLUB_SCORE) return "a";
+  return gesamt >= MIN_CLUB_SCORE_B ? "b" : "c";
+}
+export const clubStufeInfo = (o: DddOrt) => CLUB_STUFEN.find((s) => s.wert === clubStufe(o))!;
+
+/** Club-Detailseite im Index? Nur A und B – C ist nicht geprüft und meist dünn (noindex, nicht in der Sitemap). */
+export const clubIndexierbar = (o: DddOrt) => clubStufe(o) !== "c";
+
+/**
+ * Hat ein Ort aus einem anderen Hub dort eine sichtbare Seite? Nur dann ist die Club-Ansicht ein Zusatz mit Canonical
+ * auf die Haupt-URL. Sonst (z. B. Giselle Bar, Bar-Score < 7) ist die Club-Seite die einzige – und damit kanonisch.
+ */
+export const hauptSeiteSichtbar = (o: DddOrt) =>
+  o.typ !== "club" && HAUPT_HUB_TYPEN.includes(o.typ) && (o.qualitaets_score ?? 0) >= MIN_SCORE_HAUPT_HUB;
+export const eigeneClubSeite = (o: DddOrt) => !hauptSeiteSichtbar(o);
 
 export function clubArt(o: DddOrt): ClubArt {
   const roh = o.typ === "club" ? o.extras.unterart : o.extras.club_unterart;
@@ -195,12 +234,16 @@ export const CLUB_SORTIERUNGEN: { wert: ClubSort; label: string }[] = [
   { wert: "neu", label: "Neu im Guide" },
 ];
 
+export type ClubAnsicht = "grid" | "karte";
+
 export interface ClubFilter {
+  stufen: ClubStufe[]; // leer = alle (A/B/C)
   arten: ClubArt[]; // leer = alle
   genres: string[]; // Slugs (ODER)
   stadtteile: string[]; // Slugs (ODER)
   eintritt: EintrittStufe | null;
   sort: ClubSort;
+  ansicht: ClubAnsicht; // Grid ist Standard, Karte optional
 }
 
 type SP = Record<string, string | string[] | undefined>;
@@ -210,33 +253,37 @@ const GENRE_SLUGS = new Map(GENRE_NAMEN.map((g) => [slugify(g), g]));
 export const genreSlug = (name: string) => slugify(name);
 export const genreName = (slug: string) => GENRE_SLUGS.get(slug) ?? slug;
 
-export const CLUB_STANDARD: ClubFilter = { arten: [], genres: [], stadtteile: [], eintritt: null, sort: "empfohlen" };
+export const CLUB_STANDARD: ClubFilter = { stufen: [], arten: [], genres: [], stadtteile: [], eintritt: null, sort: "empfohlen", ansicht: "grid" };
 
 export function clubFilterLesen(sp: SP): ClubFilter {
   const sort = eins(sp.sort);
   const eintritt = eins(sp.eintritt);
   return {
+    stufen: CLUB_STUFEN.map((x) => x.wert).filter((w) => mehrere(sp.stufe).includes(w)),
     arten: CLUB_ARTEN.map((a) => a.wert).filter((w) => mehrere(sp.art).includes(w)),
     genres: [...new Set(mehrere(sp.genre))].filter((g) => GENRE_SLUGS.has(g)),
     stadtteile: [...new Set(mehrere(sp.stadtteil))],
     eintritt: EINTRITT_STUFEN.some((s) => s.wert === eintritt) ? (eintritt as EintrittStufe) : null,
     sort: CLUB_SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as ClubSort) : "empfohlen",
+    ansicht: eins(sp.ansicht) === "karte" ? "karte" : "grid",
   };
 }
 
 /** Hat die URL einen Filter- oder Sortier-Parameter? (→ noindex) */
 export function clubHatParameter(sp: SP): boolean {
-  return ["art", "genre", "stadtteil", "eintritt", "sort"].some((k) => eins(sp[k]) !== undefined);
+  return ["stufe", "art", "genre", "stadtteil", "eintritt", "sort", "ansicht"].some((k) => eins(sp[k]) !== undefined);
 }
 
 export function clubFilterHref(basis: string, f: ClubFilter, aenderung: Partial<ClubFilter>): string {
   const n = { ...f, ...aenderung };
   const p = new URLSearchParams();
+  if (n.stufen.length) p.set("stufe", CLUB_STUFEN.map((s) => s.wert).filter((w) => n.stufen.includes(w)).join(","));
   if (n.arten.length) p.set("art", CLUB_ARTEN.map((a) => a.wert).filter((w) => n.arten.includes(w)).join(","));
   if (n.genres.length) p.set("genre", n.genres.join(","));
   if (n.stadtteile.length) p.set("stadtteil", n.stadtteile.join(","));
   if (n.eintritt) p.set("eintritt", n.eintritt);
   if (n.sort !== "empfohlen") p.set("sort", n.sort);
+  if (n.ansicht === "karte") p.set("ansicht", "karte");
   const qs = p.toString().replace(/%2C/g, ",");
   return qs ? `${basis}?${qs}` : basis;
 }
@@ -245,6 +292,7 @@ export function clubFilterHref(basis: string, f: ClubFilter, aenderung: Partial<
 export function clubsFiltern(orte: DddOrt[], f: ClubFilter, ohne: (keyof ClubFilter)[] = []): DddOrt[] {
   const mit = (k: keyof ClubFilter) => !ohne.includes(k);
   return orte.filter((o) => {
+    if (mit("stufen") && f.stufen.length && !f.stufen.includes(clubStufe(o))) return false;
     if (mit("arten") && f.arten.length && !f.arten.includes(clubArt(o))) return false;
     if (mit("genres") && f.genres.length && !alleGenres(o).some((g) => f.genres.includes(slugify(g)))) return false;
     if (mit("stadtteile") && f.stadtteile.length && !f.stadtteile.includes(slugify(o.stadtteil ?? ""))) return false;
@@ -275,6 +323,11 @@ export function clubsSortieren(orte: DddOrt[], sort: ClubSort): DddOrt[] {
       a.name.localeCompare(b.name, "de"));
   }
   return kopie;
+}
+
+/** Nach Stufe gruppiert (A, B, C), Reihenfolge innerhalb der Stufe bleibt erhalten; leere Stufen fallen weg. */
+export function nachStufen(orte: DddOrt[]): { stufe: (typeof CLUB_STUFEN)[number]; orte: DddOrt[] }[] {
+  return CLUB_STUFEN.map((stufe) => ({ stufe, orte: orte.filter((o) => clubStufe(o) === stufe.wert) })).filter((g) => g.orte.length);
 }
 
 /** Anzahl je Genre (für die Genre-Chips). */

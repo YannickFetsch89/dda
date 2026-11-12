@@ -56,11 +56,29 @@ describe("ortEntscheidung", () => {
     expect(ortEntscheidung("restaurants-cafes", "x", null)).toEqual({ art: "fehlt" });
   });
 
-  it("Clubs nur sichtbar mit Freigabe; umgetypte Orte → 308 auf die Club-Seite", () => {
+  it("Clubs: alle mit passendem Profil sichtbar; umgetypte Orte → 308 auf die Club-Seite", () => {
     const sichtbar = ort({ typ: "club", club, club_score: { gesamt: 8 }, club_freigegeben: "2026-11-11" });
     expect(ortEntscheidung("clubs", "zakk-flingern", sichtbar)).toEqual({ art: "weiter" });
-    expect(ortEntscheidung("clubs", "x", { ...sichtbar, club_freigegeben: null })).toEqual({ art: "fehlt" });
+    // Ohne Freigabe: Stufe B/C, aber sichtbar
+    expect(ortEntscheidung("clubs", "x", { ...sichtbar, club_freigegeben: null, club_score: { gesamt: 3 } })).toEqual({ art: "weiter" });
+    expect(ortEntscheidung("clubs", "x", { ...sichtbar, club: { passt: false } })).toEqual({ art: "fehlt" });
+    expect(ortEntscheidung("clubs", "x", { ...sichtbar, aktiv: false })).toEqual({ art: "fehlt" });
     expect(ortEntscheidung("restaurants-cafes", "zakk-flingern", sichtbar)).toEqual({ art: "umleiten", ziel: "/guides/clubs/zakk-flingern" });
+  });
+
+  it("Aus dem Club-Hub genommen (Konvex) → Bar-Seite; nur als Club sichtbare Bar → Club-Seite", () => {
+    const konvex = ort({ typ: "kneipe", qualitaets_score: 7, club, club_score: { gesamt: 7 }, auch_club: null, kein_club: "Bar" });
+    expect(ortEntscheidung("clubs", "konvex-flingern", konvex)).toEqual({ art: "umleiten", ziel: "/guides/kneipen-bars/konvex-flingern" });
+    expect(ortEntscheidung("kneipen-bars", "konvex-flingern", konvex)).toEqual({ art: "weiter" });
+    // Giselle Bar: Bar-Score 4, aber Club (auch_club) → Bar-URL leitet auf die Club-Seite
+    const giselle = ort({ typ: "kneipe", qualitaets_score: 4, club, club_score: { gesamt: 7 }, auch_club: true });
+    expect(ortEntscheidung("kneipen-bars", "giselle", giselle)).toEqual({ art: "umleiten", ziel: "/guides/clubs/giselle" });
+    expect(ortEntscheidung("clubs", "giselle", giselle)).toEqual({ art: "weiter" });
+    // Sichtbares Restaurant mit Club-Ansicht: falscher Hub bleibt 404 (eine URL je Ort)
+    const schlager = ort({ typ: "restaurant", qualitaets_score: 7, club, club_score: { gesamt: 6 }, auch_club: true });
+    expect(ortEntscheidung("kneipen-bars", "schlager", schlager)).toEqual({ art: "fehlt" });
+    // Club-URL eines normalen Restaurants → auf seine Seite
+    expect(ortEntscheidung("clubs", "pizza", ort({}))).toEqual({ art: "umleiten", ziel: "/guides/restaurants-cafes/pizza" });
   });
 });
 

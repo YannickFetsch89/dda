@@ -1658,3 +1658,33 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .unter-link { margin-left: 8px; vertical-align: middle; }
 .detail-raster .gd-krumen { margin-bottom: 12px; }
 .detail__abschnitt > .link { display: flex; margin-top: 6px; }
+
+/* Club-Hub: Empfehlungsstufen A/B/C (12.11.2026) – dieselben Farben an Chips, Überschriften, Legende und Karten-Pins */
+.cl-stufe__punkt { display: inline-block; flex: none; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; border: 1.5px solid #ffffff; box-shadow: 0 0 0 1px rgba(27, 37, 64, 0.25); vertical-align: middle; }
+.cl-stufe__punkt--a { background: #c9a84c; }
+.cl-stufe__punkt--b { background: #457b9d; }
+.cl-stufe__punkt--c { background: #8a94a6; }
+.cl-stufe-gruppe { margin-top: 28px; }
+.cl-stufe-gruppe:first-of-type { margin-top: 8px; }
+.cl-stufe-gruppe__kopf h2 { display: flex; align-items: center; gap: 4px; font-size: 26px; margin: 0; }
+.cl-stufe-gruppe__kopf h2 .cl-stufe__punkt { width: 14px; height: 14px; margin-right: 8px; }
+.cl-stufe-gruppe__zahl { margin-left: 8px; font-family: var(--font-body, inherit); font-size: 15px; font-weight: 700; color: var(--ddd-text-muted); }
+.cl-stufe-gruppe__kopf p { margin: 4px 0 0; font-size: 14px; }
+.cl-stufe-gruppe--c .cl-karte__bild { aspect-ratio: 16 / 7; }
+.cl-top { display: inline-flex; align-items: center; gap: 3px; background: #c9a84c; color: #1b2540; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; }
+.cl-top .icon { font-size: 15px; }
+.cl-stufe { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: var(--r-pill); border: 1px solid var(--ddd-border); background: var(--ddd-surface); color: var(--ddd-text); font-size: 13px; font-weight: 700; }
+.cl-stufe:hover { color: var(--ddd-text); border-color: var(--ddd-navy); }
+.cl-stufe--a { background: #f5eedb; border-color: #c9a84c; color: #6e5a22; }
+.cl-stufe--a:hover { color: #6e5a22; }
+.cl-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 13px; font-weight: 600; color: var(--ddd-text-body); }
+.cl-legende li { display: flex; align-items: center; }
+.gd-kompakt .gd-typ .cl-stufe__punkt { width: 9px; height: 9px; margin-right: 5px; }
+/* Pins nach Stufe: A Gold, B Blau, C Grau (kleiner); gewählt = Ring statt Gold */
+.gd-pin.gd-pin--stufe-a { background: #c9a84c; }
+.gd-pin.gd-pin--stufe-a .icon { color: #1b2540; }
+.gd-pin.gd-pin--stufe-b { background: #457b9d; }
+.gd-pin.gd-pin--stufe-b .icon { color: #ffffff; }
+.gd-pin.gd-pin--stufe-c { background: #8a94a6; width: 28px; height: 28px; }
+.gd-pin.gd-pin--stufe-c .icon { color: #ffffff; font-size: 14px; }
+.gd-pin.gd-pin--stufe.gd-pin--an { box-shadow: 0 0 0 3px #1b2540, 0 6px 14px rgba(27, 37, 64, 0.45); }

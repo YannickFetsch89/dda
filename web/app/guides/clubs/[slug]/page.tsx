@@ -2,7 +2,8 @@
 // Name, Profil und Adresse stehen außerhalb jeder Suspense-Grenze (erste HTML-Antwort);
 // Öffnungszeiten (Wochentag), nächste Events und ähnliche Clubs werden nachgeladen.
 // Orte mit Haupt-URL in einem anderen Hub (auch_club, z. B. Pitcher) haben hier eine Club-Ansicht mit
-// Canonical auf die Haupt-URL und noindex – jede Seite erscheint so nur einmal im Index.
+// Canonical auf die Haupt-URL und noindex – jede Seite erscheint so nur einmal im Index. Ist ihre Haupt-Seite
+// nicht sichtbar (Score dort < 7), ist die Club-Seite kanonisch. Stufe C („Weitere Clubs“): noindex, kein Canonical.
 export const instant = false;
 import { guideStadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
@@ -17,8 +18,8 @@ import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { ortPfad } from "@/components/ort-karten";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import {
-  FAKT_LABEL, alleGenres, clubArtInfo, clubBeschreibung, clubHighlight, clubProfil, clubScore, clubsSortieren,
-  eintrittKurz, genreIcon, genreSlug, hauptGenres,
+  FAKT_LABEL, alleGenres, clubArtInfo, clubBeschreibung, clubHighlight, clubIndexierbar, clubProfil, clubScore, clubsSortieren,
+  clubStufe, clubStufeInfo, eigeneClubSeite, eintrittKurz, genreIcon, genreSlug, hauptGenres, hauptSeiteSichtbar,
 } from "@/lib/clubs";
 import { clubLaden, clubsLaden, naechsteEvents } from "@/lib/clubs-daten";
 import { clubJsonLd, clubKanonischerPfad } from "@/lib/clubs-json-ld";
@@ -47,14 +48,16 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const titel = `${ort.name} – ${art} in ${ort.stadtteil ?? "Düsseldorf"}${genres ? ` (${genres})` : ""}`;
   const beschreibung =
     kurzBeschreibung(clubBeschreibung(ort), 160) ?? `${ort.name}: ${art} in ${ort.stadtteil ?? "Düsseldorf"}. Empfohlen von dies.das.düsseldorf.`;
-  const eigene = ort.typ === "club";
+  const eigene = eigeneClubSeite(ort);
   const pfad = eigene ? `${BASIS}/${encodeURIComponent(ort.slug)}` : ortPfad(ort);
   const bild = ortBildUrl(ort);
+  // Indexierbar: eigene Seite in Stufe A/B. Sonst noindex – Canonical nur auf eine andere, indexierbare Haupt-URL
+  const indexierbar = eigene && clubIndexierbar(ort);
   return {
     title: titel,
     description: beschreibung,
-    alternates: { canonical: pfad },
-    robots: eigene ? undefined : { index: false, follow: true },
+    alternates: indexierbar || !eigene ? { canonical: pfad } : undefined,
+    robots: indexierbar ? undefined : { index: false, follow: true },
     openGraph: { title: titel, description: beschreibung, url: pfad, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", ...(bild ? { images: [{ url: bild }] } : {}) },
     twitter: { card: bild ? "summary_large_image" : "summary", title: titel, description: beschreibung, ...(bild ? { images: [bild] } : {}) },
   };
@@ -196,6 +199,9 @@ export default async function ClubDetail(props: Props) {
             {pill.length > 0 && (
               <span className="cl-pill"><Icon name={genreIcon(pill[0])} />{pill.join(" · ")}</span>
             )}
+            <Link href={`${BASIS}?stufe=${clubStufe(ort)}`} className={`cl-stufe cl-stufe--${clubStufe(ort)}`}>
+              <span className="cl-stufe__punkt" aria-hidden />{clubStufeInfo(ort).label}
+            </Link>
           </div>
           {highlight && <blockquote className="gd-zitat">{highlight}</blockquote>}
           <BeschreibungText text={clubBeschreibung(ort)} />
@@ -303,7 +309,7 @@ export default async function ClubDetail(props: Props) {
               <Icon name="headphones" />Resident Advisor
             </a>
           )}
-          {ort.typ !== "club" && (
+          {hauptSeiteSichtbar(ort) && (
             <Link href={ortPfad(ort)} className="gd-knopf">
               <Icon name="arrow_forward" />Mehr zu {ort.name}
             </Link>

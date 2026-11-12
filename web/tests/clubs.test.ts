@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CLUB_STANDARD, clubArt, clubBeschreibung, clubFilterHref, clubFilterLesen, clubHatParameter, clubProfil, clubsFiltern,
-  clubsSortieren, eintrittKurz, eintrittStufe, hauptGenres, istSichtbarerClub,
+  clubIndexierbar, clubStufe, clubsSortieren, eigeneClubSeite, eintrittKurz, eintrittStufe, hauptGenres, istSichtbarerClub,
+  nachStufen,
 } from "@/lib/clubs";
 import { naechsteEvents } from "@/lib/clubs-daten";
 import { clubsListeJsonLd } from "@/lib/clubs-json-ld";
@@ -47,13 +48,37 @@ describe("clubProfil", () => {
 });
 
 describe("Sichtbarkeit und Texte", () => {
-  it("Club-Score ≥ 7 und passt – unabhängig vom qualitaets_score des Haupt-Hubs", () => {
+  it("alle passenden Clubs sichtbar (seit 12.11.2026), gestuft nach A/B/C", () => {
     expect(istSichtbarerClub(SALON)).toBe(true);
     expect(istSichtbarerClub(SCHLAGER)).toBe(true);
-    expect(istSichtbarerClub(SCHWACH)).toBe(false);
+    expect(istSichtbarerClub(SCHWACH)).toBe(true);
+    expect(istSichtbarerClub(OHNE_FREIGABE)).toBe(true);
     expect(istSichtbarerClub(PASST_NICHT)).toBe(false);
-    // „passt“ der KI reicht nicht – erst die Freigabe nach Sichtprüfung
-    expect(istSichtbarerClub(OHNE_FREIGABE)).toBe(false);
+    // Vom Auftraggeber herausgenommen (Konvex → Bars)
+    expect(istSichtbarerClub(ort("Bar", { ...SALON.extras, kein_club: "Bar" }))).toBe(false);
+    // ohne Club-Score keine Einordnung
+    expect(istSichtbarerClub(ort("Neu", { club: profil() }))).toBe(false);
+  });
+
+  it("Stufen: A = Freigabe + Score ≥ 7, B = Score ≥ 5, C = übrige", () => {
+    expect(clubStufe(SALON)).toBe("a");
+    expect(clubStufe(SCHLAGER)).toBe("a");
+    // „passt“ der KI und hoher Score reichen nicht für die Top-Empfehlung – erst die Freigabe nach Sichtprüfung
+    expect(clubStufe(OHNE_FREIGABE)).toBe("b");
+    expect(clubStufe(SCHWACH)).toBe("b");
+    const klein = ort("Klein", { club: profil(), club_score: { gesamt: 4 }, club_freigegeben: "2026-11-11" });
+    expect(clubStufe(klein)).toBe("c");
+    expect(clubIndexierbar(SCHWACH)).toBe(true);
+    expect(clubIndexierbar(klein)).toBe(false);
+    expect(nachStufen([klein, SCHWACH, SALON]).map((g) => [g.stufe.wert, g.orte.map((o) => o.name)])).toEqual([
+      ["a", ["Salon"]], ["b", ["Schwach"]], ["c", ["Klein"]],
+    ]);
+  });
+
+  it("Club-Seite ist kanonisch, wenn die Haupt-Seite im anderen Hub nicht sichtbar ist", () => {
+    expect(eigeneClubSeite(SALON)).toBe(true);
+    expect(eigeneClubSeite(SCHLAGER)).toBe(true); // Restaurant-Score 5 → keine Restaurant-Seite
+    expect(eigeneClubSeite({ ...SCHLAGER, qualitaets_score: 8 })).toBe(false);
   });
 
   it("Profil-Links nur exakt, ohne Query", () => {
@@ -90,10 +115,19 @@ describe("Filter", () => {
 
   it("liest und schreibt URL-Parameter", () => {
     const f = clubFilterLesen({ genre: "techno,unsinn", art: "club", eintritt: "bis10", sort: "neu" });
-    expect(f).toEqual({ arten: ["club"], genres: ["techno"], stadtteile: [], eintritt: "bis10", sort: "neu" });
+    expect(f).toEqual({ stufen: [], arten: ["club"], genres: ["techno"], stadtteile: [], eintritt: "bis10", sort: "neu", ansicht: "grid" });
     expect(clubFilterHref("/guides/clubs", f, { sort: "empfohlen" })).toBe("/guides/clubs?art=club&genre=techno&eintritt=bis10");
     expect(clubHatParameter({})).toBe(false);
     expect(clubHatParameter({ genre: "techno" })).toBe(true);
+    // Stufen (Reihenfolge fest) und Kartenansicht
+    const g = clubFilterLesen({ stufe: "c,a,x", ansicht: "karte" });
+    expect(g.stufen).toEqual(["a", "c"]);
+    expect(g.ansicht).toBe("karte");
+    expect(clubFilterHref("/guides/clubs", g, {})).toBe("/guides/clubs?stufe=a,c&ansicht=karte");
+    expect(clubFilterHref("/guides/clubs", g, { ansicht: "grid", stufen: [] })).toBe("/guides/clubs");
+    expect(clubHatParameter({ stufe: "a" })).toBe(true);
+    expect(clubHatParameter({ ansicht: "karte" })).toBe(true);
+    expect(clubsFiltern(alle, { ...CLUB_STANDARD, stufen: ["a"] }).map((o) => o.name).sort()).toEqual(["Salon", "Schlager Cafe"]);
   });
 
   it("Genres ODER-verknüpft, Eintritt „bis 10 €“ schließt Freies ein", () => {
@@ -120,10 +154,12 @@ describe("Daten und JSON-LD", () => {
     expect(naechsteEvents(SALON, pool("beispiel"))).toEqual([]);
   });
 
-  it("ItemList nutzt die kanonische URL (auch_club → Haupt-URL)", () => {
-    const [, liste] = clubsListeJsonLd([SALON, SCHLAGER], "https://diesdas.events", "/guides/clubs");
+  it("ItemList nutzt die kanonische URL (auch_club → Haupt-URL, wenn die sichtbar ist)", () => {
+    const sichtbaresRestaurant = { ...SCHLAGER, qualitaets_score: 8 };
+    const [, liste] = clubsListeJsonLd([SALON, sichtbaresRestaurant, SCHLAGER], "https://diesdas.events", "/guides/clubs");
     const urls = (liste.itemListElement as { url: string }[]).map((x) => x.url);
     expect(urls[0]).toBe("https://diesdas.events/guides/clubs/salon");
     expect(urls[1]).toBe("https://diesdas.events/guides/restaurants-cafes/schlager-cafe");
+    expect(urls[2]).toBe("https://diesdas.events/guides/clubs/schlager-cafe"); // Restaurant-Seite nicht sichtbar
   });
 });

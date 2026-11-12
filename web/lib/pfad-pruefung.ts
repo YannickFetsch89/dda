@@ -118,7 +118,7 @@ async function reiheVorhanden(slug: string): Promise<boolean | undefined> {
 
 type OrtKopf = {
   typ: string; aktiv: boolean; qualitaets_score: number | null;
-  club: unknown; club_score: unknown; club_freigegeben: unknown; auch_club: unknown;
+  club: unknown; club_score: unknown; club_freigegeben: unknown; auch_club: unknown; kein_club?: unknown;
 };
 
 async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
@@ -126,7 +126,7 @@ async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
     const z = await abfrage<OrtKopf>(
       "orte",
       `select=typ,aktiv,qualitaets_score,club:extras->club,club_score:extras->club_score,` +
-        `club_freigegeben:extras->club_freigegeben,auch_club:extras->auch_club&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+        `club_freigegeben:extras->club_freigegeben,auch_club:extras->auch_club,kein_club:extras->kein_club&slug=eq.${encodeURIComponent(slug)}&limit=1`,
     );
     return z === undefined ? undefined : (z[0] ?? null);
   });
@@ -144,19 +144,33 @@ const HUB_TYPEN: Record<Exclude<OrtHub, "clubs">, string[]> = {
 export function clubSichtbar(o: OrtKopf): boolean {
   const ort = {
     typ: o.typ,
-    extras: { club: o.club, club_score: o.club_score, club_freigegeben: o.club_freigegeben, auch_club: o.auch_club },
+    qualitaets_score: o.qualitaets_score,
+    extras: { club: o.club, club_score: o.club_score, club_freigegeben: o.club_freigegeben, auch_club: o.auch_club, kein_club: o.kein_club },
   } as unknown as DddOrt;
   return o.aktiv && istSichtbarerClub(ort);
+}
+
+/** Hub, in dem ein Ort (kein Club) seine sichtbare Seite hat – sonst null. */
+function sichtbarerHub(o: OrtKopf): Exclude<OrtHub, "clubs"> | null {
+  if (!o.aktiv || (o.qualitaets_score ?? 0) < MIN_SCORE) return null;
+  const hubs = Object.keys(HUB_TYPEN) as Exclude<OrtHub, "clubs">[];
+  return hubs.find((h) => HUB_TYPEN[h].includes(o.typ)) ?? null;
 }
 
 /** Entscheidung für einen Ort unter /guides/<hub>/<slug> (rein, testbar). */
 export function ortEntscheidung(hub: OrtHub, slug: string, o: OrtKopf | null): Pruefung {
   if (!o) return FEHLT;
-  if (hub === "clubs") return clubSichtbar(o) ? WEITER : FEHLT;
+  if (hub === "clubs") {
+    if (clubSichtbar(o)) return WEITER;
+    // Aus dem Club-Hub genommen, aber im eigenen Hub sichtbar (z. B. Konvex → Bars): dauerhaft dorthin
+    const eigener = sichtbarerHub(o);
+    return eigener ? { art: "umleiten", ziel: `/guides/${eigener}/${encodeURIComponent(slug)}` } : FEHLT;
+  }
   const sichtbar = o.aktiv && HUB_TYPEN[hub].includes(o.typ) && (o.qualitaets_score ?? 0) >= MIN_SCORE;
   if (sichtbar) return WEITER;
-  // Zum Club umgetypt (früher hier gelistet): alte URL dauerhaft auf die Club-Seite
-  if (o.typ === "club" && clubSichtbar(o)) return { art: "umleiten", ziel: `/guides/clubs/${encodeURIComponent(slug)}` };
+  // Zum Club umgetypt (früher hier gelistet) oder nur als Club sichtbar (auch_club, Score hier < 7):
+  // diese URL dauerhaft auf die Club-Seite. Orte mit sichtbarer Seite in einem anderen Hub bleiben 404 (eine URL je Ort).
+  if (!sichtbarerHub(o) && clubSichtbar(o)) return { art: "umleiten", ziel: `/guides/clubs/${encodeURIComponent(slug)}` };
   return FEHLT;
 }
 

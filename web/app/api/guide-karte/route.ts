@@ -4,7 +4,11 @@
 // Browser/Proxy kurz zwischengespeichert.
 //   /api/guide-karte?hub=restaurants&typ=restaurant,cafe&stadtteil=bilk
 //   /api/guide-karte?hub=kneipen&art=bar&stadtteil=altstadt
+//   /api/guide-karte?hub=clubs&stufe=a,c&genre=techno
 import { kartenOrte } from "@/components/ort-karten";
+import { clubFilterLesen, clubsFiltern, clubsSortieren, clubStufe } from "@/lib/clubs";
+import { clubKartenOrte } from "@/lib/clubs-karte";
+import { clubsLaden } from "@/lib/clubs-daten";
 import { filterLesen, filtern, sortieren } from "@/lib/guide-filter";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { filterLesen as kneipenFilterLesen, filtern as kneipenFiltern } from "@/lib/kneipen";
@@ -29,6 +33,13 @@ export async function GET(request: Request) {
       const f = kneipenFilterLesen(sp);
       const orte = sortieren(kneipenFiltern(await kneipenLaden(), f), f.sort);
       return antwort(request, kartenOrte(orte));
+    }
+    if (sp.hub === "clubs") {
+      const f = clubFilterLesen(sp);
+      // Liste neben der Karte: erst Top-Empfehlungen, dann B, dann C – innerhalb nach gewählter Sortierung
+      const sortiert = clubsSortieren(clubsFiltern(await clubsLaden(), f), f.sort);
+      const orte = ["a", "b", "c"].flatMap((s) => sortiert.filter((o) => clubStufe(o) === s));
+      return antwort(request, clubKartenOrte(orte));
     }
     if (sp.hub === "restaurants") {
       const f = filterLesen(sp);
