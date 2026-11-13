@@ -86,6 +86,9 @@ class PruefTest(unittest.TestCase):
         p, _ = pr.pruefen(ki(beschreibung="Viel Platz zum Spielen und Toben im Park. " * 3
                              + "Ein Leser-Kommentar bemängelt allerdings Zustand und Sauberkeit."), QUELLEN)
         self.assertIsNone(p["beschreibung"])  # Kritik aus Kommentaren gehört nicht in die Beschreibung
+        p, _ = pr.pruefen(ki(beschreibung="Der Spielplatz liegt im Park und hat eine Rutsche. "
+                             "Zu den übrigen Spielgeräten verrät die Quelle leider nichts weiter."), QUELLEN)
+        self.assertIsNone(p["beschreibung"])  # keine Meta-Sätze über die Quellen
         p, _ = pr.pruefen(ki(beschreibung="Kurz."), QUELLEN)
         self.assertIsNone(p["beschreibung"])
         text = "Im Volksgarten findet ihr eine große Rutsche und eine Nestschaukel. Im Sommer läuft die Wasserpumpe, " \

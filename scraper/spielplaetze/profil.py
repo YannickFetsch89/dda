@@ -55,7 +55,7 @@ STICHWORTE = {
 VERNEINUNG = r"\bkein|\bnicht\b|\bohne\b|abgebaut|entfernt|gesperrt|fehlt"
 ALTER_STICHWORTE = r"\d|kleinkind|schulkind|krabbel|baby|jugendlich|jahre|kinder unter|ab \w+ jahren|altersgruppe|altergruppe|alle alter"
 # Keine Wertungen und keine Kritik in der Beschreibung (Plan §10: Abmahnrisiko durch Wertungen)
-WERTUNG = r"geheimtipp|\bsterne?\b|bewertung|\d,\d ?/ ?5|bemängel|bemaengel|kritisier|kommentar|schmutzig|dreckig|verwahrlost|ungepflegt|sauberkeit"
+WERTUNG = r"\bquellen?\b|verrät|keine angaben|geheimtipp|\bsterne?\b|bewertung|\d,\d ?/ ?5|bemängel|bemaengel|kritisier|kommentar|schmutzig|dreckig|verwahrlost|ungepflegt|sauberkeit"
 SAISON_STICHWORTE = r"mai|juni|juli|august|september|oktober|april|sommer|saison|winter|abgestellt|in betrieb|geöffnet|geoeffnet"
 
 SYSTEM = """Du erstellst Profile öffentlicher Spielplätze für den Düsseldorfer Stadtguide dies.das.düsseldorf.
@@ -76,6 +76,7 @@ Grundregeln:
 - „beschreibung“: 2–4 eigene Sätze auf Deutsch, Anrede ihr/euch, locker, keine Werbesprache, keine Sterne/Bewertungen,
   keine Öffnungszeiten, keine Adresse, keine Parkplatz-Hinweise. Keine Wertungen und keine Kritik, auch nicht aus
   Kommentaren oder Bewertungen (kein „bemängelt“, „ungepflegt“, „schmutzig“). Nur, was die Quellen über diesen Platz sagen.
+- Die Beschreibung spricht über den Platz, nie über die Quellen („laut Quelle“, „die Quelle verrät nichts“ gehören nicht hinein).
 - Ausleihbares Spielzeug (Bälle, Skateboards, Fahrzeuge) ist kein Gerät; Skaten nur bei einer Skate-Anlage. Keine Schablone aus Name, Stadtteil
   und Größe – gibt es nichts Inhaltliches, bleibt sie leer.
 - „highlight“: ein Satz (max. 100 Zeichen), was den Platz ausmacht, sonst leer.
