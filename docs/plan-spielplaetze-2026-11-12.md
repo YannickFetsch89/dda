@@ -314,7 +314,7 @@ Regeln von `abenteuer_import.py` (reine Funktionen, getestet):
   Eine Zeile ohne Eintritt gibt es damit in der Datenbank nicht. **Bei einer bestehenden Zeile** (Wiederholungsimport) bleibt die
   Datenbankzeile bei einer ungültigen CSV-Zeile vollständig unverändert – kein teilweises Überschreiben –, Log-Fehler. Das gilt für
   fehlende/ungültige Pflichtfelder und für `ausschliessen = ja` ohne `grund`.
-- **Stadtteil:** muss ein Katalogwert sein. Sonst Code `kein_stadtteil`, und die Spalte `stadtteil` behält den ungültigen Text nicht: eine neue Zeile bleibt leer, eine bestehende behält den alten Wert. Auflösen nur durch einen Katalogwert in `abenteuer.csv`. An einer noch nie aktiven Zeile sperrt der Code die Freischaltung, an einer aktiven Zeile ist er eine Warnung.
+- **Stadtteil:** muss ein Katalogwert sein. Sonst Code `kein_stadtteil`, und die Spalte `stadtteil` behält den ungültigen Text nicht: eine neue Zeile bleibt leer, eine bestehende behält den alten Wert. Auflösen nur durch einen Katalogwert in `abenteuer.csv`. An einer nie freigeschalteten oder abgeschalteten Zeile sperrt der Code die Freischaltung, an einer aktiven Zeile ist er eine Warnung.
 - **Anlegen** mit `aktiv=false`. `ausgeschlossen`: bei `ausschliessen = ja` und gesetztem `grund` der Grund, sonst `null`. Ein leerer
   `grund` bei `ausschliessen = ja` ist ein Log-Fehler, die Zeile wird nicht angelegt (bestehende Zeile: unverändert, siehe oben).
   `bestaetigt` aus der CSV (nur `access_private`). Freischaltung und Abschalten über dieselbe SQL
