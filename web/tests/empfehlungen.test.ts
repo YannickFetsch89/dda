@@ -107,6 +107,13 @@ describe("Stamm (Abschnitt 3, Schritt 1)", () => {
     expect(stufe(ev({ id: "c", titel: "Repair-Cafe Flingern", kategorie: "community", ort: "Stadtteilladen" }))).toBe(0);
     expect(stufe(ev({ id: "s", titel: "Speed Dating 30+", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
     expect(stufe(ev({ id: "d", titel: "Speed-Dating", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
+    expect(stufe(ev({ id: "m", titel: "Repair-Cafés im Stadtteil", kategorie: "community", ort: "Stadtteilladen" }))).toBe(0);
+  });
+
+  it("„Repair Cafeteria“ und „Highspeed Dating“ sind kein Stamm", () => {
+    expect(stufe(ev({ id: "r", titel: "Repair Cafeteria – Kunstaktion", kategorie: "kultur", ort: "Atelierhaus" }))).toBe(2);
+    expect(stufe(ev({ id: "a", titel: "Repair Caféteria", kategorie: "kultur", ort: "Atelierhaus" }))).toBe(2);
+    expect(stufe(ev({ id: "h", titel: "Highspeed Dating mit KI – Lesung", kategorie: "kultur", ort: "Literaturhaus" }))).toBe(2);
   });
 
   it("Wöchentliches Yoga → 0", () => {
@@ -173,6 +180,14 @@ describe("Zugpferd-Orte (Abschnitt 4)", () => {
     expect(stufe(ev({ id: "pv", titel: "Public Viewing: Deutschland – Spanien", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
     expect(stufe(ev({ id: "fs", titel: "Fanshop-Verkauf", kategorie: "sport", ort: "PSD Bank Dome" }))).toBe(2);
     expect(stufe(ev({ id: "hs", titel: "Düsseldorfer EG – Kölner Haie", kategorie: "sport", ort: "PSD Bank Dome" }))).toBe(3);
+  });
+
+  it("Ausschluss greift auch für Auswärts an der Arena, Schreibvarianten und das Wort nur im Ort; Zugpferd-Titel bleibt 3", () => {
+    expect(stufe(ev({ id: "aw", titel: "Auswärtsfahrt nach Köln – Treffpunkt", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
+    expect(stufe(ev({ id: "pv", titel: "Public-Viewing: EM-Finale", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
+    expect(stufe(ev({ id: "fs", titel: "Fan Shop geöffnet", kategorie: "sport", ort: "PSD Bank Dome" }))).toBe(2);
+    expect(stufe(ev({ id: "or", titel: "Trikotverkauf", kategorie: "sport", ort: "Merkur Spiel-Arena Fanshop" }))).toBe(2);
+    expect(stufe(ev({ id: "kt", titel: "Rheinkirmes Public Viewing", kategorie: "outdoor", ort: "Rheinwiesen Oberkassel" }))).toBe(3);
   });
 
   it("Premiere im Kunstpalast → 3; Workshop oder Foyer dort höchstens 2", () => {
@@ -326,6 +341,34 @@ describe("Die fünf Plätze (Abschnitt 9)", () => {
     expect(p.tipp?.id).toBe("t");
     expect(p.plaetze[0]?.id).toBe("b"); // Platz 2: andere Kategorie, Stufe 2
     expect(p.plaetze[1]?.id).toBe("j"); // Platz 3: kein Stufe-2-Event aus anderem Stadtteil → Stufe 1 ohne Regel
+  });
+
+  it("Platz 3: Stufe ≥ 2 aus einem dritten Stadtteil kommt vor Stufe 1", () => {
+    const p = plaetzeAm(
+      [
+        e({ id: "t", titel: "Sinfoniekonzert", kategorie: "musik", ort: "Tonhalle", stadtteil: "Pempelfort" }),
+        e({ id: "a", titel: "Lesung", kategorie: "kultur", ort: "Literaturhaus", stadtteil: "Carlstadt", beschreibung: "x".repeat(100) }),
+        e({ id: "c", titel: "Flohmarkt", kategorie: "food", ort: "Aachener Platz", stadtteil: "Bilk" }),
+        e({ id: "j", titel: "Jazz-Jam", kategorie: "musik", ort: "Café Unikat", stadtteil: "Flingern", beschreibung: "x".repeat(100) }),
+      ],
+      TAG,
+    );
+    expect(p.plaetze[0]?.id).toBe("a");
+    expect(p.plaetze[1]?.id).toBe("c");
+  });
+
+  it("Platz 3: Stufe 1 mit Bild kommt vor Stufe ≥ 2 aus anderem Stadtteil ohne Bild", () => {
+    const p = plaetzeAm(
+      [
+        e({ id: "t", titel: "Sinfoniekonzert", kategorie: "musik", ort: "Tonhalle", stadtteil: "Pempelfort" }),
+        e({ id: "a", titel: "Lesung", kategorie: "kultur", ort: "Literaturhaus", stadtteil: "Carlstadt" }),
+        e({ id: "o", titel: "Flohmarkt", kategorie: "food", ort: "Aachener Platz", stadtteil: "Bilk", bild_url: null }),
+        e({ id: "j", titel: "Jazz-Jam", kategorie: "musik", ort: "Café Unikat", stadtteil: "Carlstadt" }),
+      ],
+      TAG,
+    );
+    expect(p.plaetze[0]?.id).toBe("a");
+    expect(p.plaetze[1]?.id).toBe("j");
   });
 
   it("Zwei Events mit Ort „Düsseldorf“ dürfen beide in den Plätzen stehen, zwei am selben echten Ort nicht", () => {
