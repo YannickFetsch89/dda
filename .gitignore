@@ -19,6 +19,7 @@ data/*
 data/spielplaetze/*
 !data/spielplaetze/korrekturen.csv
 !data/spielplaetze/abenteuer.csv
+!data/spielplaetze/ausstattung.csv
 
 # Playwright
 playwright/.auth/

@@ -1,6 +1,6 @@
 # Plan: Guide „Spielplätze“ (`/guides/spielplaetze`)
 
-Stand 13.11.2026 · **konsolidierte Fassung** nach acht Cursor-Prüfungen und acht eigenen Durchsichten · **vom Auftraggeber freigegeben am 13.11.2026** · noch nichts umgesetzt.
+Stand 13.11.2026 · **konsolidierte Fassung** nach acht Cursor-Prüfungen und acht eigenen Durchsichten · **vom Auftraggeber freigegeben am 13.11.2026**, ergänzt um Tischtennis und `ausstattung.csv` (13.11.) · noch nichts umgesetzt.
 Diese Fassung ersetzt alle früheren Abschnitte (0, 0.3 usw.); die Prüfhistorie steht in Abschnitt 14.
 
 **Ziel:** Eltern finden den passenden öffentlichen Spielplatz in Düsseldorf – nach Alter, Ausstattung, Stadtteil und Nähe.
@@ -73,7 +73,7 @@ ergänzend `DESIGN_PROMPTS_GUIDES.md` Abschnitt 10 (Repo). **Abweichungen vom Ha
 | E1 | Im Hub: Kinder-, Wald- und Wasserspielplätze der Stadt (351 Einträge → **344 Spielplätze** nach Zusammenführung, 4.1) plus die kurze manuelle Liste betreuter Abenteuerspielplätze (4.6, nicht in den 344). Keine Bolz-, Skater-, Freizeit-, Indoor- oder kommerziellen Anlagen. Die Einleitung sagt das. |
 | E2 | Auf Karte, Liste und in den Zahlen steht jede Zeile mit `aktiv=true`. Neue Plätze aus E1 mit gültiger Koordinate kommen über die Freischalt-SQL dazu, nur ohne Ausschluss und ohne sperrenden Prüf-Code (Schritt 6); ein später hinzukommender sperrender Code nimmt eine aktive Zeile nicht heraus. Freischaltung nach Stichprobe der Prüf-CSV, nicht Einzel-Freigabe. Ausschlüsse stehen in `data/spielplaetze/korrekturen.csv` (Schlüssel → Grund, 3.1) und nur für: nicht öffentlich, Dublette, nachweislich abgebaut, unauflösbarer Name. |
 | E3 | Nur Düsseldorf. Neuss/Ratingen später. |
-| E4 | Ausstattung nur belegt (OSM-Tag oder wörtliches Zitat). Ohne Beleg „keine Angabe“, nie „fehlt“; „fehlt/nein“ nur bei belegter Abwesenheit. |
+| E4 | Ausstattung nur belegt (OSM-Tag, wörtliches Zitat oder Sichtung des Auftraggebers über `ausstattung.csv`, 3.2). Ohne Beleg „keine Angabe“, nie „fehlt“; „fehlt/nein“ nur bei belegter Abwesenheit. |
 | E5 | Alter: **belegt** (OSM `min_age`/`max_age`, Zitat, Stadtname „Kleinkind/Schulkind“) oder **vermutlich** (Formel 4.5, erste zutreffende Zeile). Vermutlich zählt für Filter und Pin-Farbe, wird überall als „vermutlich“ gekennzeichnet und zählt **nicht** für die Indexierung: es ersetzt die zwei Geräte nicht und blockiert eine sonst indexierbare Seite nicht. |
 | E6 | Fotos: keine erkennbaren Kinder/Personen. Google-Fotos nur nach Sichtprüfung, gespeichert als `extras.google_foto`, geschützt durch `foto_manuell` (4.4), sonst Typ-Illustration (Abschnitt 11). Kein Street View. |
 | E7 | Notfallnummer als Hinweis, kein `tel:`-Link (Regel 4.1, Wortlaut 6.3). |
@@ -98,7 +98,8 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
 - `extras.spielplatz`:
   ```
   { quelle: "stadt-duesseldorf" | "abenteuer", lizenz: "dl-de/zero-2.0", quelle_url, datenstand: "2020-09-25",
-    // lizenz und datenstand nur bei quelle stadt-duesseldorf. Abenteuer: quelle "abenteuer", quelle_url aus abenteuer.csv
+    // lizenz und datenstand nur bei quelle stadt-duesseldorf. Abenteuer: quelle "abenteuer", quelle_url aus abenteuer.csv,
+    // dazu schluessel: "abenteuer:<kurz>" (Identität für Wiederholungsimport und ausstattung.csv)
     teile: [{ objektschluessel, stadt_name, objektart, groesse_m2, latitude, longitude }],   // 1–3 Teilflächen (4.1)
     typ: "kinder" | "wald" | "wasser" | "abenteuer",   // abenteuer nur aus der manuellen Liste (4.6)
     name_quelle: "stadt" | "korrektur",   // Anzeigename aus der Normalisierung oder aus korrekturen.csv
@@ -121,7 +122,9 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
               // Abenteuer: Pflicht ja|nein aus abenteuer.csv; eine Zeile ohne gültigen Wert legt der Import nicht an (4.6).
     fehlende_teile: [{ objektschluessel, seit }],   // Schlüssel aus einem späteren Stadtstand verschwunden
     stadt_fehlt_seit?: "YYYY-MM-DD",   // nur wenn kein Schlüssel der Zeile mehr in der Datei steht
-    ausstattung: { <geraet>: { wert: "ja"|"nein", quelle: "osm"|"zitat"|"stadt", beleg?, url? } },
+    ausstattung: { <geraet>: { wert: "ja"|"nein", quelle: "osm"|"zitat"|"stadt"|"sichtung", beleg?, url?, stand? } },
+              // <geraet>: sandkasten, schaukel, rutsche, klettern, wasserspiel, seilbahn, tischtennis (Filter);
+              // federwippe, wippe, karussell, balancierbalken (Nebengeräte, nur Detailseite). quelle "sichtung" nur aus 3.2.
     alter: { wert: "0-3"|"3-6"|"6-12"|"alle", art: "belegt"|"vermutlich", beleg? } | null,
     extras: { schatten|wc|eingezaeunt|picknick|rollstuhl: { wert: "ja"|"nein"|"teilweise", notiz?, quelle, beleg? } },
     traeger?: string,   // nur Abenteuer, aus abenteuer.csv; die Detailseite zeigt ihn, wenn er gesetzt ist
@@ -166,6 +169,23 @@ Normalisierung und Slug ändern sich **nur bei nie freigeschalteten Zeilen**; ab
 (auch nach dem Abschalten, sonst fände die Weiterleitung aus 5.5 die alte URL nicht mehr), der Name ändert sich dann nur über
 `anzeigename` (Abenteuer: Spalte `name` in `abenteuer.csv`). Deshalb setzt der Import `name_unklar` nur bei nie freigeschalteten
 Zeilen; bei freigeschalteten Zeilen steht ein geänderter Stadtname als „Stadtname neu“ in der Prüf-CSV, ohne Code.
+### 3.2 Ausstattung von Hand: `data/spielplaetze/ausstattung.csv` (eingecheckt, vom Auftraggeber gepflegt)
+Für Ausstattung, die der Auftraggeber selbst gesehen hat (vor Ort oder eindeutig auf einem Luftbild/Kartenbild).
+Spalten: `schluessel` (kleinster Objektschlüssel wie in 3.1, oder `abenteuer:<kurz>`), `merkmal`, `wert`, `beleg`, `stand`.
+- `merkmal`: ein Gerät aus §3 (`sandkasten` … `tischtennis`, Nebengeräte) oder ein Extra (`schatten`, `wc`, `eingezaeunt`,
+  `picknick`, `rollstuhl`). `wert`: `ja` oder `nein`, bei `rollstuhl` auch `teilweise`. `beleg`: kurzer Text, wie die Angabe
+  gesichert ist (z. B. „vor Ort gesehen“), Pflicht. `stand`: Datum `YYYY-MM-DD`, Pflicht.
+- `ausstattung_import.py` schreibt jede gültige Zeile als `{ wert, quelle: "sichtung", beleg, stand }` nach
+  `extras.spielplatz.ausstattung` bzw. `extras.spielplatz.extras`. Ungültige Zeile (unbekannter Schlüssel oder Merkmal, falscher
+  Wert, leerer Beleg, Datum ungültig, Schlüssel nicht der kleinste der Gruppe, doppelte Zeile): Log-Fehler, nichts geschrieben.
+- **Vorrang:** Eine Sichtung gewinnt gegen OSM und Zitat. OSM-Abgleich (4.2) und Profil (4.3) überschreiben ein Merkmal mit
+  `quelle: "sichtung"` nie; ein abweichender OSM- oder Zitat-Wert kommt nur in die Prüf-CSV.
+- Fehlt eine Zeile, die vorher in der Datei stand, entfernt der nächste Lauf dieses Merkmal (nur Einträge mit `quelle: "sichtung"`);
+  der nächste OSM-Abgleich bzw. das Profil kann es wieder füllen. Fehlt die Datei ganz, ändert der Lauf nichts.
+- Der Lauf ändert nur Ausstattung und Extras, nie `aktiv`, Name, Slug, Stadtteil oder Prüf-Codes. Er kann jederzeit laufen,
+  auch nach dem Livegang; die Seite zeigt die Änderung nach dem nächsten Cache-Ablauf.
+- Die Detailseite nennt die Quelle als „vor Ort geprüft ({stand})“ in „Stand der Angaben“ (5.3).
+
 - Wiederholungsimport findet die Zeile über die **Schnittmenge** der `objektschluessel` (4.7), nicht über die exakte Liste.
   Die sortierte Liste bleibt der gespeicherte Stand der aktuellen Teilflächen.
 
@@ -241,7 +261,7 @@ Zeilen; bei freigeschalteten Zeilen steht ein geänderter Stadtname als „Stadt
 - Eine Overpass-Abfrage `nwr[leisure=playground]` + Geräte-Objekte `playground=*` im Stadtgebiet, generischer User-Agent,
   Wiederholung mit Pause, Zwischenspeicher `data/spielplaetze/osm.json` (gitignored, nie veröffentlicht).
 - Zuordnung: Stadt-Punkt liegt in der OSM-Fläche **oder** OSM-Mittelpunkt ≤ 60 m; mehrere Kandidaten → Prüf-CSV, nichts übernehmen.
-- Übernahme mit `quelle: "osm"`: Geräte (Mapping-Tabelle, 4.5), `min_age`/`max_age`, `wheelchair`, `fee` → `eintritt`
+- Übernahme mit `quelle: "osm"` (nie über ein Merkmal mit `quelle: "sichtung"`, 3.2): Geräte (Mapping-Tabelle, 4.5), `min_age`/`max_age`, `wheelchair`, `fee` → `eintritt`
   (`yes` → `ja`, `no` → `nein`, sonst `null`; **nur bei `quelle: "stadt-duesseldorf"`** – bei Abenteuerplätzen bleibt `eintritt` aus
   `abenteuer.csv`, ein abweichendes `fee` steht nur in der Prüf-CSV), `access`
   (`access=private` → Code `access_private`, Prüf-CSV, sperrt die Freischaltung, bis `korrekturen.csv` ihn unter `bestaetigt` führt
@@ -273,7 +293,7 @@ Zeilen; bei freigeschalteten Zeilen steht ein geänderter Stadtname als „Stadt
   bei einer größeren Kinder-Teilfläche nur für den Wasserbereich formulieren), Beschreibung 2–4 eigene Sätze,
   Highlight, `profil_stand` = Datum der jüngsten Quelle. **Jede Aussage mit wörtlichem Beleg**, Prüfung wie bei den Clubs
   (Wortstamm/Zahl im Zitat). Eine Schablone aus Stadtfeldern („Spielplatz X in Y, Z m²“) ist keine Beschreibung.
-- Widerspruch OSM ↔ Zitat: jüngere Quelle gewinnt, beide in der Prüf-CSV.
+- Widerspruch OSM ↔ Zitat: jüngere Quelle gewinnt, beide in der Prüf-CSV. Ein Merkmal mit `quelle: "sichtung"` (3.2) bleibt immer.
 
 ### 4.4 Google (`google_abgleich.py`, nur Runde-1-Plätze)
 - Umkreissuche 80 m, Typ `playground`, über den vorhandenen Places-Client; Treffer nur bei Namensähnlichkeit oder einzigem Treffer,
@@ -284,7 +304,11 @@ Zeilen; bei freigeschalteten Zeilen steht ein geänderter Stadtname als „Stadt
 ### 4.5 Regeln (reine Funktionen, getestet)
 - **Geräte-Mapping OSM → Liste:** `sandpit`→Sandkasten, `swing`/`basketswing`/`baby_swing`→Schaukel, `slide`→Rutsche,
   `climbingwall`/`climbingframe`/`climbing_net`→Klettern, `water`/`pump`/`splash_pad`→Wasserspiel, `zipwire`→Seilbahn;
-  weitere (`springy`, `seesaw`, `roundabout`, `balancebeam`) als Nebengeräte (Detailseite, kein Filter).
+  **Tischtennis** aus `leisure=pitch` + `sport=table_tennis` (auch `sport=table_tennis` an einem Punkt), wenn das Objekt in der
+  Spielplatzfläche liegt oder ≤ 40 m vom Stadt-Punkt bzw. der Abenteuer-Koordinate entfernt ist (Platten stehen oft neben dem
+  Spielplatz); weitere (`springy`→Federwippe, `seesaw`→Wippe, `roundabout`→Karussell, `balancebeam`→Balancierbalken) als
+  Nebengeräte (Detailseite, kein Filter). Tischtennis ist ein Filter-Gerät wie die übrigen sechs (Chip ab 5 sichtbaren Plätzen,
+  E11), zählt für die zwei Geräte der Indexierung, für „X von Y“ und für den Score, aber nicht für das Alter.
 - **Alter.** Erst ein belegter Wert, sonst die Ableitung. Belegt (dann nicht weiter ableiten): OSM `min_age`/`max_age`,
   wörtliches Zitat oder Stadtname. „Kleinkind“ und „Schulkind“ an zusammengeführten Teilen, oder eine Spanne über mehr
   als ein Band: „alle“. Nur „Kleinkind“ oder `max_age` ≤ 3: „0-3“. Nur „Schulkind“ oder `min_age` ≥ 6: „6-12“. Sonst das
@@ -302,7 +326,7 @@ Zeilen; bei freigeschalteten Zeilen steht ein geänderter Stadtname als „Stadt
   „Vermutlich“ zählt für Filter und Pin, ersetzt bei der Indexierung keine Geräte und sperrt eine Seite mit Beschreibung
   und mindestens zwei Geräten nicht.
 - **Score (intern, 0–1):** gewichtete Summe aus Teilwerten, jeder Teilwert 0–1:
-  Ausstattung 35 % (Anzahl belegter Hauptgeräte / 6, höchstens 1), Größe 20 % (Perzentil-Rang der summierten Größe. Die Menge ist bei jedem Schritt 6, gerechnet vor der Freischalt-SQL, die Vereinigung aus den nicht ausgeschlossenen **städtischen** Plätzen ohne sperrenden Prüf-Code (nach `bestaetigt`, also wie `freischaltbar()` in Schritt 6) und den bereits aktiven städtischen Plätzen, auch mit Warn-Code. Ein ausgeschlossener Platz gehört nicht dazu, auch wenn er noch aktiv ist. Liegt ein städtischer Platz außerhalb der Menge, ist sein Größen-Teilwert 0,5. Abenteuerplätze haben keine Größe, ihr Teilwert ist 0,5 = neutral,
+  Ausstattung 35 % (Anzahl belegter Filter-Geräte inkl. Tischtennis / 6, höchstens 1), Größe 20 % (Perzentil-Rang der summierten Größe. Die Menge ist bei jedem Schritt 6, gerechnet vor der Freischalt-SQL, die Vereinigung aus den nicht ausgeschlossenen **städtischen** Plätzen ohne sperrenden Prüf-Code (nach `bestaetigt`, also wie `freischaltbar()` in Schritt 6) und den bereits aktiven städtischen Plätzen, auch mit Warn-Code. Ein ausgeschlossener Platz gehört nicht dazu, auch wenn er noch aktiv ist. Liegt ein städtischer Platz außerhalb der Menge, ist sein Größen-Teilwert 0,5. Abenteuerplätze haben keine Größe, ihr Teilwert ist 0,5 = neutral,
   und sie gehen nicht in die Perzentil-Menge ein), Besonderheit 20 % (Wasser 1, Wald 1, Abenteuer 1, rollstuhlgerecht belegt +0,5, höchstens 1; sonst 0),
   Google 15 % (Bayes-Mittel wie beim Club-Score auf 0–1; ohne Google 0,5 = neutral), Extras 10 % (Anteil belegter „ja“ unter
   Schatten, WC, eingezäunt, Picknick). Sortierung „Empfohlen“ = Score absteigend, dann Name.
@@ -369,7 +393,7 @@ OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei H
 - `web/lib/spielplaetze-daten.ts`: eigene Abfrage (`"use cache"`, seitenweise), `typ='spielplatz'`, `aktiv=true`,
   **mit** `extras` (nicht die Spaltenliste aus `orte.ts`), **ohne** Score-Schwelle.
 - `web/lib/spielplaetze.ts`: Profil nur aus bekannten Werten lesen; Konstanten (Altersfarben/Labels aus dem Handoff, Geräte, Extras);
-  Filter `alter` (Einzelauswahl; „alle“ passt zu jedem Alter; unbekannt nur bei „Alle Alter“), `geraet` (UND, nur „ja“),
+  Filter `alter` (Einzelauswahl; „alle“ passt zu jedem Alter; unbekannt nur bei „Alle Alter“), `geraet` (UND, nur „ja“; Sandkasten, Schaukel, Rutsche, Klettern, Wasserspiel, Seilbahn, Tischtennis),
   `extra` (UND), `typ` (Wasser, Wald, Abenteuer; Mehrfach, ODER; aus Stadtdaten bzw. Liste belegt, daher ohne Schwelle – ein
   Chip erscheint, sobald mindestens ein sichtbarer Platz den Typ hat), `stadtteil` (Mehrfach, ODER), `sort` (`empfohlen` = Score, dann Name; `ausstattung` = Anzahl belegter Geräte);
   `istIndexierbar` (5.4); Chip-Schwelle 5 (E11). „In der Nähe“ ist kein URL-Parameter.
@@ -401,7 +425,7 @@ OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei H
 - Beschreibung (nur aus Profil); zusammengeführte Teilflächen als Bereiche („Bereich für Kleinkinder und für Schulkinder“);
   Ausstattung: ja (grün) / keine Angabe (neutral) / nein (rot, nur belegt); Extras mit Notiz; Größe „ca. 1.200 m² laut Stadt“
   (Summe der Teilflächen); bei `typ: "abenteuer"` die Öffnungszeiten aus `oeffnungszeiten` und, wenn gesetzt, den Träger; Saison-Hinweis nur für den Wasserbereich, wenn eine Kinder-Teilfläche größer ist, sonst bei Typ Wasser;
-  **Notfallnummer** (6.3); „Stand der Angaben“, Quellen, OSM-Namensnennung, Haftungssatz (6.5).
+  **Notfallnummer** (6.3); „Stand der Angaben“ (bei Sichtung „vor Ort geprüft ({stand})“, 3.2), Quellen, OSM-Namensnennung, Haftungssatz (6.5).
 - Rechts: Mini-Karte, „Route planen“ (Google-Maps-Link aus der Koordinate, öffnet erst nach Klick), Anker „In der Nähe“
   (scrollt nur, fragt den Standort nicht ab).
 - „In der Nähe“: (1) „Weitere Spielplätze in {Park}“ = andere Spielplätze mit demselben Namensstamm. Stamm = Anzeigename ohne das
@@ -422,7 +446,7 @@ OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei H
 
 ### 5.4 Indexierung
 - Hub indexierbar.
-- **Detail indexierbar nur mit** Profil-Beschreibung **und** ≥ 2 belegten Geräten (`quelle` `osm` oder `zitat`, mit Beleg). Geräte aus dem Profil zählen mit, auch ohne OSM-Treffer. Vermutetes Alter ersetzt diese zwei Geräte
+- **Detail indexierbar nur mit** Profil-Beschreibung **und** ≥ 2 belegten Geräten (`quelle` `osm`, `zitat` oder `sichtung`, mit Beleg). Geräte aus dem Profil zählen mit, auch ohne OSM-Treffer. Vermutetes Alter ersetzt diese zwei Geräte
   nicht und macht eine Seite, die beides hat, nicht zu noindex. Typ Wasser/Wald allein reicht nicht. Sonst `noindex, follow`,
   ohne Canonical, nicht in der Sitemap, aber erreichbar und in Hub/Liste verlinkt.
 - **Stadtteilseiten** `/guides/spielplaetze/stadtteil/{slug}` (`instant = false`) ab 5 **sichtbaren** Spielplätzen indexierbar.
@@ -540,7 +564,7 @@ zweiter Import ohne Änderung → gleiche Slugs; Kollision mit Abenteuer- und an
 ausgeschlossenen, danach aktiven Plätze, alle anderen `top: false`;
 Flingern Nord/Süd-Mapping; Bezirk aus `Nummer[:2]` (leer = kein Fehler, abweichend = Prüf-CSV); Adresse bleibt leer ohne `strasse_hausnr`;
 OSM-Mapping inkl. `fee` → `eintritt` (nur städtisch; Abenteuer + OSM ohne `fee` → `eintritt` bleibt, abweichendes `fee` → nur Prüf-CSV), Zuordnung auch über die Abenteuer-Koordinate, Abenteuer ohne OSM-Treffer → `eintritt` bleibt, keine OSM-Codes; OSM-Lauf entfernt `access_private`, wenn das Tag weg ist; zwei Geräte mit Beleg aus dem Profil zählen ohne OSM-Treffer; Alter in der Reihenfolge von 4.5 (weniger als zwei Geräte → keins; Kleinkind und Schulkind im
-Namen → belegt „alle“; vermutet ersetzt keine Geräte); Belegprüfung; Score; Top-Badge nur bei indexierbar; `istIndexierbar` gegen die gemeinsame Fixture (auch in vitest).
+Namen → belegt „alle“; vermutet ersetzt keine Geräte); Belegprüfung; Score; `ausstattung_import` (gültige Zeile schreibt `quelle: "sichtung"`; unbekannter Schlüssel/Merkmal, falscher Wert, leerer Beleg, ungültiges Datum, nicht kleinster Schlüssel, Dublette → Log-Fehler und nichts geschrieben; entfernte Zeile entfernt nur Sichtungs-Einträge; fehlende Datei ändert nichts; OSM und Profil überschreiben keine Sichtung); Tischtennis aus `sport=table_tennis` ≤ 40 m, zählt für Filter, Indexierung und Score, nicht fürs Alter; Top-Badge nur bei indexierbar; `istIndexierbar` gegen die gemeinsame Fixture (auch in vitest).
 
 **Web (vitest):** Filter (UND, „alle“, unbekanntes Alter, Chip-Schwelle 4/5, Rollstuhl `limited` zählt nicht, X = mindestens ein
 Gerät, Typ-Filter ODER inkl. Abenteuer), Titel „{Name} {inStadtteil}“, Sichtbarkeit ohne Qualitäts-Score, `istIndexierbar` (Beschreibung + 2 Geräte + vermutetes Alter → indexierbar; Geräte aus dem Profil mit Beleg zählen ohne OSM-Treffer;
@@ -672,3 +696,5 @@ Keine offenen Produktentscheidungen. Vor dem Livegang liegen zur Freigabe vor: d
 - Cursor-Prüfung 8 (13.11., eingearbeitet): E2 an `aktiv=true` geknüpft (eine aktive Zeile mit neuem sperrendem Code bleibt auf Karte,
   Liste und in den Zahlen); Vorschau mit zwei Listen, beide UPDATE filtern auf den alten `aktiv`-Wert, `RETURNING` liefert nur
   Änderungen, IndexNow meldet daraus `aktiv=true` nur indexierbar und `aktiv=false` als alte URL; Top-Wortlaut in §7 angeglichen.
+- Ergänzung nach Freigabe (Auftraggeber, 13.11.): Tischtennis als siebtes Filter-Gerät (OSM `sport=table_tennis` ≤ 40 m);
+  Ausstattung von Hand über `ausstattung.csv` (3.2) mit `quelle: "sichtung"`, die OSM und Profil nie überschreiben.
