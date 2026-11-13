@@ -101,10 +101,12 @@ def abstand_zu_form(punkt: tuple[float, float], form: dict) -> float:
     """Abstand eines Punkts zu einer Form (Fläche: drinnen = 0, sonst zum Rand; Linie: zur Linie; Punkt: zum Punkt)."""
     if form["art"] == "punkt":
         return abstand_m(punkt, form["mitte"])
-    if form["art"] == "flaeche" and any(im_ring(punkt, r) for r in form["ringe"]):
+    loecher = form.get("loecher") or []
+    if form["art"] == "flaeche" and any(im_ring(punkt, r) for r in form["ringe"]) \
+            and not any(im_ring(punkt, r) for r in loecher):
         return 0.0
     besten = math.inf
-    for r in form["ringe"]:
+    for r in form["ringe"] + loecher:
         for a, b in zip(r, r[1:]):
             besten = min(besten, _abstand_strecke(punkt, a, b, punkt[0]))
     return besten
@@ -118,23 +120,29 @@ def abstand_formen(a: dict, b: dict) -> float:
 
 
 def form_aus_element(el: dict) -> dict | None:
-    """Overpass-Element (out geom) → {art: punkt|flaeche|linie, ringe, mitte}."""
+    """Overpass-Element (out geom) → {art: punkt|flaeche|linie, ringe (außen), loecher (innen), mitte}."""
     if el["type"] == "node":
-        return {"art": "punkt", "ringe": [], "mitte": (el["lat"], el["lon"])}
-    ringe = []
+        return {"art": "punkt", "ringe": [], "loecher": [], "mitte": (el["lat"], el["lon"])}
+    ringe, loecher = [], []
     if el["type"] == "way" and el.get("geometry"):
         ringe = [[(g["lat"], g["lon"]) for g in el["geometry"]]]
     elif el["type"] == "relation":
         for m in el.get("members") or []:
-            if m.get("type") == "way" and m.get("role") in ("outer", "") and m.get("geometry"):
-                ringe.append([(g["lat"], g["lon"]) for g in m["geometry"]])
+            if m.get("type") == "way" and m.get("geometry"):
+                ring = [(g["lat"], g["lon"]) for g in m["geometry"]]
+                if m.get("role") in ("outer", ""):
+                    ringe.append(ring)
+                elif m.get("role") == "inner":
+                    loecher.append(ring)
     ringe = [r for r in ringe if len(r) >= 2]
+    loecher = [r for r in loecher if len(r) >= 4 and r[0] == r[-1]]
     if not ringe:
         return None
     alle = [p for r in ringe for p in r]
     mitte = (sum(p[0] for p in alle) / len(alle), sum(p[1] for p in alle) / len(alle))
     geschlossen = all(len(r) >= 4 and r[0] == r[-1] for r in ringe)
-    return {"art": "flaeche" if geschlossen else "linie", "ringe": ringe, "mitte": mitte}
+    return {"art": "flaeche" if geschlossen else "linie", "ringe": ringe, "loecher": loecher if geschlossen else [],
+            "mitte": mitte}
 
 
 # ---------------------------------------------------------------------------

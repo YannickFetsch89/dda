@@ -100,6 +100,7 @@ UMLAUT_WOERTER = {
     "Roentgen": "Röntgen", "Puettkamp": "Püttkamp", "Huelsfeld": "Hülsfeld", "Buerger": "Bürger",
     "Raeuscher": "Räuscher", "Kyffhaeuser": "Kyffhäuser", "Gaerten": "Gärten", "Kaempen": "Kämpen",
     "Peenemuender": "Peenemünder", "Doeblin": "Döblin", "Saeckinger": "Säckinger",
+    "Rossstr": "Roßstr",  # Roßstraße (Derendorf) – kein allgemeines ss → ß (Strassmann)
 }
 _BUCHSTABE = "A-Za-zÄÖÜäöüß"
 
@@ -373,7 +374,9 @@ def ist_unklar(segmente: list[str]) -> bool:
 
 
 def name_aus_segmenten(segmente: list[str], typ: str) -> str:
-    stamm, zusatz = segmente[0], [s for s in segmente[1:] if s.lower() != segmente[0].lower()]
+    # Zusatz entfällt, wenn er schon im Stamm steht – ganz oder als Teil nach „/“ („…Straße/Heideweg (Heideweg)“)
+    im_stamm = {segmente[0].lower()} | {t.strip().lower() for t in segmente[0].split("/")}
+    stamm, zusatz = segmente[0], [s for s in segmente[1:] if s.lower() not in im_stamm]
     name = f"{TYP_WORT[typ]} {stamm}"
     return f"{name} ({', '.join(zusatz)})" if zusatz else name
 
@@ -816,9 +819,15 @@ def schreiben(db, plan: dict) -> dict:
         try:
             db.table("orte").insert(teil).execute()
             zaehler["neu"] += len(teil)
-        except Exception as e:  # noqa: BLE001
-            zaehler["fehler"] += len(teil)
-            logger.error("Fehler beim Anlegen (Block ab %d): %s", i, e)
+        except Exception as e:  # noqa: BLE001 – Block fehlgeschlagen: Zeilen einzeln nachholen
+            logger.warning("Block ab %d fehlgeschlagen (%s) – lege die Zeilen einzeln an", i, e)
+            for z in teil:
+                try:
+                    db.table("orte").insert(z).execute()
+                    zaehler["neu"] += 1
+                except Exception as e2:  # noqa: BLE001
+                    zaehler["fehler"] += 1
+                    logger.error("Fehler beim Anlegen von %s: %s", z["slug"], e2)
     return zaehler
 
 

@@ -159,6 +159,12 @@ class NameTest(unittest.TestCase):
         self.assertEqual(self.name("FRITZ-STRASSMANN-STR., KSP")[0], "Spielplatz Fritz-Strassmann-Straße")
         self.assertEqual(self.name("CHRISTOPHSTRASSE   KSP")[0], "Spielplatz Christophstraße")
 
+    def test_zusatz_schon_im_stamm_und_wortliste(self):
+        self.assertEqual(self.name("SANKT-FRANZISKUS-STR./HEIDEWEG, Ksp Heideweg")[0],
+                         "Spielplatz Sankt-Franziskus-Straße/Heideweg")
+        self.assertEqual(self.name("ROSSSTR., Platz der Ideen, KSP")[0], "Spielplatz Roßstraße (Platz der Ideen)")
+        self.assertEqual(self.name("STRAELENER WEG, KSP")[0], "Spielplatz Straelener Weg")  # Dehnungs-e wie Kevelaer
+
     def test_ergaenzungsstrich_und_zitat(self):
         self.assertEqual(self.name("LANGER-,BINNENSTR., Ksp")[0], "Spielplatz Langer- und Binnenstraße")
         self.assertEqual(self.name("VOR DEM DEICH, Ksp 'Wind,Wasser,Sonne'", "wasser")[0],
@@ -187,6 +193,10 @@ class StadtteilTest(unittest.TestCase):
         self.assertIsNone(si.polygon_treffer(51.215, 6.715, STADTTEILE))  # im Loch
         self.assertEqual(si.polygon_treffer(51.23, 6.80, STADTTEILE)["name"], "Hafen")
         self.assertIsNone(si.polygon_treffer(51.30, 6.80, STADTTEILE))
+
+    def test_punkt_auf_gemeinsamer_kante_genau_ein_stadtteil(self):
+        treffer = [s["name"] for s in STADTTEILE if si.im_polygon(6.79, 51.23, s["geometrie"])]
+        self.assertEqual(treffer, ["Hafen"])  # halboffene Kante: der Punkt gehört zum Polygon rechts davon
 
     def test_flingern_mapping_und_katalog(self):
         st = si.stadtteile_lesen({"features": [{"properties": {"Name": "Flingern Süd", "Nummer": "021"},
@@ -248,6 +258,36 @@ class KorrekturDateiTest(unittest.TestCase):
         self.assertEqual(si.ausgeschlossen_neu({"x": 1}, korrektur(ausschliessen=True, grund="Dublette"), None), "Dublette")
         self.assertEqual(si.ausgeschlossen_neu({"x": 1}, korrektur(ausschliessen=True), "alt"), "alt")  # leerer Grund
         self.assertIsNone(si.ausgeschlossen_neu({"x": 1}, korrektur(), "alt"))
+
+
+class FakeDB:
+    """Minimaler Ersatz für den Supabase-Client: Block-Insert schlägt fehl, einzelne Zeilen nur ohne „kaputt“."""
+
+    def __init__(self):
+        self.angelegt = []
+        self._daten = None
+
+    def table(self, _name):
+        return self
+
+    def insert(self, daten):
+        self._daten = daten
+        return self
+
+    def execute(self):
+        if isinstance(self._daten, list) or "kaputt" in self._daten["slug"]:
+            raise RuntimeError("Insert abgelehnt")
+        self.angelegt.append(self._daten["slug"])
+        return self
+
+
+class SchreibTest(unittest.TestCase):
+    def test_blockfehler_einzeln_nachholen(self):
+        neu = [{"spalten": {"slug": s, "name": s}, "stadtfelder": {}} for s in ("a", "kaputt", "c")]
+        db = FakeDB()
+        zaehler = si.schreiben(db, {"neu": neu, "aenderungen": []})
+        self.assertEqual((zaehler["neu"], zaehler["fehler"]), (2, 1))
+        self.assertEqual(db.angelegt, ["a", "c"])
 
 
 class PlanTest(unittest.TestCase):

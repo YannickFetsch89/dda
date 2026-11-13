@@ -57,6 +57,23 @@ class ZuordnungTest(unittest.TestCase):
                                     punkt(2, {"leisure": "playground"}, -20)])["art"], "mehrdeutig")
 
 
+class FormTest(unittest.TestCase):
+    def test_relation_mit_loch(self):
+        rel = {"type": "relation", "id": 9, "tags": {"leisure": "playground"}, "members": [
+            {"type": "way", "role": "outer", "geometry": quadrat(-50, -50, 100)},
+            {"type": "way", "role": "inner", "geometry": quadrat(-10, -10, 20)}]}
+        form = oa.form_aus_element(rel)
+        self.assertEqual(oa.abstand_zu_form((LAT, LON), form) > 0, True)  # im Loch: nicht drinnen
+        self.assertAlmostEqual(oa.abstand_zu_form((LAT, LON), form), 10.0, delta=0.5)
+        self.assertEqual(oa.abstand_zu_form((LAT + 30 * M, LON), form), 0.0)  # in der Fläche, außerhalb des Lochs
+
+    def test_punkt_auf_der_kante_zaehlt_als_drinnen(self):
+        form = oa.form_aus_element(flaeche(1, {"leisure": "playground"}, 0, -20, 40))
+        self.assertEqual(oa.abstand_zu_form((LAT, LON), form), 0.0)
+        e = auswerten([flaeche(1, {"leisure": "playground"}, 0, -20, 40)])
+        self.assertEqual(e["art"], "in_flaeche")
+
+
 class GeraeteTest(unittest.TestCase):
     def test_geraete_in_der_flaeche(self):
         e = auswerten([flaeche(1, {"leisure": "playground"}, -20, -20, 40),
