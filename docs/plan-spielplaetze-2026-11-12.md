@@ -1,6 +1,6 @@
 # Plan: Guide „Spielplätze“ (`/guides/spielplaetze`)
 
-Stand 13.11.2026 · **konsolidierte Fassung** nach acht Cursor-Prüfungen und acht eigenen Durchsichten · noch nichts umgesetzt.
+Stand 13.11.2026 · **konsolidierte Fassung** nach acht Cursor-Prüfungen und acht eigenen Durchsichten · **vom Auftraggeber freigegeben am 13.11.2026** · noch nichts umgesetzt.
 Diese Fassung ersetzt alle früheren Abschnitte (0, 0.3 usw.); die Prüfhistorie steht in Abschnitt 14.
 
 **Ziel:** Eltern finden den passenden öffentlichen Spielplatz in Düsseldorf – nach Alter, Ausstattung, Stadtteil und Nähe.
