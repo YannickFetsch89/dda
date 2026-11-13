@@ -116,6 +116,8 @@ describe("Stamm (Abschnitt 3, Schritt 1)", () => {
   it("„Repair Cafeteria“ und „Highspeed Dating“ sind kein Stamm", () => {
     expect(stufe(ev({ id: "r", titel: "Repair Cafeteria – Kunstaktion", kategorie: "kultur", ort: "Atelierhaus" }))).toBe(2);
     expect(stufe(ev({ id: "a", titel: "Repair Caféteria", kategorie: "kultur", ort: "Atelierhaus" }))).toBe(2);
+    expect(stufe(ev({ id: "t", titel: "Repair Cafetaria", kategorie: "kultur", ort: "Atelierhaus" }))).toBe(2);
+    expect(stufe(ev({ id: "b", titel: "Repair Cafe-teria", kategorie: "kultur", ort: "Atelierhaus" }))).toBe(2);
     expect(stufe(ev({ id: "h", titel: "Highspeed Dating mit KI – Lesung", kategorie: "kultur", ort: "Literaturhaus" }))).toBe(2);
   });
 
@@ -193,6 +195,11 @@ describe("Zugpferd-Orte (Abschnitt 4)", () => {
     expect(stufe(ev({ id: "kt", titel: "Rheinkirmes Public Viewing", kategorie: "outdoor", ort: "Rheinwiesen Oberkassel" }))).toBe(3);
     expect(stufe(ev({ id: "pz", titel: "PublicViewing EM", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
     expect(stufe(ev({ id: "p2", titel: "Public  Viewing", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
+  });
+
+  it("„Fan Shopping“ löst den Ausschluss nicht aus, „Fortuna-Fanshop“ schon", () => {
+    expect(stufe(ev({ id: "sh", titel: "Fan Shopping Night", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(3);
+    expect(stufe(ev({ id: "ff", titel: "Fortuna-Fanshop: Weihnachtsverkauf", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
   });
 
   it("„Republic“ und „profan“ lösen den Ausschluss nicht aus", () => {
