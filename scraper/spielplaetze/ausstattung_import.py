@@ -26,8 +26,8 @@ AUSSTATTUNG_CSV = Path(__file__).resolve().parents[2] / "data" / "spielplaetze" 
 QUELLE = "sichtung"
 
 # Filter-Geräte (Chip ab 5 sichtbaren Plätzen) und Nebengeräte (nur Detailseite) – Schlüssel wie in §3 des Plans
-GERAETE = ("sandkasten", "schaukel", "rutsche", "klettern", "wasserspiel", "seilbahn", "tischtennis")
-NEBENGERAETE = ("federwippe", "wippe", "karussell", "balancierbalken")
+GERAETE = ("sandkasten", "schaukel", "rutsche", "klettern", "wasserspiel", "seilbahn", "tischtennis", "fussball", "basketball")
+NEBENGERAETE = ("federwippe", "wippe", "karussell", "balancierbalken", "volleyball", "skaten")
 EXTRAS = ("schatten", "wc", "eingezaeunt", "picknick", "rollstuhl")
 
 
