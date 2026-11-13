@@ -108,6 +108,9 @@ describe("Stamm (Abschnitt 3, Schritt 1)", () => {
     expect(stufe(ev({ id: "s", titel: "Speed Dating 30+", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
     expect(stufe(ev({ id: "d", titel: "Speed-Dating", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
     expect(stufe(ev({ id: "m", titel: "Repair-Cafés im Stadtteil", kategorie: "community", ort: "Stadtteilladen" }))).toBe(0);
+    expect(stufe(ev({ id: "ab", titel: "Repair Caféabend", kategorie: "community", ort: "Stadtteilladen" }))).toBe(0);
+    // Ein Speed-Datingabend ist Speed-Dating – die offene rechte Seite ist gewollt
+    expect(stufe(ev({ id: "sa", titel: "Speed-Datingabend 25–35", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
   });
 
   it("„Repair Cafeteria“ und „Highspeed Dating“ sind kein Stamm", () => {
@@ -188,6 +191,13 @@ describe("Zugpferd-Orte (Abschnitt 4)", () => {
     expect(stufe(ev({ id: "fs", titel: "Fan Shop geöffnet", kategorie: "sport", ort: "PSD Bank Dome" }))).toBe(2);
     expect(stufe(ev({ id: "or", titel: "Trikotverkauf", kategorie: "sport", ort: "Merkur Spiel-Arena Fanshop" }))).toBe(2);
     expect(stufe(ev({ id: "kt", titel: "Rheinkirmes Public Viewing", kategorie: "outdoor", ort: "Rheinwiesen Oberkassel" }))).toBe(3);
+    expect(stufe(ev({ id: "pz", titel: "PublicViewing EM", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
+    expect(stufe(ev({ id: "p2", titel: "Public  Viewing", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
+  });
+
+  it("„Republic“ und „profan“ lösen den Ausschluss nicht aus", () => {
+    expect(stufe(ev({ id: "rv", titel: "Republic Viewing – Filmabend", kategorie: "kultur", ort: "Capitol Theater" }))).toBe(3);
+    expect(stufe(ev({ id: "pf", titel: "Profan shop talk – Lesung", kategorie: "kultur", ort: "Kom(m)ödchen" }))).toBe(3);
   });
 
   it("Premiere im Kunstpalast → 3; Workshop oder Foyer dort höchstens 2", () => {

@@ -395,7 +395,7 @@ export const SAMMELORTE = new Set(["düsseldorf", "stadtbüchereien düsseldorf"
  * „Repair Café“ und „Speed Dating“ auch mit Leerzeichen (Nachtrag nach der Cursor-Prüfung der Umsetzung).
  */
 export const STAMM =
-  /yoga|pilates|meditation|lauftreff|parkrun|repair[-\s]?caf[eé]s?(?![a-zäöüé])|spieleabend|brettspiel|sprechstunde|\bmeetup\b|\bspeed[-\s]?dating|sprachcaf[eé]|sprachtreff|sprachtandem|\btandem\b|language exchange|conversation club|stammtisch|(?<!dis)kurse?\b/i;
+  /yoga|pilates|meditation|lauftreff|parkrun|repair[-\s]?caf[eé]s?(?!teria|téria)|spieleabend|brettspiel|sprechstunde|\bmeetup\b|\bspeed[-\s]?dating|sprachcaf[eé]|sprachtreff|sprachtandem|\btandem\b|language exchange|conversation club|stammtisch|(?<!dis)kurse?\b/i;
 
 export const REGELMAESSIG =
   /jeden (montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|tag|abend|morgen|woche|monat)|wöchentlich|monatlich|regelmäßig|immer (montags|dienstags|mittwochs|donnerstags|freitags|samstags|sonntags)/i;
@@ -412,7 +412,8 @@ const SZENE = /jam[- ]?session|\bjam\b|open[- ]?stage|open[- ]?mic|karaoke/i;
 /** Formate, die an einem Zugpferd-Ort höchstens Stufe 2 bekommen (Titel oder Ort). */
 const KLEINFORMAT = /workshop|atelier|foyer/i;
 const HEIMSPIEL = /fortuna|\bdeg\b|düsseldorfer eg|psd bank dome|merkur spiel-?arena/i;
-const KEIN_HEIMSPIEL = /auswärts|public[- ]viewing|fan[-\s]?shop/i;
+// Linke Wortgrenze per Rückschau (\b kennt keine Umlaute): „Republic Viewing“ und „profan shop“ treffen nicht
+const KEIN_HEIMSPIEL = /(?<![a-zäöüé])auswärts|(?<![a-zäöüé])public[-\s]*viewing|(?<![a-zäöüé])fan[-\s]*shop/i;
 
 /** Ein Satz endet am nächsten „.“, „!“ oder „?“. */
 function saetze(text: string): string[] {
