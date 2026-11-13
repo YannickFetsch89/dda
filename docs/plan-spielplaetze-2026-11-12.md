@@ -1,6 +1,6 @@
 # Plan: Guide „Spielplätze“ (`/guides/spielplaetze`)
 
-Stand 12.11.2026 · **konsolidierte Fassung** nach drei Cursor-Prüfungen und vier eigenen Durchsichten · noch nichts umgesetzt.
+Stand 13.11.2026 · **konsolidierte Fassung** nach vier Cursor-Prüfungen und fünf eigenen Durchsichten · noch nichts umgesetzt.
 Diese Fassung ersetzt alle früheren Abschnitte (0, 0.3 usw.); die Prüfhistorie steht in Abschnitt 14.
 
 **Ziel:** Eltern finden den passenden öffentlichen Spielplatz in Düsseldorf – nach Alter, Ausstattung, Stadtteil und Nähe.
@@ -70,7 +70,7 @@ ergänzend `DESIGN_PROMPTS_GUIDES.md` Abschnitt 10 (Repo). **Abweichungen vom Ha
 
 | Nr. | Entscheidung |
 |---|---|
-| E1 | Im Hub: Kinder-, Wald- und Wasserspielplätze der Stadt (351 Einträge → **344 Spielplätze** nach Zusammenführung, 4.1). Keine Bolz-, Skater-, Freizeit-, Indoor- oder kommerziellen Anlagen. Die Einleitung sagt das. |
+| E1 | Im Hub: Kinder-, Wald- und Wasserspielplätze der Stadt (351 Einträge → **344 Spielplätze** nach Zusammenführung, 4.1) plus die kurze manuelle Liste betreuter Abenteuerspielplätze (4.6, nicht in den 344). Keine Bolz-, Skater-, Freizeit-, Indoor- oder kommerziellen Anlagen. Die Einleitung sagt das. |
 | E2 | Alle Spielplätze aus E1 mit gültiger Koordinate kommen auf die Karte. Freischaltung nach Stichprobe der Prüf-CSV, nicht Einzel-Freigabe. Ausschlüsse stehen in `data/spielplaetze/korrekturen.csv` (Schlüssel → Grund, 3.1) und nur für: nicht öffentlich, Dublette, nachweislich abgebaut, unauflösbarer Name. |
 | E3 | Nur Düsseldorf. Neuss/Ratingen später. |
 | E4 | Ausstattung nur belegt (OSM-Tag oder wörtliches Zitat). Ohne Beleg „keine Angabe“, nie „fehlt“; „fehlt/nein“ nur bei belegter Abwesenheit. |
@@ -97,14 +97,22 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
   `bild_attribution` (nur bei freigegebenem Foto).
 - `extras.spielplatz`:
   ```
-  { quelle: "stadt-duesseldorf", lizenz: "dl-de/zero-2.0", quelle_url, datenstand: "2020-09-25",
+  { quelle: "stadt-duesseldorf" | "abenteuer", lizenz: "dl-de/zero-2.0", quelle_url, datenstand: "2020-09-25",
+    // lizenz und datenstand nur bei quelle stadt-duesseldorf. Abenteuer: quelle "abenteuer", quelle_url aus abenteuer.csv
     teile: [{ objektschluessel, stadt_name, objektart, groesse_m2, latitude, longitude }],   // 1–3 Teilflächen (4.1)
     typ: "kinder" | "wald" | "wasser" | "abenteuer",   // abenteuer nur aus der manuellen Liste (4.6)
     name_quelle: "stadt" | "korrektur",   // Anzeigename aus der Normalisierung oder aus korrekturen.csv
     pruefung: ["name_unklar" | "kein_stadtteil" | "access_private" | "bezirk_abweichend" | "gruppe_gemischt" | "zuordnung_mehrdeutig"],
-              // offene Prüfpunkte; die Freischalt-SQL nimmt nur Zeilen mit leerer Liste (bezirk_abweichend allein sperrt nicht)
+    bestaetigt: ["access_private" | "gruppe_gemischt"],   // aus korrekturen.csv: diese Codes sperren für den Schlüssel nicht
+              // Sperrend: name_unklar, kein_stadtteil, access_private, gruppe_gemischt. bestaetigt hebt nur access_private und
+              // gruppe_gemischt auf. name_unklar verschwindet nur über anzeigename, kein_stadtteil nur über stadtteil (3.1).
+              // Warnung, sperrt nie: bezirk_abweichend, zuordnung_mehrdeutig.
+              // Stadt-Codes schreibt nur der Stadt-Import, OSM-Codes nur der OSM-Abgleich. Ein Lauf löscht die Codes der anderen Quelle nicht.
+    ausgeschlossen: "<grund>" | null,   // aus korrekturen.csv (ausschliessen = ja) bzw. abenteuer.csv; die SQL filtert darauf (CSV kann sie nicht lesen)
+    freigeschaltet_am: "YYYY-MM-DD" | null,   // setzt die Freischalt-SQL beim ersten aktiv=true; Grundlage der Weiterleitung nach dem Abschalten (5.5)
     notfallnummer: "9601" | null,  groesse_m2,  stadtbezirk_stadt: 1–10 | null,
-    eintritt: "ja" | "nein" | null,   // OSM fee; null = kein Treffer. Städtischer Platz gilt dann als frei
+    eintritt: "ja" | "nein" | null,   // Städtisch: OSM fee; null = kein Treffer, der Platz gilt als frei.
+              // Abenteuer: Pflicht ja|nein aus abenteuer.csv; eine Zeile ohne gültigen Wert legt der Import nicht an (4.6).
     fehlende_teile: [{ objektschluessel, seit }],   // Schlüssel aus einem späteren Stadtstand verschwunden
     stadt_fehlt_seit?: "YYYY-MM-DD",   // nur wenn kein Schlüssel der Zeile mehr in der Datei steht
     ausstattung: { <geraet>: { wert: "ja"|"nein", quelle: "osm"|"zitat"|"stadt", beleg?, url? } },
@@ -117,13 +125,22 @@ Tabelle `orte` (Typ `spielplatz` ist im CHECK-Constraint schon erlaubt):
 - Öffnungszeiten (nur Abenteuerplätze) in der vorhandenen Spalte `oeffnungszeiten`.
 
 ### 3.1 Korrekturdatei `data/spielplaetze/korrekturen.csv` (eingecheckt, vom Auftraggeber gepflegt)
-Spalten: `schluessel` (Objektschlüssel der Stadt bzw. manueller Schlüssel `abenteuer:<kurz>`), `anzeigename`, `ausschliessen`
-(leer/ja), `grund`, `stadtteil` (nur bei `kein_stadtteil`). Der Import wendet die Datei **vor** Namensbildung, Slug und
-Freischalt-Prüfung an: ein `anzeigename` ersetzt den normalisierten Namen (`name_quelle: "korrektur"`, `name_unklar` entfällt),
-`ausschliessen = ja` hält die Zeile dauerhaft inaktiv (statt `NICHT_IM_HUB` nach Name – Namen ändern sich durch die
-Normalisierung, Schlüssel nicht). Bei zusammengeführten Plätzen gilt der Eintrag für den kleinsten Objektschlüssel der Gruppe.
-Ablauf: Import → Prüf-CSV → Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein → Import erneut (nur Stadtfelder,
-Name, Slug solange inaktiv) → Freischalt-SQL.
+Spalten: `schluessel` (Objektschlüssel der Stadt), `anzeigename`, `ausschliessen` (leer/ja), `grund`, `stadtteil`
+(nur bei `kein_stadtteil`), `bestaetigt` (kommagetrennte Prüf-Codes, die für diesen Schlüssel nicht sperren).
+Abenteuerplätze stehen nicht hier, sondern in `abenteuer.csv` (4.6). Fehlt `korrekturen.csv`, gilt das als keine Korrekturen, der Import läuft.
+Der Import wendet die Datei **vor** Namensbildung, Slug und Freischalt-Prüfung an: ein `anzeigename` ersetzt den normalisierten Namen
+(`name_quelle: "korrektur"`, `name_unklar` entfällt), ein gesetzter `stadtteil` ersetzt `kein_stadtteil`,
+`ausschliessen = ja` schreibt `ausgeschlossen = <grund>` in die Zeile (statt `NICHT_IM_HUB` nach Name – Namen ändern sich durch
+die Normalisierung, Schlüssel nicht). Eine inaktive Zeile bleibt damit inaktiv (die Freischalt-SQL nimmt sie nicht); eine schon
+freigeschaltete Zeile schaltet erst die Abschalt-SQL in Schritt 6 ab – der Import ändert `aktiv` nie. `bestaetigt` hebt nur
+`access_private` und `gruppe_gemischt` auf, wenn der nächste Import sie neu setzt; der Code bleibt in `pruefung` und in der Prüf-CSV
+sichtbar. `name_unklar` verschwindet nur über `anzeigename`, `kein_stadtteil` nur über `stadtteil` (sonst entstünden Slug aus dem
+Rohnamen bzw. ein Platz ohne Stadtteil, Titel und Stadtteilseite). Steht einer dieser beiden Codes unter `bestaetigt`, wird das
+ignoriert und im Log als Fehler gemeldet.
+Bei zusammengeführten Plätzen gilt der Eintrag für den **kleinsten** Objektschlüssel der Gruppe. Ein Schlüssel, der zur Gruppe gehört,
+aber nicht der kleinste ist, wird nicht angewendet und im Log als Fehler gemeldet.
+Ablauf: Import → Prüf-CSV → Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein → Import erneut (Stadtfelder,
+Name und Slug solange inaktiv, `bestaetigt`) → Freischalt-SQL.
 - Wiederholungsimport findet die Zeile über die **Schnittmenge** der `objektschluessel` (4.7), nicht über die exakte Liste.
   Die sortierte Liste bleibt der gespeicherte Stand der aktuellen Teilflächen.
 
@@ -143,7 +160,8 @@ Name, Slug solange inaktiv) → Freischalt-SQL.
      Plätze behalten, Prüf-CSV.
    - **Gemischte Gruppe** (einige Teile ≤ 30 m, andere weiter weg): Teile, die über Abstände ≤ 30 m verbunden sind, bilden
      je eine Teilgruppe (ein Platz je Teilgruppe); Nummer nach den Regeln oben für die ganze Gruppe; Code `gruppe_gemischt`
-     in der Prüf-CSV. Kommt heute nicht vor, kann mit einem neuen Stadtstand kommen.
+     in der Prüf-CSV. Der Code sperrt die Freischaltung, bis `korrekturen.csv` ihn unter `bestaetigt` führt; die automatische
+     Teilung bleibt. Kommt heute nicht vor, kann mit einem neuen Stadtstand kommen.
    - Heute: sechs Gruppen auf einem Punkt werden je ein Platz, Hanielpark bleibt zwei. **351 → 344.**
 4. **Name** (reine, getestete Funktion): „GW “-Präfix weg (E10); Teil vor dem Komma = Ort/Park, danach Zusatz.
    `Ksp/KSP` → Spielplatz, `Wsp/WSP` → Wasserspielplatz, `Waldksp` → Waldspielplatz; Schreibweise normalisieren
@@ -169,8 +187,11 @@ Name, Slug solange inaktiv) → Freischalt-SQL.
 8. Schreiben über das Skript (wie der Club-Import), alle Zeilen `aktiv=false`, `extras.spielplatz.quelle` gesetzt.
    Rücknahme **nur vor der Freischaltung**: `DELETE … WHERE typ='spielplatz' AND aktiv=false AND extras->'spielplatz'->>'quelle'='stadt-duesseldorf'`.
    Wiederholter Import findet die Zeile nach 4.7 und ändert nur Stadtfelder (`extras_mergen`): `teile`, Größe, Koordinate, Typ,
-   Notfallnummer, Adresse, `eintritt`, `pruefung` – bei inaktiven Zeilen auch Name und Slug. Nie Profil, Foto, `aktiv`, und bei
-   aktiven Zeilen nie Name aus der Normalisierung (nur aus `korrekturen.csv`) oder Slug.
+   Notfallnummer, Adresse, die Stadt-Codes in `pruefung` (`name_unklar`, `kein_stadtteil`, `bezirk_abweichend`, `gruppe_gemischt`)
+   und `bestaetigt` aus der CSV. `eintritt` und die OSM-Codes (`access_private`, `zuordnung_mehrdeutig`) schreibt nur der OSM-Abgleich;
+   ein Stadt-Import lässt sie stehen. Bei inaktiven Zeilen auch Name und Slug. Dazu `ausgeschlossen` aus der CSV. Nie Profil, Foto,
+   `aktiv`, `freigeschaltet_am`, und bei aktiven Zeilen nie Name aus der Normalisierung (nur aus `korrekturen.csv`) oder Slug.
+   Abschalten nur über die Abschalt-SQL (Schritt 6).
 9. Ausgabe: `data/spielplaetze/pruefung.csv` (Schlüssel, Name alt/neu, Stadtteil, Prüf-Codes aus `pruefung`, zusammengeführt,
    Nummer unterdrückt, GW, keine Adresse) und Zusammenfassung im Log. Die Prüf-CSV ist eine Ausgabe; Entscheidungen gehen nur über
    `korrekturen.csv` zurück.
@@ -181,7 +202,8 @@ Name, Slug solange inaktiv) → Freischalt-SQL.
 - Zuordnung: Stadt-Punkt liegt in der OSM-Fläche **oder** OSM-Mittelpunkt ≤ 60 m; mehrere Kandidaten → Prüf-CSV, nichts übernehmen.
 - Übernahme mit `quelle: "osm"`: Geräte (Mapping-Tabelle, 4.5), `min_age`/`max_age`, `wheelchair`, `fee` → `eintritt`
   (`yes` → `ja`, `no` → `nein`, sonst `null`), `access`
-  (`access=private` → Code `access_private`, Prüf-CSV, sperrt die Freischaltung; dauerhaft über `korrekturen.csv` ausschließen).
+  (`access=private` → Code `access_private`, Prüf-CSV, sperrt die Freischaltung, bis `korrekturen.csv` ihn unter `bestaetigt` führt
+  oder der Platz mit `ausschliessen` draußen bleibt).
   Mehrere OSM-Kandidaten → Code `zuordnung_mehrdeutig` (sperrt nicht, es wird nur nichts übernommen).
 - **Bericht:** Anteil der Plätze mit ≥ 1 / ≥ 2 OSM-Geräten. OSM-Plätze ohne Stadt-Treffer nur auflisten (nicht anlegen) – Kandidaten
   für neuere Plätze und Abenteuerspielplätze.
@@ -190,8 +212,12 @@ Name, Slug solange inaktiv) → Freischalt-SQL.
 - **Runde 1 (108 Spielplätze, nach der Zusammenführung gezählt):** alle Wasser (9) + alle Wald (20) + Kinderspielplätze
   mit **summierter** Größe ≥ 3.000 m² (79). Die frühere Rechnung 9 + 20 + 86 − 6 = 109 zählte Einträge vor der
   Zusammenführung; Auf'm Rott fällt mit der Kinderfläche in die 9 Wasser und wird nicht noch einmal als großer
-  Kinderspielplatz gezählt. Erst **Probe mit 10**, Bericht zum Gegenlesen, dann der Rest. Runde 2 (**74** Kinderspielplätze
-  mit Summe 1.500–3.000 m², nach der Zusammenführung gezählt; die frühere 85 zählte Einträge davor) nur nach Bericht und Freigabe. Profil erst, wenn Schritt 3 von 4.1 gelaufen ist.
+  Kinderspielplatz gezählt. **Dazu alle Abenteuerplätze aus `abenteuer.csv`** (zusätzlich zu den 108; Eltern suchen sie
+  namentlich, ohne Profil wären ihre Seiten nie indexierbar). Erst **Probe mit 10**, Bericht zum Gegenlesen, dann der Rest. Runde 2 (**74** Kinderspielplätze
+  mit Summe 1.500 bis unter 3.000 m²) nur nach Bericht und Freigabe. Dieselbe Zählung an den Roh-Einträgen ist ebenfalls 74:
+  die sechs Zusammenführungen verschieben keinen Platz in oder aus diesem Band. Am Angerbach (712 m² Kleinkind plus 1.635 m²
+  Schulkind) wird ein Platz, Alter belegt „alle“, und bleibt in Runde 2. Die früher genannte 85 war keine Vorher-Zählung
+  dieser Definition. Profil erst, wenn Schritt 3 von 4.1 gelaufen ist.
 - Quellen: duesseldorf.de, Pressemitteilungen der Stadt, Vorlagen der Bezirksvertretungen, lokale Presse; Spielplatz-Portale nur als
   Fakt mit Zitat. robots.txt, ≥ 2 s Pause, keine Rausgegangen-Seiten.
 - Ergebnis je Platz: Geräte, Extras (inkl. Rollstuhl), Alter, `saison` (nur mit Beleg; bei Typ Wasser für den Platz,
@@ -227,26 +253,47 @@ Name, Slug solange inaktiv) → Freischalt-SQL.
   und mindestens zwei Geräten nicht.
 - **Score (intern, 0–1):** gewichtete Summe aus Teilwerten, jeder Teilwert 0–1:
   Ausstattung 35 % (Anzahl belegter Hauptgeräte / 6, höchstens 1), Größe 20 % (Perzentil-Rang der summierten Größe unter allen
-  sichtbaren Plätzen), Besonderheit 20 % (Wasser 1, Wald 1, Abenteuer 1, rollstuhlgerecht belegt +0,5, höchstens 1; sonst 0),
+  nicht ausgeschlossenen **städtischen** Plätzen ohne sperrenden Prüf-Code, gerechnet vor der Freischalt-SQL – nicht unter den
+  bereits aktiven, weil diese Menge in Schritt 6 noch leer ist; Abenteuerplätze haben keine Größe, ihr Teilwert ist 0,5 = neutral,
+  und sie gehen nicht in die Perzentil-Menge ein), Besonderheit 20 % (Wasser 1, Wald 1, Abenteuer 1, rollstuhlgerecht belegt +0,5, höchstens 1; sonst 0),
   Google 15 % (Bayes-Mittel wie beim Club-Score auf 0–1; ohne Google 0,5 = neutral), Extras 10 % (Anteil belegter „ja“ unter
   Schatten, WC, eingezäunt, Picknick). Sortierung „Empfohlen“ = Score absteigend, dann Name.
   „Top-Spielplatz“ = die besten 20 % **der indexierbaren** Plätze nach Score (mindestens 1, aufgerundet).
 
 ### 4.6 Abenteuer-/Bauspielplätze
-Manuelle Liste (Name, Träger, Adresse, Koordinate aus OSM oder vom Auftraggeber bestätigt, Öffnungszeiten, Quelle-URL) vor dem
-Livegang, als Zeilen in `korrekturen.csv` mit Schlüssel `abenteuer:<kurz>`; nur öffentlich belegte, öffentlich zugängliche Anlagen.
-`typ: "abenteuer"`, Öffnungszeiten in der Spalte `oeffnungszeiten`, Ersatzbild = Kinder-Motiv, eigener Typ-Text „betreuter
-Abenteuerspielplatz – Öffnungszeiten beachten“. Keine Notfallnummer (nicht städtisch), Score-Besonderheit 1.
-`quelle` ist nicht `stadt-duesseldorf`, damit Rücknahme-DELETE und der Stadt-Diff sie nicht treffen. Eigene Identität
-(manueller Schlüssel), nicht die Objektschlüssel der Stadt. Blockiert den Import der städtischen Plätze nicht.
+Eigene Datei `data/spielplaetze/abenteuer.csv` (eingecheckt, vom Auftraggeber gepflegt), nicht `korrekturen.csv`.
+Spalten: `schluessel` (`abenteuer:<kurz>`), `name`, `traeger`, `adresse`, `latitude`, `longitude`, `stadtteil` (Katalogwert),
+`oeffnungszeiten`, `eintritt` (`ja` oder `nein`, Pflicht), `quelle_url`. `abenteuer_import.py` legt daraus Zeilen an und blockiert
+den Stadt-Import nicht. Nur öffentlich belegte, öffentlich zugängliche Anlagen. `typ: "abenteuer"`, `quelle: "abenteuer"`,
+Öffnungszeiten in der Spalte `oeffnungszeiten`, Ersatzbild = Kinder-Motiv, eigener Typ-Text „betreuter Abenteuerspielplatz –
+Öffnungszeiten beachten“. Die Detailseite zeigt die Öffnungszeiten. Keine Notfallnummer (nicht städtisch), Score-Besonderheit 1.
+Rücknahme-DELETE und der Stadt-Diff treffen `quelle = "abenteuer"` nicht. Eigene Identität (manueller Schlüssel), nicht die
+Objektschlüssel der Stadt.
+
+Regeln von `abenteuer_import.py` (reine Funktionen, getestet):
+- **Pflichtfelder:** `schluessel` (Muster `abenteuer:[a-z0-9-]+`, eindeutig), `name`, `latitude`/`longitude` (im Rechteck aus 4.1
+  Schritt 2), `eintritt` (`ja` oder `nein`), `quelle_url`. Fehlt eines oder ist es ungültig: Zeile wird **nicht** angelegt, Log-Fehler.
+  Eine Zeile ohne Eintritt gibt es damit in der Datenbank nicht.
+- **Stadtteil:** muss ein Katalogwert sein; sonst Code `kein_stadtteil` (sperrend, auflösen nur durch Korrektur in `abenteuer.csv`).
+- **Anlegen** mit `aktiv=false`, `ausgeschlossen` aus der optionalen Spalte `ausschliessen`/`grund` (gleiche Bedeutung wie in
+  `korrekturen.csv`). Freischaltung und Abschalten über dieselbe SQL wie bei den städtischen Plätzen (Schritt 6).
+- **Wiederholungsimport** findet die Zeile über `schluessel`: aktualisiert Name (nur solange inaktiv auch den Slug), Träger, Adresse,
+  Koordinate, Stadtteil, Öffnungszeiten, Eintritt, Quelle; nie Profil, Foto, `aktiv`, `freigeschaltet_am`. Ein aus der CSV gelöschter
+  Schlüssel deaktiviert nichts automatisch, er erscheint im Log; Abschalten nur über `ausschliessen` + Abschalt-SQL.
+- **Slug** wie 4.1 Schritt 7 (Name + Stadtteil, `slug_mit_suffix`, fest ab `aktiv=true`).
+- **Rücknahme** nur vor der Freischaltung: `DELETE … WHERE typ='spielplatz' AND aktiv=false AND extras->'spielplatz'->>'quelle'='abenteuer'`.
 
 ### 4.7 Aktualisierung
 Stadtdatei jährlich prüfen (Last-Modified). Bei neuem Stand die Gruppen nach 4.1 neu bilden und so zuordnen:
 - Schnittmenge der Objektschlüssel mit genau einer bestehenden Zeile: diese Zeile. Stadtfelder neu rechnen (Größe, Koordinate
-  der größten verbliebenen Teilfläche, Typ, Nummer). Slug, Profil, Foto, freigegebener Name und `aktiv` bleiben.
+  der größten verbliebenen Teilfläche, Typ, Nummer, Stadt-Codes in `pruefung`). `eintritt` und OSM-Codes bleiben.
+  Solange `aktiv=false`: Name und Slug aus dem aktuellen Anzeigenamen neu. Ab `aktiv=true`: Slug fest; `name` nur, wenn
+  `korrekturen.csv` einen `anzeigename` für den kleinsten Schlüssel setzt. Profil, Foto und `aktiv` bleiben in beiden Fällen.
 - Ein Schlüssel fehlt, andere der Zeile stehen noch in der Datei: Schlüssel aus `teile` nach `fehlende_teile` (mit Datum),
   Zeile nicht deaktivieren.
-- Kein Schlüssel der Zeile steht noch in der Datei: `stadt_fehlt_seit` setzen, nicht sofort deaktivieren.
+- Kein Schlüssel der Zeile steht noch in der Datei: `stadt_fehlt_seit` setzen, nicht sofort deaktivieren. Die Zeile steht in der
+  Prüf-CSV; bestätigt der Auftraggeber den Abbau, trägt er `ausschliessen = ja` (Grund „abgebaut“) in `korrekturen.csv` ein, der
+  nächste Import setzt `ausgeschlossen`, die Abschalt-SQL (Schritt 6) setzt `aktiv=false`, die alte URL leitet weiter (5.5).
 - Eine neue Gruppe trifft keine Zeile: neue inaktive Zeile.
 - Eine Gruppe trifft mehrere Zeilen, oder eine Zeile trifft mehrere Gruppen: nichts automatisch teilen oder verschmelzen,
   Prüf-CSV.
@@ -268,8 +315,10 @@ OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei H
   `hubOrte("spielplaetze")` → Spielplätze laden (expliziter Zweig, kein Fallback auf Clubs).
 
 ### 5.2 Hub `/guides/spielplaetze` (`instant = false`)
-- Heller Hero (Tokens mit Dark-Variante), H1 „Spielplätze in Düsseldorf“, Zahl aus den Daten, Brotkrumen Start / Düsseldorf entdecken /
-  Spielplätze. Darunter **Einleitung** (2–3 Sätze inkl. „nur öffentliche städtische Spielplätze“).
+- Heller Hero (Tokens mit Dark-Variante): Bild `web/public/guides/spielplaetze.webp` rechts auf 46 %, im hellen Theme mit
+  Ausblendung nach links in den hellen Grund. Die dunkle Darstellung nutzt die dunklen Flächentokens und diese helle Maske nicht;
+  der Text bleibt lesbar (5.7). H1 „Spielplätze in Düsseldorf“, Zahl aus den Daten, Brotkrumen Start / Düsseldorf entdecken /
+  Spielplätze. Darunter **Einleitung** (2–3 Sätze: öffentliche städtische Spielplätze, dazu wenige betreute Abenteuerspielplätze).
 - Filter: Alter (groß, Farbpunkt + Text), Typ (Wasser/Wald/Abenteuer), Ausstattung, Extras inkl. Rollstuhl (E11), Stadtteil, Sortierung; „In der Nähe“-Knopf (E8,
   nur dieser Knopf fragt den Standort ab). Leere Ergebnisse erklären: „Die Ausstattung ist noch nicht für alle Spielplätze erfasst.“
   Sichtbarer Hinweis über der Liste: „Ausstattung für X von Y Spielplätzen erfasst“. X = Spielplätze mit mindestens einem
@@ -289,16 +338,20 @@ OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei H
   „Medienhafen“); Adresse falls vorhanden; Alters-Badge (+ „vermutlich“).
 - Beschreibung (nur aus Profil); zusammengeführte Teilflächen als Bereiche („Bereich für Kleinkinder und für Schulkinder“);
   Ausstattung: ja (grün) / keine Angabe (neutral) / nein (rot, nur belegt); Extras mit Notiz; Größe „ca. 1.200 m² laut Stadt“
-  (Summe der Teilflächen); Saison-Hinweis nur für den Wasserbereich, wenn eine Kinder-Teilfläche größer ist, sonst bei Typ Wasser;
+  (Summe der Teilflächen); bei `typ: "abenteuer"` die Öffnungszeiten aus `oeffnungszeiten`; Saison-Hinweis nur für den Wasserbereich, wenn eine Kinder-Teilfläche größer ist, sonst bei Typ Wasser;
   **Notfallnummer** (6.3); „Stand der Angaben“, Quellen, OSM-Namensnennung, Haftungssatz (6.5).
 - Rechts: Mini-Karte, „Route planen“ (Google-Maps-Link aus der Koordinate, öffnet erst nach Klick), Anker „In der Nähe“
   (scrollt nur, fragt den Standort nicht ab).
-- „In der Nähe“: (1) „Weitere Spielplätze in {Park}“ = andere Spielplätze mit demselben Namensstamm (die zwei Hanielpark-Plätze,
-  mehrere Plätze im Hofgarten), nicht die schon zusammengeführten Bereiche; sonst die 3 nächsten;
+- „In der Nähe“: (1) „Weitere Spielplätze in {Park}“ = andere Spielplätze mit demselben Namensstamm. Stamm = Anzeigename ohne das
+  führende Typwort („Spielplatz“, „Wasserspielplatz“, „Waldspielplatz“, „Abenteuerspielplatz“) und ohne Klammerzusatz, also der Park
+  bzw. Ort: „Spielplatz Hanielpark (an der Rollerbahn)“ → „Hanielpark“, „Wasserspielplatz Volksgarten“ und „Spielplatz Volksgarten
+  (…)“ → beide „Volksgarten“. Gruppiert wird bei gleichem, nicht leerem Stamm (Groß-/Kleinschreibung egal). Ohne Partner gibt es keine
+  Park-Gruppe, sondern die 3 nächsten. Zusammengeführte Bereiche eines Platzes sind keine Nachbarn;
   (2) bis zu 2 Cafés aus dem Restaurant-Guide (Typ Café, ≤ 1 km, kanonische URL) – Block entfällt, wenn keins;
   (3) „Familien-Events {inStadtteil}“ (Kategorie Familie, gleicher Stadtteil; Events haben keine Koordinate).
-- JSON-LD `Playground` mit `geo`, `address` (falls vorhanden), `isAccessibleForFree` nur wenn `eintritt` nicht `ja`
-  (fehlendes OSM-`fee` lässt einen städtischen Platz frei); kein `aggregateRating`;
+- JSON-LD `Playground` mit `geo`, `address` (falls vorhanden). `isAccessibleForFree`: bei städtischen Plätzen falsch nur wenn
+  `eintritt` = `ja`, sonst wahr (fehlendes OSM-`fee` lässt den Platz frei). Bei Abenteuerplätzen aus dem Pflichtfeld: `ja` → falsch,
+  `nein` → wahr (ohne gültigen Wert gibt es die Zeile nicht, 4.6). Kein `aggregateRating`;
   BreadcrumbList aus derselben Kette wie die sichtbaren Brotkrumen.
 - Title/Description: „{Name} {inStadtteil}“ ohne Gedankenstrich, z. B. „Spielplatz Hofgarten (Oederallee) in Pempelfort“,
   „Wasserspielplatz Volksgarten in Oberbilk“ (der Name trägt den Typ schon). Description aus Profil, sonst
@@ -321,8 +374,10 @@ OSM halbjährlich neu abgleichen (nur `quelle: "osm"`-Felder). Profile nur bei H
 
 ### 5.5 Proxy, Foto-Proxy, Karten-API
 - `pfad-pruefung.ts`: `OrtHub`/`HUBS` + `spielplaetze`; `ortEntscheidung("spielplaetze")`: sichtbar = `aktiv && typ === "spielplatz"`,
-  **ohne** Score; unbekannt/inaktiv → direkte 404 im Proxy. Tests in `seo-a1`/`seo-b` von `null` auf die neue Entscheidung umstellen.
-  `OrtKopf` lädt dafür `typ`, `aktiv` (vorhanden).
+  **ohne** Score; unbekannt oder nie freigeschaltet → direkte 404 im Proxy. **Abgeschaltet** (inaktiv **und** `freigeschaltet_am`
+  gesetzt): dauerhafte Weiterleitung (Proxy-„umleiten“, 308) auf `/guides/spielplaetze/stadtteil/{stadtteil-slug}`, ohne gültigen
+  Stadtteil auf `/guides/spielplaetze` – eine einmal indexierte URL endet nie in einer 404. Tests in `seo-a1`/`seo-b` von `null` auf
+  die neuen Entscheidungen umstellen. `OrtKopf` lädt dafür zusätzlich `stadtteil` und `extras->spielplatz->>freigeschaltet_am`.
 - `/ort-foto/[slug]`: aktiver Spielplatz auch ohne `qualitaets_score` (eigener Zweig, wie Clubs).
 - `/api/guide-karte`: Zweig `hub=spielplaetze` mit eigener Punktfunktion (5.2).
 
@@ -336,6 +391,7 @@ im Footer (`web/components/rahmen.tsx`, heute „Restaurants, Cafés, Kneipen, B
 ### 5.7 Design, Barrierefreiheit, Mobil
 Altersfarben aus dem Handoff mit Text; eigene Outline-SVGs für Schaukel, Rutsche, Sandkasten (2 px, 24er Raster, mit Label);
 Icons mit `title`; Touch-Ziele ≥ 44 px; 375 px ohne horizontales Scrollen; Liste als Alternative zur Karte; hell und dunkel geprüft.
+Der dunkle Hero nutzt die dunklen Flächentokens. Die helle Bildmaske aus Abschnitt 11 gilt nur für den hellen Hero.
 
 ---
 
@@ -343,8 +399,8 @@ Icons mit `title`; Touch-Ziele ≥ 44 px; 375 px ohne horizontales Scrollen; Lis
 
 ### 6.1 Einleitung (Hub, Entwurf zur Freigabe)
 „Hier findet ihr {anzahl} öffentliche Spielplätze in Düsseldorf – vom kleinen Sandkasten im Viertel bis zum Wasser- und
-Waldspielplatz. Filtert nach Alter, Ausstattung und Stadtteil oder lasst euch zeigen, was in eurer Nähe liegt. Bolzplätze,
-Skateanlagen und Indoor-Spielplätze sind nicht dabei.“
+Waldspielplatz, dazu wenige betreute Abenteuerspielplätze mit festen Öffnungszeiten. Filtert nach Alter, Ausstattung und
+Stadtteil oder lasst euch zeigen, was in eurer Nähe liegt. Bolzplätze, Skateanlagen und Indoor-Spielplätze sind nicht dabei.“
 
 ### 6.2 Fünf FAQs (Entwurf, Antworten mit internen Links, Texte vor dem Livegang zur Freigabe)
 1. „Wo gibt es Wasserspielplätze in Düsseldorf?“ (inkl. Saison-Hinweis – keine sechste FAQ)
@@ -380,11 +436,16 @@ Zusätzlich im bestehenden Google-Maps-Absatz: „… und der Knopf ‚Route pla
 Punkt → 1; konstruierter Fall 40 m → 2 Plätze, Nummer behalten; Hanielpark 127 m → 2 Plätze, Nummer behalten; konstruierter Fall
 > 150 m → 2 Plätze, Nummer unterdrückt; Bolzplatz mit gleicher Nummer zählt nicht; gleiche Größe → kleinerer Objektschlüssel);
 Namen (GW mit Komma, Ksp/Wsp/Waldksp, Apostroph, „Str.“, `a.d.` → „an der“, `ggü.` → „gegenüber“, „Fritz./Mörsenb.“ → inaktiv);
-Wiederholungsimport (Schnittmenge trifft eine Zeile; ein Schlüssel fehlt → `fehlende_teile`, Slug bleibt; Schlüssel wechseln die
+Wiederholungsimport (Schnittmenge trifft eine Zeile; ein Schlüssel fehlt → `fehlende_teile`, die Zeile bleibt, der Slug bleibt solange sie aktiv ist; Schlüssel wechseln die
 Gruppe → Prüf-CSV, nichts automatisch teilen); gemischte Gruppe (10 m + 100 m → Teilgruppe + Einzelplatz, Code `gruppe_gemischt`);
-`korrekturen.csv` (Anzeigename ersetzt Normalisierung und löscht `name_unklar`; `ausschliessen` hält inaktiv; Eintrag am kleinsten
-Schlüssel einer Gruppe; `abenteuer:`-Zeilen); Slug ändert sich bei inaktiver Zeile mit neuem Namen, bei aktiver nicht;
-Prüf-Codes (welche sperren die Freischaltung); Score-Teilwerte und Top = 20 % der indexierbaren; Ray-Casting (MultiPolygon, Loch, Rand);
+`korrekturen.csv` (Anzeigename ersetzt Normalisierung und löscht `name_unklar`; Stadtteil löscht `kein_stadtteil`; `ausschliessen` hält inaktiv; `bestaetigt` hebt `access_private` und `gruppe_gemischt` auf, der Code bleibt in der Prüf-CSV; Eintrag am kleinsten
+Schlüssel einer Gruppe, ein anderer Schlüssel derselben Gruppe ist ein Log-Fehler und wird nicht angewendet; fehlende Datei = keine Korrekturen; `abenteuer:`-Zeilen gehören nicht hierher); Slug ändert sich bei inaktiver Zeile mit neuem Namen, bei aktiver nicht; aktiver Name nur aus `korrekturen.csv`;
+Prüf-Codes (sperrend: `name_unklar`, `kein_stadtteil`, `access_private`, `gruppe_gemischt`; `bezirk_abweichend` und `zuordnung_mehrdeutig` sperren nicht); Stadt-Import lässt `eintritt` und OSM-Codes stehen; Score-Teilwerte, Größen-Perzentil über die freischaltbare Menge, Top = 20 % der indexierbaren; Ray-Casting (MultiPolygon, Loch, Rand);
+`ausgeschlossen` aus der CSV gesetzt, Import ändert `aktiv` und `freigeschaltet_am` nie; `bestaetigt` mit `name_unklar` bzw.
+`kein_stadtteil` wird ignoriert (Log-Fehler); `stadt_fehlt_seit` → erst über `ausschliessen` ausgeschlossen;
+`abenteuer_import` (Pflichtfelder, ungültiger Eintritt → nicht angelegt, Koordinate außerhalb → nicht angelegt, Stadtteil kein
+Katalogwert → `kein_stadtteil`, Wiederholungsimport über `schluessel`, Slug fest ab aktiv, gelöschter Schlüssel deaktiviert nichts,
+DELETE trifft nur `quelle='abenteuer'` und inaktiv); Größen-Teilwert Abenteuer = 0,5 und nicht in der Perzentil-Menge;
 Flingern Nord/Süd-Mapping; Bezirk aus `Nummer[:2]` (leer = kein Fehler, abweichend = Prüf-CSV); Adresse bleibt leer ohne `strasse_hausnr`;
 OSM-Mapping inkl. `fee` → `eintritt`; Alter in der Reihenfolge von 4.5 (weniger als zwei Geräte → keins; Kleinkind und Schulkind im
 Namen → belegt „alle“; vermutet ersetzt keine Geräte); Belegprüfung; Score; Top-Badge nur bei indexierbar.
@@ -392,9 +453,10 @@ Namen → belegt „alle“; vermutet ersetzt keine Geräte); Belegprüfung; Sco
 **Web (vitest):** Filter (UND, „alle“, unbekanntes Alter, Chip-Schwelle 4/5, Rollstuhl `limited` zählt nicht, X = mindestens ein
 Gerät, Typ-Filter ODER inkl. Abenteuer), Titel „{Name} {inStadtteil}“, Sichtbarkeit ohne Qualitäts-Score, `istIndexierbar` (Beschreibung + 2 Geräte + vermutetes Alter → indexierbar;
 Beschreibung + vermutetes Alter + 1 Gerät → nicht), Karten-Punkte ohne Bewertung/OSM-Tags, JSON-LD ohne `aggregateRating`,
-`isAccessibleForFree` (nur `eintritt=ja` setzt es auf falsch), Pfadentscheidungen (neue Fälle statt `null`), Sitemap-Liste,
+`isAccessibleForFree` (städtisch: nur `eintritt=ja` setzt es auf falsch; Abenteuer: `ja` → falsch, `nein` → wahr), Pfadentscheidungen (neue Fälle statt `null`; nie freigeschaltet → 404; abgeschaltet mit `freigeschaltet_am` → 308 auf die Stadtteilseite, ohne Stadtteil auf den Hub), Sitemap-Liste,
 Stadtteilseite ab 5 sichtbaren inklusive dünner, dünnes Detail ohne Canonical, Filter-URL mit Canonical auf den Hub,
 Event-Link nur bei Familie mit `inStadtteil`, Saison-Hinweis nur für den Wasserbereich, Notfallnummer-Zeile entfällt ohne Nummer,
+Öffnungszeiten nur bei Abenteuer, Namensstamm ohne Typwort und Klammer („Wasserspielplatz Volksgarten“ + „Spielplatz Volksgarten (…)“ gruppieren; ohne Partner → drei nächste),
 Texte (5 FAQs, nur interne Links, keine Score-Zahl, ihr/euch).
 
 ---
@@ -405,10 +467,10 @@ Texte (5 FAQs, nur interne Links, keine Score-Zahl, ihr/euch).
 |---|---|---|
 | 1 | Stadt-Import (inaktiv) direkt per Skript wie beim Club-Import – **Freigabe des Auftraggebers für diesen Schreibweg vor dem ersten Lauf**; Prüf-CSV | Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein; Import erneut |
 | 2 | OSM-Abgleich + Bericht (Abdeckung) | Entscheidung, ob Runde 2 der Profile nötig ist |
-| 3 | Abenteuer-Liste | Auftraggeber bestätigt |
+| 3 | Abenteuer-Liste in `abenteuer.csv` (`abenteuer_import.py`, Zeilen inaktiv) | Auftraggeber bestätigt Name, Koordinate, Öffnungszeiten, Eintritt; die Plätze laufen in Schritt 4/5 mit (Runde 1) |
 | 4 | Google Runde 1 (Kosten vorher) + Foto-Sichtung | Foto-SQL |
 | 5 | Profile: Probe 10 → Bericht → Rest Runde 1 | Gegenlesen |
-| 6 | Score, Top-Badge, Freischaltungs-SQL: `aktiv=true` nur für Zeilen ohne sperrenden Prüf-Code (`name_unklar`, `kein_stadtteil`, `access_private`, `gruppe_gemischt`) und ohne `ausschliessen` in `korrekturen.csv`; ab da ist der Slug fest | Auftraggeber führt SQL aus |
+| 6 | Score, Top-Badge, **Freischalt-SQL** (städtisch und Abenteuer): `aktiv=true` und `freigeschaltet_am` (falls leer) nur für Zeilen mit `ausgeschlossen IS NULL` und ohne sperrenden Prüf-Code – `name_unklar` und `kein_stadtteil` sperren immer, `access_private` und `gruppe_gemischt` nur, wenn sie nicht in `bestaetigt` stehen; `bezirk_abweichend` und `zuordnung_mehrdeutig` sperren nicht. Ab da ist der Slug fest. **Abschalt-SQL** im selben Schritt und bei jeder späteren Aktualisierung: `aktiv=false` für aktive Zeilen mit gesetztem `ausgeschlossen` (die URL leitet danach weiter, 5.5) | Auftraggeber führt SQL aus |
 | 7 | Website, Texte (6.1/6.2 zur Freigabe), Illustrationen eingebaut | Cursor-Check |
 | 8 | Tests, Build, Browser (Desktop/Mobil, hell/dunkel) | Deploy nur nach OK |
 | 9 | IndexNow (Hub, Stadtteilseiten, indexierbare Details), Sitemap-Kontrolle | Bericht |
@@ -430,7 +492,7 @@ grob 4 $). Profile: 108 × 0,05–0,10 $ ≈ 6–11 $. **Gesamt ≈ 12–19 $**,
 | Kinder auf Fotos | nur Sichtprüfung, sonst Illustration |
 | Falscher Stadtteil | Punkt-in-Polygon mit Prüf-CSV |
 | Name falsch aufgelöst | Prüf-CSV, unklare Plätze inaktiv, Korrektur über `korrekturen.csv` (Schlüssel statt Name) |
-| Slug-Änderung nach Livegang | Slugs vor Freischaltung fest |
+| Slug-Änderung nach Livegang | Ab `aktiv=true` ist der Slug fest. Davor bildet jeder Import ihn aus dem aktuellen Anzeigenamen neu |
 | Abmahnrisiko durch Wertungen | keine Score-Zahl, „nein“ nur belegt, Haftungssatz |
 | ODbL | Nur Eigenschaften, Namensnennung, Rohdaten/Karten-API ohne OSM-Tags |
 
@@ -449,9 +511,10 @@ Prüfung vor dem Einbau: keine Person (auch nicht im Hintergrund), keine Schrift
 links/unten lesbar (hell und dunkel).
 
 ## 12. Abnahmekriterien
-- 344 Spielplätze (bzw. Zahl nach Ausschlüssen) korrekt importiert; Stichprobe von 30: Name, Stadtteil, Notfallnummer stimmen.
+- 344 städtische Spielplätze (bzw. Zahl nach Ausschlüssen) korrekt importiert, dazu die Zeilen aus `abenteuer.csv`; Stichprobe von 30: Name, Stadtteil, Notfallnummer stimmen.
   Hanielpark ist zwei Plätze, die sechs Gruppen auf einem Punkt sind je einer.
-- Alle Wasser- und Waldspielplätze mit Profil; ≥ 60 Plätze mit ≥ 2 belegten Geräten und Altersangabe (belegt oder vermutlich).
+- Alle Wasser-, Wald- und Abenteuerspielplätze mit Profil; ≥ 60 Plätze mit ≥ 2 belegten Geräten und Altersangabe (belegt oder vermutlich).
+- Abschalten getestet: eine abgeschaltete Testzeile leitet dauerhaft auf ihre Stadtteilseite weiter, eine nie freigeschaltete liefert 404.
 - Keine Fotos mit Personen; jedes Foto mit Urheber; Illustrationen eingebaut.
 - Hub, Detail, Stadtteilseiten: Inhalt im ersten HTML; Index-/Canonical-Regeln wie 5.4; JSON-LD valide, ohne Bewertungen; Proxy 404 für
   unbekannte Slugs; Karten-API ohne Bewertung/OSM-Tags.
@@ -459,7 +522,7 @@ links/unten lesbar (hell und dunkel).
 - Alle Tests grün; Cursor-Check ohne kritische/mittlere Befunde; Deploy nach OK; IndexNow gemeldet.
 
 ## 13. Offene Punkte
-Keine offenen Entscheidungen. Texte 6.1/6.2 und die Abenteuer-Liste werden vor dem Livegang zur Freigabe vorgelegt.
+Keine offenen Produktentscheidungen. Vor dem Livegang liegen zur Freigabe vor: die Texte 6.1/6.2 (FAQ 5 wird dabei einmal gewählt, nach dem OSM-Bericht) und die Zeilen in `abenteuer.csv`.
 
 ## 14. Prüfhistorie
 - Entwurf 12.11. → Cursor-Prüfung 1: Dateistand 2020, Objektart als Text, Koordinaten nur aus `geometry`, Score nicht in
@@ -478,7 +541,17 @@ Keine offenen Entscheidungen. Texte 6.1/6.2 und die Abenteuer-Liste werden vor d
   über Schlüssel-Schnittmenge; `eintritt`, Koordinate je Teil, `fehlende_teile`; Freischalt-SQL mit Ausschlüssen; DELETE nur vor der
   Freischaltung; Filter-Canonical nicht über `seitenMetadaten`; Stadtteil-ItemList nur indexierbar; X/Y definiert; Datenschutz-Satz nur
   für den Sortier-Knopf; Titel „{Name} – {inStadtteil}“; Footer-Markenabsatz; Tests nachgezogen.
-- Vierte Durchsicht (Claude, 12.11.): Runde 2 nach Zusammenführung = **74** (nicht 85); Rückweg der Prüf-CSV über eingecheckte
+- Vierte Durchsicht (Claude, 12.11.): Runde 2 = **74** Kinderspielplätze (die frühere 85 zählte alle Typen im Größenband; Kinder
+  allein sind roh wie zusammengeführt 74 – Korrektur nach Cursor-Prüfung 4); Rückweg der Prüf-CSV über eingecheckte
   `korrekturen.csv` (Schlüssel statt Name, ersetzt `NICHT_IM_HUB`), Slug bis zur Freischaltung neu, danach fest; Prüf-Codes
   `extras.spielplatz.pruefung` als Grundlage der Freischalt-SQL; Typ `abenteuer` mit Öffnungszeiten; Typ-Filter Wasser/Wald/Abenteuer;
   gemischte Gruppen; Score-Formel und Top-Grundmenge; FAQ 5 beim Festschreiben; Titel ohne Gedankenstrich; Freigabe des Schreibwegs.
+- Cursor-Prüfung 4 (12.11., eingearbeitet): Sperr-Codes sind genau vier, `bestaetigt` hebt sie auf; 4.7 folgt der Namensregel aus 4.1;
+  Abenteuer in eigener CSV mit Pflicht-`eintritt` und Öffnungszeiten auf der Detailseite; Stadt-Import lässt OSM-Felder stehen;
+  Größen-Perzentil über die freischaltbare Menge; Namensstamm vor der Klammer; Runde 2 ist roh und nach Zusammenführung 74.
+- Fünfte Durchsicht (Claude, 13.11.): Ausschluss als Datenbankfeld `ausgeschlossen` (die SQL kann keine CSV lesen); Abschalt-SQL und
+  `freigeschaltet_am`, abgeschaltete Plätze leiten dauerhaft auf die Stadtteilseite bzw. den Hub weiter statt 404; `stadt_fehlt_seit`
+  endet über `ausschliessen`; Abenteuerplätze inaktiv angelegt, gleiche Freischaltung, in Runde 1 (Profil, Google, Fotos), Import-Regeln
+  (Pflichtfelder, Eintritt Pflicht ohne Weglassen-Fall, Katalog-Stadtteil, Wiederholungsimport, Slug, eigener DELETE); `bestaetigt` nur
+  für `access_private`/`gruppe_gemischt`; Größen-Teilwert Abenteuer neutral; Namensstamm ohne Typwort und Klammer; Tests und Abnahme
+  nachgezogen.
