@@ -390,9 +390,12 @@ export const ZUGPFERD_TITEL = /rheinkirmes|japan-?tag|nacht der museen|\bcsd\b|\
 /** Orte, die für viele Häuser stehen: keine Serien-Regel 3, keine Ort-Eindeutigkeit in den Plätzen (Abschnitt 6). */
 export const SAMMELORTE = new Set(["düsseldorf", "stadtbüchereien düsseldorf"]);
 
-/** Stammformate (Abschnitt 3, Schritt 1). Im Titel immer, in der Beschreibung nur im Satz mit REGELMAESSIG. */
+/**
+ * Stammformate (Abschnitt 3, Schritt 1). Im Titel immer, in der Beschreibung nur im Satz mit REGELMAESSIG.
+ * „Repair Café“ und „Speed Dating“ auch mit Leerzeichen (Nachtrag nach der Cursor-Prüfung der Umsetzung).
+ */
 export const STAMM =
-  /yoga|pilates|meditation|lauftreff|parkrun|repair-?café|spieleabend|brettspiel|sprechstunde|\bmeetup\b|speed-?dating|sprachcaf[eé]|sprachtreff|sprachtandem|\btandem\b|language exchange|conversation club|stammtisch|(?<!dis)kurse?\b/i;
+  /yoga|pilates|meditation|lauftreff|parkrun|repair[-\s]?caf[eé]|spieleabend|brettspiel|sprechstunde|\bmeetup\b|speed[-\s]?dating|sprachcaf[eé]|sprachtreff|sprachtandem|\btandem\b|language exchange|conversation club|stammtisch|(?<!dis)kurse?\b/i;
 
 export const REGELMAESSIG =
   /jeden (montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|tag|abend|morgen|woche|monat)|wöchentlich|monatlich|regelmäßig|immer (montags|dienstags|mittwochs|donnerstags|freitags|samstags|sonntags)/i;
@@ -459,9 +462,13 @@ export function istStamm(e: DddEvent): boolean {
   return hatSprachhinweis(e);
 }
 
-/** Grundstufe (Abschnitt 3, Schritt 2): Zugpferd 3, Szene 1, sonst 2. */
+/**
+ * Grundstufe (Abschnitt 3, Schritt 2): Zugpferd 3, Szene 1, sonst 2. Auswärts, Public Viewing und Fanshop heben
+ * weder über den Ort noch über das Heimspiel auf 3 („Public Viewing“ in der Merkur Spiel-Arena bleibt 2).
+ */
 export function grundstufe(e: DddEvent): 1 | 2 | 3 {
-  const ortTreffer = istZugpferdOrt(e.ort);
+  const nebenveranstaltung = KEIN_HEIMSPIEL.test(e.titel) || KEIN_HEIMSPIEL.test(e.ort);
+  const ortTreffer = !nebenveranstaltung && istZugpferdOrt(e.ort);
   if (ortTreffer || ZUGPFERD_TITEL.test(e.titel) || istHeimspiel(e)) {
     const kleinformat = e.kategorie === "community" || KLEINFORMAT.test(e.titel) || KLEINFORMAT.test(e.ort);
     return ortTreffer && kleinformat ? 2 : 3;
@@ -688,10 +695,11 @@ export function startPlaetze(kandidaten: DddEvent[], k: StufenKontext, tag: stri
   // Platz 2: andere Kategorie als der Tipp (ohne Tipp entfällt die Regel), Stufe 3 oder 2, sonst die nächste Stufe
   const andereKategorie = (e: DddEvent) => !tipp || e.kategorie !== tipp.kategorie;
   const p2 = waehle([(e) => gross(e) && andereKategorie(e), (e) => eins(e) && andereKategorie(e)], mitFokus);
-  // Platz 3: anderer Stadtteil als die beiden ersten (ohne Stadtteil nicht wählbar); bleibt er leer, ohne diese Regel
+  // Platz 3: anderer Stadtteil als die beiden ersten (ohne Stadtteil nicht wählbar); bleibt er leer, rückt die
+  // nächste Stufe (1) ohne die Stadtteil-Regel nach – nicht ein weiteres Event derselben Stufe aus demselben Stadtteil
   const stadtteile = new Set(belegt.map((e) => e.stadtteil).filter((s): s is string => !!s));
   const andererStadtteil = (e: DddEvent) => !!e.stadtteil && !stadtteile.has(e.stadtteil);
-  const p3 = waehle([(e) => gross(e) && andererStadtteil(e), gross, eins], mitFokus);
+  const p3 = waehle([(e) => gross(e) && andererStadtteil(e), eins], mitFokus);
   // Platz 4: genau eine Szene-Karte (auch als Serie); sonst Stufe 2 oder 3 – keine nur über die Serie gedeckelte 1
   const p4 = waehle([istSzene, gross]);
   // Platz 5: Fund – Stufe 2, in der Tagesansicht mehrtägig nur am Fokustag; sonst die nächste Stufe

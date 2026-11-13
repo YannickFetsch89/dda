@@ -304,3 +304,9 @@ Korrigiert nach der Nachprüfung der eigenen Änderungen. Die Groß- und Kleinsc
 
 - Das Serienfenster hängt nicht am einzelnen Termin. Eine Gruppe ist Serie, wenn irgendein Fenster von `datum` bis `datum + 14`, Grenzen eingeschlossen, mindestens drei Einträge mit unterschiedlichem Datum hat. Dann gilt das für jeden Termin der Gruppe. Sonst wäre dieselbe Führung am Montag Stufe 1 und am Dienstag Stufe 2.
 - Platz 4 nimmt nur Events, deren Grundstufe Szene ist, auch als Serie. Eine täglich laufende Führung, deren Stufe nur über Schritt 3 auf 1 gedeckelt ist, ist dort nicht wählbar.
+
+## 14. Nachtrag nach der Cursor-Prüfung der Umsetzung (13.11.2026)
+
+- Platz 3: Bleibt der Platz wegen des Stadtteils leer, rückt Stufe 1 ohne Stadtteil-Regel nach. Ein weiteres Event der Stufe 2 oder 3 aus einem schon belegten Stadtteil kommt nicht vorher.
+- „Auswärts“, „Public Viewing“ und „Fanshop“ im Titel oder Ort heben weder über `ZUGPFERD_ORTE` noch über das Heimspiel auf 3. „Public Viewing“ in der Merkur Spiel-Arena bleibt 2.
+- Stamm-Muster: `repair[-\s]?caf[eé]` und `speed[-\s]?dating` statt `repair-?café` und `speed-?dating`. „Repair Café“ und „Speed Dating“ mit Leerzeichen werden 0.

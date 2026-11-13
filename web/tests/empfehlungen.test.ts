@@ -102,6 +102,13 @@ describe("Stamm (Abschnitt 3, Schritt 1)", () => {
     expect(stufe(ev({ id: "a", titel: "AfterWorkOut", kategorie: "sport", ort: "Rheinwiesen", beschreibung: "Workout nach Feierabend mit Musik." }))).toBe(2);
   });
 
+  it("„Repair Café“ und „Speed Dating“ auch mit Leerzeichen → 0", () => {
+    expect(stufe(ev({ id: "r", titel: "Repair Café Bilk", kategorie: "community", ort: "Stadtteilladen" }))).toBe(0);
+    expect(stufe(ev({ id: "c", titel: "Repair-Cafe Flingern", kategorie: "community", ort: "Stadtteilladen" }))).toBe(0);
+    expect(stufe(ev({ id: "s", titel: "Speed Dating 30+", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
+    expect(stufe(ev({ id: "d", titel: "Speed-Dating", kategorie: "dating", ort: "Bar Alto" }))).toBe(0);
+  });
+
   it("Wöchentliches Yoga → 0", () => {
     expect(stufe(ev({ id: "y", titel: "Yoga im Hofgarten", kategorie: "sport", ort: "Hofgarten" }))).toBe(0);
   });
@@ -160,6 +167,12 @@ describe("Zugpferd-Orte (Abschnitt 4)", () => {
     expect(stufe(heim)).toBe(3);
     expect(istHeimspiel(aus)).toBe(false);
     expect(stufe(aus)).not.toBe(3);
+  });
+
+  it("Public Viewing und Fanshop in der Arena heben nicht über den Ort auf 3", () => {
+    expect(stufe(ev({ id: "pv", titel: "Public Viewing: Deutschland – Spanien", kategorie: "sport", ort: "Merkur Spiel-Arena" }))).toBe(2);
+    expect(stufe(ev({ id: "fs", titel: "Fanshop-Verkauf", kategorie: "sport", ort: "PSD Bank Dome" }))).toBe(2);
+    expect(stufe(ev({ id: "hs", titel: "Düsseldorfer EG – Kölner Haie", kategorie: "sport", ort: "PSD Bank Dome" }))).toBe(3);
   });
 
   it("Premiere im Kunstpalast → 3; Workshop oder Foyer dort höchstens 2", () => {
@@ -298,6 +311,21 @@ describe("Die fünf Plätze (Abschnitt 9)", () => {
     expect(p.plaetze[2]).toBeNull();
     expect(p.picks.map((x) => x.id)).toContain("f1"); // erst als Fund, nicht auf Platz 4
     expect(p.plaetze[3]?.id).toBe("f1");
+  });
+
+  it("Platz 3: ohne anderen Stadtteil rückt die nächste Stufe nach, nicht dieselbe Stufe aus demselben Stadtteil", () => {
+    const p = plaetzeAm(
+      [
+        e({ id: "t", titel: "Sinfoniekonzert", kategorie: "musik", ort: "Tonhalle", stadtteil: "Pempelfort" }),
+        e({ id: "a", titel: "Lesung", kategorie: "kultur", ort: "Literaturhaus", stadtteil: "Carlstadt" }),
+        e({ id: "b", titel: "Flohmarkt", kategorie: "food", ort: "Markthalle", stadtteil: "Carlstadt", beschreibung: "x".repeat(100) }),
+        e({ id: "j", titel: "Jazz-Jam", kategorie: "musik", ort: "Café Unikat", stadtteil: "Carlstadt" }),
+      ],
+      TAG,
+    );
+    expect(p.tipp?.id).toBe("t");
+    expect(p.plaetze[0]?.id).toBe("b"); // Platz 2: andere Kategorie, Stufe 2
+    expect(p.plaetze[1]?.id).toBe("j"); // Platz 3: kein Stufe-2-Event aus anderem Stadtteil → Stufe 1 ohne Regel
   });
 
   it("Zwei Events mit Ort „Düsseldorf“ dürfen beide in den Plätzen stehen, zwei am selben echten Ort nicht", () => {
