@@ -504,6 +504,10 @@ describe("Flaggen mit Zeitpunkt (Abschnitt 8)", () => {
   it("Tipp-Flagge: bis 7 Tage Laufzeit an jedem Tag, darüber nur am Fokustag", () => {
     const kurz = ev({ id: "k", titel: "Festival", kategorie: "musik", ort: "Festwiese", datum: "2026-11-13", datum_bis: "2026-11-19", tipp_des_tages: true, bild_url: BILD });
     for (const tag of ["2026-11-13", "2026-11-16", "2026-11-19"]) expect(plaetzeAm([kurz], tag).tipp?.id).toBe("k");
+    // Genau 8 Tage (13.–20., einschließlich gezählt) gelten schon als lang: Flagge nur am Fokustag
+    const acht = ev({ id: "acht", titel: "Festival", kategorie: "musik", ort: "Festwiese", datum: "2026-11-13", datum_bis: "2026-11-20", tipp_des_tages: true, bild_url: BILD });
+    const achtTage = Array.from({ length: 8 }, (_, i) => plusTage("2026-11-13", i));
+    expect(achtTage.filter((tag) => plaetzeAm([acht], tag).tipp?.id === "acht")).toEqual([fokustag(acht)]);
     const lang = mitFokustag({ id: "l", titel: "Ausstellung", kategorie: "kultur", ort: "Galerie", datum: "2026-11-05", datum_bis: "2027-02-05", tipp_des_tages: true, bild_url: BILD }, "2026-11-20");
     expect(plaetzeAm([lang], "2026-11-20").tipp?.id).toBe(lang.id);
     expect(plaetzeAm([lang], "2026-11-21").tipp).toBeNull();

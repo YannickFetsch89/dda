@@ -596,11 +596,12 @@ export function amFokustag(e: DddEvent, tag: string): boolean {
 
 /**
  * Gilt die Tipp-Flagge? `tag` = gezeigter Tag (Tagesansicht) oder null (Zeitraum: kein Fokustag).
- * Bis 7 Tage Laufzeit an jedem Tag, darüber nur am Fokustag.
+ * Bis 7 Tage Laufzeit (einschließlich gezählt) an jedem Tag, ab 8 Tagen nur am Fokustag.
  */
 export function tippGilt(e: DddEvent, tag: string | null): boolean {
   if (!e.tipp_des_tages || e.abgesagt) return false;
-  if (tag === null || !istMehrtaegig(e) || tageZwischen(e.datum, e.datum_bis!) <= 7) return true;
+  // Laufzeit einschließlich gezählt (wie beim Fokustag): 1.–7. gilt jeden Tag, 1.–8. nur am Fokustag (Auftraggeber 13.11.2026)
+  if (tag === null || !istMehrtaegig(e) || tageZwischen(e.datum, e.datum_bis!) + 1 <= 7) return true;
   return fokustag(e) === tag;
 }
 

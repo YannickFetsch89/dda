@@ -310,3 +310,4 @@ Korrigiert nach der Nachprüfung der eigenen Änderungen. Die Groß- und Kleinsc
 - Platz 3: Bleibt der Platz wegen des Stadtteils leer, rückt Stufe 1 ohne Stadtteil-Regel nach. Ein weiteres Event der Stufe 2 oder 3 aus einem schon belegten Stadtteil kommt nicht vorher.
 - „Auswärts“, „Public Viewing“ und „Fanshop“ im Titel oder Ort heben weder über `ZUGPFERD_ORTE` noch über das Heimspiel auf 3. „Public Viewing“ in der Merkur Spiel-Arena bleibt 2.
 - Stamm-Muster: `repair[-\s]?caf[eé]` und `speed[-\s]?dating` statt `repair-?café` und `speed-?dating`. „Repair Café“ und „Speed Dating“ mit Leerzeichen werden 0.
+- Tipp-Flagge (Abschnitt 8): Die Laufzeit zählt einschließlich, wie beim Fokustag. Bis 7 Tage (z. B. 1.–7.) gilt die Flagge an jedem Tag, ab 8 Tagen (z. B. 1.–8.) nur am Fokustag. Entscheidung des Auftraggebers vom 13.11.2026; der Satz „mehr als 7 Tage nach `datum`“ ist damit überholt.
