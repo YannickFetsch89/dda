@@ -12,7 +12,13 @@ venv/
 logs/*.log
 
 # Lokale Zwischenspeicher (z.B. Google-Places-Flächensuche, enthält Google-Inhalte)
-data/
+data/*
+# Ausnahme Spielplatz-Guide: die vom Auftraggeber gepflegten Entscheidungsdateien sind eingecheckt
+# (Plan 3.1/4.6); Stadtdateien, OSM-Zwischenspeicher und Prüf-CSV bleiben lokal.
+!data/spielplaetze/
+data/spielplaetze/*
+!data/spielplaetze/korrekturen.csv
+!data/spielplaetze/abenteuer.csv
 
 # Playwright
 playwright/.auth/
