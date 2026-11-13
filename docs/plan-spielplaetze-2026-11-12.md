@@ -1,6 +1,6 @@
 # Plan: Guide „Spielplätze“ (`/guides/spielplaetze`)
 
-Stand 13.11.2026 · **konsolidierte Fassung** nach acht Cursor-Prüfungen und acht eigenen Durchsichten · **vom Auftraggeber freigegeben am 13.11.2026**, ergänzt um Tischtennis und `ausstattung.csv` (13.11.) · noch nichts umgesetzt.
+Stand 13.11.2026 · **konsolidierte Fassung** nach acht Cursor-Prüfungen und acht eigenen Durchsichten · **vom Auftraggeber freigegeben am 13.11.2026**, ergänzt um Tischtennis und `ausstattung.csv` (13.11.) · Schritte 1 und 2 umgesetzt (13.11.), Runde 2 der Profile freigegeben.
 Diese Fassung ersetzt alle früheren Abschnitte (0, 0.3 usw.); die Prüfhistorie steht in Abschnitt 14.
 
 **Ziel:** Eltern finden den passenden öffentlichen Spielplatz in Düsseldorf – nach Alter, Ausstattung, Stadtteil und Nähe.
@@ -293,7 +293,7 @@ Spalten: `schluessel` (kleinster Objektschlüssel wie in 3.1, oder `abenteuer:<k
   Kinderspielplatz gezählt. **Dazu alle Abenteuerplätze aus `abenteuer.csv`** (zusätzlich zu den 108; Eltern suchen sie
   namentlich). Indexierbar wird die Seite mit Profil-Beschreibung und mindestens zwei belegten Geräten (5.4). Geräte mit Beleg
   aus dem Profil (`quelle: "zitat"`) zählen dafür, auch ohne OSM-Treffer. Erst **Probe mit 10**, Bericht zum Gegenlesen, dann der Rest. Runde 2 (**74** Kinderspielplätze
-  mit Summe 1.500 bis unter 3.000 m²) nur nach Bericht und Freigabe. Dieselbe Zählung an den Roh-Einträgen ist ebenfalls 74:
+  mit Summe 1.500 bis unter 3.000 m²) – **vom Auftraggeber am 13.11.2026 nach dem OSM-Bericht freigegeben**; läuft direkt nach Runde 1 (gleiche Probe-/Bericht-Logik), Kosten vorher nennen (Abschnitt 9). Dieselbe Zählung an den Roh-Einträgen ist ebenfalls 74:
   die sechs Zusammenführungen verschieben keinen Platz in oder aus diesem Band. Am Angerbach (712 m² Kleinkind plus 1.635 m²
   Schulkind) wird ein Platz, Alter belegt „alle“, und bleibt in Runde 2. Die früher genannte 85 war keine Vorher-Zählung
   dieser Definition. Profil erst, wenn Schritt 3 von 4.1 gelaufen ist.
@@ -591,11 +591,11 @@ Texte (5 FAQs, nur interne Links, keine Score-Zahl, ihr/euch).
 
 | Schritt | Inhalt | Freigabe / Ergebnis |
 |---|---|---|
-| 1 | Stadt-Import (inaktiv) direkt per Skript wie beim Club-Import – **Freigabe des Auftraggebers für diesen Schreibweg vor dem ersten Lauf**; Prüf-CSV | Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein; Import erneut |
-| 2 | OSM-Abgleich + Bericht (Abdeckung) | Entscheidung, ob Runde 2 der Profile nötig ist |
+| 1 | **Erledigt 13.11.:** Stadt-Import (inaktiv) direkt per Skript wie beim Club-Import – **Freigabe des Auftraggebers für diesen Schreibweg vor dem ersten Lauf**; Prüf-CSV | Auftraggeber trägt Entscheidungen in `korrekturen.csv` ein; Import erneut |
+| 2 | **Erledigt 13.11.:** OSM-Abgleich + Bericht (Abdeckung): 303 von 344 Plätzen mit OSM-Treffer, 56 % mit ≥ 1 und 35 % mit ≥ 2 Filter-Geräten, 16 mehrdeutig, 40 ohne Treffer | Runde 2 der Profile freigegeben (13.11.) |
 | 3 | Abenteuer-Liste in `abenteuer.csv` (`abenteuer_import.py`, Zeilen inaktiv), danach OSM-Abgleich dieser Koordinaten (4.2) | Auftraggeber bestätigt Name, Koordinate, Öffnungszeiten, Eintritt; die Plätze laufen in Schritt 4/5 mit (Runde 1) |
 | 4 | Google Runde 1 (Kosten vorher) + Foto-Sichtung | Foto-SQL |
-| 5 | Profile: Probe 10 → Bericht → Rest Runde 1 | Gegenlesen |
+| 5 | Profile: Probe 10 → Bericht → Rest Runde 1 → Runde 2 (74 Plätze) | Gegenlesen |
 | 6 | Score und Top-Badge (`score.py`, 4.5), **Freischalt-SQL** (städtisch und Abenteuer; feste Datei `database/spielplaetze_freischalten.sql`, Bedingung mit `COALESCE(…, '[]')` auf `pruefung` und `bestaetigt`, endet mit `RETURNING slug, aktiv`; vorher zeigt `freischalt_vorschau.py` lesend zwei Listen: **Anschalten** = `aktiv=false` und `freischaltbar(zeile)` (getestete reine Funktion), **Abschalten** = `aktiv=true` und `ausgeschlossen` gesetzt. Beide UPDATE filtern auf den alten Wert (`WHERE aktiv=false …` bzw. `WHERE aktiv=true …`), damit `RETURNING` nur Zeilen liefert, deren `aktiv` sich ändert): `aktiv=true` und `freigeschaltet_am` (falls leer) nur für Zeilen mit `ausgeschlossen IS NULL` und ohne sperrenden Prüf-Code – `name_unklar` und `kein_stadtteil` sperren immer, `access_private` und `gruppe_gemischt` nur, wenn sie nicht in `bestaetigt` stehen; `bezirk_abweichend` und `zuordnung_mehrdeutig` sperren nicht. Sperrende Codes wirken nur hier: eine schon aktive Zeile mit neuem sperrendem Code bleibt aktiv (Warnung in der Prüf-CSV). Score und Top bei jedem Durchlauf neu, Perzentil-Menge nach 4.5. Eine zuvor abgeschaltete Zeile wird nur wieder aktiv, wenn `ausgeschlossen` null ist und kein sperrender Code steht (`name_unklar` und `kein_stadtteil` sperren immer, `access_private` und `gruppe_gemischt` nur ohne `bestaetigt`); `freigeschaltet_am` bleibt der erste Tag, der Slug bleibt. **Abschalt-SQL** (in derselben Datei, ebenfalls mit `RETURNING slug`) im selben Schritt und bei jeder späteren Aktualisierung: `aktiv=false` für aktive Zeilen mit gesetztem `ausgeschlossen` (die URL leitet danach weiter, 5.5). Das Rücknahme-DELETE verlangt zusätzlich `freigeschaltet_am IS NULL` (4.1, 4.6) | Auftraggeber führt SQL aus |
 | 7 | Website, Texte (6.1/6.2 zur Freigabe), Illustrationen eingebaut | Cursor-Check |
 | 8 | Tests, Build, Browser (Desktop/Mobil, hell/dunkel) | Deploy nur nach OK |
@@ -709,3 +709,7 @@ Keine offenen Produktentscheidungen. Vor dem Livegang liegen zur Freigabe vor: d
 - Ergänzung nach Freigabe (Auftraggeber, 13.11.): Tischtennis, Fußball und Basketball als Filter-Geräte, Volleyball und Skaten als
   Nebengeräte (OSM-Sportflächen ≤ 40 m, 4.2); OSM-Zuordnung „Fläche zuerst“ und Geräte-Zuordnung präzisiert;
   Ausstattung von Hand über `ausstattung.csv` (3.2) mit `quelle: "sichtung"`, die OSM und Profil nie überschreiben.
+- Umsetzung 13.11.: Schritt 1 (344 Plätze inaktiv, `korrekturen.csv` mit 10 Einträgen, ein Platz ausgeschlossen) und Schritt 2
+  (OSM-Abgleich, Bericht `data/spielplaetze/osm_bericht.md`). Auftraggeber gibt Runde 2 der Profile frei. Hinweis aus dem Bericht:
+  Einige OSM-Objekte tragen eine städtische Standortnummer, liegen aber > 60 m vom Stadt-Punkt (z. B. 9652 Tannenhof/Gothaer Weg) –
+  dort ist vermutlich die Stadtkoordinate ungenau; Korrektur bei Bedarf über `korrekturen.csv` (Stadtteil) bzw. Sichtung.
