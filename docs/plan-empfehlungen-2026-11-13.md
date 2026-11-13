@@ -1,6 +1,6 @@
 # Plan: Empfehlungen auf der Startseite
 
-Stand: 13.11.2026, nach fünf Prüfungen und den Nachträgen. **Vom Auftraggeber freigegeben am 13.11.2026.** Noch nicht umgesetzt.
+Stand: 13.11.2026, nach fünf Prüfungen und den Nachträgen. **Vom Auftraggeber freigegeben am 13.11.2026.** Umgesetzt am 13.11.2026 (lokal, noch nicht deployt; SQL `database/flaggen_zeitpunkt_2026-11-13.sql` steht aus).
 
 Betrifft die Auswahl von Tipp, Picks, „Beliebt“, der Wochenend-Box, des Zeitraums Wochenende und des Highlights. Kalender, Suche, Kategoriezeilen und Stadtteilseiten bleiben, wie sie sind.
 

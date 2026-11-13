@@ -35,6 +35,10 @@ export interface DddEvent {
   tipp_des_tages: boolean;
   highlight_der_woche: boolean;
   top_event_des_monats: boolean;
+  /** Zeitpunkt, zu dem die Highlight-Flagge gesetzt wurde; ohne ihn gilt die Flagge nicht (Plan Empfehlungen, Abschnitt 8) */
+  highlight_gesetzt_am?: string | null;
+  /** Zeitpunkt, zu dem die Top-Flagge gesetzt wurde; ohne ihn gilt die Flagge nicht */
+  top_gesetzt_am?: string | null;
   slug: string | null;
   /** Bleibt im Kalender sichtbar (markiert), fällt aber aus allen Hervorhebungen und der Startseite */
   abgesagt: boolean;

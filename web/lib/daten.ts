@@ -12,6 +12,8 @@ const SPALTEN_BASIS =
   "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
 // Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
 const SPALTEN_VARIANTEN = [
+  // Zeitpunkte der Highlight-/Top-Flaggen (database/flaggen_zeitpunkt_2026-11-13.sql); ohne sie gelten die Flaggen nicht
+  `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, reihe:reihen(slug, titel)`,
   `${SPALTEN_BASIS}, abgesagt, unterkategorie, reihe:reihen(slug, titel)`,
   `${SPALTEN_BASIS}, abgesagt, reihe:reihen(slug, titel)`,
   `${SPALTEN_BASIS}, abgesagt`,
@@ -68,6 +70,8 @@ export function normalisieren(z: Zeile): DddEvent {
     tipp_des_tages: z.tipp_des_tages === true,
     highlight_der_woche: z.highlight_der_woche === true,
     top_event_des_monats: z.top_event_des_monats === true,
+    highlight_gesetzt_am: text(z.highlight_gesetzt_am),
+    top_gesetzt_am: text(z.top_gesetzt_am),
     abgesagt: z.abgesagt === true || ABSAGE.test(titel) || (ortUngueltig && ABSAGE.test(ortRoh ?? "")),
     reihe: reiheAus(z.reihe),
     unterkategorie: typeof z.unterkategorie === "string" ? z.unterkategorie : null,
@@ -82,7 +86,7 @@ function reiheAus(wert: unknown): DddEvent["reihe"] {
 
 /** Supabase meldet eine unbekannte Spalte/Beziehung (Migration noch nicht ausgeführt). */
 function spaltenFehlt(meldung: string | undefined): boolean {
-  return !!meldung && /abgesagt|reihe|unterkategorie/.test(meldung);
+  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am/.test(meldung);
 }
 
 /** Events laden mit der neuesten Spaltenvariante, die die DB schon kennt. */
@@ -161,7 +165,9 @@ function beispielEvents(heute: string, jetzt: Date): DddEvent[] {
       erstellt_am: new Date(jetzt.getTime() - (FRISCH.has(id) ? 10 : 72) * 3_600_000).toISOString(),
       tipp_des_tages: id === "e1",
       highlight_der_woche: id === "e5",
+      highlight_gesetzt_am: id === "e5" ? jetzt.toISOString() : null,
       top_event_des_monats: id === "e13",
+      top_gesetzt_am: id === "e13" ? jetzt.toISOString() : null,
     };
   });
 }

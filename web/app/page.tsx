@@ -8,7 +8,7 @@ import { KalenderToggle } from "@/components/datum-waehler";
 import { Datumsleiste } from "@/components/datumsleiste";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden } from "@/lib/daten";
-import { filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, themenZaehlen, uhrzeitenVon, vielfaeltig, wochenendProgramm } from "@/lib/ableitungen";
+import { beliebtAuswahl, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
 import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
@@ -32,13 +32,6 @@ const REIHEN = [
 
 function startHref(key: string, heute: string) {
   return key === "heute" || key === heute ? "/" : `/?datum=${key}`;
-}
-
-/** Füllt eine Liste aus einem größeren Bereich auf, wenn der gewählte Zeitraum zu wenig hergibt. */
-function auffuellen(primaer: DddEvent[], reserve: DddEvent[], n: number): DddEvent[] {
-  if (primaer.length >= n) return primaer.slice(0, n);
-  const ids = new Set(primaer.map((e) => e.id));
-  return [...primaer, ...reserve.filter((e) => !ids.has(e.id))].slice(0, n);
 }
 
 export async function generateMetadata(props: PageProps<"/">): Promise<Metadata> {
@@ -69,8 +62,6 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
 
   const imZeitraum = filtern(pool.events, { von: z.von, bis: z.bis });
   const woche = filtern(pool.events, { von: z.von, bis: plusTage(z.von, 6) });
-  const beliebtSortiert = [...imZeitraum].sort(nachBeliebtheit);
-  const wocheBeliebt = [...woche].sort(nachBeliebtheit);
 
   // Hero
   const neu = neuSeit(pool.events, pool.jetzt).sort(nachNeu);
@@ -93,16 +84,15 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
     };
   });
 
-  // Tipp + Picks
-  // Tipp: Redaktions-Tipp nur mit eigenem Bild; Events ohne Bild nur, wenn es sonst nichts gibt
-  const tipp =
-    imZeitraum.find((e) => e.tipp_des_tages && e.bild_url) ??
-    beliebtSortiert.find((e) => e.bild_url) ??
-    imZeitraum.find((e) => e.tipp_des_tages) ??
-    beliebtSortiert[0] ??
-    null;
-  const picks = vielfaeltig(imZeitraum, 4, new Set(tipp ? [tipp.id] : []));
-  const beliebt = auffuellen(beliebtSortiert, wocheBeliebt, 5);
+  // Tipp + Picks: fünf Plätze nach Stufe und Sortierschlüssel (docs/plan-empfehlungen-2026-11-13.md, Abschnitt 9).
+  // Kandidaten mit Langläufern; in der Tagesansicht gilt der Fokustag, im Zeitraum nicht.
+  const fokusTag = z.von === z.bis ? z.von : null;
+  const stufen = stufenKontext(pool.events, heute);
+  const { tipp, picks } = startPlaetze(filtern(pool.events, { von: z.von, bis: z.bis, mitLanglaeufern: true }), stufen, fokusTag);
+  // „Von der Redaktion“ nur, wenn der gezeigte Tipp die Tipp-Flagge trägt und sie an diesem Tag gilt
+  const vonRedaktion = !!tipp && tippGilt(tipp, fokusTag);
+  // „Beliebt“: bisherige Menge, Stamm draußen, mehrtägige Events in der Tagesansicht nur am Fokustag (auch beim Auffüllen)
+  const beliebt = beliebtAuswahl(imZeitraum, woche, stufen, fokusTag);
 
   // Infoboxen
   const abend = imZeitraum.filter((e) => uhrzeitenVon(e).some((z) => z >= "17:00")).sort(nachZeit).slice(0, 8);
@@ -161,12 +151,12 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             </Leer>
           </div>
         ) : (
-          <section className="sektion startraster" aria-label="Tipp und Picks">
+          <section className={startrasterKlasse(tipp)} aria-label="Tipp und Picks">
             {tipp && <TippDesTages e={tipp} heute={heute} />}
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <div className="sektionskopf">
                 <h2 className="d">Picks des Tages</h2>
-                <Link href={`/entdecken?datum=${z.key}`}>Von der Redaktion</Link>
+                {vonRedaktion && <Link href={`/entdecken?datum=${z.key}`}>Von der Redaktion</Link>}
               </div>
               <div className="nur-mobil">
                 <Reihe breite={280} label="Picks des Tages">

@@ -84,6 +84,12 @@ function proUhrzeit(gruppe: DddEvent[]): DddEvent[] {
   return [...nachZeit.values()].sort((a, b) => (a.uhrzeit ?? "99").localeCompare(b.uhrzeit ?? "99"));
 }
 
+/** Spätester gesetzter Zeitpunkt (ISO-Strings lassen sich als Text vergleichen), sonst null. */
+function spaetester(werte: (string | null | undefined)[]): string | null {
+  const gesetzt = werte.filter((w): w is string => !!w).sort();
+  return gesetzt.length ? gesetzt[gesetzt.length - 1] : null;
+}
+
 /**
  * Fasst Termine desselben Events am selben Tag zu einem Listeneintrag zusammen.
  * Der Eintrag ist der früheste (nicht abgesagte) Termin mit bereinigtem Titel und `uhrzeiten`;
@@ -115,6 +121,8 @@ export function buendeln(events: DddEvent[]): DddEvent[] {
       tipp_des_tages: gruppe.some((e) => e.tipp_des_tages),
       highlight_der_woche: gruppe.some((e) => e.highlight_der_woche),
       top_event_des_monats: gruppe.some((e) => e.top_event_des_monats),
+      highlight_gesetzt_am: spaetester(gruppe.filter((e) => e.highlight_der_woche).map((e) => e.highlight_gesetzt_am)),
+      top_gesetzt_am: spaetester(gruppe.filter((e) => e.top_event_des_monats).map((e) => e.top_gesetzt_am)),
     });
   }
   // Reihenfolge wie geladen (nach Datum), damit nachfolgende Sortierungen stabil bleiben

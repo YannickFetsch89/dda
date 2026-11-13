@@ -10,7 +10,7 @@ Starten: streamlit run dashboard/app.py
 """
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -148,6 +148,36 @@ def feld_toggeln(event_id: str, feld: str, wert: bool) -> bool:
         return False
 
 
+# Flaggen mit Zeitpunkt (docs/plan-empfehlungen-2026-11-13.md, Abschnitt 8): Highlight gilt auf der Website
+# sieben Tage, Top bis Monatsende. Der Zeitpunkt wird beim Einschalten gesetzt und beim Ausschalten geleert.
+ZEITPUNKT_FELD = {
+    "highlight_der_woche": "highlight_gesetzt_am",
+    "top_event_des_monats": "top_gesetzt_am",
+}
+
+
+def flagge_setzen(event_id: str, feld: str, wert: bool) -> bool:
+    """Setzt eine Redaktions-Flagge und – bei Highlight und Top – ihren Zeitpunkt (UTC)."""
+    zeit_feld = ZEITPUNKT_FELD.get(feld)
+    if not zeit_feld:
+        return feld_toggeln(event_id, feld, wert)
+    db = get_db()
+    daten = {feld: wert, zeit_feld: datetime.now(timezone.utc).isoformat() if wert else None}
+    try:
+        db.table("events").update(daten).eq("id", event_id).execute()
+        return True
+    except Exception as e:
+        if zeit_feld in str(e):
+            # Spalte fehlt noch (database/flaggen_zeitpunkt_2026-11-13.sql nicht ausgeführt)
+            st.warning(
+                f"Spalte {zeit_feld} fehlt noch – Flagge ohne Zeitpunkt gesetzt, auf der Website gilt sie erst "
+                "nach dem SQL database/flaggen_zeitpunkt_2026-11-13.sql."
+            )
+            return feld_toggeln(event_id, feld, wert)
+        st.error(f"Fehler beim Aktualisieren: {e}")
+        return False
+
+
 # ── UI-Komponenten ────────────────────────────────────────────────────────────
 
 def featured_badge(event: dict) -> str:
@@ -261,7 +291,7 @@ def event_karte(event: dict, key_prefix: str):
             label = "🔥 Highlight ✓" if ist_highlight else "🔥 Highlight der Woche"
             btn_type = "primary" if ist_highlight else "secondary"
             if st.button(label, key=f"{key_prefix}_highlight_{eid}", use_container_width=True, type=btn_type):
-                if feld_toggeln(eid, "highlight_der_woche", not ist_highlight):
+                if flagge_setzen(eid, "highlight_der_woche", not ist_highlight):
                     st.cache_data.clear()
                     st.rerun()
 
@@ -271,7 +301,7 @@ def event_karte(event: dict, key_prefix: str):
             label = "👑 Top-Event ✓" if ist_top else "👑 Top-Event des Monats"
             btn_type = "primary" if ist_top else "secondary"
             if st.button(label, key=f"{key_prefix}_top_{eid}", use_container_width=True, type=btn_type):
-                if feld_toggeln(eid, "top_event_des_monats", not ist_top):
+                if flagge_setzen(eid, "top_event_des_monats", not ist_top):
                     st.cache_data.clear()
                     st.rerun()
 
