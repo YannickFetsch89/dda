@@ -68,6 +68,22 @@ function pinElement(o: KartenOrt): HTMLButtonElement {
   return pin;
 }
 
+/** Vorschaubild in der Liste; fehlt es oder lädt es nicht (404), steht das Typ-Icon auf hellem Grund. */
+function ListenBild({ bild, icon }: { bild: string | null; icon: string }) {
+  const [fehler, setFehler] = useState<string | null>(null);
+  const zeigen = bild && fehler !== bild;
+  return (
+    <span className="gd-kompakt__bild">
+      {zeigen ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={bild} alt="" loading="lazy" onError={() => setFehler(bild)} />
+      ) : (
+        <span className="icon" aria-hidden data-icon={icon} />
+      )}
+    </span>
+  );
+}
+
 /** Popup-Inhalt per DOM (Texte über textContent – keine HTML-Injektion aus Datenbankwerten). */
 function popupInhalt(o: KartenOrt): HTMLElement {
   const box = document.createElement("a");
@@ -78,6 +94,8 @@ function popupInhalt(o: KartenOrt): HTMLElement {
     img.src = o.bild;
     img.alt = "";
     img.loading = "lazy";
+    // Bild nicht ladbar (z. B. Illustration fehlt): Popup ohne Bild statt kaputtem Symbol
+    img.onerror = () => img.remove();
     box.appendChild(img);
   }
   const text = document.createElement("span");
@@ -341,14 +359,7 @@ export default function GuideKarte({ orte: geladen, ladefehler = false, naehe = 
             onMouseLeave={() => markerRef.current.get(o.id)?.el.classList.remove("gd-pin--puls")}
           >
             <button type="button" className="gd-kompakt__knopf" onClick={() => auswaehlen(o.id, true)} aria-pressed={o.id === gewaehlt}>
-              <span className="gd-kompakt__bild">
-                {o.bild ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={o.bild} alt="" loading="lazy" />
-                ) : (
-                  <span className="icon" aria-hidden data-icon={o.icon} />
-                )}
-              </span>
+              <ListenBild bild={o.bild} icon={o.icon} />
               <span className="gd-kompakt__text">
                 <span className="gd-typ">
                   {o.stufe ? <span className={`cl-stufe__punkt cl-stufe__punkt--${o.stufe}`} aria-hidden />

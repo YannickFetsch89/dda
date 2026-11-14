@@ -1134,6 +1134,7 @@ body:has(.gd-seite) .katleiste { position: relative; }
 .gd-kompakt__knopf { flex: 1; display: flex; gap: 14px; padding: 10px; text-align: left; min-width: 0; }
 .gd-kompakt__bild { flex: 0 0 104px; height: 78px; border-radius: var(--r-tile); overflow: hidden; background: var(--ddd-gold-tint); display: flex; align-items: center; justify-content: center; color: var(--ddd-text-muted); }
 .gd-kompakt__bild img { width: 100%; height: 100%; object-fit: cover; }
+.gd-kompakt__bild > .icon { font-size: 30px; opacity: 0.7; }
 .gd-kompakt__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; justify-content: center; }
 .gd-kompakt__name { font-size: 17px; line-height: 1.2; color: var(--ddd-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gd-kompakt__meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--ddd-text-body); }
