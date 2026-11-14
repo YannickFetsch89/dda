@@ -5,7 +5,7 @@
 // Links als [Text](/pfad) – nur interne Pfade; das JSON-LD bekommt den reinen Text.
 // Fakten nur aus unseren Daten (Küchen, Stadtteile, Genres, Brauhäuser) und allgemein bekanntem Stadtwissen.
 
-export type GuideSeite = "uebersicht" | "restaurants-cafes" | "kneipen-bars" | "clubs";
+export type GuideSeite = "uebersicht" | "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze";
 
 export interface GuideFrage { frage: string; antwort: string }
 export interface GuideAbschnitt { titel: string; absaetze: string[] }
@@ -21,7 +21,7 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
     einleitung:
       "Wo isst man gut, wo trinkt man das beste Alt, wo wird bis zum Morgen getanzt? In unserem Guide stehen " +
       "{restaurants} Restaurants und Cafés, {kneipen} Kneipen und Bars und {clubs} Clubs in Düsseldorf und Umgebung – " +
-      "jede Empfehlung mit eigener Seite, Adresse und Karte.",
+      "jede Empfehlung mit eigener Seite, Adresse und Karte. Für Familien kommen {spielplaetze} öffentliche Spielplätze dazu.",
     titel: "Düsseldorf von morgens bis spät in die Nacht",
     abschnitte: [
       {
@@ -91,8 +91,9 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         frage: "Welche Guides kommen noch dazu?",
         antwort:
-          "In Arbeit sind Guides für Spielplätze, Ausflüge in der Umgebung und Wochenend-Trips. Bis dahin findet ihr " +
-          "Ideen für Familien und Ausflüge in unserem [Eventkalender](/entdecken).",
+          "Neu ist der [Spielplatz-Guide](/guides/spielplaetze) mit allen öffentlichen Spielplätzen der Stadt. In Arbeit " +
+          "sind Ausflüge und Wochenend-Trips; bis dahin findet ihr Ideen für Familien in unserem " +
+          "[Eventkalender](/kategorie/familie).",
       },
     ],
   },
@@ -358,6 +359,99 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
         antwort:
           "Alle Partys und Konzerte des Abends stehen in unserem Eventkalender unter [heute](/heute), die der nächsten " +
           "Tage unter [Nightlife](/kategorie/nightlife). Auf jeder Club-Karte seht ihr außerdem das nächste Event des Clubs.",
+      },
+    ],
+  },
+
+  // Einleitung, Langtext und Fragen vom Auftraggeber freigegeben am 14.11.2026 (Plan 6.1/6.2)
+  spielplaetze: {
+    einleitung:
+      "Hier findet ihr {anzahl} öffentliche Spielplätze in Düsseldorf – vom kleinen Sandkasten im Viertel bis zum Wasser- " +
+      "und Waldspielplatz, dazu wenige betreute Abenteuerspielplätze mit festen Öffnungszeiten. Filtert nach Alter, " +
+      "Ausstattung und Stadtteil oder lasst euch zeigen, was in eurer Nähe liegt. Bolzplätze, Skateanlagen und " +
+      "Indoor-Spielplätze sind nicht dabei.",
+    titel: "Spielen in Düsseldorf",
+    abschnitte: [
+      {
+        titel: "Woher die Angaben kommen",
+        absaetze: [
+          "Grundlage ist die Liste der städtischen Spielplätze, die Düsseldorf als offene Daten veröffentlicht – mit Lage, " +
+            "Größe und der Notfallnummer jedes Platzes. Was dort steht, haben wir um Angaben aus OpenStreetMap und aus " +
+            "öffentlichen Quellen wie Stadtteil- und Familienportalen ergänzt. Jedes Gerät, jedes Extra und jede " +
+            "Altersangabe auf einer Spielplatz-Seite stützt sich auf so einen Beleg. Wo nichts belegt ist, steht „keine " +
+            "Angabe“ – das heißt nicht, dass etwas fehlt. Eine Altersgruppe, die wir nur aus den Geräten ableiten, ist als " +
+            "„vermutlich“ gekennzeichnet.",
+        ],
+      },
+      {
+        titel: "Wasserspielplätze für den Sommer",
+        absaetze: [
+          "Neun Plätze in der Stadt sind als Wasserspielplatz angelegt, darunter der " +
+            "[Wasserspielplatz Alter Bilker Friedhof](/guides/spielplaetze/wasserspielplatz-alter-bilker-friedhof-bilk) mit " +
+            "Pumpen und Düsen, der [Wasserspielplatz Alter Gerresheimer Friedhof](/guides/spielplaetze/wasserspielplatz-alter-gerresheimer-friedhof-gerresheim) " +
+            "mit Schwengelpumpe und Wasserkanone und der [Wasserspielplatz Auf’m Rott](/guides/spielplaetze/wasserspielplatz-aufm-rott-wersten) " +
+            "in Wersten. Dazu kommen viele normale Spielplätze mit einer Matschanlage. Das Wasser läuft in der Regel nur " +
+            "tagsüber und in den warmen Monaten – wo eine Quelle die Saison nennt, steht sie auf der Seite des Platzes.",
+        ],
+      },
+      {
+        titel: "Waldspielplätze und betreute Abenteuerspielplätze",
+        absaetze: [
+          "Zwanzig Waldspielplätze liegen in den Düsseldorfer Wäldern, viele im Osten der Stadt rund um Ludenberg, Rath " +
+            "und Gerresheim, weitere im Süden bei Benrath, Hassels und Garath. Sie sind oft aus Holz gebaut und liegen an " +
+            "Wanderparkplätzen oder Lichtungen. Ganz anders funktionieren die vier betreuten Abenteuerspielplätze in Eller, " +
+            "Niederkassel, Mörsenbroich und Garath: Dort arbeiten pädagogische Teams, Kinder bauen Hütten, es gibt Tiere " +
+            "und Feuerstellen. Sie haben feste Öffnungszeiten und sind kostenlos, etwa der " +
+            "[Abenteuerspielplatz Eller](/guides/spielplaetze/abenteuerspielplatz-eller).",
+        ],
+      },
+      {
+        titel: "Spielplätze im Stadtteil finden",
+        absaetze: [
+          "Die meisten Plätze liegen in Wohnvierteln, in Parks und zwischen Hochhäusern – besonders viele in " +
+            "[Gerresheim](/guides/spielplaetze/stadtteil/gerresheim), [Garath](/guides/spielplaetze/stadtteil/garath) und " +
+            "[Wersten](/guides/spielplaetze/stadtteil/wersten). Mit dem Stadtteil-Filter seht ihr alle Plätze eines " +
+            "Viertels auf der Karte, und der Knopf „In der Nähe“ sortiert die Liste nach der Entfernung zu eurem " +
+            "Standort. Der Standort bleibt dabei in eurem Browser.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        frage: "Wo gibt es Wasserspielplätze in Düsseldorf?",
+        antwort:
+          "Neun Spielplätze sind als Wasserspielplatz angelegt, zum Beispiel am Alten Bilker Friedhof, am Alten " +
+          "Gerresheimer Friedhof, Auf’m Rott in Wersten und im Volksgarten. Der Filter " +
+          "[Wasserspielplätze](/guides/spielplaetze?typ=wasser) zeigt alle auf der Karte. Das Wasser läuft meist nur " +
+          "tagsüber und in den Sommermonaten.",
+      },
+      {
+        frage: "Welcher Spielplatz eignet sich für Kleinkinder?",
+        antwort:
+          "Für die Kleinsten passen Plätze mit Sandkasten, Babyschaukel oder Federwippe. Wählt im Filter die " +
+          "Altersgruppe [„0–3 Jahre“](/guides/spielplaetze?alter=0-3): Dann seht ihr alle Plätze, die laut einer Quelle oder nach ihren Geräten für " +
+          "Kleinkinder geeignet sind, und die Plätze für alle Altersgruppen.",
+      },
+      {
+        frage: "Wo finde ich Waldspielplätze?",
+        antwort:
+          "Zwanzig Waldspielplätze liegen in den Wäldern im Osten und Süden der Stadt, etwa rund um Ludenberg, Rath und " +
+          "Gerresheim und bei Benrath. Der Filter [Waldspielplätze](/guides/spielplaetze?typ=wald) zeigt sie alle auf " +
+          "der Karte.",
+      },
+      {
+        frage: "Was bedeutet die Nummer auf dem Spielplatzschild?",
+        antwort:
+          "Die vierstellige Nummer auf dem Schild ist eine Notfallnummer der Stadt, keine Telefonnummer. Im Notfall " +
+          "wählt ihr die 112 und nennt diese Nummer – dann weiß die Leitstelle sofort, wo der Spielplatz liegt. Auf jeder " +
+          "[Spielplatz-Seite](/guides/spielplaetze) steht die Nummer des Platzes.",
+      },
+      {
+        frage: "Gibt es rollstuhlgerechte Spielplätze?",
+        antwort:
+          "Ja, für einige Plätze ist belegt, dass sie mit dem Rollstuhl befahrbar oder barrierefrei gestaltet sind, für " +
+          "andere gilt das teilweise. Der Filter [„Rollstuhlgerecht“](/guides/spielplaetze?extra=rollstuhl) zeigt die Plätze, bei denen das belegt ist; auf den " +
+          "Seiten steht, wenn ein Platz nur teilweise zugänglich ist.",
       },
     ],
   },

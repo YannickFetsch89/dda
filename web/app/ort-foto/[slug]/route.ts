@@ -13,6 +13,7 @@ import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
 import { clubLaden } from "@/lib/clubs-daten";
 import { istSichtbarerClub } from "@/lib/clubs";
 import { ortLaden, slugDekodieren } from "@/lib/orte";
+import { spielplatzLaden } from "@/lib/spielplaetze-daten";
 
 const FOTO_BREITE = 1200;
 // Nur echte Ressourcennamen zulassen ("places/<id>/photos/<id>"), nichts anderes an Google weiterreichen
@@ -75,7 +76,9 @@ async function bildQuelle(slug: string): Promise<{ adresse: string | null; googl
   // Club-Hub: Orte mit auch_club (z. B. Konvex) sind im Club-Hub sichtbar, auch wenn ihr Score im Haupt-Hub < 7 ist.
   // Club-Zeilen (typ = club) nur, wenn sie im Hub sichtbar sind (Freigabe!) – ortLaden kennt die Freigabe nicht.
   const geladen = await ortLaden(slug);
-  const ort = (geladen && (geladen.typ !== "club" || istSichtbarerClub(geladen)) ? geladen : null) ?? (await clubLaden(slug));
+  // Spielplätze haben keinen qualitaets_score: eigener Zweig, nur aktive (abgeschaltete → 404, keine Weiterleitung)
+  const ort = (geladen && (geladen.typ !== "club" || istSichtbarerClub(geladen)) ? geladen : null) ?? (await clubLaden(slug))
+    ?? (await spielplatzLaden(slug));
   if (ort?.bild_url && !ort.bild_url.includes("key=")) {
     cacheLife({ stale: 3600, revalidate: TAG, expire: 7 * TAG });
     return { adresse: ort.bild_url, google: false };

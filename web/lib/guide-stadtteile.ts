@@ -7,6 +7,7 @@ import { ortPfad } from "@/components/ort-karten";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "./kneipen-daten";
 import { MIN_EINTRAEGE, kanonischerStadtteil, type GuideHub } from "./landing";
 import { orteLaden } from "./orte";
+import { spielplaetzeLaden } from "./spielplaetze-daten";
 import type { DddOrt } from "./typen";
 
 /** Alle Orte eines Hubs, wie der Hub sie zeigt. */
@@ -16,6 +17,7 @@ export async function hubOrte(hub: GuideHub): Promise<DddOrt[]> {
     return [...eigene, ...brauhaeuser];
   }
   if (hub === "kneipen-bars") return kneipenLaden();
+  if (hub === "spielplaetze") return spielplaetzeLaden(); // ausdrücklicher Zweig, kein Rückfall auf Clubs (Plan 5.1)
   return clubsLaden();
 }
 

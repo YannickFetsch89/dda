@@ -15,7 +15,7 @@ const GuideKarte = dynamic(() => import("./guide-karte"), {
 type Stand = { quelle: string; orte: KartenOrt[] | null; fehler: boolean };
 
 /** `quelle`: Adresse der Kartenpunkte mit den aktuellen Filtern, z. B. /api/guide-karte?hub=restaurants&stadtteil=bilk */
-export function GuideKarteLazy({ quelle }: { quelle: string }) {
+export function GuideKarteLazy({ quelle, naehe = false }: { quelle: string; naehe?: boolean }) {
   const [stand, setStand] = useState<Stand | null>(null);
 
   useEffect(() => {
@@ -29,5 +29,5 @@ export function GuideKarteLazy({ quelle }: { quelle: string }) {
 
   // Gehört der Stand zu einer älteren Filter-URL, gilt die Karte als „lädt“
   const aktuell = stand?.quelle === quelle ? stand : null;
-  return <GuideKarte orte={aktuell?.orte ?? null} ladefehler={aktuell?.fehler ?? false} />;
+  return <GuideKarte orte={aktuell?.orte ?? null} ladefehler={aktuell?.fehler ?? false} naehe={naehe} />;
 }

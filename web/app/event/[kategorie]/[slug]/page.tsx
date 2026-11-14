@@ -18,7 +18,7 @@ import { BeschreibungText } from "@/components/beschreibung-text";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { seitenMetadaten } from "@/lib/seo";
 import { kategorie as kategorieInfo } from "@/lib/kategorien";
-import { GUIDE_HUBS, guideStadtteilPfad, inStadtteil, kanonischerStadtteil, kategoriePfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
+import { GUIDE_HUBS, guideStadtteilPfad, hubPasstZuEvent, inStadtteil, kanonischerStadtteil, kategoriePfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
 import { unterkategorieIndexierbar } from "@/lib/landing-listen";
 import { hubOrte, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { clubProfil } from "@/lib/clubs";
@@ -100,7 +100,8 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
 
   // Guide-Stadtteile, die es für den Stadtteil des Events gibt (nur indexierbare, ab fünf Orten)
   const st = kanonischerStadtteil(e.stadtteil);
-  const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
+  // Spielplätze nur bei Kategorie Familie (E16); die Schwelle (≥ 5 Plätze) prüft stadtteileImHub wie bei allen Hubs
+  const hubs = (Object.keys(GUIDE_HUBS) as GuideHub[]).filter((h) => hubPasstZuEvent(h, e.kategorie));
   const [hubListen, clubs] = await Promise.all([st && !online ? Promise.all(hubs.map((h) => hubOrte(h))) : Promise.resolve([]), clubsLaden()]);
   const guideLinks = st
     ? hubs.flatMap((h, i) => (hubListen[i] && stadtteileImHub(h, hubListen[i]).some((x) => x.stadtteil === st) ? [{ name: `${GUIDE_HUBS[h].name} ${inStadtteil(st)}`, pfad: guideStadtteilPfad(h, st) }] : []))

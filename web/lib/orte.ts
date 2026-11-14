@@ -31,10 +31,12 @@ const EXTRAS_FELDER = [
   "vorher_typ",
   // Bildausschnitt („unten“/„oben“) und Bildversion (neue URL nach einem Bildtausch → kein alter Browser-Cache)
   "bild_fokus", "foto_version",
+  // Spielplätze (lib/spielplaetze.ts): Profil, Prüf-Codes, Score – bei allen anderen Orten leer
+  "spielplatz",
 ];
-const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
+export const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 
-type Zeile = Record<string, unknown>;
+export type Zeile = Record<string, unknown>;
 
 /**
  * Nur Orte ab diesem Qualitäts-Score (1–10) erscheinen auf der Website.
@@ -54,7 +56,7 @@ function text(wert: unknown): string | null {
   return t.length ? t : null;
 }
 
-function normalisieren(z: Zeile): DddOrt {
+export function normalisieren(z: Zeile): DddOrt {
   return {
     id: String(z.id),
     name: text(z.name) ?? "Ohne Name",

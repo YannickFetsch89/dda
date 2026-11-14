@@ -7,10 +7,12 @@ import { notFound } from "next/navigation";
 import { JsonLd, Krumen, LinkChips } from "./landing";
 import { Icon, Leer } from "./karten";
 import { ClubKarte } from "./club-karte";
+import { SpielplatzKarte } from "./spielplatz-karte";
 import { OrtKartenGrid } from "./ort-karten";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { hubOrtPfad, hubOrte, orteImStadtteil, stadtteileImHub, zaehltFuerIndex } from "@/lib/guide-stadtteile";
 import { clubsSortieren, nachStufen } from "@/lib/clubs";
+import { ortIndexierbar, sortieren as spielplaetzeSortieren } from "@/lib/spielplaetze";
 import { STADTTEIL_TEXTE } from "@/lib/landing-texte";
 import { GUIDE_HUBS, MIN_EINTRAEGE, inStadtteil, bezirkSatz, guideStadtteilPfad, stadtteilAusSlug, stadtteilPfad, type GuideHub } from "@/lib/landing";
 import { seitenMetadaten } from "@/lib/seo";
@@ -25,9 +27,13 @@ async function laden(hub: GuideHub, slug: string) {
   const alle = await hubOrte(hub);
   const imStadtteil = orteImStadtteil(alle, st);
   // Club-Hub: Top-Empfehlungen zuerst (A, B, C), sonst die Reihenfolge des Hubs
-  const orte = hub === "clubs" ? nachStufen(clubsSortieren(imStadtteil, "empfohlen")).flatMap((g) => g.orte) : imStadtteil;
-  // Für Index-Schwelle und ItemList zählen im Club-Hub nur indexierbare Orte (Stufe A/B)
-  return { st, alle, orte, indexOrte: orte.filter(zaehltFuerIndex(hub)) };
+  const orte = hub === "clubs" ? nachStufen(clubsSortieren(imStadtteil, "empfohlen")).flatMap((g) => g.orte)
+    : hub === "spielplaetze" ? spielplaetzeSortieren(imStadtteil, "empfohlen") : imStadtteil;
+  // Index-Schwelle: im Club-Hub nur indexierbare Orte (Stufe A/B), sonst jeder sichtbare (Spielplätze: dünne zählen mit, Plan 5.4)
+  const indexOrte = orte.filter(zaehltFuerIndex(hub));
+  // ItemList: eigene Liste – bei Spielplätzen nur die indexierbaren Detailseiten (Schwelle und ItemList sind zwei Listen)
+  const listenOrte = hub === "spielplaetze" ? orte.filter(ortIndexierbar) : indexOrte;
+  return { st, alle, orte, indexOrte, listenOrte };
 }
 
 export async function guideStadtteilMetadaten(hub: GuideHub, slug: string): Promise<Metadata> {
@@ -38,7 +44,7 @@ export async function guideStadtteilMetadaten(hub: GuideHub, slug: string): Prom
   return seitenMetadaten({
     pfad: guideStadtteilPfad(hub, d.st),
     titel: `${h.name} ${imOrt}`,
-    beschreibung: `${d.orte.length} ausgewählte ${h.mehrzahl} ${imOrt}. ${STADTTEIL_TEXTE[d.st] ?? bezirkSatz(d.st)}`.slice(0, 300),
+    beschreibung: `${d.orte.length} ${hub === "spielplaetze" ? "öffentliche" : "ausgewählte"} ${h.mehrzahl} ${imOrt}. ${STADTTEIL_TEXTE[d.st] ?? bezirkSatz(d.st)}`.slice(0, 300),
     noindex: d.indexOrte.length < MIN_EINTRAEGE,
   });
 }
@@ -58,7 +64,7 @@ function ortListeJsonLd(hub: GuideHub, name: string, orte: DddOrt[]): Record<str
 export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: string }) {
   const d = await laden(hub, slug);
   if (!d) notFound();
-  const { st, alle, orte, indexOrte } = d;
+  const { st, alle, orte, listenOrte } = d;
   const h = GUIDE_HUBS[hub];
   const name = stadtteilName(st);
   const imOrt = inStadtteil(st);
@@ -71,7 +77,7 @@ export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: strin
     { name: h.name, pfad: hubPfad },
     { name, pfad },
   ];
-  const liste = ortListeJsonLd(hub, `${h.name} ${imOrt}`, indexOrte);
+  const liste = ortListeJsonLd(hub, `${h.name} ${imOrt}`, listenOrte);
   const jsonLd = [brotkrumenJsonLd(SITE_URL, krumen), ...(liste ? [liste] : [])];
 
   const andere = stadtteileImHub(hub, alle)
@@ -94,6 +100,10 @@ export async function GuideStadtteil({ hub, slug }: { hub: GuideHub; slug: strin
           {hub === "clubs" ? (
             <div className="cl-grid" role="list">
               {orte.map((o) => <ClubKarte key={o.id} o={o} />)}
+            </div>
+          ) : hub === "spielplaetze" ? (
+            <div className="gd-grid gd-grid--3 sp-stadtteil-grid" role="list">
+              {orte.map((o) => <SpielplatzKarte key={o.id} o={o} />)}
             </div>
           ) : (
             <OrtKartenGrid orte={orte} />

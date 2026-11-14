@@ -13,6 +13,7 @@ describe("routeVon", () => {
     expect(routeVon("/tag/2026-11-12")).toEqual({ typ: "tag", datum: "2026-11-12" });
     expect(routeVon("/reihe/comedy-zakk")).toEqual({ typ: "reihe", slug: "comedy-zakk" });
     expect(routeVon("/guides/clubs/salon-des-amateurs-altstadt")).toEqual({ typ: "ort", hub: "clubs", slug: "salon-des-amateurs-altstadt" });
+    expect(routeVon("/guides/spielplaetze/x")).toEqual({ typ: "ort", hub: "spielplaetze", slug: "x" });
   });
 
   it("Einzelsegment unter /event/ ohne UUID ist ungültig (echte 404 statt Soft-404 der alten Seite)", () => {
@@ -20,8 +21,8 @@ describe("routeVon", () => {
   });
 
   it("lässt alles andere durch", () => {
-    expect(routeVon("/guides/spielplaetze/x")).toBeNull();
     expect(routeVon("/guides/clubs")).toBeNull();
+    expect(routeVon("/guides/spielplaetze")).toBeNull();
     expect(routeVon("/heute")).toBeNull();
     expect(routeVon("/event/musik/%E0%A4%A")).toBeNull(); // kaputtes Prozentzeichen
   });
@@ -64,6 +65,25 @@ describe("ortEntscheidung", () => {
     expect(ortEntscheidung("clubs", "x", { ...sichtbar, club: { passt: false } })).toEqual({ art: "fehlt" });
     expect(ortEntscheidung("clubs", "x", { ...sichtbar, aktiv: false })).toEqual({ art: "fehlt" });
     expect(ortEntscheidung("restaurants-cafes", "zakk-flingern", sichtbar)).toEqual({ art: "umleiten", ziel: "/guides/clubs/zakk-flingern" });
+  });
+
+  it("Spielplätze (Plan 5.5): sichtbar ohne Score; nie freigeschaltet → 404; abgeschaltet → 308 auf die Stadtteilseite", () => {
+    const sp = (mehr: Record<string, unknown>) =>
+      ort({ typ: "spielplatz", qualitaets_score: null, aktiv: true, stadtteil: "Bilk", freigeschaltet_am: "2026-11-13", ...mehr });
+    expect(ortEntscheidung("spielplaetze", "x", sp({}))).toEqual({ art: "weiter" });
+    // Wieder freigeschaltet: aktiv, gleicher Slug → 200
+    expect(ortEntscheidung("spielplaetze", "x", sp({ freigeschaltet_am: "2026-11-01" }))).toEqual({ art: "weiter" });
+    expect(ortEntscheidung("spielplaetze", "x", sp({ aktiv: false, freigeschaltet_am: null }))).toEqual({ art: "fehlt" });
+    expect(ortEntscheidung("spielplaetze", "x", null)).toEqual({ art: "fehlt" });
+    expect(ortEntscheidung("spielplaetze", "x", sp({ typ: "restaurant", qualitaets_score: 9 }))).toEqual({ art: "fehlt" });
+    expect(ortEntscheidung("spielplaetze", "x", sp({ aktiv: false }))).toEqual({ art: "umleiten", ziel: "/guides/spielplaetze/stadtteil/bilk" });
+    // Gespeichertes „Hafen“ → Anzeige-Slug „medienhafen“
+    expect(ortEntscheidung("spielplaetze", "x", sp({ aktiv: false, stadtteil: "Hafen" }))).toEqual({ art: "umleiten", ziel: "/guides/spielplaetze/stadtteil/medienhafen" });
+    // Ohne gültigen Stadtteil → Hub
+    expect(ortEntscheidung("spielplaetze", "x", sp({ aktiv: false, stadtteil: null }))).toEqual({ art: "umleiten", ziel: "/guides/spielplaetze" });
+    expect(ortEntscheidung("spielplaetze", "x", sp({ aktiv: false, stadtteil: "Atlantis" }))).toEqual({ art: "umleiten", ziel: "/guides/spielplaetze" });
+    // Spielplatz-URL unter einem anderen Hub bleibt 404
+    expect(ortEntscheidung("restaurants-cafes", "x", sp({}))).toEqual({ art: "fehlt" });
   });
 
   it("Aus dem Club-Hub genommen (Konvex) → Bar-Seite; nur als Club sichtbare Bar → Club-Seite", () => {

@@ -10,6 +10,7 @@ import { zahl } from "@/lib/guide-filter";
 import { orteLaden } from "@/lib/orte";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { clubsLaden } from "@/lib/clubs-daten";
+import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
 
 export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
@@ -32,7 +33,7 @@ const HUBS: Hub[] = [
   { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
   { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },
   { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: true },
-  { slug: "spielplaetze", label: "Spielplätze", icon: "toys", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: false },
+  { slug: "spielplaetze", label: "Spielplätze", icon: "toys", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: true },
   { slug: "ausfluege", label: "Ausflüge", icon: "hiking", teaser: "Raus aus der Stadt – unter einer Stunde erreichbar", einheit: "Ziele", fertig: false },
   { slug: "wochenend-trips", label: "Wochenend-Trips", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
 ];
@@ -98,15 +99,21 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
 /** Anzahl je Hub (Daten gecached über orteLaden) – jede Kachel zählt genau das, was ihr Hub zeigt
  * (Restaurant-Hub inkl. Brauhäuser, Kneipen-Hub inkl. Restaurants mit auch_kneipe). */
 async function anzahlLaden(): Promise<Record<string, number>> {
-  const [restaurants, brauhaeuser, kneipen, clubs] = await Promise.all([
-    orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(), clubsLaden(),
+  const [restaurants, brauhaeuser, kneipen, clubs, spielplaetze] = await Promise.all([
+    orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(), clubsLaden(), spielplaetzeLaden(),
   ]);
-  return { "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length, clubs: clubs.length };
+  return {
+    "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length, clubs: clubs.length,
+    spielplaetze: spielplaetze.length,
+  };
 }
 
 export default async function GuidesUebersicht() {
   const anzahl = await anzahlLaden();
-  const werte = { restaurants: zahl(anzahl["restaurants-cafes"] ?? 0), kneipen: zahl(anzahl["kneipen-bars"] ?? 0), clubs: zahl(anzahl.clubs ?? 0) };
+  const werte = {
+    restaurants: zahl(anzahl["restaurants-cafes"] ?? 0), kneipen: zahl(anzahl["kneipen-bars"] ?? 0), clubs: zahl(anzahl.clubs ?? 0),
+    spielplaetze: zahl(anzahl.spielplaetze ?? 0),
+  };
   return (
     <div className="gd-seite">
       <header className="gd-entdecken container">

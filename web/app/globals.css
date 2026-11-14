@@ -1720,3 +1720,190 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .gd-entdecken .gd-einleitung { margin: 0; max-width: 640px; font-size: 16px; line-height: 1.5; }
 .gd-textlink { color: var(--ddd-link); font: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
 .gd-textlink:hover { color: var(--ddd-text); }
+
+/* ===================== Spielplatz-Guide (Handoff 14, Plan 5.2/5.3/5.7) ===================== */
+/* Altersfarben aus dem Handoff: c = Pin/Punkt, bg/fg = Badge (immer mit Text) */
+:root {
+  --sp-0-3: #ffb347; --sp-0-3-bg: #fff1dc; --sp-0-3-fg: #8a5a00;
+  --sp-3-6: #457b9d; --sp-3-6-bg: #e3edf3; --sp-3-6-fg: #2d5670;
+  --sp-6-12: #4caf50; --sp-6-12-bg: #e4f4e5; --sp-6-12-fg: #2a6b2d;
+  --sp-alle: #8a94a6; --sp-alle-bg: #edf0f4; --sp-alle-fg: #4a5568;
+  --sp-hero-bg: #fff6e6; --sp-ja-bg: #e4f4e5; --sp-ja-rand: #bfe3c1; --sp-ja-fg: #2a6b2d;
+  --sp-nein-bg: #fde6e8; --sp-nein-fg: #a3202b; --sp-teil-bg: #fff3d6; --sp-teil-fg: #8a5a00;
+}
+:root[data-theme="dark"] {
+  --sp-0-3-bg: rgba(255, 179, 71, 0.16); --sp-0-3-fg: #ffc978;
+  --sp-3-6-bg: rgba(69, 123, 157, 0.28); --sp-3-6-fg: #9cc4dd;
+  --sp-6-12-bg: rgba(76, 175, 80, 0.18); --sp-6-12-fg: #8fd492;
+  --sp-alle-bg: rgba(138, 148, 166, 0.2); --sp-alle-fg: #c3cad6;
+  --sp-hero-bg: var(--ddd-surface); --sp-ja-bg: rgba(76, 175, 80, 0.14); --sp-ja-rand: rgba(76, 175, 80, 0.4); --sp-ja-fg: #8fd492;
+  --sp-nein-bg: rgba(230, 57, 70, 0.16); --sp-nein-fg: #ff9aa3; --sp-teil-bg: rgba(255, 179, 71, 0.16); --sp-teil-fg: #ffc978;
+}
+
+/* Eigene Geräte-Icons (Outline 2 px, 24er Raster) über die Icon-Komponente: data-icon="sp:…" */
+.icon[data-icon^="sp:"]::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background: currentColor;
+  -webkit-mask: var(--sp-icon) center / contain no-repeat; mask: var(--sp-icon) center / contain no-repeat;
+}
+.icon[data-icon="sp:schaukel"] { --sp-icon: url("/guides/icons/sp-schaukel.svg"); }
+.icon[data-icon="sp:rutsche"] { --sp-icon: url("/guides/icons/sp-rutsche.svg"); }
+.icon[data-icon="sp:sandkasten"] { --sp-icon: url("/guides/icons/sp-sandkasten.svg"); }
+
+/* Heller Hero: Bild rechts auf 46 %, läuft nach links in den Grund aus; mobil Bild oben, Überschrift unten */
+.sp-hero { height: 240px; background: var(--sp-hero-bg); }
+.sp-hero__bild { position: absolute; inset: 0 0 35% 0; -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent 100%); mask-image: linear-gradient(180deg, #000 45%, transparent 100%); }
+.sp-hero__bild img, .sp-hero__bild .bild__platzhalter { width: 100%; height: 100%; object-fit: cover; }
+.sp-hero__bild .bild__platzhalter { display: none; }
+.sp-hero h1 { color: var(--ddd-text); }
+.sp-hero p { color: var(--ddd-text-body); }
+.sp-hero .gd-krumen { color: var(--ddd-text-muted); }
+@media (max-width: 767px) {
+  .sp-hero { height: auto; }
+  .sp-hero__bild { position: relative; inset: auto; height: 150px; }
+  .sp-hero .gd-hero__inhalt { height: auto; padding-top: 4px; padding-bottom: 20px; }
+}
+@media (min-width: 768px) {
+  .sp-hero__bild { inset: 0 0 0 54%; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%); mask-image: linear-gradient(90deg, transparent 0%, #000 45%); }
+  .sp-hero .gd-hero__inhalt { justify-content: center; padding-bottom: 0; }
+  .sp-hero h1 { font-size: 56px; max-width: 60%; }
+  .sp-hero p { max-width: 50%; }
+}
+:root[data-theme="dark"] .sp-hero__bild img { opacity: 0.8; }
+
+/* Altersfilter groß (48 px) mit Farbpunkt; aktiv: Tint, Rand und Punkt in der Altersfarbe */
+.sp-punkt { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--ddd-navy); border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(27, 37, 64, 0.2); vertical-align: middle; }
+.sp-punkt--0-3 { background: var(--sp-0-3); }
+.sp-punkt--3-6 { background: var(--sp-3-6); }
+.sp-punkt--6-12 { background: var(--sp-6-12); }
+.sp-punkt--alle { background: var(--sp-alle); }
+:root[data-theme="dark"] .sp-punkt { border-color: var(--ddd-surface); }
+:root[data-theme="dark"] .sp-punkt--unbekannt { background: #f7f8fa; }
+.sp-alter-chip { height: 48px; padding: 0 18px; gap: 8px; border: 1.5px solid transparent; }
+.sp-alter-chip--0-3.gd-chip--an { background: var(--sp-0-3-bg); color: var(--sp-0-3-fg); border-color: var(--sp-0-3); }
+.sp-alter-chip--3-6.gd-chip--an { background: var(--sp-3-6-bg); color: var(--sp-3-6-fg); border-color: var(--sp-3-6); }
+.sp-alter-chip--6-12.gd-chip--an { background: var(--sp-6-12-bg); color: var(--sp-6-12-fg); border-color: var(--sp-6-12); }
+.sp-alter-chip--alle.gd-chip--an { background: var(--sp-alle-bg); color: var(--sp-alle-fg); border-color: var(--sp-alle); }
+/* Touch-Ziele ≥ 44 px (5.7) – nur im Spielplatz-Guide, die anderen Guides behalten 40 px */
+@media (max-width: 767px) { .sp-seite .gd-chip--gross, .sp-alter-chip { height: auto; min-height: 44px; } }
+
+.sp-erfasst { display: flex; align-items: center; gap: 6px; margin: 6px 0 12px; font-size: 13px; }
+.sp-erfasst .icon { font-size: 16px; }
+.sp-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 13px; font-weight: 600; color: var(--ddd-text-body); }
+.sp-legende li { display: flex; align-items: center; gap: 6px; }
+.sp-quellen { font-size: 12px; padding-top: 8px; padding-bottom: 24px; }
+.sp-quellen a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* Pins in Altersfarbe, unbekannt neutral (Navy); gewählter Pin mit hellem Ring; Hover in der Liste lässt den Pin pulsieren */
+.gd-pin.gd-pin--alter-0-3 { background: var(--sp-0-3); }
+.gd-pin.gd-pin--alter-0-3 .icon { color: #1b2540; }
+.gd-pin.gd-pin--alter-3-6 { background: var(--sp-3-6); }
+.gd-pin.gd-pin--alter-6-12 { background: var(--sp-6-12); }
+.gd-pin.gd-pin--alter-alle { background: var(--sp-alle); }
+.gd-pin.gd-pin--alter-3-6 .icon, .gd-pin.gd-pin--alter-6-12 .icon, .gd-pin.gd-pin--alter-alle .icon { color: #ffffff; }
+.gd-pin.gd-pin--alter-unbekannt { background: var(--ddd-navy); }
+.gd-pin.gd-pin--alter-unbekannt .icon { color: #ffffff; }
+.gd-pin.gd-pin--alter.gd-pin--an { box-shadow: 0 0 0 3px #1b2540, 0 6px 14px rgba(27, 37, 64, 0.45); }
+:root[data-theme="dark"] .gd-pin.gd-pin--alter.gd-pin--an { box-shadow: 0 0 0 3px #f7f8fa, 0 6px 14px rgba(0, 0, 0, 0.6); }
+@keyframes dddPulse { from { scale: 1; } to { scale: 1.3; } }
+/* „scale“ statt „transform“: MapLibre positioniert den Marker über transform */
+.gd-pin.gd-pin--puls { animation: dddPulse 0.9s ease-in-out infinite alternate; transform-origin: 50% 100%; z-index: 2; }
+@media (prefers-reduced-motion: reduce) { .gd-pin.gd-pin--puls { animation: none; scale: 1.15; } }
+.gd-kompakt--alter-0-3:hover { border-color: var(--sp-0-3); }
+.gd-kompakt--alter-3-6:hover { border-color: var(--sp-3-6); }
+.gd-kompakt--alter-6-12:hover { border-color: var(--sp-6-12); }
+.gd-kompakt--alter-alle:hover { border-color: var(--sp-alle); }
+.gd-kompakt[class*="gd-kompakt--alter-"]:hover { background: #fffdf7; }
+:root[data-theme="dark"] .gd-kompakt[class*="gd-kompakt--alter-"]:hover { background: var(--ddd-subtle); }
+.gd-kompakt .gd-typ .sp-punkt { width: 10px; height: 10px; margin-right: 5px; border-width: 1.5px; }
+
+/* „In der Nähe“ in der Kartenliste; eigener Standort als Navy-Kreis */
+.gd-naehe { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 4px 4px 8px; }
+.gd-naehe__knopf { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--ddd-navy); color: #ffffff; font-size: 14px; font-weight: 600; }
+.gd-naehe__knopf .icon { font-size: 18px; }
+.gd-naehe__knopf.is-aktiv { background: var(--ddd-surface); color: var(--ddd-text); border: 1.5px solid var(--ddd-border); }
+:root[data-theme="dark"] .gd-naehe__knopf:not(.is-aktiv) { background: var(--ddd-gold); color: var(--ddd-navy); }
+.gd-standort { width: 18px; height: 18px; border-radius: 50%; background: #1b2540; border: 3px solid #ffffff; box-shadow: 0 0 0 6px rgba(27, 37, 64, 0.2); }
+
+/* Alters-Badge (Karte und groß auf der Detailseite) */
+.sp-alter { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 3px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; background: var(--sp-alle-bg); color: var(--sp-alle-fg); border: 1.5px solid transparent; }
+.sp-alter--0-3 { background: var(--sp-0-3-bg); color: var(--sp-0-3-fg); }
+.sp-alter--3-6 { background: var(--sp-3-6-bg); color: var(--sp-3-6-fg); }
+.sp-alter--6-12 { background: var(--sp-6-12-bg); color: var(--sp-6-12-fg); }
+.sp-alter__vermutlich { font-weight: 500; opacity: 0.85; }
+.sp-alter--gross { margin: 14px 0 6px; padding: 5px 18px 5px 5px; gap: 10px; font-size: 18px; }
+.sp-alter--gross.sp-alter--0-3 { border-color: var(--sp-0-3); }
+.sp-alter--gross.sp-alter--3-6 { border-color: var(--sp-3-6); }
+.sp-alter--gross.sp-alter--6-12 { border-color: var(--sp-6-12); }
+.sp-alter--gross.sp-alter--alle { border-color: var(--sp-alle); }
+.sp-alter__kreis { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--sp-alle); color: #ffffff; }
+.sp-alter--0-3 .sp-alter__kreis { background: var(--sp-0-3); color: #1b2540; }
+.sp-alter--3-6 .sp-alter__kreis { background: var(--sp-3-6); }
+.sp-alter--6-12 .sp-alter__kreis { background: var(--sp-6-12); }
+.sp-alter__kreis .icon { font-size: 20px; }
+
+.sp-karte .gd-karte__text { gap: 6px; }
+.sp-geraete { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-geraet { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 10px; background: var(--ddd-bg); color: var(--ddd-text-body); }
+.sp-geraet .icon { font-size: 18px; }
+
+/* Detailseite */
+.sp-detail__titel { font-size: 32px; line-height: 1.15; margin-top: 6px; }
+.sp-detail__lage { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 15px; }
+.sp-detail__lage .icon { font-size: 18px; }
+.sp-block { margin-top: 32px; }
+.sp-block h2 { font-size: 26px; margin-bottom: 14px; }
+.sp-bereiche { margin: 0; padding-left: 20px; line-height: 1.7; }
+.sp-ausstattung { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; list-style: none; margin: 0; padding: 0; }
+@media (min-width: 560px) { .sp-ausstattung { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sp-ausstattung__zeile { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 16px; border: 1.5px solid var(--ddd-border); background: var(--ddd-surface); }
+.sp-ausstattung__status { font-size: 22px; font-variation-settings: "FILL" 1; }
+.sp-ausstattung__name { flex: 1; font-size: 16px; font-weight: 600; color: var(--ddd-text); }
+.sp-ausstattung__offen { font-size: 12px; color: var(--ddd-text-muted); }
+.sp-ausstattung__icon { font-size: 22px; color: var(--ddd-border); }
+.sp-ausstattung__zeile--ja { background: var(--sp-ja-bg); border-color: var(--sp-ja-rand); }
+.sp-ausstattung__zeile--ja .sp-ausstattung__status { color: #2a9d8f; }
+.sp-ausstattung__zeile--ja .sp-ausstattung__icon { color: var(--sp-ja-fg); }
+.sp-ausstattung__zeile--nein .sp-ausstattung__status { color: #e63946; }
+.sp-ausstattung__zeile--nein .sp-ausstattung__name, .sp-ausstattung__zeile--offen .sp-ausstattung__name { color: var(--ddd-text-muted); font-weight: 500; }
+.sp-ausstattung__zeile--offen .sp-ausstattung__status { color: var(--ddd-text-muted); opacity: 0.6; }
+.sp-neben { margin-top: 12px; font-size: 15px; color: var(--ddd-text-body); }
+.sp-extras { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.sp-extras__zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.sp-extras__kachel { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ddd-bg); color: var(--ddd-text-body); }
+.sp-extras__kachel .icon { font-size: 20px; }
+.sp-extras__label { width: 120px; font-size: 15px; }
+.sp-extras__notiz { font-size: 14px; }
+.sp-status { padding: 3px 12px; border-radius: var(--r-pill); font-size: 13px; font-weight: 700; background: var(--ddd-bg); color: var(--ddd-text-muted); }
+.sp-status--ja { background: var(--sp-ja-bg); color: var(--sp-ja-fg); }
+.sp-status--nein { background: var(--sp-nein-bg); color: var(--sp-nein-fg); }
+.sp-status--teilweise { background: var(--sp-teil-bg); color: var(--sp-teil-fg); }
+.sp-status--offen { font-weight: 500; }
+.sp-fakten h2 { margin-bottom: 4px; }
+.sp-fakten:not(:has(.gd-info__zeile)) { display: none; }
+.sp-notfall { display: flex; gap: 14px; align-items: flex-start; margin-top: 28px; padding: 16px 18px; border-radius: 16px; background: var(--sp-nein-bg); color: var(--ddd-text-body); }
+.sp-notfall__icon { font-size: 28px; color: #e63946; }
+.sp-notfall p { margin: 0; line-height: 1.5; }
+.sp-notfall__quelle { font-size: 13px; }
+.sp-stand { margin-top: 24px; font-size: 13px; line-height: 1.6; display: flex; flex-direction: column; gap: 4px; }
+.sp-stand a { text-decoration: underline; text-underline-offset: 2px; }
+.sp-seitenpanel { display: flex; flex-direction: column; gap: 12px; }
+.sp-seitenpanel .karte-ausschnitt { border-radius: 16px; overflow: hidden; }
+/* „Route planen“ steht als eigener Knopf darunter */
+.sp-seitenpanel .karte-ausschnitt__route { display: none; }
+.sp-seitenpanel__adresse { display: flex; gap: 6px; align-items: flex-start; font-size: 14px; color: var(--ddd-text-body); }
+.sp-seitenpanel__adresse .icon { font-size: 18px; color: var(--ddd-text-muted); }
+.sp-detail .gd-knopf { min-height: 44px; }
+.sp-naehe { margin-top: 48px; scroll-margin-top: 80px; }
+.sp-naehe > h2 { font-size: 30px; }
+.sp-naehe__block { margin-top: 24px; }
+.sp-naehe__titel { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; color: var(--ddd-text); }
+.sp-naehe__kreis { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--sp-hero-bg); color: var(--ddd-text); border: 1px solid var(--ddd-border); }
+.sp-naehe__kreis .icon { font-size: 20px; }
+.sp-naehe__zusatz { margin-top: 4px; font-size: 14px; }
+.sp-naehe__block .link { display: inline-block; margin-top: 10px; }
+@media (min-width: 1024px) {
+  .sp-naehe__grid.gd-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sp-naehe__unten { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 32px; align-items: start; }
+  .sp-naehe__cafes .gd-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) { .sp-detail { scroll-behavior: smooth; } html:has(.sp-detail) { scroll-behavior: smooth; } }

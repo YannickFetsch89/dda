@@ -17,7 +17,7 @@ describe("Guide-Texte", () => {
   });
 
   it("Links nur intern und auf bekannte Seitentypen", () => {
-    const erlaubt = /^\/(guides(\/(restaurants-cafes|kneipen-bars|clubs)(\/stadtteil)?(\/[a-z0-9-]+)?)?|heute|wochenende|entdecken|stadtteile|kategorie\/[a-z-]+)$/;
+    const erlaubt = /^\/(guides(\/(restaurants-cafes|kneipen-bars|clubs|spielplaetze)(\/stadtteil)?(\/[a-z0-9-]+)?)?|guides\/spielplaetze\?(typ=(wasser|wald|abenteuer)|alter=(0-3|3-6|6-12)|extra=[a-z]+)|heute|wochenende|entdecken|stadtteile|kategorie\/[a-z-]+)$/;
     for (const s of SEITEN) for (const z of linkZiele(GUIDE_TEXTE[s])) expect(z, `${s}: ${z}`).toMatch(erlaubt);
   });
 

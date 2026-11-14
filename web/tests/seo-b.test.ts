@@ -55,7 +55,7 @@ describe("Proxy: Landingpages", () => {
     expect(routeVon("/kategorie/musik")).toEqual({ typ: "kategorie", slug: "musik" });
     expect(routeVon("/stadtteil/flingern")).toEqual({ typ: "stadtteil", slug: "flingern" });
     expect(routeVon("/guides/restaurants-cafes/stadtteil/unterbilk")).toEqual({ typ: "guide-stadtteil", hub: "restaurants-cafes", slug: "unterbilk" });
-    expect(routeVon("/guides/spielplaetze/stadtteil/unterbilk")).toBeNull();
+    expect(routeVon("/guides/spielplaetze/stadtteil/unterbilk")).toEqual({ typ: "guide-stadtteil", hub: "spielplaetze", slug: "unterbilk" });
   });
 
   it("echte 404 für Unbekanntes, ohne Netz", async () => {

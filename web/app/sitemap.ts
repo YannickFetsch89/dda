@@ -9,6 +9,9 @@ import { kneipenLaden } from "@/lib/kneipen-daten";
 import { clubIndexierbar, eigeneClubSeite } from "@/lib/clubs";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { clubKanonischerPfad } from "@/lib/clubs-json-ld";
+import { ortIndexierbar } from "@/lib/spielplaetze";
+import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
+import { spielplatzPfad } from "@/lib/spielplaetze-json-ld";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
@@ -71,7 +74,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
   // Jeder Ort genau einmal (URL nach typ über ortPfad) – auch Brauhäuser, die in zwei Hubs erscheinen
-  const [orte, kneipen, clubsAlle] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden(), clubsLaden()]);
+  const [orte, kneipen, clubsAlle, spielplaetzeAlle] = await Promise.all([
+    orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden(), clubsLaden(), spielplaetzeLaden(),
+  ]);
+  // Spielplätze: nur aktive (abgeschaltete leiten weiter) und nur indexierbare Detailseiten (Plan 5.4)
+  const spielplaetze = spielplaetzeAlle.filter(ortIndexierbar);
   // Club-Hub: nur Club-Seiten, die selbst kanonisch und indexierbar sind (Stufe A/B; auch_club-Orte mit sichtbarer
   // Haupt-Seite haben hier noindex und stehen mit ihrer Haupt-URL in der Sitemap)
   const clubs = clubsAlle.filter((o) => eigeneClubSeite(o) && clubIndexierbar(o));
@@ -82,11 +89,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const restaurants = orte.filter((o) => o.typ !== "kneipe");
   const guides: MetadataRoute.Sitemap = orte.length
     ? [
-        { url: `${SITE_URL}/guides`, ...mit(geaendert([...orte, ...clubsAlle])), changeFrequency: "weekly", priority: 0.7 },
+        { url: `${SITE_URL}/guides`, ...mit(geaendert([...orte, ...clubsAlle, ...spielplaetzeAlle])), changeFrequency: "weekly", priority: 0.7 },
         { url: `${SITE_URL}/guides/restaurants-cafes`, ...mit(geaendert(restaurants)), changeFrequency: "weekly", priority: 0.7 },
         ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, ...mit(geaendert(kneipen)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
         ...(clubsAlle.length ? [{ url: `${SITE_URL}/guides/clubs`, ...mit(geaendert(clubsAlle)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
-        ...[...orte.map((o) => ({ o, pfad: ortPfad(o) })), ...clubs.map((o) => ({ o, pfad: clubKanonischerPfad(o) }))].map(({ o, pfad }) => ({
+        ...(spielplaetzeAlle.length ? [{ url: `${SITE_URL}/guides/spielplaetze`, ...mit(geaendert(spielplaetzeAlle)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
+        ...[
+          ...orte.map((o) => ({ o, pfad: ortPfad(o) })),
+          ...clubs.map((o) => ({ o, pfad: clubKanonischerPfad(o) })),
+          ...spielplaetze.map((o) => ({ o, pfad: spielplatzPfad(o) })),
+        ].map(({ o, pfad }) => ({
           url: `${SITE_URL}${pfad}`,
           ...mit(geaendert([o])),
           changeFrequency: "monthly" as const,

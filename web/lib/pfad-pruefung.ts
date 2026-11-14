@@ -8,7 +8,9 @@
 import { istSichtbarerClub } from "./clubs";
 import { istGueltigerTag } from "./datum";
 import { kategorieAusDb } from "./kategorien";
-import { kategorieGueltig, kategoriePfad, stadtteilAusSlug, stadtteilPfad, unterkategorieGueltig } from "./landing";
+import {
+  guideStadtteilPfad, kanonischerStadtteil, kategorieGueltig, kategoriePfad, stadtteilAusSlug, stadtteilPfad, unterkategorieGueltig,
+} from "./landing";
 import { eventPfad } from "./pfade";
 import type { DddOrt, KategorieSlug } from "./typen";
 
@@ -30,8 +32,8 @@ export type Route =
   | { typ: "stadtteil"; slug: string }
   | { typ: "guide-stadtteil"; hub: OrtHub; slug: string };
 
-export type OrtHub = "restaurants-cafes" | "kneipen-bars" | "clubs";
-const HUBS: OrtHub[] = ["restaurants-cafes", "kneipen-bars", "clubs"];
+export type OrtHub = "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze";
+const HUBS: OrtHub[] = ["restaurants-cafes", "kneipen-bars", "clubs", "spielplaetze"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function teil(roh: string): string | null {
@@ -119,14 +121,17 @@ async function reiheVorhanden(slug: string): Promise<boolean | undefined> {
 type OrtKopf = {
   typ: string; aktiv: boolean; qualitaets_score: number | null;
   club: unknown; club_score: unknown; club_freigegeben: unknown; auch_club: unknown; kein_club?: unknown;
+  /** Nur Spielplätze: Stadtteil und erster Freischalt-Tag (Weiterleitung abgeschalteter Plätze, Plan 5.5) */
+  stadtteil?: string | null; freigeschaltet_am?: string | null;
 };
 
 async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
   return gemerkt(`ort:${slug}`, async () => {
     const z = await abfrage<OrtKopf>(
       "orte",
-      `select=typ,aktiv,qualitaets_score,club:extras->club,club_score:extras->club_score,` +
-        `club_freigegeben:extras->club_freigegeben,auch_club:extras->auch_club,kein_club:extras->kein_club&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      `select=typ,aktiv,qualitaets_score,stadtteil,club:extras->club,club_score:extras->club_score,` +
+        `club_freigegeben:extras->club_freigegeben,auch_club:extras->auch_club,kein_club:extras->kein_club,` +
+        `freigeschaltet_am:extras->spielplatz->>freigeschaltet_am&slug=eq.${encodeURIComponent(slug)}&limit=1`,
     );
     return z === undefined ? undefined : (z[0] ?? null);
   });
@@ -135,10 +140,23 @@ async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
 // ---------- Entscheidungen ----------
 
 const MIN_SCORE = 7; // wie MIN_QUALITAETS_SCORE in lib/orte.ts
-const HUB_TYPEN: Record<Exclude<OrtHub, "clubs">, string[]> = {
+const HUB_TYPEN: Record<Exclude<OrtHub, "clubs" | "spielplaetze">, string[]> = {
   "restaurants-cafes": ["restaurant", "imbiss", "cafe"],
   "kneipen-bars": ["kneipe"],
 };
+
+/**
+ * Spielplätze (Plan 5.5): sichtbar = aktiv, ohne Score. Nie freigeschaltet → 404. Abgeschaltet (inaktiv mit
+ * freigeschaltet_am) → dauerhaft auf die Stadtteilseite (stadtteilSlug, „Hafen“ → medienhafen), ohne gültigen Stadtteil
+ * auf den Hub. Eine einmal indexierte URL endet nie in einer 404.
+ */
+export function spielplatzEntscheidung(o: OrtKopf | null): Pruefung {
+  if (!o || o.typ !== "spielplatz") return FEHLT;
+  if (o.aktiv) return WEITER;
+  if (!o.freigeschaltet_am) return FEHLT;
+  const st = kanonischerStadtteil(o.stadtteil);
+  return { art: "umleiten", ziel: st ? guideStadtteilPfad("spielplaetze", st) : "/guides/spielplaetze" };
+}
 
 /** Im Club-Hub sichtbar? Dieselbe Regel wie die Website (lib/clubs.ts). */
 export function clubSichtbar(o: OrtKopf): boolean {
@@ -151,14 +169,15 @@ export function clubSichtbar(o: OrtKopf): boolean {
 }
 
 /** Hub, in dem ein Ort (kein Club) seine sichtbare Seite hat – sonst null. */
-function sichtbarerHub(o: OrtKopf): Exclude<OrtHub, "clubs"> | null {
+function sichtbarerHub(o: OrtKopf): Exclude<OrtHub, "clubs" | "spielplaetze"> | null {
   if (!o.aktiv || (o.qualitaets_score ?? 0) < MIN_SCORE) return null;
-  const hubs = Object.keys(HUB_TYPEN) as Exclude<OrtHub, "clubs">[];
+  const hubs = Object.keys(HUB_TYPEN) as Exclude<OrtHub, "clubs" | "spielplaetze">[];
   return hubs.find((h) => HUB_TYPEN[h].includes(o.typ)) ?? null;
 }
 
 /** Entscheidung für einen Ort unter /guides/<hub>/<slug> (rein, testbar). */
 export function ortEntscheidung(hub: OrtHub, slug: string, o: OrtKopf | null): Pruefung {
+  if (hub === "spielplaetze") return spielplatzEntscheidung(o);
   if (!o) return FEHLT;
   if (hub === "clubs") {
     if (clubSichtbar(o)) return WEITER;

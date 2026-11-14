@@ -13,6 +13,11 @@ import { filterLesen, filtern, sortieren } from "@/lib/guide-filter";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { filterLesen as kneipenFilterLesen, filtern as kneipenFiltern } from "@/lib/kneipen";
 import { orteLaden } from "@/lib/orte";
+import {
+  filterLesen as spielplatzFilterLesen, filtern as spielplaetzeFiltern, ortStadtteilSlug, sortieren as spielplaetzeSortieren,
+} from "@/lib/spielplaetze";
+import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
+import { spielplatzKartenOrte } from "@/lib/spielplaetze-karte";
 
 const CACHE = "public, max-age=300, stale-while-revalidate=3600";
 
@@ -40,6 +45,11 @@ export async function GET(request: Request) {
       const sortiert = clubsSortieren(clubsFiltern(await clubsLaden(), f), f.sort);
       const orte = ["a", "b", "c"].flatMap((s) => sortiert.filter((o) => clubStufe(o) === s));
       return antwort(request, clubKartenOrte(orte));
+    }
+    if (sp.hub === "spielplaetze") {
+      const f = spielplatzFilterLesen(sp);
+      const orte = spielplaetzeSortieren(spielplaetzeFiltern(await spielplaetzeLaden(), f, ortStadtteilSlug), f.sort);
+      return antwort(request, spielplatzKartenOrte(orte));
     }
     if (sp.hub === "restaurants") {
       const f = filterLesen(sp);

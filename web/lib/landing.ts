@@ -59,12 +59,18 @@ export function unterkategoriePfad(kategorie: string, unter: string): string {
   return `/kategorie/${kategorie}/${unter}`;
 }
 
-export type GuideHub = "restaurants-cafes" | "kneipen-bars" | "clubs";
+export type GuideHub = "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze";
 export const GUIDE_HUBS: Record<GuideHub, { name: string; mehrzahl: string; icon: string }> = {
   "restaurants-cafes": { name: "Restaurants & Cafés", mehrzahl: "Restaurants und Cafés", icon: "restaurant" },
   "kneipen-bars": { name: "Kneipen & Bars", mehrzahl: "Kneipen und Bars", icon: "sports_bar" },
   clubs: { name: "Clubs", mehrzahl: "Clubs", icon: "nightlife" },
+  spielplaetze: { name: "Spielplätze", mehrzahl: "Spielplätze", icon: "toys" },
 };
+
+/** Guide-Stadtteil-Links auf Event-Seiten: Spielplätze nur bei Kategorie Familie (E16 im Spielplatz-Plan). */
+export function hubPasstZuEvent(hub: GuideHub, kategorie: string): boolean {
+  return hub !== "spielplaetze" || kategorie === "familie";
+}
 
 export function istGuideHub(hub: string): hub is GuideHub {
   return hub in GUIDE_HUBS;

@@ -179,18 +179,27 @@ export default function DatenschutzSeite() {
           Quellenangabe „© OpenStreetMap-Mitwirkende“ klicken, öffnet sich die Website openstreetmap.org.
         </li>
         <li>
-          <b>Google Maps (nur nach Klick):</b> Auf Event-Seiten können Sie einen Kartenausschnitt von Google Maps
+          <b>Google Maps (nur nach Klick):</b> Auf Event-Seiten und den Seiten des Spielplatz-Guides können Sie einen
+          Kartenausschnitt von Google Maps
           (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland) einblenden. Die Karte wird erst
           geladen, wenn Sie auf „Karte anzeigen“ oder „Nur dieses Mal“ klicken; erst dann werden Daten (u.a. Ihre
           IP-Adresse) an Google übermittelt, ggf. auch in die USA. Bei „Karte anzeigen“ speichern wir Ihre
           Entscheidung lokal in Ihrem Browser (siehe Abschnitt 7); Sie können sie dort jederzeit löschen. Links
           zur Routenplanung auf Event-Seiten und der Knopf „Google Maps“ auf den Seiten der Restaurant- und
-          Café-Guides öffnen Google Maps erst, wenn Sie sie anklicken; dabei übermitteln wir nicht, von welcher
+          Café-Guides und der Knopf „Route planen“ im Spielplatz-Guide öffnen Google Maps erst, wenn Sie sie anklicken; dabei übermitteln wir nicht, von welcher
           unserer Seiten Sie kommen. Rechtsgrundlage: Ihre Einwilligung
           (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).{" "}
           <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">
             Datenschutzerklärung von Google
           </a>
+        </li>
+        <li>
+          <b>Standortfunktion im Spielplatz-Guide.</b> Wenn Sie auf der Übersichtsseite des Spielplatz-Guides bei der
+          Sortierung auf „In der Nähe“ tippen, fragt Ihr Browser, ob die Website Ihren Standort verwenden darf. Nur wenn
+          Sie zustimmen, berechnet Ihr Browser auf Ihrem Gerät die Entfernung zu den Spielplätzen. Die Website erhält
+          Ihren Standort dabei nicht und speichert ihn nicht. Die Freigabe können Sie jederzeit in den Einstellungen
+          Ihres Browsers widerrufen. Der Link „In der Nähe“ auf einer Spielplatz-Seite springt nur zu den schon geladenen
+          Angaben weiter unten und fragt den Standort nicht ab.
         </li>
         <li>
           <b>Supabase:</b> Wir nutzen Supabase als Datenbank-Backend für die Speicherung von Event-Daten.

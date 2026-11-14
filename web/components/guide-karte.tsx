@@ -25,6 +25,9 @@ export interface KartenOrt {
   /** Nur Club-Hub: Empfehlungsstufe → Pin-Farbe (a = Top, b = empfohlen, c = weitere) */
   stufe?: "a" | "b" | "c";
   stufeLabel?: string;
+  /** Nur Spielplätze: Altersgruppe → Pin-Farbe (unbekannt = neutral) und Text für Liste/Popup */
+  alter?: "0-3" | "3-6" | "6-12" | "alle" | "unbekannt";
+  alterLabel?: string;
 }
 
 const START = { center: [6.7735, 51.2277] as [number, number], zoom: 12 };
@@ -55,8 +58,9 @@ function istDunkel(): boolean {
 function pinElement(o: KartenOrt): HTMLButtonElement {
   const pin = document.createElement("button");
   pin.type = "button";
-  pin.className = o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}` : "gd-pin";
-  pin.setAttribute("aria-label", o.stufeLabel ? `${o.name} (${o.stufeLabel})` : o.name);
+  pin.className = o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}` : o.alter ? `gd-pin gd-pin--alter gd-pin--alter-${o.alter}` : "gd-pin";
+  const zusatz = o.stufeLabel ?? o.alterLabel;
+  pin.setAttribute("aria-label", zusatz ? `${o.name} (${zusatz})` : o.name);
   const icon = document.createElement("span");
   icon.className = "icon";
   icon.textContent = o.icon;
@@ -80,7 +84,8 @@ function popupInhalt(o: KartenOrt): HTMLElement {
   text.className = "ddd-pop__text";
   const typ = document.createElement("span");
   typ.className = "ddd-pop__typ";
-  typ.textContent = o.stufeLabel ? `${o.typLabel} · ${o.stufeLabel}` : o.typLabel;
+  const zusatz = o.stufeLabel ?? o.alterLabel;
+  typ.textContent = zusatz ? `${o.typLabel} · ${zusatz}` : o.typLabel;
   const name = document.createElement("span");
   name.className = "ddd-pop__name d";
   name.textContent = o.name;
@@ -98,9 +103,28 @@ function popupInhalt(o: KartenOrt): HTMLElement {
 
 const KEINE: KartenOrt[] = [];
 
-/** `orte` ist null, solange die Punkte noch nachgeladen werden (siehe guide-karte-lazy.tsx). */
-export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte: KartenOrt[] | null; ladefehler?: boolean }) {
-  const orte = geladen ?? KEINE;
+/** Entfernung in Metern (Haversine) – nur im Browser, für „In der Nähe“. */
+function abstand(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const r = (x: number) => (x * Math.PI) / 180;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+const abstandText = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`);
+
+/**
+ * `orte` ist null, solange die Punkte noch nachgeladen werden (siehe guide-karte-lazy.tsx).
+ * `naehe` (Spielplätze, E8): Knopf „In der Nähe“ – fragt den Standort erst nach Klick ab, rechnet nur im Browser,
+ * speichert und sendet nichts. Ohne Freigabe bleibt die Reihenfolge.
+ */
+export default function GuideKarte({ orte: geladen, ladefehler = false, naehe = false }: { orte: KartenOrt[] | null; ladefehler?: boolean; naehe?: boolean }) {
+  const roh = geladen ?? KEINE;
+  const [standort, setStandort] = useState<{ lat: number; lng: number } | null>(null);
+  const [standortHinweis, setStandortHinweis] = useState<string | null>(null);
+  const standortRef = useRef<maplibregl.Marker | null>(null);
+  const orte = useMemo(
+    () => (standort ? [...roh].sort((a, b) => abstand(standort, a) - abstand(standort, b)) : roh),
+    [roh, standort],
+  );
   const kartenRef = useRef<HTMLDivElement>(null);
   const listeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -249,6 +273,39 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
     }
   }, [sichtbar, gewaehlt]);
 
+  // Eigener Standort als Navy-Kreis; Karte auf Standort und die nächsten Plätze ausrichten
+  useEffect(() => {
+    const map = mapRef.current;
+    standortRef.current?.remove();
+    standortRef.current = null;
+    if (!map || !standort) return;
+    const punkt = document.createElement("span");
+    punkt.className = "gd-standort";
+    punkt.setAttribute("aria-label", "Dein Standort");
+    standortRef.current = new maplibregl.Marker({ element: punkt }).setLngLat([standort.lng, standort.lat]).addTo(map);
+    const grenzen = new maplibregl.LngLatBounds();
+    grenzen.extend([standort.lng, standort.lat]);
+    for (const o of orte.slice(0, 5)) grenzen.extend([o.lng, o.lat]);
+    map.fitBounds(grenzen, { padding: 60, maxZoom: 15, duration: 600 });
+    listeRef.current?.scrollTo({ top: 0 });
+  }, [standort, orte]);
+
+  const standortHolen = () => {
+    if (!("geolocation" in navigator)) {
+      setStandortHinweis("Dein Browser kann den Standort nicht bestimmen. Die Liste bleibt in der bisherigen Reihenfolge.");
+      return;
+    }
+    setStandortHinweis("Standort wird bestimmt …");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setStandort({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setStandortHinweis(null);
+      },
+      () => setStandortHinweis("Ohne Standortfreigabe bleibt die Liste in der bisherigen Reihenfolge."),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  };
+
   // Ausgewählten Pin hervorheben
   useEffect(() => {
     for (const [id, { el, marker }] of markerRef.current) {
@@ -261,6 +318,15 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
   return (
     <div className="gd-kartenansicht">
       <div className="gd-kartenliste" ref={listeRef} role="list" aria-label="Orte auf der Karte">
+        {naehe && (
+          <div className="gd-kartenliste__hinweis gd-naehe">
+            <button type="button" className={`gd-naehe__knopf ${standort ? "is-aktiv" : ""}`} onClick={standort ? () => setStandort(null) : standortHolen} aria-pressed={!!standort}>
+              <span className="icon" aria-hidden data-icon={standort ? "close" : "my_location"} />
+              {standort ? "Nähe-Sortierung beenden" : "In der Nähe"}
+            </button>
+            <span className="muted">{standortHinweis ?? (standort ? "Sortiert nach Entfernung – dein Standort bleibt in deinem Browser." : "Sortiert nach Empfehlung. Für die Nähe fragt dein Browser nach deinem Standort.")}</span>
+          </div>
+        )}
         {bereich && (
           <div className="gd-kartenliste__hinweis">
             {sichtbar.length} {sichtbar.length === 1 ? "Ort" : "Orte"} in diesem Bereich ·{" "}
@@ -268,7 +334,12 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
           </div>
         )}
         {sichtbar.map((o) => (
-          <div key={o.id} role="listitem" data-id={o.id} className={`gd-kompakt ${o.id === gewaehlt ? "gd-kompakt--an" : ""}`}>
+          <div
+            key={o.id} role="listitem" data-id={o.id}
+            className={`gd-kompakt ${o.alter ? `gd-kompakt--alter-${o.alter}` : ""} ${o.id === gewaehlt ? "gd-kompakt--an" : ""}`}
+            onMouseEnter={() => markerRef.current.get(o.id)?.el.classList.add("gd-pin--puls")}
+            onMouseLeave={() => markerRef.current.get(o.id)?.el.classList.remove("gd-pin--puls")}
+          >
             <button type="button" className="gd-kompakt__knopf" onClick={() => auswaehlen(o.id, true)} aria-pressed={o.id === gewaehlt}>
               <span className="gd-kompakt__bild">
                 {o.bild ? (
@@ -280,13 +351,15 @@ export default function GuideKarte({ orte: geladen, ladefehler = false }: { orte
               </span>
               <span className="gd-kompakt__text">
                 <span className="gd-typ">
-                  {o.stufe ? <span className={`cl-stufe__punkt cl-stufe__punkt--${o.stufe}`} aria-hidden /> : <span className="icon" aria-hidden data-icon={o.icon} />}
-                  {o.stufeLabel ?? o.typLabel}
+                  {o.stufe ? <span className={`cl-stufe__punkt cl-stufe__punkt--${o.stufe}`} aria-hidden />
+                    : o.alter ? <span className={`sp-punkt sp-punkt--${o.alter}`} aria-hidden />
+                    : <span className="icon" aria-hidden data-icon={o.icon} />}
+                  {o.stufeLabel ?? (o.alterLabel ? `${o.typLabel} · ${o.alterLabel}` : o.typLabel)}
                 </span>
                 <span className="gd-kompakt__name d">{o.name}</span>
                 <span className="gd-kompakt__meta">
                   {o.rating && <span className="gd-bewertung"><span className="icon is-active" aria-hidden data-icon="star" /><b>{o.rating}</b>{o.anzahl && <span className="muted">({o.anzahl})</span>}</span>}
-                  <span className="muted">{[o.stadtteil, o.preis].filter(Boolean).join(" · ")}</span>
+                  <span className="muted">{[o.stadtteil, standort ? abstandText(abstand(standort, o)) : null, o.preis].filter(Boolean).join(" · ")}</span>
                 </span>
               </span>
             </button>
