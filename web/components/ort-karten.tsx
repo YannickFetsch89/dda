@@ -41,7 +41,7 @@ const TYP_ICON: Record<string, string> = {
   cafe: "local_cafe",
   kneipe: "sports_bar",
   club: "nightlife",
-  spielplatz: "toys",
+  spielplatz: "sp:spielplatz",
   ausflug: "hiking",
   wochenendtipp: "luggage",
 };

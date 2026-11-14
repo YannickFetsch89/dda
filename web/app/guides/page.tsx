@@ -34,7 +34,7 @@ const HUBS: Hub[] = [
   { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
   { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },
   { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: true },
-  { slug: "spielplaetze", label: "Spielplätze", icon: "toys", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: SPIELPLAETZE_VERLINKT },
+  { slug: "spielplaetze", label: "Spielplätze", icon: "sp:spielplatz", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: SPIELPLAETZE_VERLINKT },
   { slug: "ausfluege", label: "Ausflüge", icon: "hiking", teaser: "Raus aus der Stadt – unter einer Stunde erreichbar", einheit: "Ziele", fertig: false },
   { slug: "wochenend-trips", label: "Wochenend-Trips", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
 ];

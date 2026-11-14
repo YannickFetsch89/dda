@@ -64,7 +64,7 @@ export const GUIDE_HUBS: Record<GuideHub, { name: string; mehrzahl: string; icon
   "restaurants-cafes": { name: "Restaurants & Cafés", mehrzahl: "Restaurants und Cafés", icon: "restaurant" },
   "kneipen-bars": { name: "Kneipen & Bars", mehrzahl: "Kneipen und Bars", icon: "sports_bar" },
   clubs: { name: "Clubs", mehrzahl: "Clubs", icon: "nightlife" },
-  spielplaetze: { name: "Spielplätze", mehrzahl: "Spielplätze", icon: "toys" },
+  spielplaetze: { name: "Spielplätze", mehrzahl: "Spielplätze", icon: "sp:spielplatz" },
 };
 
 /**

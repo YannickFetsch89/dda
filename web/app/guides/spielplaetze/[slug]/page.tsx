@@ -198,7 +198,7 @@ async function WeitereSpielplaetze({ ort }: { ort: DddOrt }) {
   if (!n.orte.length) return null;
   return (
     <section className="sp-naehe__block">
-      <h3 className="sp-naehe__titel"><span className="sp-naehe__kreis" aria-hidden><Icon name="toys" /></span>{n.titel}</h3>
+      <h3 className="sp-naehe__titel"><span className="sp-naehe__kreis" aria-hidden><Icon name="sp:spielplatz" /></span>{n.titel}</h3>
       <div className="gd-grid sp-naehe__grid" role="list">
         {n.orte.map(({ o, m }) => <SpielplatzKarte key={o.id} o={o} meter={m} />)}
       </div>

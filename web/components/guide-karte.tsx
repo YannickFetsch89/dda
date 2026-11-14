@@ -63,7 +63,9 @@ function pinElement(o: KartenOrt): HTMLButtonElement {
   pin.setAttribute("aria-label", zusatz ? `${o.name} (${zusatz})` : o.name);
   const icon = document.createElement("span");
   icon.className = "icon";
-  icon.textContent = o.icon;
+  // Eigene SVG-Piktogramme („sp:…“, CSS-Maske über data-icon) statt Ligatur-Text
+  if (o.icon.startsWith("sp:")) icon.dataset.icon = o.icon;
+  else icon.textContent = o.icon;
   pin.appendChild(icon);
   return pin;
 }

@@ -48,7 +48,7 @@ function Hero({ anzahl }: { anzahl: number }) {
   return (
     <section className="gd-hero sp-hero">
       <div className="sp-hero__bild">
-        <BildImg src="/guides/spielplaetze.webp" alt="" icon="toys" eager />
+        <BildImg src="/guides/spielplaetze.webp" alt="" icon="sp:spielplatz" eager />
       </div>
       <div className="gd-hero__inhalt container">
         <nav className="gd-krumen" aria-label="Brotkrumen">

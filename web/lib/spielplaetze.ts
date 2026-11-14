@@ -65,7 +65,7 @@ export const ALTERSGRUPPEN: { wert: Alter; label: string; kurz: string }[] = [
   { wert: "alle", label: "Für alle Altersgruppen", kurz: "alle Altersgruppen" },
 ];
 export const TYPEN: { wert: SpielplatzTyp; label: string; mehrzahl: string; icon: string; bild: string }[] = [
-  { wert: "kinder", label: "Spielplatz", mehrzahl: "Spielplätze", icon: "toys", bild: "/guides/spielplatz-typ-kinder.webp" },
+  { wert: "kinder", label: "Spielplatz", mehrzahl: "Spielplätze", icon: "sp:spielplatz", bild: "/guides/spielplatz-typ-kinder.webp" },
   { wert: "wasser", label: "Wasserspielplatz", mehrzahl: "Wasserspielplätze", icon: "water_drop", bild: "/guides/spielplatz-typ-wasser.webp" },
   { wert: "wald", label: "Waldspielplatz", mehrzahl: "Waldspielplätze", icon: "forest", bild: "/guides/spielplatz-typ-wald.webp" },
   { wert: "abenteuer", label: "Abenteuerspielplatz", mehrzahl: "Abenteuerspielplätze", icon: "cottage", bild: "/guides/spielplatz-typ-kinder.webp" },
