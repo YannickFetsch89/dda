@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GUIDE_TEXTE } from "@/lib/guide-texte";
-import { hubPasstZuEvent } from "@/lib/landing";
+import { SPIELPLAETZE_VERLINKT, hubPasstZuEvent, hubVerlinkt } from "@/lib/landing";
 import {
   CHIP_SCHWELLE, EXTRAS, GERAETE, STANDARD, chips, erfasst, extraBelegt, extraJa, filterHref, filterLesen, filtern, geraetBelegt, geraetJa, groesseText,
   hatParameter, istIndexierbar, namensStamm, nachbarn, ortStadtteilSlug, saisonHinweis, sortieren, spielplatzTitel,
@@ -174,7 +174,10 @@ describe("Karte und JSON-LD ohne Bewertung", () => {
 
 describe("Einbaustellen und Texte", () => {
   it("Event-Link „Spielplätze …“ nur bei Kategorie Familie", () => {
-    expect(hubPasstZuEvent("spielplaetze", "familie")).toBe(true);
+    // Solange der Guide nicht verlinkt ist (14.11.2026), gibt es den Link gar nicht
+    expect(hubPasstZuEvent("spielplaetze", "familie")).toBe(SPIELPLAETZE_VERLINKT);
+    expect(hubVerlinkt("spielplaetze")).toBe(SPIELPLAETZE_VERLINKT);
+    expect(hubVerlinkt("clubs")).toBe(true);
     expect(hubPasstZuEvent("spielplaetze", "musik")).toBe(false);
     expect(hubPasstZuEvent("clubs", "musik")).toBe(true);
   });

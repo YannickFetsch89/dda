@@ -67,8 +67,19 @@ export const GUIDE_HUBS: Record<GuideHub, { name: string; mehrzahl: string; icon
   spielplaetze: { name: "Spielplätze", mehrzahl: "Spielplätze", icon: "toys" },
 };
 
+/**
+ * Spielplatz-Guide verlinkt? Seit 14.11.2026 vorübergehend aus: Die Seiten bleiben live (Sitemap, direkte URLs),
+ * aber Menü, Footer, /guides-Kachel, Übersichtstext, Familien-Kategorie, Event- und Stadtteilseiten verlinken sie
+ * nicht, bis Bilder und Vorschaubilder fertig sind. Wieder einschalten: true setzen (+ client.tsx, rahmen.tsx, llms.txt).
+ */
+export const SPIELPLAETZE_VERLINKT = false;
+
+/** Darf ein Hub von außen (Event-, Stadtteilseiten) verlinkt werden? */
+export const hubVerlinkt = (hub: GuideHub) => hub !== "spielplaetze" || SPIELPLAETZE_VERLINKT;
+
 /** Guide-Stadtteil-Links auf Event-Seiten: Spielplätze nur bei Kategorie Familie (E16 im Spielplatz-Plan). */
 export function hubPasstZuEvent(hub: GuideHub, kategorie: string): boolean {
+  if (!hubVerlinkt(hub)) return false;
   return hub !== "spielplaetze" || kategorie === "familie";
 }
 

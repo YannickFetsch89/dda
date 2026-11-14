@@ -345,7 +345,7 @@ export const GUIDE_LINKS = [
   { href: "/guides/restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant" },
   { href: "/guides/kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar" },
   { href: "/guides/clubs", label: "Clubs", icon: "nightlife" },
-  { href: "/guides/spielplaetze", label: "Spielplätze", icon: "toys" },
+  // Spielplätze vorübergehend nicht verlinkt (SPIELPLAETZE_VERLINKT in lib/landing.ts)
 ];
 
 function KopfNavMitPfad() {

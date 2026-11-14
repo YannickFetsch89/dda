@@ -21,7 +21,7 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
     einleitung:
       "Wo isst man gut, wo trinkt man das beste Alt, wo wird bis zum Morgen getanzt? In unserem Guide stehen " +
       "{restaurants} Restaurants und Cafés, {kneipen} Kneipen und Bars und {clubs} Clubs in Düsseldorf und Umgebung – " +
-      "jede Empfehlung mit eigener Seite, Adresse und Karte. Für Familien kommen {spielplaetze} öffentliche Spielplätze dazu.",
+      "jede Empfehlung mit eigener Seite, Adresse und Karte.",
     titel: "Düsseldorf von morgens bis spät in die Nacht",
     abschnitte: [
       {
@@ -91,9 +91,8 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         frage: "Welche Guides kommen noch dazu?",
         antwort:
-          "Neu ist der [Spielplatz-Guide](/guides/spielplaetze) mit allen öffentlichen Spielplätzen der Stadt. In Arbeit " +
-          "sind Ausflüge und Wochenend-Trips; bis dahin findet ihr Ideen für Familien in unserem " +
-          "[Eventkalender](/kategorie/familie).",
+          "In Arbeit sind Guides für Spielplätze, Ausflüge in der Umgebung und Wochenend-Trips. Bis dahin findet ihr " +
+          "Ideen für Familien und Ausflüge in unserem [Eventkalender](/entdecken).",
       },
     ],
   },

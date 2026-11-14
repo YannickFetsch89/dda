@@ -62,7 +62,6 @@ export function Kopf() {
               <Link href="/guides/restaurants-cafes">Restaurants &amp; Cafés</Link>
               <Link href="/guides/kneipen-bars">Kneipen &amp; Bars</Link>
               <Link href="/guides/clubs">Clubs</Link>
-              <Link href="/guides/spielplaetze">Spielplätze</Link>
               <Link href="/merkliste">Merkliste</Link>
               <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>
@@ -129,8 +128,8 @@ export async function Fuss() {
           <Wortmarke gross />
           <p>
             Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Theater, Comedy, Partys und Familienprogramm.
-            Dazu unsere Guides mit den besten Restaurants, Cafés, Kneipen, Bars und Clubs der Stadt und allen öffentlichen
-            Spielplätzen – nach Stadtteil sortiert. So seht ihr auf einen Blick, was ihr heute, morgen oder am Wochenende unternehmen könnt.
+            Dazu unsere Guides mit den besten Restaurants, Cafés, Kneipen, Bars und Clubs der Stadt – nach Stadtteil
+            sortiert. So seht ihr auf einen Blick, was ihr heute, morgen oder am Wochenende unternehmen könnt.
           </p>
           <Link href="/ueber" className="fuss__mehr">Mehr über uns</Link>
         </div>
@@ -157,7 +156,6 @@ export async function Fuss() {
           <Link href="/guides/restaurants-cafes">Restaurants & Cafés</Link>
           <Link href="/guides/kneipen-bars">Kneipen & Bars</Link>
           <Link href="/guides/clubs">Clubs</Link>
-          <Link href="/guides/spielplaetze">Spielplätze</Link>
           <Link href="/guides">Alle Guides</Link>
         </div>
         <div className="fuss__spalte">

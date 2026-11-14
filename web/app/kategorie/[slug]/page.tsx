@@ -29,7 +29,7 @@ const EXTRA_LINKS: Partial<Record<KategorieSlug, { name: string; pfad: string }[
   food: [{ name: "Restaurants & Cafés", pfad: "/guides/restaurants-cafes" }],
   nightlife: [{ name: "Club-Guide", pfad: "/guides/clubs" }, { name: "Kneipen & Bars", pfad: "/guides/kneipen-bars" }],
   musik: [{ name: "Club-Guide", pfad: "/guides/clubs" }],
-  familie: [{ name: "Spielplätze", pfad: "/guides/spielplaetze" }],
+  // familie: Spielplätze vorübergehend nicht verlinkt (SPIELPLAETZE_VERLINKT in lib/landing.ts)
 };
 
 const kommende = kategorieEvents;

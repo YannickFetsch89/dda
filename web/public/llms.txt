@@ -27,7 +27,6 @@ Wichtig: Die Eventdaten ändern sich täglich. Bitte für konkrete Termine immer
 - [Restaurants & Cafés](https://diesdas.events/guides/restaurants-cafes) – auch nach Stadtteil, z. B. /guides/restaurants-cafes/stadtteil/unterbilk
 - [Kneipen & Bars](https://diesdas.events/guides/kneipen-bars) – mit Brauhäusern und Altbierkneipen
 - [Clubs](https://diesdas.events/guides/clubs) – mit Musikrichtung und Programm
-- [Spielplätze](https://diesdas.events/guides/spielplaetze) – alle öffentlichen Spielplätze mit Alter, Ausstattung und Notfallnummer, auch nach Stadtteil
 
 ## Mehr
 

@@ -12,7 +12,7 @@ import { plusTage } from "@/lib/datum";
 import { hubOrte, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { STADTTEIL_TEXTE } from "@/lib/landing-texte";
 import {
-  GUIDE_HUBS, LANDING_TAGE, inStadtteil, MIN_EINTRAEGE, bezirkSatz, guideStadtteilPfad, nachbarStadtteile, stadtteilAusSlug, stadtteilPfad, type GuideHub,
+  GUIDE_HUBS, hubVerlinkt, LANDING_TAGE, inStadtteil, MIN_EINTRAEGE, bezirkSatz, guideStadtteilPfad, nachbarStadtteile, stadtteilAusSlug, stadtteilPfad, type GuideHub,
 } from "@/lib/landing";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { seitenMetadaten } from "@/lib/seo";
@@ -68,7 +68,7 @@ export default async function StadtteilSeite({ params }: Props) {
   const nachbarn = nachbarStadtteile(st).map((s) => ({ name: stadtteilName(s), pfad: stadtteilPfad(s)!, anzahl: kommende(pool, s).length }));
 
   // Guide-Stadtteilseiten, die es für diesen Stadtteil gibt (ab fünf Orten)
-  const hubs = Object.keys(GUIDE_HUBS) as GuideHub[];
+  const hubs = (Object.keys(GUIDE_HUBS) as GuideHub[]).filter(hubVerlinkt);
   const orteJeHub = await Promise.all(hubs.map((h) => hubOrte(h)));
   const guideLinks = hubs.flatMap((h, i) => {
     const treffer = stadtteileImHub(h, orteJeHub[i]).find((x) => x.stadtteil === st);
