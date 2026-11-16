@@ -180,11 +180,11 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
 
         {beliebt.length > 0 && (
           <section className="sektion">
-            <div className="sektionskopf">
-              <h2 className="d">Beliebt in Düsseldorf</h2>
+            <div className="sektionskopf sektionskopf--stapeln">
+              <h2 className="d">Diese Woche beliebt in Düsseldorf</h2>
               <Link href={`/entdecken?datum=${z.key === "heute" ? "woche" : z.key}&sort=beliebt`}>Alle beliebten Events</Link>
             </div>
-            <Reihe breite={220} raster5 label="Beliebt in Düsseldorf">
+            <Reihe breite={220} raster5 label="Diese Woche beliebt in Düsseldorf">
               {beliebt.map((e, i) => (
                 <EventKarte key={e.id} e={e} heute={heute} variante="rang" rang={i + 1} />
               ))}

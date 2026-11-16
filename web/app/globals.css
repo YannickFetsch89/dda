@@ -86,6 +86,8 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 
 .sektionskopf { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
 .sektionskopf h2 { font-size: 26px; line-height: 1.05; }
+/* Lange Überschrift: mobil steht der Link darunter statt daneben (sonst bricht sie auf drei Zeilen um) */
+@media (max-width: 767px) { .sektionskopf--stapeln { flex-direction: column; align-items: flex-start; gap: 6px; } }
 .sektionskopf a, .link { font-size: 13px; font-weight: 600; color: var(--ddd-link); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 @media (min-width: 1200px) {
   .sektionskopf { margin-bottom: 18px; }
@@ -414,17 +416,20 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .datumsleiste-huelle { gap: 8px; align-items: stretch; }
   .datumsleiste-rahmen { gap: 0; }
   /* Nur der Pfeil, ohne Kreis und Rand (Auftraggeber 16.11.2026: der Kreis nahm zu viel Platz); Schatten für Kontrast */
+  /* Weißer Pfeil auf kleinem, halbtransparentem Navy-Kreis; was dahinter liegt, wird leicht unscharf (Glas-Effekt) */
   .datumsleiste__pfeil {
-    position: absolute; top: 50%; z-index: 2; transform: translateY(-50%); width: 24px; height: 48px;
-    background: none; border: 0; border-radius: 0; transition: opacity 0.2s;
+    position: absolute; top: 50%; z-index: 2; transform: translateY(-50%); width: 28px; height: 28px;
+    border: 0; border-radius: 50%; color: #ffffff; background: rgba(27, 37, 64, 0.55);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); transition: opacity 0.2s;
   }
-  .datumsleiste__pfeil--links { left: -14px; }
-  .datumsleiste__pfeil--rechts { right: -10px; }
-  .datumsleiste__pfeil .icon { font-size: 30px; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7)); }
+  .datumsleiste__pfeil--links { left: -8px; }
+  .datumsleiste__pfeil--rechts { right: -6px; }
+  .datumsleiste__pfeil .icon { font-size: 24px; }
   .datumsleiste__pfeil:disabled { opacity: 0; pointer-events: none; }
   .datumsleiste-huelle .kalender-toggle .kalender-toggle__knopf {
     height: 100%; min-height: 72px; width: 58px; padding: 0; justify-content: center; border-radius: var(--r-md);
-    border: 2px solid var(--ddd-gold); background: transparent; color: var(--ddd-on-navy);
+    /* Outline in der Farbe der Tageskacheln (helleres Blau auf Navy) */
+    border: 2px solid rgba(247, 248, 250, 0.08); background: transparent; color: var(--ddd-on-navy);
   }
   .kalender-toggle__knopf .kalender-toggle__icon { font-size: 32px; }
   .kalender-toggle__knopf .kalender-toggle__text { display: none; }
