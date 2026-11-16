@@ -30,6 +30,18 @@ interface Props {
 
 type Modus = "tag" | "zeitraum";
 
+/** Signal des Chips „Eigener Zeitraum“ (/entdecken): alle Kalender mit Umschalter wechseln in den Zeitraum-Modus. */
+const ZEITRAUM_SIGNAL = "ddd:eigener-zeitraum";
+
+/** Chip bzw. Menüpunkt „Eigener Zeitraum“: schaltet den Kalender darunter auf Zeitraum (kein eigener URL-Parameter). */
+export function EigenerZeitraumKnopf({ aktiv, className = "chip" }: { aktiv: boolean; className?: string }) {
+  return (
+    <button type="button" className={className} aria-current={aktiv ? "true" : undefined} onClick={() => window.dispatchEvent(new Event(ZEITRAUM_SIGNAL))}>
+      Eigener Zeitraum
+    </button>
+  );
+}
+
 export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, gewaehlt, mitZeitraum = false, zeitraum }: Props) {
   const router = useRouter();
   const heuteDate = new Date(heute + "T00:00:00");
@@ -45,6 +57,21 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
   // Zeitraum-Auswahl in Arbeit: erster Klick = Start, zweiter Klick = Ende (wie bei einer Hotelsuche)
   const [anfang, setAnfang] = useState<string | null>(null);
   const [zeiger, setZeiger] = useState<string | null>(null);
+  const wurzel = useRef<HTMLDivElement>(null);
+
+  // Chip „Eigener Zeitraum“: Zeitraum-Modus an, Auswahl zurücksetzen, Kalender in den sichtbaren Bereich holen
+  useEffect(() => {
+    if (!mitZeitraum) return;
+    const umschalten = () => {
+      setModus("zeitraum");
+      setAnfang(null);
+      setZeiger(null);
+      const el = wurzel.current;
+      if (el && el.offsetParent) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    };
+    window.addEventListener(ZEITRAUM_SIGNAL, umschalten);
+    return () => window.removeEventListener(ZEITRAUM_SIGNAL, umschalten);
+  }, [mitZeitraum]);
 
   const ersterTag = new Date(jahr, monat, 1);
   const wochentagErster = (ersterTag.getDay() + 6) % 7;
@@ -68,6 +95,9 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
     // Steckt der Kalender in einem aufklappbaren Menü (<details>), dieses schließen
     ereignis.currentTarget.closest("details")?.removeAttribute("open");
     router.push(`${ziel}?${qs.toString()}`);
+    // Laufende Auswahl beenden – der Kalender bleibt auf /entdecken nach dem Wählen sichtbar
+    setAnfang(null);
+    setZeiger(null);
     onWahl?.();
   }
 
@@ -98,7 +128,7 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
   for (let i = 1; i <= tageImMonat; i++) zellen.push(i);
 
   return (
-    <div className="kalender">
+    <div className="kalender" ref={wurzel}>
       {mitZeitraum && (
         <>
           <div className="kalender__modus" role="group" aria-label="Auswahl">
@@ -238,7 +268,6 @@ const ZEITRAUM_LINKS = [
   { key: "wochenende", label: "Dieses Wochenende" },
   { key: "woche", label: "Diese Woche" },
   { key: "monat", label: "Nächste 30 Tage" },
-  { key: "alle", label: "60 Tage" },
 ];
 
 const keinAbo = () => () => {};

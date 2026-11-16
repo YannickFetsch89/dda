@@ -9,8 +9,8 @@ import { OrtKartenGrid } from "@/components/ort-karten";
 import { orteLaden } from "@/lib/orte";
 import { orteSuchen } from "@/lib/orte-suche";
 import { TAGESZEITEN, filtern, highlights, kategorieZaehlen, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, stadtteileZaehlen, type Tageszeit } from "@/lib/ableitungen";
-import { ZEITRAUM_OPTIONEN, metaZeile, zeitraumAuflösen } from "@/lib/datum";
-import { DatumWaehler } from "@/components/datum-waehler";
+import { ZEITRAUM_OPTIONEN, istEigenerZeitraum, metaZeile, zeitraumAuflösen } from "@/lib/datum";
+import { DatumWaehler, EigenerZeitraumKnopf } from "@/components/datum-waehler";
 import { KATEGORIEN, kategorie } from "@/lib/kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
 import { kurzBeschreibung } from "@/lib/beschreibung";
@@ -102,6 +102,8 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   // Für den Kalender: alle aktiven Filter außer Datum und Seite behalten; exakt gewähltes Datum markieren
   const ohneDatum = Object.fromEntries(Object.entries(p).filter(([k, v]) => v && k !== "datum" && k !== "seite")) as Record<string, string>;
   const exaktesDatum = /^\d{4}-\d{2}-\d{2}$/.test(z.key) ? z.key : undefined;
+  // Eigener Zeitraum aus dem Kalender (datum=von_bis): im Kalender markiert, Chip „Eigener Zeitraum“ aktiv
+  const eigenerZeitraum = istEigenerZeitraum(z.key) ? { von: z.von, bis: z.bis } : undefined;
 
   const aktiv = {
     datum: z.label,
@@ -148,8 +150,9 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
                   {o.label}
                 </Link>
               ))}
+              <EigenerZeitraumKnopf aktiv={!!eigenerZeitraum} />
               <div className="filter-kalender">
-                <DatumWaehler heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} />
+                <DatumWaehler key={z.key} heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} zeitraum={eigenerZeitraum} mitZeitraum />
               </div>
             </FilterGruppe>
             <FilterGruppe titel="Kategorie">
@@ -194,8 +197,9 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
               {o.label}
             </Link>
           ))}
+          <EigenerZeitraumKnopf aktiv={!!eigenerZeitraum} className="popover__knopf" />
           <span className="popover__titel">Datum wählen</span>
-          <DatumWaehler heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} />
+          <DatumWaehler key={z.key} heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} zeitraum={eigenerZeitraum} mitZeitraum />
         </Dropdown>
         <Dropdown label={aktiv.kategorie ?? "Kategorie"} aktiv={!!aktiv.kategorie}>
           <Link href={url(p, { kategorie: undefined, unter: undefined })}>Alle Kategorien</Link>

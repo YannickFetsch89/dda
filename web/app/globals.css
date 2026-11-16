@@ -145,6 +145,10 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .popover a { padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; gap: 12px; color: var(--ddd-text-body); }
 .popover a:hover { background: var(--ddd-bg); }
 .popover a[aria-current="true"] { background: var(--ddd-filter-bg); color: var(--ddd-filter-fg); }
+/* Knopf im Popover wie ein Menü-Link (z. B. „Eigener Zeitraum“ auf /entdecken) */
+.popover__knopf { padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; display: flex; width: 100%; text-align: left; color: var(--ddd-text-body); cursor: pointer; }
+.popover__knopf:hover { background: var(--ddd-bg); }
+.popover__knopf[aria-current="true"] { background: var(--ddd-filter-bg); color: var(--ddd-filter-fg); }
 .popover a span { color: var(--ddd-text-muted); font-weight: 500; font-size: 12px; }
 .popover--links { left: 0; right: auto; }
 

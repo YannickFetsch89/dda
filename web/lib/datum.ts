@@ -112,7 +112,7 @@ export const ZEITRAUM_OPTIONEN = [
   { key: "wochenende", label: "Dieses Wochenende" },
   { key: "woche", label: "Diese Woche" },
   { key: "monat", label: "Nächste 30 Tage" },
-  { key: "alle", label: "60 Tage" },
+  // „60 Tage“ (key „alle“) ersetzt durch „Eigener Zeitraum“ auf /entdecken (Auftraggeber 16.11.2026); alte Links gelten weiter
 ];
 
 /** Nächstes (bzw. laufendes) Wochenende Fr–So. */
