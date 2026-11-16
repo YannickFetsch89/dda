@@ -410,12 +410,17 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 /* Rahmen um Leiste und Pfeile (components/datumsleiste.tsx): ab Tablet stehen die Pfeile neben der Leiste */
 .datumsleiste-rahmen { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
 .kalender-toggle__icon { font-size: 16px; }
-/* Handy (Auftraggeber 16.11.2026): Tage größer und ohne Rand. Die Pfeile liegen als Kreise ÜBER der Leiste (sie schieben
-   die Tage nicht weg) und verschwinden am Anfang/Ende. Der Kalender ist eine eigene Kachel mit goldenem Rand. */
+.kalender-toggle__text--mobil { display: none; }
+@media (max-width: 1199px) { .kalender-toggle__text--gross { display: none; } .kalender-toggle__text--mobil { display: inline; } }
+/* Pille „Kalender öffnen“ in der Reihe der Schnellfilter: Farbe der Tageskacheln, weiße Schrift */
+.schnellfilter .kalender-toggle { flex: none; }
+.schnellfilter .kalender-toggle__knopf { gap: 8px; border-color: transparent; background: rgba(247, 248, 250, 0.08); color: #ffffff; }
+.schnellfilter .kalender-toggle__knopf .kalender-toggle__icon { font-size: 18px; }
+/* Handy (Auftraggeber 16.11.2026): Tage größer und ohne Rand, die Leiste nutzt die volle Breite. Die Pfeile liegen über
+   der Leiste und verschwinden am Anfang/Ende. Der Kalender steht als Pille „Kalender öffnen“ bei den Schnellfiltern. */
 @media (max-width: 767px) {
-  .datumsleiste-huelle { gap: 8px; align-items: stretch; }
+  .datumsleiste-huelle { gap: 10px; align-items: center; }
   .datumsleiste-rahmen { gap: 0; }
-  /* Nur der Pfeil, ohne Kreis und Rand (Auftraggeber 16.11.2026: der Kreis nahm zu viel Platz); Schatten für Kontrast */
   /* Weißer Pfeil auf kleinem, halbtransparentem Navy-Kreis; was dahinter liegt, wird leicht unscharf (Glas-Effekt) */
   .datumsleiste__pfeil {
     position: absolute; top: 50%; z-index: 2; transform: translateY(-50%); width: 28px; height: 28px;
@@ -426,13 +431,6 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .datumsleiste__pfeil--rechts { right: -6px; }
   .datumsleiste__pfeil .icon { font-size: 24px; }
   .datumsleiste__pfeil:disabled { opacity: 0; pointer-events: none; }
-  .datumsleiste-huelle .kalender-toggle .kalender-toggle__knopf {
-    height: 100%; min-height: 72px; width: 58px; padding: 0; justify-content: center; border-radius: var(--r-md);
-    /* Outline in der Farbe der Tageskacheln (helleres Blau auf Navy) */
-    border: 2px solid rgba(247, 248, 250, 0.08); background: transparent; color: var(--ddd-on-navy);
-  }
-  .kalender-toggle__knopf .kalender-toggle__icon { font-size: 32px; }
-  .kalender-toggle__knopf .kalender-toggle__text { display: none; }
 }
 .datumsleiste::-webkit-scrollbar { display: none; }
 .datumsleiste a {
@@ -837,6 +835,18 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .kalender__tag:disabled { opacity: 0.25; cursor: default; }
 /* Heute: blauer Ring; der gewählte Tag ist gold (wie in der Tagesleiste) – Auftraggeber 16.11.2026 */
 .kalender__tag--heute { box-shadow: inset 0 0 0 2px var(--ddd-link); font-weight: 700; }
+/* Umschalter „Tag wählen“ / „Zeitraum wählen“ (Startseite) */
+.kalender__modus { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 8px; border-radius: var(--r-pill); background: var(--ddd-bg); }
+.kalender__modus button { min-height: 36px; padding: 0 10px; border-radius: var(--r-pill); font-size: 13px; font-weight: 600; color: var(--ddd-text-muted); cursor: pointer; }
+.kalender__modus button.is-aktiv { background: var(--ddd-navy); color: #ffffff; }
+:root[data-theme="dark"] .kalender__modus button.is-aktiv { background: var(--ddd-gold); color: var(--ddd-navy); }
+.kalender__hinweis { margin: 0 0 6px; text-align: center; font-size: 12px; color: var(--ddd-text-muted); }
+/* Zeitraum: Start und Ende gold, Tage dazwischen als helles Band */
+.kalender__tag--im-zeitraum { background: var(--ddd-gold-tint); color: var(--ddd-navy); border-radius: 0; }
+.kalender__tag--zeitraum-start { border-radius: 50% 0 0 50%; }
+.kalender__tag--zeitraum-ende { border-radius: 0 50% 50% 0; }
+.kalender__tag--zeitraum-start.kalender__tag--zeitraum-ende { border-radius: 50%; }
+.kalender__tag--zeitraum-start, .kalender__tag--zeitraum-ende { background: var(--ddd-gold); color: var(--ddd-navy); font-weight: 700; }
 
 .kalender-toggle { display: inline-flex; position: relative; }
 .kalender-dropdown {
@@ -844,7 +854,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   background: var(--ddd-surface); color: var(--ddd-text); border: 1px solid var(--ddd-border); border-radius: var(--r-md); box-shadow: var(--sh-l);
 }
 .kalender-hintergrund { display: none; }
-@media (max-width: 767px) {
+@media (max-width: 1199px) {
   .kalender-hintergrund { display: block; position: fixed; inset: 0; z-index: 79; background: rgba(13, 17, 23, 0.55); }
   .kalender-dropdown { position: fixed; top: 50%; left: 50%; right: auto; transform: translate(-50%, -50%); z-index: 80; max-width: calc(100vw - 32px); }
   .kalender-dropdown .kalender { width: 300px; max-width: 100%; }

@@ -123,9 +123,35 @@ export function wochenende(heute: string): { fr: string; sa: string; so: string 
   return { fr, sa: plusTage(fr, 1), so: plusTage(fr, 2) };
 }
 
+/** Eigener Zeitraum aus dem Kalender: „2026-11-18_2026-11-22“ (Start und Ende, beide einschließlich). */
+const EIGENER_ZEITRAUM = /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})$/;
+/** Längster wählbarer Zeitraum – so weit wie Tagesleiste und Kalender reichen. */
+export const MAX_ZEITRAUM_TAGE = 60;
+
+export const zeitraumKey = (von: string, bis: string) => (von === bis ? von : `${von}_${bis}`);
+
+/** Ist der Key ein eigener Zeitraum (nicht „heute“, „woche“ …)? Dann bleibt das Label groß („Mi 18.11. – So 22.11.“). */
+export const istEigenerZeitraum = (key: string) => EIGENER_ZEITRAUM.test(key);
+
+/** Label klein beginnend für Sätze („diese Woche“), eigene Zeiträume unverändert („Mi 18.11. – So 22.11.“). */
+export function zeitraumImSatz(z: Zeitraum): string {
+  return istEigenerZeitraum(z.key) ? z.label : z.label.charAt(0).toLowerCase() + z.label.slice(1);
+}
+
 export function zeitraumAuflösen(eingabe: string | undefined, heute: string): Zeitraum {
   const key: string = eingabe ?? "heute";
+  // Vor istGueltigerTag lesen: der Typ-Guard verengt key danach
+  const eigen = key.match(EIGENER_ZEITRAUM);
   if (istGueltigerTag(key)) return { key, label: tagKurz(key), von: key, bis: key };
+  // Eigener Zeitraum aus dem Kalender: gültige Tage, Start ≤ Ende; Vergangenes beginnt heute, höchstens 60 Tage
+  if (eigen && istGueltigerTag(eigen[1]) && istGueltigerTag(eigen[2]) && eigen[1] <= eigen[2] && eigen[2] >= heute) {
+    const von = eigen[1] < heute ? heute : eigen[1];
+    const grenze = plusTage(von, MAX_ZEITRAUM_TAGE - 1);
+    const bis = eigen[2] > grenze ? grenze : eigen[2];
+    if (von === bis) return { key: von, label: tagKurz(von), von, bis };
+    const k = zeitraumKey(von, bis);
+    return { key: k, label: `${tagKurz(von)} – ${tagKurz(bis)}`, von, bis };
+  }
   switch (key) {
     case "morgen":
       return { key, label: "Morgen", von: plusTage(heute, 1), bis: plusTage(heute, 1) };
@@ -144,14 +170,13 @@ export function zeitraumAuflösen(eingabe: string | undefined, heute: string): Z
   }
 }
 
-/** Kennzahl unter der Event-Zahl: „kostenlos heute“, „kostenlos am Do 03.12.“, „kostenlos dieses Wochenende“. */
+/** Kennzahl unter der Event-Zahl: „kostenlos heute“, „kostenlos Do 03.12.“, „kostenlos dieses Wochenende“. */
 export function kostenlosKennzahl(z: Zeitraum, heute: string): string {
   if (z.von === heute && z.bis === heute) return "kostenlos heute";
-  if (z.von === z.bis) return `kostenlos am ${tagKurz(z.von)}`;
+  if (z.von === z.bis) return `kostenlos ${tagKurz(z.von)}`; // „kostenlos Sa 21.11.“ (ohne „am“, Auftraggeber 16.11.2026)
   if (z.key === "monat") return "kostenlos in den nächsten 30 Tagen";
   if (z.key === "alle") return "kostenlos in 60 Tagen";
-  const klein = z.label.charAt(0).toLowerCase() + z.label.slice(1);
-  return `kostenlos ${klein}`;
+  return `kostenlos ${zeitraumImSatz(z)}`;
 }
 
 /**

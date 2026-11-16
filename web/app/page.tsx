@@ -10,12 +10,12 @@ import { WochenendTag } from "@/components/wochenend-tag";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden, vergangeneWochenendEvents } from "@/lib/daten";
 import { beliebtAuswahl, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
-import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
+import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, zeitraumImSatz, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddEvent } from "@/lib/typen";
 
-import { anzeigeTitel, zeitKurz, zeitLang } from "@/lib/termine";
+import { anzeigeTitel, zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 
 const SCHNELLFILTER = [
@@ -67,11 +67,15 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   // Hero
   const neu = neuSeit(pool.events, pool.jetzt).sort(nachNeu);
   // Zeitraum-Label klein beginnend, Rest unverändert („dieses Wochenende“, nicht „dieses wochenende“)
-  const zeitraumKlein = z.label.charAt(0).toLowerCase() + z.label.slice(1);
+  const zeitraumKlein = zeitraumImSatz(z);
   const kennzahlLabel = istHeute ? "Events heute" : z.von === z.bis ? `Events ${tagKurz(z.von)}` : `Events ${zeitraumKlein}`;
   const kostenlosLabel = kostenlosKennzahl(z, heute);
   // Tagesleiste: 60 Tage, bei einem weiter entfernten Tag bis 14 Tage danach (höchstens ein Jahr)
-  const tageAnzahl = tagesleistenLaenge(heute, z.von);
+  // Bis zum Ende des gewählten Zeitraums (eigener Zeitraum aus dem Kalender kann weiter reichen als 60 Tage ab heute)
+  const tageAnzahl = tagesleistenLaenge(heute, z.bis);
+  // Für den Kalender: einzelner Tag oder Zeitraum (Wochenende, Woche, eigener Zeitraum)
+  const kalenderTag = z.von === z.bis ? z.von : undefined;
+  const kalenderZeitraum = z.von !== z.bis ? { von: z.von, bis: z.bis } : undefined;
   const tage = Array.from({ length: tageAnzahl }, (_, i) => {
     const tag = plusTage(heute, i);
     return {
@@ -81,7 +85,8 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
       monat: i > 0 && tag.endsWith("-01") ? MONATE[Number(tag.slice(5, 7)) - 1].slice(0, 3) : undefined,
       anzahl: filtern(pool.events, { von: tag, bis: tag }).length,
       href: startHref(tag, heute),
-      aktiv: z.von === tag && z.bis === tag,
+      // Gold: der gewählte Tag bzw. jeder Tag im Zeitraum (Wochenende, Woche, eigener Zeitraum)
+      aktiv: tag >= z.von && tag <= z.bis,
     };
   });
 
@@ -134,8 +139,10 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
               </div>
             </div>
           </div>
-          <Datumsleiste tage={tage} nachher={<KalenderToggle heute={heute} ziel="/" gewaehlt={z.von === z.bis ? z.von : undefined} />} />
+          <Datumsleiste tage={tage} nachher={<KalenderToggle heute={heute} ziel="/" gewaehlt={kalenderTag} zeitraum={kalenderZeitraum} klasse="nur-desktop" />} />
           <div className="schnellfilter nur-mobil" aria-label="Zeitraum">
+            {/* Kalender als erste Pille in dieser Reihe (mobil/Tablet); am Desktop steht er neben der Tagesleiste */}
+            <KalenderToggle heute={heute} ziel="/" gewaehlt={kalenderTag} zeitraum={kalenderZeitraum} />
             {SCHNELLFILTER.map((s) => (
               <Link key={s.key} href={startHref(s.key, heute)} className="chip chip--navy" aria-current={z.key === s.key ? "true" : undefined} scroll={false}>
                 {s.label}
@@ -372,8 +379,9 @@ function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
           <Icon name={k.icon} />
           <span className="nur-desktop">{k.name}</span>
           <span className="nur-mobil">
-            {k.name}
-            {zeitLang(e) ? ` · ${zeitLang(e)}` : ""} · {e.ort}
+            {/* Mit Datum („Heute“, „Morgen“, „Do 26.11.“) – bei einem Zeitraum ist sonst unklar, welcher Tag gemeint ist */}
+            {k.name} · {metaZeile(e, heute)}
+            {e.uhrzeit && !e.uhrzeiten ? " Uhr" : ""} · {e.ort}
           </span>
         </span>
         <h2 className="sticker__titel d">
