@@ -134,7 +134,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
               </div>
             </div>
           </div>
-          <Datumsleiste tage={tage} nachher={<KalenderToggle heute={heute} ziel="/" />} />
+          <Datumsleiste tage={tage} nachher={<KalenderToggle heute={heute} ziel="/" gewaehlt={z.von === z.bis ? z.von : undefined} />} />
           <div className="schnellfilter nur-mobil" aria-label="Zeitraum">
             {SCHNELLFILTER.map((s) => (
               <Link key={s.key} href={startHref(s.key, heute)} className="chip chip--navy" aria-current={z.key === s.key ? "true" : undefined} scroll={false}>

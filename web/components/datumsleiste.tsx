@@ -58,24 +58,28 @@ export function Datumsleiste({ tage, nachher }: { tage: LeistenTag[]; nachher?: 
 
   return (
     <div className="datumsleiste-huelle">
-      <button type="button" className="datumsleiste__pfeil" onClick={() => blaettern(-1)} disabled={!rand.links} aria-label="Frühere Tage">
-        <span className="icon" aria-hidden data-icon="chevron_left" />
-      </button>
-      <nav className="datumsleiste" aria-label="Tag wählen" ref={leiste}>
-        {tage.map((t) => (
-          <Link key={t.tag} data-tag={t.tag} href={t.href} aria-current={t.aktiv ? "true" : undefined} scroll={false}>
-            <span className="datumsleiste__wt">{t.monat ? `${t.wochentag} · ${t.monat}` : t.wochentag}</span>
-            <span className="datumsleiste__tag">{t.tagNr}</span>
-            <span className="datumsleiste__anz">
-              {t.anzahl}
-              <span className="nur-desktop"> Events</span>
-            </span>
-          </Link>
-        ))}
-      </nav>
-      <button type="button" className="datumsleiste__pfeil" onClick={() => blaettern(1)} disabled={!rand.rechts} aria-label="Spätere Tage">
-        <span className="icon" aria-hidden data-icon="chevron_right" />
-      </button>
+      {/* Rahmen um Leiste und Pfeile: mobil liegen die Pfeile als Kreise ÜBER den Tagen (die Leiste behält ihre volle
+          Breite), ab Tablet stehen sie daneben (Auftraggeber 16.11.2026) */}
+      <div className="datumsleiste-rahmen">
+        <button type="button" className="datumsleiste__pfeil datumsleiste__pfeil--links" onClick={() => blaettern(-1)} disabled={!rand.links} aria-label="Frühere Tage">
+          <span className="icon" aria-hidden data-icon="chevron_left" />
+        </button>
+        <nav className="datumsleiste" aria-label="Tag wählen" ref={leiste}>
+          {tage.map((t) => (
+            <Link key={t.tag} data-tag={t.tag} href={t.href} aria-current={t.aktiv ? "true" : undefined} scroll={false}>
+              <span className="datumsleiste__wt">{t.monat ? `${t.wochentag} · ${t.monat}` : t.wochentag}</span>
+              <span className="datumsleiste__tag">{t.tagNr}</span>
+              <span className="datumsleiste__anz">
+                {t.anzahl}
+                <span className="nur-desktop"> Events</span>
+              </span>
+            </Link>
+          ))}
+        </nav>
+        <button type="button" className="datumsleiste__pfeil datumsleiste__pfeil--rechts" onClick={() => blaettern(1)} disabled={!rand.rechts} aria-label="Spätere Tage">
+          <span className="icon" aria-hidden data-icon="chevron_right" />
+        </button>
+      </div>
       {nachher}
     </div>
   );

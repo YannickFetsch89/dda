@@ -104,18 +104,44 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
   );
 }
 
-export function KalenderToggle({ heute, ziel }: { heute: string; ziel?: string }) {
+/**
+ * Kalender neben der Tagesleiste (Startseite). `gewaehlt`: der in der Leiste gewählte Tag – im Kalender gold markiert,
+ * „heute“ trägt nur einen blauen Ring (Auftraggeber 16.11.2026). Mobil öffnet der Kalender mittig über einer
+ * Abdunklung; Tippen daneben oder Escape schließt ihn.
+ */
+export function KalenderToggle({ heute, ziel, gewaehlt }: { heute: string; ziel?: string; gewaehlt?: string }) {
   const [offen, setOffen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!offen) return;
+    const draussen = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOffen(false);
+    };
+    const taste = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOffen(false);
+    };
+    document.addEventListener("mousedown", draussen);
+    document.addEventListener("keydown", taste);
+    return () => {
+      document.removeEventListener("mousedown", draussen);
+      document.removeEventListener("keydown", taste);
+    };
+  }, [offen]);
+
   return (
-    <div className="kalender-toggle">
-      <button type="button" className="chip chip--navy" onClick={() => setOffen(!offen)} aria-label={offen ? "Schließen" : "Kalender"}>
-        <span className="icon" style={{ fontSize: 16 }} aria-hidden data-icon="calendar_month" />
-        {offen ? "Schließen" : "Kalender"}
+    <div className="kalender-toggle" ref={ref}>
+      <button type="button" className="chip chip--navy kalender-toggle__knopf" onClick={() => setOffen(!offen)} aria-label={offen ? "Kalender schließen" : "Kalender öffnen"} aria-expanded={offen}>
+        <span className="icon kalender-toggle__icon" aria-hidden data-icon="calendar_month" />
+        <span className="kalender-toggle__text">{offen ? "Schließen" : "Kalender"}</span>
       </button>
       {offen && (
-        <div className="kalender-dropdown">
-          <DatumWaehler heute={heute} ziel={ziel} onWahl={() => setOffen(false)} />
-        </div>
+        <>
+          <div className="kalender-hintergrund" aria-hidden onClick={() => setOffen(false)} />
+          <div className="kalender-dropdown" role="dialog" aria-label="Datum wählen">
+            <DatumWaehler heute={heute} ziel={ziel} gewaehlt={gewaehlt} onWahl={() => setOffen(false)} />
+          </div>
+        </>
       )}
     </div>
   );
