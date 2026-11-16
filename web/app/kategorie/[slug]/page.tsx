@@ -10,6 +10,7 @@ import { unterkategorienZaehlen } from "@/lib/ableitungen";
 import { eventPoolLaden } from "@/lib/daten";
 import { KATEGORIEN, kategorie, katStil } from "@/lib/kategorien";
 import { KATEGORIE_TEXTE } from "@/lib/landing-texte";
+import { SPIELPLAETZE_VERLINKT } from "@/lib/schalter";
 import { LANDING_TAGE, MIN_EINTRAEGE, kategorieGueltig, unterkategoriePfad } from "@/lib/landing";
 import { kategorieEvents, unterkategorieIndexierbar } from "@/lib/landing-listen";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
@@ -29,7 +30,8 @@ const EXTRA_LINKS: Partial<Record<KategorieSlug, { name: string; pfad: string }[
   food: [{ name: "Restaurants & Cafés", pfad: "/guides/restaurants-cafes" }],
   nightlife: [{ name: "Club-Guide", pfad: "/guides/clubs" }, { name: "Kneipen & Bars", pfad: "/guides/kneipen-bars" }],
   musik: [{ name: "Club-Guide", pfad: "/guides/clubs" }],
-  // familie: Spielplätze vorübergehend nicht verlinkt (SPIELPLAETZE_VERLINKT in lib/landing.ts)
+  // Spielplätze nur, wenn der Guide verlinkt ist (lib/schalter.ts)
+  ...(SPIELPLAETZE_VERLINKT ? { familie: [{ name: "Spielplätze", pfad: "/guides/spielplaetze" }] } : {}),
 };
 
 const kommende = kategorieEvents;

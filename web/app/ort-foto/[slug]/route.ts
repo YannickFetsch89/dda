@@ -69,28 +69,37 @@ async function googleFotoAdresse(name: string, slug: string): Promise<Ergebnis> 
   }
 }
 
-/**
- * Bildquelle eines Ortes: { adresse, google } – gecached nach Ergebnis (siehe Kopfkommentar).
- * `version` (extras.foto_version, als ?v= in der Bild-URL) gehört zum Cache-Schlüssel: Ein neu gewähltes Foto bekommt so
- * sofort einen eigenen Eintrag, statt bis zu 30 Tage die gemerkte Adresse des alten Fotos zu liefern.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- version wirkt nur als Teil des Cache-Schlüssels
-async function bildQuelle(slug: string, version: string): Promise<{ adresse: string | null; google: boolean }> {
-  "use cache";
-  cacheTag(fotoTag(slug));
+/** Ort zum Slug, wie die Website ihn zeigt (Daten aus dem gecachten Pool – kein Google-Abruf). */
+async function fotoOrt(slug: string) {
   // Club-Hub: Orte mit auch_club (z. B. Konvex) sind im Club-Hub sichtbar, auch wenn ihr Score im Haupt-Hub < 7 ist.
   // Club-Zeilen (typ = club) nur, wenn sie im Hub sichtbar sind (Freigabe!) – ortLaden kennt die Freigabe nicht.
   const geladen = await ortLaden(slug);
   // Spielplätze haben keinen qualitaets_score: eigener Zweig, nur aktive (abgeschaltete → 404, keine Weiterleitung)
-  const ort = (geladen && (geladen.typ !== "club" || istSichtbarerClub(geladen)) ? geladen : null) ?? (await clubLaden(slug))
+  return (geladen && (geladen.typ !== "club" || istSichtbarerClub(geladen)) ? geladen : null) ?? (await clubLaden(slug))
     ?? (await spielplatzLaden(slug));
-  if (ort?.bild_url && !ort.bild_url.includes("key=")) {
-    cacheLife({ stale: 3600, revalidate: TAG, expire: 7 * TAG });
-    return { adresse: ort.bild_url, google: false };
-  }
+}
+
+/** Welches Foto gilt gerade? Eigenes Bild, sonst gültiger Google-Fotoname, sonst keins. */
+function fotoKennung(ort: Awaited<ReturnType<typeof fotoOrt>>): { eigenes: string | null; google: string | null } {
+  if (ort?.bild_url && !ort.bild_url.includes("key=")) return { eigenes: ort.bild_url, google: null };
   const foto = ort?.extras?.google_foto as { name?: unknown } | undefined;
-  const name = typeof foto?.name === "string" && FOTO_NAME.test(foto.name) ? foto.name : null;
-  const ergebnis: Ergebnis = name ? await googleFotoAdresse(name, slug) : { adresse: null };
+  return { eigenes: null, google: typeof foto?.name === "string" && FOTO_NAME.test(foto.name) ? foto.name : null };
+}
+
+/**
+ * Bildquelle eines Ortes: { adresse, google } – gecached nach Ergebnis (siehe Kopfkommentar).
+ * Schlüssel ist das gerade gespeicherte Foto selbst (Google-Fotoname bzw. eigene Bildadresse): Ein getauschtes Foto
+ * bekommt sofort einen eigenen Eintrag statt bis zu 30 Tage die gemerkte Adresse des alten. ?v= aus der URL zählt dafür
+ * nicht – so kann niemand von außen neue Einträge und damit Google-Abrufe erzwingen (Cursor-Prüfung 16.11.2026).
+ */
+async function bildQuelle(slug: string, eigenes: string | null, google: string | null): Promise<{ adresse: string | null; google: boolean }> {
+  "use cache";
+  cacheTag(fotoTag(slug));
+  if (eigenes) {
+    cacheLife({ stale: 3600, revalidate: TAG, expire: 7 * TAG });
+    return { adresse: eigenes, google: false };
+  }
+  const ergebnis: Ergebnis = google ? await googleFotoAdresse(google, slug) : { adresse: null };
   // Genau ein cacheLife-Aufruf je Durchlauf, abhängig vom Ergebnis
   if (ergebnis.adresse) cacheLife({ stale: TAG, revalidate: 30 * TAG, expire: 45 * TAG });
   else if (ergebnis.voruebergehend) cacheLife({ stale: 60, revalidate: 300, expire: 600 });
@@ -98,12 +107,11 @@ async function bildQuelle(slug: string, version: string): Promise<{ adresse: str
   return { adresse: ergebnis.adresse, google: true };
 }
 
-export async function GET(req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
+export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
   const slug = slugDekodieren((await ctx.params).slug);
-  // Nur kleine Ganzzahlen als Version zulassen – sonst könnte jede beliebige ?v= einen neuen Cache-Eintrag erzwingen
-  const v = req.nextUrl.searchParams.get("v");
-  const version = v && /^[1-9]\d{0,2}$/.test(v) ? v : "1";
-  const quelle = slug ? await bildQuelle(slug, version) : null;
+  const kennung = slug ? fotoKennung(await fotoOrt(slug)) : null;
+  // Ohne Foto gar nicht erst in den Cache bzw. zu Google
+  const quelle = slug && kennung && (kennung.eigenes || kennung.google) ? await bildQuelle(slug, kennung.eigenes, kennung.google) : null;
   // Google-Fotos nur durchreichen (nicht auf der Platte speichern), eigene Bilder cachen
   if (!slug || !quelle?.adresse) return bildAntwort(null, TAG);
   const { bild, status } = await bildHolen(quelle.adresse, !quelle.google);

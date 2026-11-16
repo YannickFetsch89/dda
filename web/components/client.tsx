@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { SPIELPLAETZE_VERLINKT } from "@/lib/schalter";
 
 // ---------- Merkliste (anonym in localStorage) ----------
 
@@ -345,7 +346,7 @@ export const GUIDE_LINKS = [
   { href: "/guides/restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant" },
   { href: "/guides/kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar" },
   { href: "/guides/clubs", label: "Clubs", icon: "nightlife" },
-  // Spielplätze vorübergehend nicht verlinkt (SPIELPLAETZE_VERLINKT in lib/landing.ts)
+  ...(SPIELPLAETZE_VERLINKT ? [{ href: "/guides/spielplaetze", label: "Spielplätze", icon: "sp:spielplatz" }] : []),
 ];
 
 function KopfNavMitPfad() {

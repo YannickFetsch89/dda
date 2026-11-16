@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GUIDE_TEXTE } from "@/lib/guide-texte";
+import { SPIELPLAETZE_VERLINKT as VERLINKT_SCHALTER } from "@/lib/schalter";
 import { SPIELPLAETZE_VERLINKT, hubPasstZuEvent, hubVerlinkt } from "@/lib/landing";
 import {
   CHIP_SCHWELLE, EXTRAS, GERAETE, STANDARD, chips, erfasst, extraBelegt, extraJa, filterHref, filterLesen, filtern, geraetBelegt, geraetJa, groesseText,
@@ -190,6 +191,11 @@ describe("Bildausschnitt (extras.bild_fokus)", () => {
 });
 
 describe("Einbaustellen und Texte", () => {
+  it("Schalter: solange der Guide nicht verlinkt ist, verlinkt auch der Übersichtstext ihn nicht", () => {
+    const text = JSON.stringify(GUIDE_TEXTE.uebersicht);
+    expect(text.includes("/guides/spielplaetze")).toBe(VERLINKT_SCHALTER);
+    expect(text.includes("{spielplaetze}")).toBe(VERLINKT_SCHALTER);
+  });
   it("Event-Link „Spielplätze …“ nur bei Kategorie Familie", () => {
     // Solange der Guide nicht verlinkt ist (14.11.2026), gibt es den Link gar nicht
     expect(hubPasstZuEvent("spielplaetze", "familie")).toBe(SPIELPLAETZE_VERLINKT);

@@ -1786,7 +1786,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .gd-punkt--cafe { background: #457b9d; }
 .gd-punkt--brauhaus { background: #c08532; }
 :root[data-theme="dark"] .gd-punkt { border-color: var(--ddd-surface); }
-:root[data-theme="dark"] .gd-punkt--restaurant { background: #f7f8fa; }
+/* Dunkel: Restaurant-Punkt bleibt Navy wie der Pin, heller Ring wie der weiße Pin-Rand (sonst unsichtbar) */
+:root[data-theme="dark"] .gd-punkt--restaurant { background: var(--ddd-navy); border-color: #f7f8fa; }
 .gd-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 13px; font-weight: 600; color: var(--ddd-text-body); }
 .gd-legende li { display: flex; align-items: center; gap: 6px; }
 

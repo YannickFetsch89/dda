@@ -3,6 +3,7 @@
 import { KATEGORIEN } from "./kategorien";
 import { slugify } from "./kueche";
 import { BEZIRKE, bezirkVon, stadtteilName } from "./stadtteile";
+import { SPIELPLAETZE_VERLINKT } from "./schalter";
 import type { KategorieSlug } from "./typen";
 
 /** Ab so vielen kommenden Einträgen ist eine Landingpage indexierbar (Arbeitsgrenze, mit der Search Console nachschärfen). */
@@ -67,12 +68,8 @@ export const GUIDE_HUBS: Record<GuideHub, { name: string; mehrzahl: string; icon
   spielplaetze: { name: "Spielplätze", mehrzahl: "Spielplätze", icon: "sp:spielplatz" },
 };
 
-/**
- * Spielplatz-Guide verlinkt? Seit 14.11.2026 vorübergehend aus: Die Seiten bleiben live (Sitemap, direkte URLs),
- * aber Menü, Footer, /guides-Kachel, Übersichtstext, Familien-Kategorie, Event- und Stadtteilseiten verlinken sie
- * nicht, bis Bilder und Vorschaubilder fertig sind. Wieder einschalten: true setzen (+ client.tsx, rahmen.tsx, llms.txt).
- */
-export const SPIELPLAETZE_VERLINKT = false;
+/** Spielplatz-Guide verlinkt? Schalter und Liste aller Stellen in lib/schalter.ts. */
+export { SPIELPLAETZE_VERLINKT };
 
 /** Darf ein Hub von außen (Event-, Stadtteilseiten) verlinkt werden? */
 export const hubVerlinkt = (hub: GuideHub) => hub !== "spielplaetze" || SPIELPLAETZE_VERLINKT;
