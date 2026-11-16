@@ -405,10 +405,14 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .datumsleiste__pfeil:disabled { opacity: 0.3; cursor: default; }
 .datumsleiste__pfeil .icon { font-size: 22px; }
 .datumsleiste-huelle .kalender-toggle { flex: none; }
-/* Handy: Wischen statt Pfeile, Kalender nur als Symbol – damit mehrere Tage sichtbar bleiben */
+/* Handy (Auftraggeber 16.11.2026): Tage etwas größer und ohne Rand; schmale Pfeile bleiben sichtbar, damit klar ist,
+   dass links/rechts weitere Tage kommen. Kalender nur als Symbol. */
 @media (max-width: 767px) {
-  .datumsleiste__pfeil { display: none; }
-  .datumsleiste-huelle .kalender-toggle .chip { font-size: 0; gap: 0; padding: 0 12px; }
+  .datumsleiste-huelle { gap: 2px; }
+  .datumsleiste__pfeil { width: 24px; height: 72px; border: 0; background: none; }
+  .datumsleiste__pfeil .icon { font-size: 26px; }
+  .datumsleiste__pfeil:disabled { opacity: 0.2; }
+  .datumsleiste-huelle .kalender-toggle .chip { font-size: 0; gap: 0; padding: 0 12px; border-color: transparent; background: rgba(247, 248, 250, 0.08); }
 }
 .datumsleiste::-webkit-scrollbar { display: none; }
 .datumsleiste a {
@@ -420,6 +424,13 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .datumsleiste__wt { font-size: 11px; font-weight: 600; }
 .datumsleiste__tag { font-family: var(--font-display); font-style: italic; font-size: 22px; line-height: 1.1; }
 .datumsleiste__anz { font-size: 10px; opacity: 0.8; }
+@media (max-width: 767px) {
+  .datumsleiste a { flex-basis: 62px; padding: 11px 0; gap: 2px; border-color: transparent; background: rgba(247, 248, 250, 0.08); }
+  .datumsleiste a:hover { border-color: transparent; }
+  .datumsleiste__wt { font-size: 12px; }
+  .datumsleiste__tag { font-size: 26px; }
+  .datumsleiste__anz { font-size: 11px; }
+}
 .schnellfilter { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 14px calc(-1 * var(--rand)) 0; padding: 0 var(--rand); }
 .schnellfilter::-webkit-scrollbar { display: none; }
 @media (min-width: 768px) { .hero__claim { font-size: 52px; } .kennzahl b { font-size: 32px; } }
@@ -518,6 +529,22 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .band .zeile__zeit { color: var(--ddd-gold); }
 .band .zeile__sub { color: var(--ddd-on-navy-muted); }
 .band .zeile__titel { white-space: normal; }
+/* Vergangene Wochenendtage (components/wochenend-tag.tsx): mobil eingeklappt, Kopf als Knopf mit Pfeil */
+.band__klapper { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; margin-bottom: 0; padding: 0; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; font-family: var(--font-display); font-style: italic; }
+.band__vorbei { margin-left: 6px; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px !important; font-weight: 600; }
+.band__pfeil { flex: none; font-size: 26px; color: var(--ddd-gold); transition: transform 0.2s; font-style: normal; }
+.band__spalte--vergangen.is-offen .band__pfeil { transform: rotate(180deg); }
+.band__spalte--vergangen .zeile { opacity: 0.75; }
+@media (max-width: 1199px) {
+  .band__spalte--vergangen:not(.is-offen) .band__inhalt { display: none; }
+  .band__spalte--vergangen.is-offen .band__klapper { margin-bottom: 6px; }
+}
+@media (min-width: 1200px) {
+  /* Desktop: drei Spalten, alle Tage offen – der Kopf ist dann kein Knopf */
+  .band__klapper { pointer-events: none; cursor: default; margin-bottom: 6px; min-height: 0; }
+  .band__pfeil { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .band__pfeil { transition: none; } }
 .band .zeile a:hover { color: var(--ddd-gold); }
 @media (min-width: 1200px) {
   .band { border-radius: var(--r-panel); padding: 36px; gap: 24px; }
@@ -1414,6 +1441,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 
 /* ── Header: Aufklappmenü „Guides“ (Desktop) und Zwischentitel im Handy-Menü ── */
 .popover .popover__titel { padding: 10px 12px 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ddd-text-muted); }
+/* Erste Zwischenüberschrift („Events“) ohne Trennstrich darüber */
+.popover .popover__titel--erste { border-top: 0; margin-top: 0; padding-top: 6px; }
 .kopf__guides { position: relative; }
 .kopf__guides summary { display: flex; align-items: center; gap: 2px; padding: 9px 10px 9px 14px; border-radius: var(--r-pill); cursor: pointer; list-style: none; }
 .kopf__guides summary::-webkit-details-marker { display: none; }

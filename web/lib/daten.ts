@@ -4,7 +4,7 @@ import { cacheLife } from "next/cache";
 import { leseClient } from "./supabase-server";
 import beispiel from "./beispiel-events.json";
 import { kategorieAusDb } from "./kategorien";
-import { heuteBerlin, plusTage, tageZwischen } from "./datum";
+import { heuteBerlin, plusTage, tageZwischen, wochenende } from "./datum";
 import { buendeln } from "./termine";
 import type { DddEvent, EventPool } from "./typen";
 
@@ -133,6 +133,48 @@ async function ausSupabaseLaden(heute: string): Promise<DddEvent[]> {
     if (!data || data.length < SEITENGROESSE) break;
   }
   return events;
+}
+
+/**
+ * Events der schon vergangenen Tage des laufenden Wochenendes (Fr/Sa, Stand Sa oder So), nur für die Wochenend-Box
+ * der Startseite: Sie zeigt bis einschließlich Sonntag alle drei Tage (Auftraggeber 16.11.2026). Der Pool selbst
+ * beginnt bei heute und bleibt so. An Mo–Fr leer. Fehler → leer (die Box zeigt dann „Noch keine Tipps“ wie bisher).
+ */
+export async function vergangeneWochenendEvents(heute: string): Promise<DddEvent[]> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
+
+  const { fr } = wochenende(heute);
+  if (fr >= heute) return [];
+  const client = supabaseClient();
+  if (!client) return [];
+  const events: DddEvent[] = [];
+  let variante = 0;
+  try {
+    for (let seite = 0; seite < 5; seite++) {
+      const { data, error } = await client
+        .from("events")
+        .select(SPALTEN_VARIANTEN[variante])
+        .eq("abgelehnt", false)
+        .gte("datum", fr)
+        .lt("datum", heute)
+        .order("datum", { ascending: true })
+        .order("id", { ascending: true })
+        .range(seite * SEITENGROESSE, (seite + 1) * SEITENGROESSE - 1);
+      if (error && variante < SPALTEN_VARIANTEN.length - 1 && spaltenFehlt(error.message)) {
+        variante += 1;
+        seite -= 1;
+        continue;
+      }
+      if (error) throw new Error(`Supabase-Fehler: ${error.message}`);
+      events.push(...(data as unknown as Zeile[]).map(normalisieren));
+      if (!data || data.length < SEITENGROESSE) break;
+    }
+  } catch (err) {
+    console.warn(`Vergangene Wochenendtage konnten nicht geladen werden: ${err instanceof Error ? err.message : err}`);
+    return [];
+  }
+  return buendeln(events);
 }
 
 // Ort → Stadtteil für die Beispiel-Events aus dem Design-Handoff

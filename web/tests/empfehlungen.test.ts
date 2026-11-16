@@ -505,6 +505,22 @@ describe("Wochenend-Box (wochenendProgramm)", () => {
     expect(wochenendProgramm(pool([ohneUhrzeit])).every((t) => t.events.length === 0)).toBe(true);
   });
 
+  it("Am Sonntag: Freitag und Samstag aus den vergangenen Events, als vergangen markiert; ohne sie leer", () => {
+    const SONNTAG = "2026-11-15";
+    const amSonntag = (events: DddEvent[]) =>
+      ({ heute: SONNTAG, jetzt: `${SONNTAG}T10:00:00Z`, events, alle: events, quelle: "beispiel", fehler: null }) as EventPool;
+    const fr = ev({ id: "fr", titel: "Konzert Freitag", kategorie: "musik", ort: "zakk", datum: "2026-11-13", uhrzeit: "20:00", bild_url: BILD });
+    const sa = ev({ id: "sa", titel: "Lesung Samstag", kategorie: "kultur", ort: "Literaturhaus", datum: "2026-11-14", uhrzeit: "19:00", bild_url: BILD });
+    const so = ev({ id: "so", titel: "Matinee Sonntag", kategorie: "kultur", ort: "Tonhalle", datum: SONNTAG, uhrzeit: "11:00", bild_url: BILD });
+    const box = wochenendProgramm(amSonntag([so]), [fr, sa]);
+    expect(box.map((t) => t.events.map((x) => x.id))).toEqual([["fr"], ["sa"], ["so"]]);
+    expect(box.map((t) => t.vergangen)).toEqual([true, true, false]);
+    // Ohne vergangene Events (alter Aufruf) bleiben Fr und Sa leer
+    expect(wochenendProgramm(amSonntag([so])).map((t) => t.events.length)).toEqual([0, 0, 1]);
+    // Abgesagte vergangene Events erscheinen nicht
+    expect(wochenendProgramm(amSonntag([so]), [{ ...fr, abgesagt: true }, sa])[0].events).toHaveLength(0);
+  });
+
   it("Ausstellung mit Uhrzeit, Start vor dem Wochenende, Fokustag Samstag → am Samstag in der Box", () => {
     const a = mitFokustag({ id: "a", titel: "Ausstellung: Farbräume", kategorie: "kultur", ort: "Kunstpalast", datum: "2026-11-05", datum_bis: "2026-11-25", uhrzeit: "11:00", bild_url: BILD }, "2026-11-14");
     expect(wochenendProgramm(pool([a])).map((t) => t.events.map((x) => x.id))).toEqual([[], [a.id], []]);
@@ -533,6 +549,18 @@ describe("„Beliebt“ in der Tagesansicht", () => {
     const lesung = ev({ id: "l", titel: "Lesung", ort: "Literaturhaus" });
     const k = stufenKontext([yoga, lesung], HEUTE);
     expect(beliebtAuswahl([yoga, lesung], [], k, null).map((x) => x.id)).toEqual(["l"]);
+  });
+
+  it("Tipp und Picks stehen nicht noch einmal in „Beliebt“; Plätze füllen andere Events, auch aus der Woche", () => {
+    const a = ev({ id: "a", titel: "Konzert A", ort: "zakk" });
+    const b = ev({ id: "b", titel: "Lesung B", ort: "Literaturhaus" });
+    const c = ev({ id: "c", titel: "Theater C", ort: "FFT", datum: "2026-11-12" });
+    const k = stufenKontext([a, b, c], HEUTE);
+    const liste = beliebtAuswahl([a, b], [c], k, null, 5, new Set(["a"])).map((x) => x.id);
+    expect(liste).not.toContain("a");
+    expect(liste).toEqual(expect.arrayContaining(["b", "c"]));
+    // Ohne Ausschluss wie bisher
+    expect(beliebtAuswahl([a, b], [], k, null).map((x) => x.id)).toContain("a");
   });
 });
 

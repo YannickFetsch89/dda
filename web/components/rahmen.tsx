@@ -53,6 +53,7 @@ export function Kopf() {
               <Icon name="menu" />
             </summary>
             <div className="popover">
+              <span className="popover__titel popover__titel--erste">Events</span>
               <Link href="/entdecken">Entdecken</Link>
               <Link href="/heute">Heute</Link>
               <Link href="/wochenende">Wochenende</Link>
@@ -62,6 +63,8 @@ export function Kopf() {
               <Link href="/guides/restaurants-cafes">Restaurants &amp; Cafés</Link>
               <Link href="/guides/kneipen-bars">Kneipen &amp; Bars</Link>
               <Link href="/guides/clubs">Clubs</Link>
+              {/* Trennstrich unter den Guides: kommt mit der Zwischenüberschrift (border-top wie bei „Guides“) */}
+              <span className="popover__titel">Service</span>
               <Link href="/merkliste">Merkliste</Link>
               <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>

@@ -298,9 +298,14 @@ export const WOCHENEND_TIPPS = { Fr: 3, Sa: 4, So: 3 } as const;
  * wie in der Tagesansicht; Stamm bleibt draußen; je Tag Sortierschlüssel a)–e) mit Kategorie-Mischung;
  * `benutzt` verhindert dasselbe Event an zwei Tagen (Plan Empfehlungen, Abschnitt 9).
  */
-export function wochenendProgramm(pool: EventPool) {
+/**
+ * `vergangene`: Events der schon vergangenen Wochenendtage (lib/daten.ts, vergangeneWochenendEvents) – der Pool beginnt
+ * bei heute. Mit ihnen zeigt die Startseite bis Sonntag auch Freitag und Samstag; ohne sie bleiben vergangene Tage leer.
+ */
+export function wochenendProgramm(pool: EventPool, vergangene: DddEvent[] = []) {
   const w = wochenende(pool.heute);
   const aktiv = pool.events.filter((e) => !e.abgesagt);
+  const frueher = vergangene.filter((e) => !e.abgesagt);
   const k = stufenKontext(aktiv, pool.heute);
   const vergleich = nachEmpfehlung(k);
   const benutzt = new Set<string>();
@@ -311,7 +316,8 @@ export function wochenendProgramm(pool: EventPool) {
       ["Sonntag", "So", w.so],
     ] as const
   ).map(([name, kurz, tag]) => {
-    const tagesEvents = filtern(aktiv, { von: tag, bis: tag, mitLanglaeufern: true }).filter(
+    const quelle = tag < pool.heute ? frueher : aktiv;
+    const tagesEvents = filtern(quelle, { von: tag, bis: tag, mitLanglaeufern: true }).filter(
       (e) => e.uhrzeit && (breite(e, k) ?? 0) >= 1 && amFokustag(e, tag),
     );
     const auswahl = vielfaeltig(tagesEvents, WOCHENEND_TIPPS[kurz], benutzt, vergleich).sort(nachZeit);
@@ -715,9 +721,13 @@ export function startPlaetze(kandidaten: DddEvent[], k: StufenKontext, tag: stri
 /**
  * „Beliebt“: Menge aus dem bisherigen filtern, Stamm draußen, Sortierschlüssel a)–e). In der Tagesansicht steht
  * ein mehrtägiges Event nur an seinem Fokustag – auch beim Auffüllen aus der Woche. Reicht es nicht, wird die Liste kürzer.
+ * `ohne`: schon als Tipp oder Pick gezeigte Events (IDs) – sie stehen nicht noch einmal in „Beliebt“ (Auftraggeber
+ * 16.11.2026: sonst wirkt die Startseite doppelt, mobil besonders); die Plätze füllen die nächsten Kandidaten.
  */
-export function beliebtAuswahl(menge: DddEvent[], reserve: DddEvent[], k: StufenKontext, tag: string | null, n = 5): DddEvent[] {
-  const passt = (e: DddEvent) => (breite(e, k) ?? 0) >= 1 && (tag === null || amFokustag(e, tag));
+export function beliebtAuswahl(
+  menge: DddEvent[], reserve: DddEvent[], k: StufenKontext, tag: string | null, n = 5, ohne: ReadonlySet<string> = new Set(),
+): DddEvent[] {
+  const passt = (e: DddEvent) => !ohne.has(e.id) && (breite(e, k) ?? 0) >= 1 && (tag === null || amFokustag(e, tag));
   const vergleich = nachEmpfehlung(k);
   const primaer = menge.filter(passt).sort(vergleich);
   if (primaer.length >= n) return primaer.slice(0, n);

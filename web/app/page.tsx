@@ -6,8 +6,9 @@ import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
 import { Datumsleiste } from "@/components/datumsleiste";
+import { WochenendTag } from "@/components/wochenend-tag";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
-import { eventPoolLaden } from "@/lib/daten";
+import { eventPoolLaden, vergangeneWochenendEvents } from "@/lib/daten";
 import { beliebtAuswahl, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
 import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
@@ -92,7 +93,9 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   // „Von der Redaktion“ nur, wenn der gezeigte Tipp die Tipp-Flagge trägt und sie an diesem Tag gilt
   const vonRedaktion = !!tipp && tippGilt(tipp, fokusTag);
   // „Beliebt“: bisherige Menge, Stamm draußen, mehrtägige Events in der Tagesansicht nur am Fokustag (auch beim Auffüllen)
-  const beliebt = beliebtAuswahl(imZeitraum, woche, stufen, fokusTag);
+  // Ohne die Events aus Tipp und Picks – sonst zeigt die Startseite dieselben Events zweimal
+  const schonGezeigt = new Set([tipp, ...picks].filter((e): e is DddEvent => !!e).map((e) => e.id));
+  const beliebt = beliebtAuswahl(imZeitraum, woche, stufen, fokusTag, 5, schonGezeigt);
 
   // Infoboxen
   const abend = imZeitraum.filter((e) => uhrzeitenVon(e).some((z) => z >= "17:00")).sort(nachZeit).slice(0, 8);
@@ -103,7 +106,8 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   const gratisWoche = woche.filter(istKostenlos);
   const themen = themenZaehlen(woche).slice(0, 14);
 
-  const wochenende = wochenendProgramm(pool);
+  // Bis einschließlich Sonntag auch die schon vergangenen Tage des Wochenendes (Fr/Sa) zeigen
+  const wochenende = wochenendProgramm(pool, await vergangeneWochenendEvents(heute));
 
   return (
     <>
@@ -311,10 +315,7 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
           </div>
           <div className="band__spalten">
             {wochenende.map((tag) => (
-              <div key={tag.tag} className="band__spalte">
-                <span className="band__tag d">
-                  {tag.name} <small>{tag.tag.slice(8, 10)}.{tag.tag.slice(5, 7)}.</small>
-                </span>
+              <WochenendTag key={tag.tag} name={tag.name} datum={`${tag.tag.slice(8, 10)}.${tag.tag.slice(5, 7)}.`} vergangen={tag.vergangen}>
                 {tag.events.length ? (
                   tag.events.map((e) => (
                     <div key={e.id} className="zeile">
@@ -333,10 +334,10 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
                   ))
                 ) : (
                   <span className="zeile__sub" style={{ padding: "10px 0" }}>
-                    Noch keine Tipps.
+                    {tag.vergangen ? "An diesem Tag gab es keine Tipps." : "Noch keine Tipps."}
                   </span>
                 )}
-              </div>
+              </WochenendTag>
             ))}
           </div>
           <Link href="/wochenende" className="btn btn--gold btn--gross nur-mobil">
