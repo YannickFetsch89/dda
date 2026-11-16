@@ -413,14 +413,14 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 @media (max-width: 767px) {
   .datumsleiste-huelle { gap: 8px; align-items: stretch; }
   .datumsleiste-rahmen { gap: 0; }
+  /* Nur der Pfeil, ohne Kreis und Rand (Auftraggeber 16.11.2026: der Kreis nahm zu viel Platz); Schatten für Kontrast */
   .datumsleiste__pfeil {
-    position: absolute; top: 50%; z-index: 2; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%;
-    background: var(--ddd-navy); border: 1.5px solid rgba(247, 248, 250, 0.35); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
-    transition: opacity 0.2s;
+    position: absolute; top: 50%; z-index: 2; transform: translateY(-50%); width: 24px; height: 48px;
+    background: none; border: 0; border-radius: 0; transition: opacity 0.2s;
   }
-  .datumsleiste__pfeil--links { left: -6px; }
-  .datumsleiste__pfeil--rechts { right: -6px; }
-  .datumsleiste__pfeil .icon { font-size: 24px; }
+  .datumsleiste__pfeil--links { left: -14px; }
+  .datumsleiste__pfeil--rechts { right: -10px; }
+  .datumsleiste__pfeil .icon { font-size: 30px; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7)); }
   .datumsleiste__pfeil:disabled { opacity: 0; pointer-events: none; }
   .datumsleiste-huelle .kalender-toggle .kalender-toggle__knopf {
     height: 100%; min-height: 72px; width: 58px; padding: 0; justify-content: center; border-radius: var(--r-md);
