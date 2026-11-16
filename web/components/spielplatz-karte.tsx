@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
-import { ortBildUrl } from "@/lib/orte";
+import { ortBildFokus, ortBildUrl } from "@/lib/orte";
 import { GERAETE, alterInfo, belegteGeraete, entfernungText, groesseText, spielplatz, typInfo } from "@/lib/spielplaetze";
 import { spielplatzPfad } from "@/lib/spielplaetze-json-ld";
 import { stadtteilName } from "@/lib/stadtteile";
@@ -31,7 +31,7 @@ export function SpielplatzKarte({ o, meter }: { o: DddOrt; meter?: number | null
     <article className="gd-karte sp-karte" role="listitem">
       <Link href={spielplatzPfad(o)} className="gd-karte__link">
         <div className="gd-karte__bild">
-          <BildImg src={ortBildUrl(o)} ersatz={typ.bild} alt="" icon={typ.icon} />
+          <BildImg src={ortBildUrl(o)} ersatz={typ.bild} alt="" icon={typ.icon} fokus={ortBildFokus(o)} />
         </div>
         <div className="gd-karte__text">
           <span className="gd-typ"><Icon name={typ.icon} />{typ.label}</span>

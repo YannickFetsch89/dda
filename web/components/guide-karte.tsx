@@ -28,6 +28,8 @@ export interface KartenOrt {
   /** Nur Spielplätze: Altersgruppe → Pin-Farbe (unbekannt = neutral) und Text für Liste/Popup */
   alter?: "0-3" | "3-6" | "6-12" | "alle" | "unbekannt";
   alterLabel?: string;
+  /** Bildausschnitt (CSS object-position), z. B. "center 22%" – nur wenn gepflegt (extras.bild_fokus) */
+  fokus?: string;
   /** Nur Restaurant-Hub: Art → Pin-Farbe (Restaurant/Imbiss, Café, Brauhaus) */
   art?: "restaurant" | "imbiss" | "cafe" | "brauhaus";
 }
@@ -76,14 +78,14 @@ function pinElement(o: KartenOrt): HTMLButtonElement {
 }
 
 /** Vorschaubild in der Liste; fehlt es oder lädt es nicht (404), steht das Typ-Icon auf hellem Grund. */
-function ListenBild({ bild, icon }: { bild: string | null; icon: string }) {
+function ListenBild({ bild, icon, fokus }: { bild: string | null; icon: string; fokus?: string }) {
   const [fehler, setFehler] = useState<string | null>(null);
   const zeigen = bild && fehler !== bild;
   return (
     <span className="gd-kompakt__bild">
       {zeigen ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={bild} alt="" loading="lazy" onError={() => setFehler(bild)} />
+        <img src={bild} alt="" loading="lazy" onError={() => setFehler(bild)} style={fokus ? { objectPosition: fokus } : undefined} />
       ) : (
         <span className="icon" aria-hidden data-icon={icon} />
       )}
@@ -103,6 +105,7 @@ function popupInhalt(o: KartenOrt): HTMLElement {
     img.loading = "lazy";
     // Bild nicht ladbar (z. B. Illustration fehlt): Popup ohne Bild statt kaputtem Symbol
     img.onerror = () => img.remove();
+    if (o.fokus) img.style.objectPosition = o.fokus;
     box.appendChild(img);
   }
   const text = document.createElement("span");
@@ -366,7 +369,7 @@ export default function GuideKarte({ orte: geladen, ladefehler = false, naehe = 
             onMouseLeave={() => markerRef.current.get(o.id)?.el.classList.remove("gd-pin--puls")}
           >
             <button type="button" className="gd-kompakt__knopf" onClick={() => auswaehlen(o.id, true)} aria-pressed={o.id === gewaehlt}>
-              <ListenBild bild={o.bild} icon={o.icon} />
+              <ListenBild bild={o.bild} icon={o.icon} fokus={o.fokus} />
               <span className="gd-kompakt__text">
                 <span className="gd-typ">
                   {o.stufe ? <span className={`cl-stufe__punkt cl-stufe__punkt--${o.stufe}`} aria-hidden />

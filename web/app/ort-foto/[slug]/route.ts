@@ -69,8 +69,13 @@ async function googleFotoAdresse(name: string, slug: string): Promise<Ergebnis> 
   }
 }
 
-/** Bildquelle eines Ortes: { adresse, google } – gecached nach Ergebnis (siehe Kopfkommentar). */
-async function bildQuelle(slug: string): Promise<{ adresse: string | null; google: boolean }> {
+/**
+ * Bildquelle eines Ortes: { adresse, google } – gecached nach Ergebnis (siehe Kopfkommentar).
+ * `version` (extras.foto_version, als ?v= in der Bild-URL) gehört zum Cache-Schlüssel: Ein neu gewähltes Foto bekommt so
+ * sofort einen eigenen Eintrag, statt bis zu 30 Tage die gemerkte Adresse des alten Fotos zu liefern.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- version wirkt nur als Teil des Cache-Schlüssels
+async function bildQuelle(slug: string, version: string): Promise<{ adresse: string | null; google: boolean }> {
   "use cache";
   cacheTag(fotoTag(slug));
   // Club-Hub: Orte mit auch_club (z. B. Konvex) sind im Club-Hub sichtbar, auch wenn ihr Score im Haupt-Hub < 7 ist.
@@ -93,9 +98,12 @@ async function bildQuelle(slug: string): Promise<{ adresse: string | null; googl
   return { adresse: ergebnis.adresse, google: true };
 }
 
-export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
+export async function GET(req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
   const slug = slugDekodieren((await ctx.params).slug);
-  const quelle = slug ? await bildQuelle(slug) : null;
+  // Nur kleine Ganzzahlen als Version zulassen – sonst könnte jede beliebige ?v= einen neuen Cache-Eintrag erzwingen
+  const v = req.nextUrl.searchParams.get("v");
+  const version = v && /^[1-9]\d{0,2}$/.test(v) ? v : "1";
+  const quelle = slug ? await bildQuelle(slug, version) : null;
   // Google-Fotos nur durchreichen (nicht auf der Platte speichern), eigene Bilder cachen
   if (!slug || !quelle?.adresse) return bildAntwort(null, TAG);
   const { bild, status } = await bildHolen(quelle.adresse, !quelle.google);

@@ -114,10 +114,17 @@ export function ortBildUrl(o: DddOrt): string | null {
   return `/ort-foto/${encodeURIComponent(o.slug)}${typeof version === "number" && version > 1 ? `?v=${version}` : ""}`;
 }
 
-/** Bildausschnitt eines Ortes für object-position („unten“ → Unterkante bleibt sichtbar). */
+/**
+ * Bildausschnitt eines Ortes für object-position: „unten“ → Unterkante bleibt sichtbar, „oben“ → Oberkante,
+ * „35%“ → senkrechte Lage in Prozent (0 % oben, 100 % unten), z. B. für Hochformat-Fotos im Querformat-Rahmen
+ * (Auftraggeber 16.11.2026, Spielplatz-Fotos). Andere Werte werden ignoriert.
+ */
 export function ortBildFokus(o: DddOrt): string | undefined {
   const f = o.extras.bild_fokus;
-  return f === "unten" ? "center bottom" : f === "oben" ? "center top" : undefined;
+  if (f === "unten") return "center bottom";
+  if (f === "oben") return "center top";
+  if (typeof f === "string" && /^(100|[1-9]?\d)%$/.test(f)) return `center ${f}`;
+  return undefined;
 }
 
 /** Urheber-Link des Google-Fotos (Google verlangt die Nennung beim Foto). */

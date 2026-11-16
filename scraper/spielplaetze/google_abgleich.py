@@ -1,16 +1,18 @@
 """
 google_abgleich.py – DiesDasDüsseldorf
-Google-Abgleich für den Guide „Spielplätze“ (Plan: docs/plan-spielplaetze-2026-11-12.md, Abschnitt 4.4), nur Runde-1-Plätze.
+Google-Abgleich für den Guide „Spielplätze“ (Plan: docs/plan-spielplaetze-2026-11-12.md, Abschnitt 4.4).
+Runde 1 = Plätze aus 4.3; Runde 2 (Auftraggeber 16.11.2026) = alle übrigen aktiven Plätze ohne Foto, damit nicht
+269 von 347 Plätzen nur die Illustration zeigen. Jede Runde hat eigene Kandidaten-/Prüfdateien.
 
 Je Platz eine Umkreissuche (80 m, Typ playground) über die Places API (New). Treffer nur bei Namensähnlichkeit oder
 einzigem Treffer, sonst Prüf-CSV. Bewertung nur intern (extras.spielplatz.google, für den Score). Foto-Kandidaten bleiben
 lokal (data/spielplaetze/google/), bis die Sichtung sie freigibt; das Foto setzt dann nur die Foto-SQL (Auftraggeber).
 
 Nutzung:
-  python -m scraper.spielplaetze.google_abgleich suchen --dry-run     # nennt Plätze und Kosten, fragt nichts ab
-  python -m scraper.spielplaetze.google_abgleich suchen               # Umkreissuche (kostet), schreibt google + Kandidaten
-  python -m scraper.spielplaetze.google_abgleich fotos [--dry-run]    # lädt Vorschaubilder der Kandidaten (kostet)
-  python -m scraper.spielplaetze.google_abgleich sql --sichtung DATEI # Foto-SQL aus der Sichtung erzeugen
+  python -m scraper.spielplaetze.google_abgleich suchen [--runde 2] --dry-run     # nennt Plätze und Kosten, fragt nichts ab
+  python -m scraper.spielplaetze.google_abgleich suchen [--runde 2]               # Umkreissuche (kostet), schreibt google + Kandidaten
+  python -m scraper.spielplaetze.google_abgleich fotos [--runde 2] [--dry-run]    # lädt Vorschaubilder der Kandidaten (kostet)
+  python -m scraper.spielplaetze.google_abgleich sql [--runde 2] --sichtung DATEI # Foto-SQL aus der Sichtung erzeugen
 """
 import argparse
 import csv
@@ -35,6 +37,13 @@ CACHE = _DATEN / "google"            # Rohantworten je Platz (Google-Inhalte, ni
 FOTOS = _DATEN / "fotos"             # Vorschaubilder für die Sichtung (gitignored)
 KANDIDATEN = _DATEN / "google_kandidaten.json"
 PRUEF_CSV = _DATEN / "google_pruefung.csv"
+
+
+def dateien(runde: int) -> tuple[Path, Path]:
+    """Kandidaten- und Prüfdatei je Runde (Runde 1 behält ihre bisherigen Namen)."""
+    if runde == 1:
+        return KANDIDATEN, PRUEF_CSV
+    return _DATEN / f"google_kandidaten_runde{runde}.json", _DATEN / f"google_pruefung_runde{runde}.csv"
 
 API_BASE = "https://places.googleapis.com/v1"
 RADIUS_M = 80.0
@@ -63,6 +72,15 @@ def ist_runde_1(zeile: dict) -> bool:
     if sp.get("typ") in ("wasser", "wald", "abenteuer"):
         return True
     return sp.get("typ") == "kinder" and (sp.get("groesse_m2") or 0) >= GROESSE_RUNDE_1
+
+
+def ist_runde_2(zeile: dict) -> bool:
+    """Runde 2: aktive, nicht ausgeschlossene Plätze außerhalb von Runde 1, die noch kein Foto haben."""
+    sp = (zeile.get("extras") or {}).get("spielplatz") or {}
+    extras = zeile.get("extras") or {}
+    if not zeile.get("aktiv") or sp.get("ausgeschlossen") or ist_runde_1(zeile):
+        return False
+    return not extras.get("google_foto") and not zeile.get("bild_url")
 
 
 def woerter(text: str) -> set[str]:
@@ -178,21 +196,28 @@ def umkreissuche(lat: float, lon: float) -> list[dict]:
     raise RuntimeError("Umkreissuche: zu viele Anfragen (429)")
 
 
-def runde_1_laden(db) -> list[dict]:
+def plaetze_laden(db, runde: int = 1) -> list[dict]:
     from scraper.orte.google_places import alle_zeilen
 
-    zeilen = alle_zeilen(db, "orte", "id, name, slug, stadtteil, latitude, longitude, extras", lambda q: q.eq("typ", "spielplatz"))
-    return sorted([z for z in zeilen if ist_runde_1(z)], key=lambda z: z["name"])
+    zeilen = alle_zeilen(db, "orte", "id, name, slug, stadtteil, latitude, longitude, aktiv, bild_url, extras",
+                         lambda q: q.eq("typ", "spielplatz"))
+    auswahl = ist_runde_1 if runde == 1 else ist_runde_2
+    return sorted([z for z in zeilen if auswahl(z) and z.get("latitude") is not None], key=lambda z: z["name"])
 
 
-def suchen(dry_run: bool) -> None:
+def runde_1_laden(db) -> list[dict]:
+    return plaetze_laden(db, 1)
+
+
+def suchen(dry_run: bool, runde: int = 1) -> None:
     from database.client import get_supabase_client
 
     db = get_supabase_client()
-    plaetze = runde_1_laden(db)
+    plaetze = plaetze_laden(db, runde)
+    kandidaten_datei, pruef_datei = dateien(runde)
     offen = [z for z in plaetze if not (CACHE / f"{z['id']}.json").exists()]
-    logger.info("Runde 1: %d Plätze (%d städtisch, %d Abenteuer), davon %d noch ohne Abfrage → Kosten ca. %.2f $%s",
-                len(plaetze), sum(1 for z in plaetze if z["extras"]["spielplatz"].get("quelle") != "abenteuer"),
+    logger.info("Runde %d: %d Plätze (%d städtisch, %d Abenteuer), davon %d noch ohne Abfrage → Kosten ca. %.2f $%s",
+                runde, len(plaetze), sum(1 for z in plaetze if z["extras"]["spielplatz"].get("quelle") != "abenteuer"),
                 sum(1 for z in plaetze if z["extras"]["spielplatz"].get("quelle") == "abenteuer"),
                 len(offen), len(offen) * PREIS_SUCHE, " [Dry-Run, keine Abfrage]" if dry_run else "")
     if dry_run:
@@ -229,21 +254,21 @@ def suchen(dry_run: bool) -> None:
             geschrieben += 1
         except Exception as e:  # noqa: BLE001
             logger.error("Speichern für %s fehlgeschlagen: %s", z["name"], e)
-    KANDIDATEN.write_text(json.dumps(kandidaten, ensure_ascii=False, indent=1), encoding="utf-8")
-    with PRUEF_CSV.open("w", encoding="utf-8-sig", newline="") as f:
+    kandidaten_datei.write_text(json.dumps(kandidaten, ensure_ascii=False, indent=1), encoding="utf-8")
+    with pruef_datei.open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(pruef[0].keys()) if pruef else ["name"], delimiter=";")
         w.writeheader()
         w.writerows(pruef)
     arten = {a: sum(1 for p in pruef if p["zuordnung"] == a) for a in ("name", "einziger", "mehrdeutig", "kein_treffer")}
     logger.info("Zuordnung: %s; %d Plätze mit Foto-Kandidaten (%d Fotos); %d Zeilen geschrieben; Prüf-CSV %s",
-                arten, sum(1 for k in kandidaten.values() if k), sum(len(k) for k in kandidaten.values()), geschrieben, PRUEF_CSV)
+                arten, sum(1 for k in kandidaten.values() if k), sum(len(k) for k in kandidaten.values()), geschrieben, pruef_datei)
 
 
-def fotos_laden(dry_run: bool) -> None:
+def fotos_laden(dry_run: bool, runde: int = 1) -> None:
     """Vorschaubilder (640 px) der Kandidaten für die Sichtung laden – nur lokal, nie veröffentlicht."""
     from config import GOOGLE_PLACES_API_KEY
 
-    kandidaten = json.loads(KANDIDATEN.read_text(encoding="utf-8"))
+    kandidaten = json.loads(dateien(runde)[0].read_text(encoding="utf-8"))
     offen = [(zid, i, f) for zid, liste in kandidaten.items() for i, f in enumerate(liste)
              if not (FOTOS / zid / f"{i}.jpg").exists()]
     logger.info("%d Fotos zu laden → Kosten ca. %.2f $%s", len(offen), len(offen) * PREIS_FOTO,
@@ -267,15 +292,15 @@ def fotos_laden(dry_run: bool) -> None:
     logger.info("Fotos fertig: %d geladen, %d Fehler", len(offen) - fehler, fehler)
 
 
-def sql_schreiben(sichtung_datei: Path) -> None:
+def sql_schreiben(sichtung_datei: Path, runde: int = 1) -> None:
     from database.client import get_supabase_client
 
     sichtung = json.loads(sichtung_datei.read_text(encoding="utf-8"))
-    kandidaten = json.loads(KANDIDATEN.read_text(encoding="utf-8"))
+    kandidaten = json.loads(dateien(runde)[0].read_text(encoding="utf-8"))
     db = get_supabase_client()
-    namen = {z["id"]: z["name"] for z in runde_1_laden(db)}
+    namen = {z["id"]: z["name"] for z in plaetze_laden(db, runde)}
     heute = date.today().isoformat()
-    ziel = _WURZEL / "database" / f"spielplatz_fotos_{heute}.sql"
+    ziel = _WURZEL / "database" / (f"spielplatz_fotos_{heute}.sql" if runde == 1 else f"spielplatz_fotos_runde{runde}_{heute}.sql")
     ziel.write_text(sql_aus_sichtung(sichtung, kandidaten, namen, heute), encoding="utf-8")
     logger.info("Foto-SQL: %s (%d mit Foto, %d ohne)", ziel, sum(1 for s in sichtung.values() if s.get("foto") is not None),
                 sum(1 for s in sichtung.values() if s.get("foto") is None))
@@ -287,21 +312,24 @@ def main():
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True)
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    parser = argparse.ArgumentParser(description="Spielplätze: Google-Abgleich (Runde 1)")
+    parser = argparse.ArgumentParser(description="Spielplätze: Google-Abgleich (Runde 1 oder 2)")
     sub = parser.add_subparsers(dest="befehl", required=True)
     s = sub.add_parser("suchen")
     s.add_argument("--dry-run", action="store_true")
+    s.add_argument("--runde", type=int, choices=(1, 2), default=1)
     f = sub.add_parser("fotos")
     f.add_argument("--dry-run", action="store_true")
+    f.add_argument("--runde", type=int, choices=(1, 2), default=1)
     q = sub.add_parser("sql")
     q.add_argument("--sichtung", type=Path, required=True)
+    q.add_argument("--runde", type=int, choices=(1, 2), default=1)
     args = parser.parse_args()
     if args.befehl == "suchen":
-        suchen(args.dry_run)
+        suchen(args.dry_run, args.runde)
     elif args.befehl == "fotos":
-        fotos_laden(args.dry_run)
+        fotos_laden(args.dry_run, args.runde)
     else:
-        sql_schreiben(args.sichtung)
+        sql_schreiben(args.sichtung, args.runde)
 
 
 if __name__ == "__main__":

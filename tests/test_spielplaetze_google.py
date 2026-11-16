@@ -21,6 +21,24 @@ class RundeTest(unittest.TestCase):
         self.assertFalse(ga.ist_runde_1(zeile("kinder", 2999.9)))
         self.assertFalse(ga.ist_runde_1(zeile("wasser", ausgeschlossen="Dublette")))
 
+    def test_runde_2(self):
+        """Runde 2: aktive Plätze außerhalb von Runde 1, nicht ausgeschlossen, noch ohne Foto."""
+        aktiv = lambda z, **mehr: {**z, "aktiv": True, **mehr}  # noqa: E731
+        self.assertTrue(ga.ist_runde_2(aktiv(zeile("kinder", 800))))
+        self.assertFalse(ga.ist_runde_2(aktiv(zeile("kinder", 3000))))       # gehört zu Runde 1
+        self.assertFalse(ga.ist_runde_2(aktiv(zeile("wald"))))               # gehört zu Runde 1
+        self.assertFalse(ga.ist_runde_2(zeile("kinder", 800)))               # nicht aktiv
+        self.assertFalse(ga.ist_runde_2(aktiv(zeile("kinder", 800, ausgeschlossen="Dublette"))))
+        mit_foto = aktiv(zeile("kinder", 800))
+        mit_foto["extras"]["google_foto"] = {"name": "places/x/photos/y"}
+        self.assertFalse(ga.ist_runde_2(mit_foto))                           # hat schon ein Foto
+        self.assertFalse(ga.ist_runde_2(aktiv(zeile("kinder", 800), bild_url="https://x/bild.jpg")))
+
+    def test_dateien_je_runde(self):
+        self.assertEqual(ga.dateien(1), (ga.KANDIDATEN, ga.PRUEF_CSV))
+        k2, p2 = ga.dateien(2)
+        self.assertEqual((k2.name, p2.name), ("google_kandidaten_runde2.json", "google_pruefung_runde2.csv"))
+
 
 class TrefferTest(unittest.TestCase):
     def test_woerter(self):

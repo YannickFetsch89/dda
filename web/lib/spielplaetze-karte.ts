@@ -2,7 +2,7 @@
 // Koordinate, URL, Thumb. Keine Bewertung, keine OSM-Tags (ODbL, Score nur intern).
 import type { KartenOrt } from "@/components/guide-karte";
 import { ortPfad } from "@/components/ort-karten";
-import { ortBildUrl } from "./orte";
+import { ortBildFokus, ortBildUrl } from "./orte";
 import { GERAETE, alterInfo, geraetJa, typInfo } from "./spielplaetze";
 import { stadtteilName } from "./stadtteile";
 import type { DddOrt } from "./typen";
@@ -23,6 +23,8 @@ export function spielplatzKartenOrte(orte: DddOrt[]): KartenOrt[] {
         rating: null,
         anzahl: null,
         bild: ortBildUrl(o) ?? typ.bild,
+        // Bildausschnitt (object-position) für Hochformat-Fotos, z. B. "center 22%"
+        fokus: ortBildFokus(o),
         href: ortPfad(o),
         lat: o.latitude!,
         lng: o.longitude!,

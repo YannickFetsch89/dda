@@ -9,6 +9,7 @@ import {
   hatParameter, istIndexierbar, namensStamm, nachbarn, ortStadtteilSlug, saisonHinweis, sortieren, spielplatzTitel,
   type SpielplatzDaten,
 } from "@/lib/spielplaetze";
+import { ortBildFokus } from "@/lib/orte";
 import { kostenlos, spielplatzJsonLd, spielplaetzeListeJsonLd } from "@/lib/spielplaetze-json-ld";
 import { spielplatzKartenOrte } from "@/lib/spielplaetze-karte";
 import type { DddOrt } from "@/lib/typen";
@@ -169,6 +170,22 @@ describe("Karte und JSON-LD ohne Bewertung", () => {
     const [, liste] = spielplaetzeListeJsonLd([duenn, ...gut], "https://x.de");
     expect(liste.numberOfItems).toBe(30);
     expect(JSON.stringify(liste)).not.toContain(duenn.slug + '"');
+  });
+});
+
+describe("Bildausschnitt (extras.bild_fokus)", () => {
+  const mit = (bild_fokus: unknown) => sp({}, { extras: { bild_fokus } });
+  it("oben/unten wie bisher, Prozentwerte als senkrechte Lage, alles andere ignoriert", () => {
+    expect(ortBildFokus(mit("oben"))).toBe("center top");
+    expect(ortBildFokus(mit("unten"))).toBe("center bottom");
+    expect(ortBildFokus(mit("22%"))).toBe("center 22%");
+    expect(ortBildFokus(mit("0%"))).toBe("center 0%");
+    expect(ortBildFokus(mit("100%"))).toBe("center 100%");
+    for (const falsch of ["101%", "22", "-5%", "22%; color: red", 22, null]) expect(ortBildFokus(mit(falsch))).toBeUndefined();
+  });
+  it("Kartenpunkte tragen den Ausschnitt mit", () => {
+    const o = sp({}, { extras: { bild_fokus: "20%", spielplatz: {} } });
+    expect(spielplatzKartenOrte([o])[0].fokus).toBe("center 20%");
   });
 });
 
