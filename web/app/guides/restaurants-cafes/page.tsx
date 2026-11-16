@@ -253,6 +253,12 @@ async function Inhalt({ searchParams, alle }: { searchParams: Promise<SP>; alle:
           </div>
         ) : f.ansicht === "karte" ? (
           <>
+            {/* Legende der Pin-Farben, mit Text (Farbe trägt keine Information allein) */}
+            <ul className="gd-legende" aria-label="Farben auf der Karte">
+              <li><span className="gd-punkt gd-punkt--restaurant" aria-hidden />Restaurant &amp; Imbiss</li>
+              <li><span className="gd-punkt gd-punkt--cafe" aria-hidden />Café</li>
+              <li><span className="gd-punkt gd-punkt--brauhaus" aria-hidden />Brauhaus</li>
+            </ul>
             {/* Kartenpunkte lädt die Karte selbst nach (/api/guide-karte) – hält die erste Antwort klein */}
             <GuideKarteLazy quelle={`/api/guide-karte?hub=restaurants${abfrage ? `&${abfrage}` : ""}`} />
             <OrtLinkListe orte={ergebnis} alleHref={href({ ansicht: "grid" })} zusatz={(o) => kueche(o)?.name} />

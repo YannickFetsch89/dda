@@ -5,6 +5,7 @@
 //   /api/guide-karte?hub=restaurants&typ=restaurant,cafe&stadtteil=bilk
 //   /api/guide-karte?hub=kneipen&art=bar&stadtteil=altstadt
 //   /api/guide-karte?hub=clubs&stufe=a,c&genre=techno
+import type { KartenOrt } from "@/components/guide-karte";
 import { kartenOrte } from "@/components/ort-karten";
 import { clubFilterLesen, clubsFiltern, clubsSortieren, clubStufe } from "@/lib/clubs";
 import { clubKartenOrte } from "@/lib/clubs-karte";
@@ -55,7 +56,9 @@ export async function GET(request: Request) {
       const f = filterLesen(sp);
       const [eigene, brauhaeuser] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants()]);
       const orte = sortieren(filtern([...eigene, ...brauhaeuser], f), f.sort);
-      return antwort(request, kartenOrte(orte));
+      // Pin-Farbe nach Art: Restaurant/Imbiss, Café, Brauhaus (Brauhäuser kommen als Kneipen mit Unterart)
+      const art = new Map(orte.map((o) => [o.id, o.typ === "kneipe" ? "brauhaus" : o.typ] as const));
+      return antwort(request, kartenOrte(orte).map((k) => ({ ...k, art: art.get(k.id) as KartenOrt["art"] })));
     }
     return Response.json({ fehler: "Unbekannter Hub" }, { status: 400 });
   } catch (err) {

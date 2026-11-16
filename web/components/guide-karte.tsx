@@ -28,6 +28,8 @@ export interface KartenOrt {
   /** Nur Spielplätze: Altersgruppe → Pin-Farbe (unbekannt = neutral) und Text für Liste/Popup */
   alter?: "0-3" | "3-6" | "6-12" | "alle" | "unbekannt";
   alterLabel?: string;
+  /** Nur Restaurant-Hub: Art → Pin-Farbe (Restaurant/Imbiss, Café, Brauhaus) */
+  art?: "restaurant" | "imbiss" | "cafe" | "brauhaus";
 }
 
 const START = { center: [6.7735, 51.2277] as [number, number], zoom: 12 };
@@ -58,7 +60,10 @@ function istDunkel(): boolean {
 function pinElement(o: KartenOrt): HTMLButtonElement {
   const pin = document.createElement("button");
   pin.type = "button";
-  pin.className = o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}` : o.alter ? `gd-pin gd-pin--alter gd-pin--alter-${o.alter}` : "gd-pin";
+  pin.className = o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}`
+    : o.alter ? `gd-pin gd-pin--alter gd-pin--alter-${o.alter}`
+    : o.art ? `gd-pin gd-pin--art gd-pin--art-${o.art}`
+    : "gd-pin";
   const zusatz = o.stufeLabel ?? o.alterLabel;
   pin.setAttribute("aria-label", zusatz ? `${o.name} (${zusatz})` : o.name);
   const icon = document.createElement("span");
