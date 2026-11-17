@@ -17,7 +17,7 @@ describe("Guide-Texte", () => {
   });
 
   it("Links nur intern und auf bekannte Seitentypen", () => {
-    const erlaubt = /^\/(guides(\/(restaurants-cafes|kneipen-bars|clubs|spielplaetze)(\/stadtteil)?(\/[a-z0-9-]+)?)?|guides\/spielplaetze\?(typ=(wasser|wald|abenteuer)|alter=(0-3|3-6|6-12)|extra=[a-z]+)|heute|wochenende|entdecken|stadtteile|kategorie\/[a-z-]+)$/;
+    const erlaubt = /^\/(guides(\/(restaurants-cafes|kneipen-bars|clubs|spielplaetze|weihnachtsmaerkte)(\/stadtteil)?(\/[a-z0-9-]+)?)?|guides\/spielplaetze\?(typ=(wasser|wald|abenteuer)|alter=(0-3|3-6|6-12)|extra=[a-z]+)|heute|wochenende|entdecken|stadtteile|kategorie\/[a-z-]+)$/;
     for (const s of SEITEN) for (const z of linkZiele(GUIDE_TEXTE[s])) expect(z, `${s}: ${z}`).toMatch(erlaubt);
   });
 
@@ -52,7 +52,12 @@ describe("Guide-Texte", () => {
     const ld = faqJsonLd([{ frage: "F?", antwort: "Siehe [Clubs](/guides/clubs)." }]);
     expect(ld["@type"]).toBe("FAQPage");
     expect(JSON.stringify(ld)).toContain('"text":"Siehe Clubs."');
-    // In den Antworten bleiben keine Platzhalter übrig (Zahlen nur in Einleitungen)
-    for (const s of SEITEN) for (const f of GUIDE_TEXTE[s].faq) expect(f.antwort + f.frage).not.toMatch(/\{\w+\}/);
+    // In den Antworten bleiben keine Platzhalter übrig (Zahlen nur in Einleitungen). Ausnahme Weihnachtsmärkte
+    // (Plan Weihnachtsmärkte 6.2): feste Satzmuster, die Seite füllt sie mit faqWerte() – nur diese Platzhalter erlaubt
+    const WM_PLATZHALTER = new Set(["{saison}", "{faq_start}", "{faq_totensonntag}", "{faq_feiertage}", "{faq_eisbahn}", "{faq_familien}"]);
+    for (const s of SEITEN) for (const f of GUIDE_TEXTE[s].faq) {
+      const rest = s === "weihnachtsmaerkte" ? (f.antwort + f.frage).replace(/\{\w+\}/g, (p) => (WM_PLATZHALTER.has(p) ? "" : p)) : f.antwort + f.frage;
+      expect(rest, s).not.toMatch(/\{\w+\}/);
+    }
   });
 });

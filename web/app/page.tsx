@@ -2,11 +2,13 @@
 import { stadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import { ClaimWort, NewsletterForm, Reihe } from "@/components/client";
 import { KalenderToggle } from "@/components/datum-waehler";
 import { Datumsleiste } from "@/components/datumsleiste";
 import { WochenendTag } from "@/components/wochenend-tag";
+import { WmStartBox } from "@/components/wm-startbox";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden, vergangeneWochenendEvents } from "@/lib/daten";
 import { beliebtAuswahl, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
@@ -184,6 +186,11 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             </div>
           </section>
         )}
+
+        {/* Saison-Box Weihnachtsmärkte (Plan Weihnachtsmärkte 5.6): Schalter und Datumsfenster prüft die Komponente */}
+        <Suspense fallback={null}>
+          <WmStartBox />
+        </Suspense>
 
         {beliebt.length > 0 && (
           <section className="sektion">

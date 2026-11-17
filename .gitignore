@@ -20,6 +20,14 @@ data/spielplaetze/*
 !data/spielplaetze/korrekturen.csv
 !data/spielplaetze/abenteuer.csv
 !data/spielplaetze/ausstattung.csv
+# Ausnahme Weihnachtsmarkt-Guide (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 3.2): gepflegte Stammdaten eingecheckt;
+# Toubiz-Zwischenspeicher, Entwurf, Prüf-CSV und Score-Bericht (Google-Rohwerte, E12) bleiben lokal.
+!data/weihnachtsmaerkte/
+data/weihnachtsmaerkte/*
+!data/weihnachtsmaerkte/maerkte.csv
+!data/weihnachtsmaerkte/saison-2026.csv
+!data/weihnachtsmaerkte/merkmale.csv
+!data/weihnachtsmaerkte/event_ausschluss.csv
 
 # Playwright
 playwright/.auth/

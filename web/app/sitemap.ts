@@ -12,6 +12,8 @@ import { clubKanonischerPfad } from "@/lib/clubs-json-ld";
 import { ortIndexierbar } from "@/lib/spielplaetze";
 import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
 import { spielplatzPfad } from "@/lib/spielplaetze-json-ld";
+import { istIndexierbar as wmIndexierbar, wmPfad } from "@/lib/weihnachtsmaerkte";
+import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { orteLaden } from "@/lib/orte";
 import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
@@ -74,9 +76,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Guides: Restaurants & Cafés (nur freigeschaltete Orte ab Mindest-Score, wie auf der Website)
   // Jeder Ort genau einmal (URL nach typ über ortPfad) – auch Brauhäuser, die in zwei Hubs erscheinen
-  const [orte, kneipen, clubsAlle, spielplaetzeAlle] = await Promise.all([
-    orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden(), clubsLaden(), spielplaetzeLaden(),
+  const [orte, kneipen, clubsAlle, spielplaetzeAlle, weihnachtsmaerkteAlle] = await Promise.all([
+    orteLaden(["restaurant", "imbiss", "cafe", "kneipe"]), kneipenLaden(), clubsLaden(), spielplaetzeLaden(), weihnachtsmaerkteLaden(),
   ]);
+  // Weihnachtsmärkte (Plan Weihnachtsmärkte 5.4): Hub immer, Details nur indexierbar; kein Saisonende-Ausschluss (E10)
+  const weihnachtsmaerkte = weihnachtsmaerkteAlle.filter(wmIndexierbar);
   // Spielplätze: nur aktive (abgeschaltete leiten weiter) und nur indexierbare Detailseiten (Plan 5.4)
   const spielplaetze = spielplaetzeAlle.filter(ortIndexierbar);
   // Club-Hub: nur Club-Seiten, die selbst kanonisch und indexierbar sind (Stufe A/B; auch_club-Orte mit sichtbarer
@@ -94,10 +98,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...(hatKneipen ? [{ url: `${SITE_URL}/guides/kneipen-bars`, ...mit(geaendert(kneipen)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
         ...(clubsAlle.length ? [{ url: `${SITE_URL}/guides/clubs`, ...mit(geaendert(clubsAlle)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
         ...(spielplaetzeAlle.length ? [{ url: `${SITE_URL}/guides/spielplaetze`, ...mit(geaendert(spielplaetzeAlle)), changeFrequency: "weekly" as const, priority: 0.7 }] : []),
+        ...(weihnachtsmaerkteAlle.length ? [{ url: `${SITE_URL}/guides/weihnachtsmaerkte`, ...mit(geaendert(weihnachtsmaerkteAlle)), changeFrequency: "daily" as const, priority: 0.7 }] : []),
         ...[
           ...orte.map((o) => ({ o, pfad: ortPfad(o) })),
           ...clubs.map((o) => ({ o, pfad: clubKanonischerPfad(o) })),
           ...spielplaetze.map((o) => ({ o, pfad: spielplatzPfad(o) })),
+          ...weihnachtsmaerkte.map((o) => ({ o, pfad: wmPfad(o) })),
         ].map(({ o, pfad }) => ({
           url: `${SITE_URL}${pfad}`,
           ...mit(geaendert([o])),

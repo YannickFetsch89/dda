@@ -2002,3 +2002,77 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
   .sp-naehe__cafes .gd-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: no-preference) { .sp-detail { scroll-behavior: smooth; } html:has(.sp-detail) { scroll-behavior: smooth; } }
+
+/* ---------- Weihnachtsmarkt-Guide (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 5.2/5.3/5.7) ---------- */
+.wm-hero h1 { font-size: 34px; }
+.wm-zwischentitel { margin: 28px 0 12px; font-size: 24px; }
+.wm-tage { margin: 18px 0 6px; display: flex; flex-direction: column; gap: 10px; }
+.wm-tage ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.wm-tage .gd-chip { min-height: 44px; }
+.wm-tage__form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--ddd-text-body); }
+.wm-tage__form input { min-height: 44px; padding: 0 10px; border-radius: var(--r-xs); border: 1px solid var(--ddd-border, #d9dce3); background: var(--ddd-surface); color: var(--ddd-text); font: inherit; }
+.wm-tage__form .gd-knopf { min-height: 44px; }
+.wm-liste { display: flex; flex-direction: column; gap: 22px; padding: 14px 0 6px; }
+.wm-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.wm-gruppe__teile { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.wm-einzeln { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 768px) {
+  .wm-gruppe { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; }
+  .wm-gruppe__teile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wm-liste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wm-liste > .wm-gruppe { grid-column: 1 / -1; }
+}
+.wm-karte--klein .gd-karte__text { padding: 12px 14px 14px; gap: 5px; }
+.wm-karte--klein .gd-karte__name { font-size: 16px; }
+.wm-zustand { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ddd-text-body); }
+.wm-zustand__punkt { width: 9px; height: 9px; border-radius: 50%; background: var(--ddd-text-muted); flex: none; }
+.wm-zustand--offen .wm-zustand__punkt { background: var(--ddd-success); }
+.wm-zustand--zu .wm-zustand__punkt { background: var(--ddd-error); }
+.wm-zustand--vor_saison .wm-zustand__punkt, .wm-zustand--nach_saison .wm-zustand__punkt { background: var(--ddd-gold); }
+.wm-zustand--laden { font-weight: 500; color: var(--ddd-text-muted); }
+.wm-zustand--unbekannt .wm-zustand__punkt { background: transparent; border: 2px dashed var(--ddd-text-muted); width: 8px; height: 8px; }
+.wm-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.wm-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--r-pill); background: var(--ddd-gold-tint); color: var(--ddd-text); font-size: 12px; font-weight: 600; }
+.wm-badge .icon { font-size: 15px; color: var(--ddd-gold-hover); }
+.wm-badge--tipp { background: var(--ddd-gold); color: #1b2540; }
+.wm-badge--tipp .icon { color: #1b2540; }
+.wm-top { margin: 18px 0 8px; }
+.wm-sonder { margin-top: 34px; }
+.wm-sonder h2 { font-size: 24px; margin-bottom: 6px; }
+.wm-sonder > p { font-size: 14px; margin-bottom: 12px; }
+.wm-sonder__rahmen { overflow-x: auto; border-radius: var(--r-card); box-shadow: var(--sh-m); background: var(--ddd-surface); }
+.wm-sonder__tabelle { width: 100%; border-collapse: collapse; font-size: 14px; }
+.wm-sonder__tabelle th, .wm-sonder__tabelle td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--ddd-subtle); vertical-align: top; }
+.wm-sonder__tabelle thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ddd-text-muted); white-space: nowrap; }
+.wm-sonder__tabelle tbody th a { color: var(--ddd-text); font-weight: 700; }
+.wm-zelle--zu { color: var(--ddd-error); font-weight: 600; }
+.wm-zelle--offen-unbekannt { color: var(--ddd-text-muted); font-style: italic; }
+.wm-zelle--leer { color: var(--ddd-text-muted); }
+/* Mobil: jede Zeile als Karte statt breiter Tabelle (5.7) */
+@media (max-width: 767px) {
+  .wm-sonder__rahmen { box-shadow: none; background: transparent; overflow: visible; }
+  .wm-sonder__tabelle thead { display: none; }
+  .wm-sonder__tabelle, .wm-sonder__tabelle tbody, .wm-sonder__tabelle tr, .wm-sonder__tabelle th, .wm-sonder__tabelle td { display: block; width: 100%; }
+  .wm-sonder__tabelle tr { margin-bottom: 12px; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); padding: 6px 0; }
+  .wm-sonder__tabelle td { display: flex; justify-content: space-between; gap: 12px; border-bottom: none; padding: 5px 14px; }
+  .wm-sonder__tabelle td::before { content: attr(data-label); color: var(--ddd-text-muted); }
+}
+.wm-zeiten__zeitraum { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 4px 0 10px; }
+.wm-zeiten__tabelle { border-collapse: collapse; font-size: 15px; margin-bottom: 8px; }
+.wm-zeiten__tabelle th { text-align: left; font-weight: 600; padding: 5px 18px 5px 0; color: var(--ddd-text-body); }
+.wm-zeiten__tabelle td { padding: 5px 0; }
+.wm-zeiten__unter { font-size: 16px; margin: 14px 0 6px; }
+.wm-zeiten__hinweis, .wm-zeiten__quelle { font-size: 13px; margin-top: 6px; }
+.wm-zeiten__quelle a, .wm-quellen a { color: var(--ddd-link); text-decoration: underline; }
+.wm-detail__zustand { margin: 8px 0 10px; }
+.wm-detail__zustand .wm-zustand { font-size: 15px; }
+.wm-merkmale { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.wm-merkmal { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-xs); background: var(--ddd-subtle); font-size: 14px; }
+.wm-merkmal .icon { color: var(--ddd-gold-hover); font-size: 20px; }
+.wm-quellen { margin: 26px auto 34px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.wm-quellen .icon { font-size: 16px; vertical-align: -3px; }
+.wm-startbox .sektionskopf h2 { display: inline-flex; align-items: center; gap: 8px; }
+.wm-startbox__liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.wm-startbox__liste li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
+.wm-startbox__liste a { font-weight: 700; color: var(--ddd-text); }
+@media (min-width: 768px) { .wm-startbox__liste { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

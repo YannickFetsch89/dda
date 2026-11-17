@@ -25,6 +25,8 @@ export function ortRoute(typ: string): string {
       return "/guides/ausfluege";
     case "wochenendtipp":
       return "/guides/wochenend-trips";
+    case "weihnachtsmarkt":
+      return "/guides/weihnachtsmaerkte";
     default:
       return "/guides/restaurants-cafes";
   }
@@ -44,6 +46,7 @@ const TYP_ICON: Record<string, string> = {
   spielplatz: "sp:spielplatz",
   ausflug: "hiking",
   wochenendtipp: "luggage",
+  weihnachtsmarkt: "storefront",
 };
 
 export function typIcon(typ: string): string {
@@ -60,6 +63,7 @@ export function typLabel(typ: string): string {
     case "spielplatz": return "Spielplatz";
     case "ausflug": return "Ausflug";
     case "wochenendtipp": return "Wochenend-Trip";
+    case "weihnachtsmarkt": return "Weihnachtsmarkt";
     default: return typ;
   }
 }

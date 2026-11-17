@@ -14,6 +14,7 @@ import { clubLaden } from "@/lib/clubs-daten";
 import { istSichtbarerClub } from "@/lib/clubs";
 import { ortLaden, slugDekodieren } from "@/lib/orte";
 import { spielplatzLaden } from "@/lib/spielplaetze-daten";
+import { weihnachtsmarktLaden } from "@/lib/weihnachtsmaerkte-daten";
 
 const FOTO_BREITE = 1200;
 // Nur echte Ressourcennamen zulassen ("places/<id>/photos/<id>"), nichts anderes an Google weiterreichen
@@ -75,8 +76,9 @@ async function fotoOrt(slug: string) {
   // Club-Zeilen (typ = club) nur, wenn sie im Hub sichtbar sind (Freigabe!) – ortLaden kennt die Freigabe nicht.
   const geladen = await ortLaden(slug);
   // Spielplätze haben keinen qualitaets_score: eigener Zweig, nur aktive (abgeschaltete → 404, keine Weiterleitung)
+  // Weihnachtsmärkte ebenso ohne Score: eigener Zweig, nur aktive
   return (geladen && (geladen.typ !== "club" || istSichtbarerClub(geladen)) ? geladen : null) ?? (await clubLaden(slug))
-    ?? (await spielplatzLaden(slug));
+    ?? (await spielplatzLaden(slug)) ?? (await weihnachtsmarktLaden(slug));
 }
 
 /** Welches Foto gilt gerade? Eigenes Bild, sonst gültiger Google-Fotoname, sonst keins. */
@@ -92,7 +94,7 @@ function fotoKennung(ort: Awaited<ReturnType<typeof fotoOrt>>): { eigenes: strin
  * bekommt sofort einen eigenen Eintrag statt bis zu 30 Tage die gemerkte Adresse des alten. ?v= aus der URL zählt dafür
  * nicht – so kann niemand von außen neue Einträge und damit Google-Abrufe erzwingen (Cursor-Prüfung 16.11.2026).
  */
-async function bildQuelle(slug: string, eigenes: string | null, google: string | null): Promise<{ adresse: string | null; google: boolean }> {
+async function bildQuelle(slug: string, eigenes: string | null, google: string | null, hoechstens30Tage = false): Promise<{ adresse: string | null; google: boolean }> {
   "use cache";
   cacheTag(fotoTag(slug));
   if (eigenes) {
@@ -101,7 +103,8 @@ async function bildQuelle(slug: string, eigenes: string | null, google: string |
   }
   const ergebnis: Ergebnis = google ? await googleFotoAdresse(google, slug) : { adresse: null };
   // Genau ein cacheLife-Aufruf je Durchlauf, abhängig vom Ergebnis
-  if (ergebnis.adresse) cacheLife({ stale: TAG, revalidate: 30 * TAG, expire: 45 * TAG });
+  // Weihnachtsmärkte: gemerkte Google-Bildadresse höchstens 30 Tage (Plan Weihnachtsmärkte E12); übrige Hubs: Folgepunkt
+  if (ergebnis.adresse) cacheLife(hoechstens30Tage ? { stale: TAG, revalidate: 20 * TAG, expire: 30 * TAG } : { stale: TAG, revalidate: 30 * TAG, expire: 45 * TAG });
   else if (ergebnis.voruebergehend) cacheLife({ stale: 60, revalidate: 300, expire: 600 });
   else cacheLife({ stale: 3600, revalidate: TAG, expire: 2 * TAG });
   return { adresse: ergebnis.adresse, google: true };
@@ -109,9 +112,12 @@ async function bildQuelle(slug: string, eigenes: string | null, google: string |
 
 export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
   const slug = slugDekodieren((await ctx.params).slug);
-  const kennung = slug ? fotoKennung(await fotoOrt(slug)) : null;
+  const ort = slug ? await fotoOrt(slug) : null;
+  const kennung = slug ? fotoKennung(ort) : null;
   // Ohne Foto gar nicht erst in den Cache bzw. zu Google
-  const quelle = slug && kennung && (kennung.eigenes || kennung.google) ? await bildQuelle(slug, kennung.eigenes, kennung.google) : null;
+  const quelle = slug && kennung && (kennung.eigenes || kennung.google)
+    ? await bildQuelle(slug, kennung.eigenes, kennung.google, ort?.typ === "weihnachtsmarkt")
+    : null;
   // Google-Fotos nur durchreichen (nicht auf der Platte speichern), eigene Bilder cachen
   if (!slug || !quelle?.adresse) return bildAntwort(null, TAG);
   const { bild, status } = await bildHolen(quelle.adresse, !quelle.google);

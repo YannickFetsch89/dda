@@ -54,6 +54,8 @@ describe("Saisonale Symbolbilder", () => {
   it("neue Saison-Motive im jeweiligen Fenster", () => {
     expect(symbolMotiv(ev("Nikolausfeier", "2026-12-06"))).toBe("nikolaus");
     expect(symbolMotiv(ev("Weihnachtsmarkt Altstadt", "2026-12-01"))).toBe("advent-weihnachtsmarkt");
+    // Innenstadt-Markt läuft bis 30.12. (Plan Weihnachtsmärkte 1.2)
+    expect(symbolMotiv(ev("Weihnachtsmarkt Altstadt", "2026-12-28"))).toBe("advent-weihnachtsmarkt");
     expect(symbolMotiv(ev("Weihnachtsgottesdienst", "2026-12-24"))).toBe("weihnachten");
     expect(symbolMotiv(ev("Silvesterparty", "2026-12-31"))).toBe("silvester");
     expect(symbolMotiv(ev("Valentinstag Dinner", "2026-02-14"))).toBe("valentinstag");

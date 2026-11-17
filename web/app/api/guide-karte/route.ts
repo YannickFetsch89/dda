@@ -19,6 +19,8 @@ import {
 } from "@/lib/spielplaetze";
 import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
 import { spielplatzKartenOrte } from "@/lib/spielplaetze-karte";
+import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
+import { weihnachtsmarktKartenOrte } from "@/lib/weihnachtsmaerkte-karte";
 
 const CACHE = "public, max-age=300, stale-while-revalidate=3600";
 
@@ -51,6 +53,11 @@ export async function GET(request: Request) {
       const f = spielplatzFilterLesen(sp);
       const orte = spielplaetzeSortieren(spielplaetzeFiltern(await spielplaetzeLaden(), f, ortStadtteilSlug), f.sort);
       return antwort(request, spielplatzKartenOrte(orte));
+    }
+    if (sp.hub === "weihnachtsmaerkte") {
+      // Nur Zeiten/Stammdaten, nie ein fertig gerechneter Zustand „offen/zu“ (Antwort ist public und bis 1 h alt, Plan E5)
+      const alle = await weihnachtsmaerkteLaden();
+      return antwort(request, weihnachtsmarktKartenOrte(alle));
     }
     if (sp.hub === "restaurants") {
       const f = filterLesen(sp);

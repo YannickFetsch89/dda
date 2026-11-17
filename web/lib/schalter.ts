@@ -8,3 +8,13 @@
  * Von Hand bleibt nur public/llms.txt (statische Datei): die Spielplatz-Zeile unter „## Guides“ wieder einfügen.
  */
 export const SPIELPLAETZE_VERLINKT = false;
+
+/**
+ * Weihnachtsmarkt-Guide verlinkt (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 5.6)? Während der Saison an, am
+ * 02.01.2027 per Commit aus – die Seiten bleiben danach erreichbar und in der Sitemap (E10). Der Schalter steuert:
+ * Menü und Mobilmenü (components/client.tsx GUIDE_LINKS, components/rahmen.tsx), Footer-Spalte und Markenabsatz,
+ * /guides-Kachel an erster Stelle (app/guides/page.tsx), Kategorie food (app/kategorie/[slug]/page.tsx), Startseiten-Box
+ * (app/page.tsx, zusätzlich Datumsfenster 15.11.–30.12.) und die FAQ „Welche Guides kommen noch dazu?“ (lib/guide-texte.ts).
+ * Von Hand: public/llms.txt (Zeile „Weihnachtsmärkte“ unter „## Guides“).
+ */
+export const WEIHNACHTSMAERKTE_VERLINKT = true;

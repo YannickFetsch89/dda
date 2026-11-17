@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { SPIELPLAETZE_VERLINKT } from "@/lib/schalter";
+import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 
 // ---------- Merkliste (anonym in localStorage) ----------
 
@@ -343,6 +343,8 @@ const NAV = [
 
 export const GUIDE_LINKS = [
   { href: "/guides", label: "Alle Guides", icon: "explore" },
+  // Saison-Guide zuerst, solange der Schalter an ist (Plan Weihnachtsmärkte 5.6)
+  ...(WEIHNACHTSMAERKTE_VERLINKT ? [{ href: "/guides/weihnachtsmaerkte", label: "Weihnachtsmärkte", icon: "storefront" }] : []),
   { href: "/guides/restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant" },
   { href: "/guides/kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar" },
   { href: "/guides/clubs", label: "Clubs", icon: "nightlife" },

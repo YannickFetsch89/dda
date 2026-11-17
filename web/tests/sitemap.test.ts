@@ -29,6 +29,14 @@ vi.mock("@/lib/spielplaetze-daten", () => ({
   ],
 }));
 vi.mock("@/components/ort-karten", () => ({ ortPfad: () => "/guides/x" }));
+// Weihnachtsmärkte: ein indexierbarer (Zeitraum + Wochenzeiten + Beschreibung) und einer ohne Zeiten
+const wmSaison = { "2026": { von: "2026-11-19", bis: "2026-12-30", zeiten: [{ tage: ["mo"], von: "11:00", bis: "20:00" }] } };
+vi.mock("@/lib/weihnachtsmaerkte-daten", () => ({
+  weihnachtsmaerkteLaden: async () => [
+    { id: "w1", slug: "altstadt-markt", typ: "weihnachtsmarkt", beschreibung: "x", aktualisiert_am: null, extras: { weihnachtsmarkt: { saisons: wmSaison } } },
+    { id: "w2", slug: "ohne-zeiten", typ: "weihnachtsmarkt", beschreibung: "x", aktualisiert_am: null, extras: { weihnachtsmarkt: { saisons: {} } } },
+  ],
+}));
 
 describe("Sitemap", () => {
   it("Spielplätze: Hub und nur indexierbare Detailseiten", async () => {
@@ -37,6 +45,14 @@ describe("Sitemap", () => {
     expect(urls).toContain("https://diesdas.events/guides/spielplaetze");
     expect(urls).toContain("https://diesdas.events/guides/spielplaetze/gut-bilk");
     expect(urls.some((u) => u.includes("duenn-bilk"))).toBe(false);
+  });
+
+  it("Weihnachtsmärkte: Hub und nur indexierbare Detailseiten", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain("https://diesdas.events/guides/weihnachtsmaerkte");
+    expect(urls).toContain("https://diesdas.events/guides/weihnachtsmaerkte/altstadt-markt");
+    expect(urls.some((u) => u.includes("ohne-zeiten"))).toBe(false);
   });
 
   it("enthält kommende und laufende Events, aber keine abgelaufenen", async () => {

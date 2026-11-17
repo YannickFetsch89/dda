@@ -9,7 +9,7 @@ import { filtern, istKostenlos, kategorieZaehlen, stadtteileZaehlen } from "@/li
 import { ZEITRAUM_OPTIONEN, plusTage } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { stadtteilPfad } from "@/lib/landing";
-import { SPIELPLAETZE_VERLINKT } from "@/lib/schalter";
+import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
 export const KONTAKT_MAIL = "hallo@diesdas.events";
@@ -61,6 +61,7 @@ export function Kopf() {
               <Link href="/stadtteile">Stadtteile &amp; Karte</Link>
               <span className="popover__titel">Guides</span>
               <Link href="/guides">Alle Guides</Link>
+              {WEIHNACHTSMAERKTE_VERLINKT && <Link href="/guides/weihnachtsmaerkte">Weihnachtsmärkte</Link>}
               <Link href="/guides/restaurants-cafes">Restaurants &amp; Cafés</Link>
               <Link href="/guides/kneipen-bars">Kneipen &amp; Bars</Link>
               <Link href="/guides/clubs">Clubs</Link>
@@ -134,7 +135,7 @@ export async function Fuss() {
           <p>
             Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Theater, Comedy, Partys und Familienprogramm.
             Dazu unsere Guides mit den besten Restaurants, Cafés, Kneipen, Bars und Clubs der Stadt
-            {SPIELPLAETZE_VERLINKT ? " und allen öffentlichen Spielplätzen" : ""} – nach Stadtteil sortiert. So seht ihr auf einen Blick, was ihr heute, morgen oder am Wochenende unternehmen könnt.
+            {SPIELPLAETZE_VERLINKT ? " und allen öffentlichen Spielplätzen" : ""} – nach Stadtteil sortiert.{WEIHNACHTSMAERKTE_VERLINKT ? " Im Advent zeigt unser Weihnachtsmarkt-Guide, welcher Markt heute geöffnet hat." : ""} So seht ihr auf einen Blick, was ihr heute, morgen oder am Wochenende unternehmen könnt.
           </p>
           <Link href="/ueber" className="fuss__mehr">Mehr über uns</Link>
         </div>
@@ -158,6 +159,7 @@ export async function Fuss() {
         </div>
         <div className="fuss__spalte">
           <b>Guides</b>
+          {WEIHNACHTSMAERKTE_VERLINKT && <Link href="/guides/weihnachtsmaerkte">Weihnachtsmärkte</Link>}
           <Link href="/guides/restaurants-cafes">Restaurants & Cafés</Link>
           <Link href="/guides/kneipen-bars">Kneipen & Bars</Link>
           <Link href="/guides/clubs">Clubs</Link>

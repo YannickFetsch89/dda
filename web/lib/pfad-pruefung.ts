@@ -32,8 +32,8 @@ export type Route =
   | { typ: "stadtteil"; slug: string }
   | { typ: "guide-stadtteil"; hub: OrtHub; slug: string };
 
-export type OrtHub = "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze";
-const HUBS: OrtHub[] = ["restaurants-cafes", "kneipen-bars", "clubs", "spielplaetze"];
+export type OrtHub = "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze" | "weihnachtsmaerkte";
+const HUBS: OrtHub[] = ["restaurants-cafes", "kneipen-bars", "clubs", "spielplaetze", "weihnachtsmaerkte"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function teil(roh: string): string | null {
@@ -123,6 +123,8 @@ type OrtKopf = {
   club: unknown; club_score: unknown; club_freigegeben: unknown; auch_club: unknown; kein_club?: unknown;
   /** Nur Spielplätze: Stadtteil und erster Freischalt-Tag (Weiterleitung abgeschalteter Plätze, Plan 5.5) */
   stadtteil?: string | null; freigeschaltet_am?: string | null;
+  /** Nur Weihnachtsmärkte: erster Freischalt-Tag (Plan Weihnachtsmärkte 5.5) */
+  wm_freigeschaltet_am?: string | null;
 };
 
 async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
@@ -131,7 +133,7 @@ async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
       "orte",
       `select=typ,aktiv,qualitaets_score,stadtteil,club:extras->club,club_score:extras->club_score,` +
         `club_freigegeben:extras->club_freigegeben,auch_club:extras->auch_club,kein_club:extras->kein_club,` +
-        `freigeschaltet_am:extras->spielplatz->>freigeschaltet_am&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+        `freigeschaltet_am:extras->spielplatz->>freigeschaltet_am,wm_freigeschaltet_am:extras->weihnachtsmarkt->>freigeschaltet_am&slug=eq.${encodeURIComponent(slug)}&limit=1`,
     );
     return z === undefined ? undefined : (z[0] ?? null);
   });
@@ -140,7 +142,7 @@ async function ortLaden(slug: string): Promise<OrtKopf | null | undefined> {
 // ---------- Entscheidungen ----------
 
 const MIN_SCORE = 7; // wie MIN_QUALITAETS_SCORE in lib/orte.ts
-const HUB_TYPEN: Record<Exclude<OrtHub, "clubs" | "spielplaetze">, string[]> = {
+const HUB_TYPEN: Record<Exclude<OrtHub, "clubs" | "spielplaetze" | "weihnachtsmaerkte">, string[]> = {
   "restaurants-cafes": ["restaurant", "imbiss", "cafe"],
   "kneipen-bars": ["kneipe"],
 };
@@ -158,6 +160,17 @@ export function spielplatzEntscheidung(o: OrtKopf | null): Pruefung {
   return { art: "umleiten", ziel: st ? guideStadtteilPfad("spielplaetze", st) : "/guides/spielplaetze" };
 }
 
+/**
+ * Weihnachtsmärkte (Plan Weihnachtsmärkte 5.5): sichtbar = aktiv und Typ, ohne Score. Nie freigeschaltet oder unbekannt → 404.
+ * Abgeschaltet (inaktiv mit freigeschaltet_am) → dauerhaft auf den Hub (es gibt keine Stadtteilseiten).
+ */
+export function weihnachtsmarktEntscheidung(o: OrtKopf | null): Pruefung {
+  if (!o || o.typ !== "weihnachtsmarkt") return FEHLT;
+  if (o.aktiv) return WEITER;
+  if (!o.wm_freigeschaltet_am) return FEHLT;
+  return { art: "umleiten", ziel: "/guides/weihnachtsmaerkte" };
+}
+
 /** Im Club-Hub sichtbar? Dieselbe Regel wie die Website (lib/clubs.ts). */
 export function clubSichtbar(o: OrtKopf): boolean {
   const ort = {
@@ -169,15 +182,17 @@ export function clubSichtbar(o: OrtKopf): boolean {
 }
 
 /** Hub, in dem ein Ort (kein Club) seine sichtbare Seite hat – sonst null. */
-function sichtbarerHub(o: OrtKopf): Exclude<OrtHub, "clubs" | "spielplaetze"> | null {
+function sichtbarerHub(o: OrtKopf): Exclude<OrtHub, "clubs" | "spielplaetze" | "weihnachtsmaerkte"> | null {
   if (!o.aktiv || (o.qualitaets_score ?? 0) < MIN_SCORE) return null;
-  const hubs = Object.keys(HUB_TYPEN) as Exclude<OrtHub, "clubs" | "spielplaetze">[];
+  const hubs = Object.keys(HUB_TYPEN) as Exclude<OrtHub, "clubs" | "spielplaetze" | "weihnachtsmaerkte">[];
   return hubs.find((h) => HUB_TYPEN[h].includes(o.typ)) ?? null;
 }
 
 /** Entscheidung für einen Ort unter /guides/<hub>/<slug> (rein, testbar). */
 export function ortEntscheidung(hub: OrtHub, slug: string, o: OrtKopf | null): Pruefung {
   if (hub === "spielplaetze") return spielplatzEntscheidung(o);
+  // Vor jedem Zugriff auf HUB_TYPEN – der neue Hub steht dort nicht (Plan Weihnachtsmärkte 5.5)
+  if (hub === "weihnachtsmaerkte") return weihnachtsmarktEntscheidung(o);
   if (!o) return FEHLT;
   if (hub === "clubs") {
     if (clubSichtbar(o)) return WEITER;
@@ -228,6 +243,8 @@ export async function pfadPruefen(pfad: string): Promise<Pruefung> {
     case "stadtteil":
       return stadtteilAusSlug(route.slug) ? WEITER : FEHLT;
     case "guide-stadtteil":
+      // Weihnachtsmärkte haben keine Stadtteilseiten (Plan E9): immer 404, auch bei gültigem Stadtteil
+      if (route.hub === "weihnachtsmaerkte") return FEHLT;
       return stadtteilAusSlug(route.slug, true) ? WEITER : FEHLT;
     case "ort": {
       const o = await ortLaden(route.slug);

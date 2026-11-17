@@ -5,9 +5,14 @@
 // Links als [Text](/pfad) – nur interne Pfade; das JSON-LD bekommt den reinen Text.
 // Fakten nur aus unseren Daten (Küchen, Stadtteile, Genres, Brauhäuser) und allgemein bekanntem Stadtwissen.
 
-import { SPIELPLAETZE_VERLINKT } from "./schalter";
+import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "./schalter";
 
-export type GuideSeite = "uebersicht" | "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze";
+/** Satz zum Saison-Guide (nur bei Schalter an, Plan Weihnachtsmärkte 5.6). */
+const WM_SATZ = WEIHNACHTSMAERKTE_VERLINKT
+  ? "Im Advent zeigt der [Weihnachtsmarkt-Guide](/guides/weihnachtsmaerkte), welcher Markt heute geöffnet hat. "
+  : "";
+
+export type GuideSeite = "uebersicht" | "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze" | "weihnachtsmaerkte";
 
 export interface GuideFrage { frage: string; antwort: string }
 export interface GuideAbschnitt { titel: string; absaetze: string[] }
@@ -94,12 +99,12 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
       {
         frage: "Welche Guides kommen noch dazu?",
         antwort:
-          SPIELPLAETZE_VERLINKT
+          WM_SATZ + (SPIELPLAETZE_VERLINKT
             ? "Neu ist der [Spielplatz-Guide](/guides/spielplaetze) mit allen öffentlichen Spielplätzen der Stadt. In Arbeit " +
               "sind Ausflüge und Wochenend-Trips; bis dahin findet ihr Ideen für Familien in unserem " +
               "[Eventkalender](/kategorie/familie)."
             : "In Arbeit sind Guides für Spielplätze, Ausflüge in der Umgebung und Wochenend-Trips. Bis dahin findet ihr " +
-              "Ideen für Familien und Ausflüge in unserem [Eventkalender](/entdecken).",
+              "Ideen für Familien und Ausflüge in unserem [Eventkalender](/entdecken)."),
       },
     ],
   },
@@ -459,6 +464,58 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
           "andere gilt das teilweise. Der Filter [„Rollstuhlgerecht“](/guides/spielplaetze?extra=rollstuhl) zeigt die Plätze, bei denen das belegt ist; auf den " +
           "Seiten steht, wenn ein Platz nur teilweise zugänglich ist.",
       },
+    ],
+  },
+  // Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, Abschnitt 6: feste Satzmuster, Namen und Zeiten kommen aus den Daten
+  // ({faq_…}, lib/weihnachtsmaerkte.ts faqWerte) – so muss 2027 nichts umgeschrieben werden.
+  weihnachtsmaerkte: {
+    einleitung:
+      "Hier findet ihr {anzahl} Weihnachtsmärkte in Düsseldorf – vom großen Markt in der Innenstadt mit Eisbahn und " +
+      "Riesenrad bis zu den Märkten in den Stadtteilen. Auf einen Blick seht ihr, wer heute geöffnet hat, was es dort gibt " +
+      "und wie ihr hinkommt; die Zeiten stammen von den Veranstaltern, Sonderzeiten an Totensonntag und Weihnachten stehen extra dabei.",
+    titel: "Weihnachtsmarkt in Düsseldorf",
+    abschnitte: [
+      {
+        titel: "Ein Markt, viele Plätze",
+        absaetze: [
+          "Der Düsseldorfer Weihnachtsmarkt ist kein einzelner Platz, sondern eine Reihe von Themenmärkten, die zu Fuß " +
+            "zusammenhängen: der Altstadt-Markt zwischen Flinger Straße und Marktstraße, der Märchen-Markt auf dem " +
+            "Schadowplatz, der Schadow-Markt, das Winter Village auf der Königsallee und die Weihnachtspromenade am " +
+            "Rheinufer. Dazu kommen die Eisbahn auf dem Corneliusplatz und das Riesenrad auf dem Burgplatz, die eigene " +
+            "Öffnungszeiten haben und länger laufen als die Märkte. Wer einen Abend einplant, kann vom Rhein über die " +
+            "Altstadt bis zur Kö laufen und kommt an allen vorbei.",
+        ],
+      },
+      {
+        titel: "Woher die Öffnungszeiten kommen",
+        absaetze: [
+          "Alle Zeiten auf diesen Seiten stammen von den Veranstaltern und von Düsseldorf Tourismus; jede Seite nennt die " +
+            "Quelle und das Datum, an dem wir sie zuletzt geprüft haben. An stillen Feiertagen wie dem Totensonntag und an " +
+            "den Weihnachtstagen weichen die Zeiten oft ab. Hat ein Veranstalter für so einen Tag nichts veröffentlicht, " +
+            "schreiben wir das dazu, statt eine Zeit zu raten. Bei Sturm oder aus Sicherheitsgründen kann ein Markt " +
+            "kurzfristig schließen – im Zweifel lohnt ein Blick auf die Seite des Veranstalters.",
+        ],
+      },
+      {
+        titel: "Abseits der Innenstadt",
+        absaetze: [
+          "Ruhiger geht es auf den Märkten in den Stadtteilen zu. Vor dem Benrather Schloss stehen an den " +
+            "Adventswochenenden Holzhütten mit Kunsthandwerk, auf dem Areal Böhler in Heerdt gibt es Bühnenprogramm " +
+            "zwischen alten Industriehallen, und auf der Nordstraße in Pempelfort sowie vor den Arcaden in Bilk laden " +
+            "kleinere Märkte zu einer Pause beim Einkaufen ein. Einige dieser Märkte haben nur an bestimmten Tagen " +
+            "geöffnet – die Tagesleiste oben zeigt, wer an eurem Wunschtag offen hat.",
+        ],
+      },
+    ],
+    faq: [
+      { frage: "Wann öffnen die Weihnachtsmärkte in Düsseldorf {saison}?", antwort: "{faq_start}" },
+      { frage: "Haben die Weihnachtsmärkte am Totensonntag geöffnet?", antwort: "{faq_totensonntag}" },
+      {
+        frage: "Welche Weihnachtsmärkte haben an Heiligabend, an den Weihnachtstagen, an Silvester und an Neujahr geöffnet?",
+        antwort: "{faq_feiertage}",
+      },
+      { frage: "Wo gibt es in Düsseldorf eine Eisbahn oder ein Riesenrad?", antwort: "{faq_eisbahn}" },
+      { frage: "Welcher Weihnachtsmarkt eignet sich für Familien mit Kindern?", antwort: "{faq_familien}" },
     ],
   },
 };

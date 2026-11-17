@@ -179,14 +179,14 @@ export default function DatenschutzSeite() {
           Quellenangabe „© OpenStreetMap-Mitwirkende“ klicken, öffnet sich die Website openstreetmap.org.
         </li>
         <li>
-          <b>Google Maps (nur nach Klick):</b> Auf Event-Seiten und den Seiten des Spielplatz-Guides können Sie einen
+          <b>Google Maps (nur nach Klick):</b> Auf Event-Seiten und den Seiten des Spielplatz- und des Weihnachtsmarkt-Guides können Sie einen
           Kartenausschnitt von Google Maps
           (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland) einblenden. Die Karte wird erst
           geladen, wenn Sie auf „Karte anzeigen“ oder „Nur dieses Mal“ klicken; erst dann werden Daten (u.a. Ihre
           IP-Adresse) an Google übermittelt, ggf. auch in die USA. Bei „Karte anzeigen“ speichern wir Ihre
           Entscheidung lokal in Ihrem Browser (siehe Abschnitt 7); Sie können sie dort jederzeit löschen. Links
           zur Routenplanung auf Event-Seiten und der Knopf „Google Maps“ auf den Seiten der Restaurant- und
-          Café-Guides und der Knopf „Route planen“ im Spielplatz-Guide öffnen Google Maps erst, wenn Sie sie anklicken; dabei übermitteln wir nicht, von welcher
+          Café-Guides und der Knopf „Route planen“ im Spielplatz- und im Weihnachtsmarkt-Guide öffnen Google Maps erst, wenn Sie sie anklicken; dabei übermitteln wir nicht, von welcher
           unserer Seiten Sie kommen. Rechtsgrundlage: Ihre Einwilligung
           (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).{" "}
           <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">

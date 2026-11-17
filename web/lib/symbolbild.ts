@@ -60,7 +60,7 @@ const SAISON: Saison[] = [
     zeitfenster: (d) => zwischen(d, "11-11", "11-15") || karnevalsSession(d),
   },
   { motiv: "nikolaus", stichworte: /nikolaus/i, zeitfenster: (d) => zwischen(d, "12-01", "12-06") },
-  { motiv: "advent-weihnachtsmarkt", stichworte: /weihnachtsmarkt|advent|glühwein|eisbahn|winterwelt/i, zeitfenster: (d) => zwischen(d, "11-15", "12-23") },
+  { motiv: "advent-weihnachtsmarkt", stichworte: /weihnachtsmarkt|advent|glühwein|eisbahn|winterwelt/i, zeitfenster: (d) => zwischen(d, "11-15", "12-30") }, // Innenstadt-Markt bis 30.12. (Plan Weihnachtsmärkte 1.2)
   { motiv: "weihnachten", stichworte: /weihnacht|christmas|krippenspiel|christmette|xmas/i, zeitfenster: (d) => zwischen(d, "12-01", "12-26") },
   // „Neujahrskonzert“ bleibt beim Konzert-Motiv; Neujahrsfeier und Silvesterparty nicht
   { motiv: "silvester", stichworte: /silvester|\bnew year\b|jahreswechsel|\bneujahr(?!skonzert)/i, zeitfenster: (d) => zwischen(d, "12-27", "12-31") || zwischen(d, "01-01", "01-01") },

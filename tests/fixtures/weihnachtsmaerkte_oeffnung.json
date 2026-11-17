@@ -1,0 +1,69 @@
+{
+  "_hinweis": "Gemeinsame Fixture für scraper/weihnachtsmaerkte/zeiten.py (oeffnung_am) und web/lib/weihnachtsmaerkte.ts (oeffnungAm). Plan 4.3.",
+  "eintraege": {
+    "innenstadt": {
+      "2026": {
+        "von": "2026-11-19", "bis": "2026-12-30",
+        "zeiten": [{"tage": ["mo", "di", "mi", "do", "so"], "von": "11:00", "bis": "20:00"}, {"tage": ["fr", "sa"], "von": "11:00", "bis": "21:00"}],
+        "sonder": [{"datum": "2026-11-22", "geschlossen": true}, {"datum": "2026-12-24", "von": "11:00", "bis": "15:00"},
+                   {"datum": "2026-12-25", "geschlossen": true}, {"datum": "2026-12-26", "von": "14:00", "bis": "21:00"}]
+      }
+    },
+    "winter-village": {
+      "2026": {
+        "von": "2026-11-20", "bis": "2026-12-30",
+        "zeiten": [{"tage": ["mo", "di", "mi", "do", "so"], "von": "11:00", "bis": "20:00"}, {"tage": ["fr", "sa"], "von": "11:00", "bis": "21:00"}],
+        "sonder": [{"datum": "2026-11-22", "geschlossen": true}, {"datum": "2026-12-24", "von": "11:00", "bis": "15:00"},
+                   {"datum": "2026-12-25", "geschlossen": true}, {"datum": "2026-12-26", "von": "14:00", "bis": "21:00"}],
+        "geerbt": ["bis", "zeiten", "sonder"], "geerbt_von": "innenstadt"
+      }
+    },
+    "nordstrasse": {
+      "2026": {"von": "2026-11-19", "bis": "2026-12-23", "zeiten": [{"tage": ["mo", "di", "mi", "do", "fr", "sa", "so"], "von": "11:30", "bis": "20:30"}], "sonder": []}
+    },
+    "benrath": {
+      "2026": {"von": "2026-11-20", "bis": "2026-12-20",
+               "zeiten": [{"tage": ["fr"], "von": "14:00", "bis": "21:00"}, {"tage": ["sa"], "von": "11:00", "bis": "21:00"}, {"tage": ["so"], "von": "11:00", "bis": "20:00"}],
+               "sonder": [{"datum": "2026-11-22", "geschlossen": true}]}
+    },
+    "koe-on-ice": {
+      "2026": {"von": "2026-11-06", "bis": "2027-01-10",
+               "zeiten": [{"tage": ["mo", "di", "mi", "do", "so"], "von": "11:00", "bis": "21:00"}, {"tage": ["fr", "sa"], "von": "11:00", "bis": "22:00"}],
+               "sonder": [{"datum": "2026-11-22", "geschlossen": true}, {"datum": "2026-12-24", "geschlossen": true},
+                          {"datum": "2026-12-31", "von": "11:00", "bis": "18:00"}, {"datum": "2027-01-01", "von": "13:00", "bis": "18:00"},
+                          {"datum": "2027-01-05", "von": "11:00", "bis": "20:00"}]}
+    },
+    "ohne-zeiten": {
+      "2026": {"von": "2026-11-19", "bis": "2026-12-23", "zeiten": [], "sonder": []}
+    },
+    "leer-2027": {
+      "2026": {"von": "2026-11-19", "bis": "2026-12-23", "zeiten": [{"tage": ["mo", "di", "mi", "do", "fr", "sa", "so"], "von": "12:00", "bis": "20:00"}], "sonder": []},
+      "2027": {}
+    }
+  },
+  "faelle": [
+    {"eintrag": "innenstadt", "datum": "2026-11-18", "zustand": "vor_saison"},
+    {"eintrag": "innenstadt", "datum": "2026-11-19", "zustand": "offen", "von": "11:00", "bis": "20:00"},
+    {"eintrag": "innenstadt", "datum": "2026-11-21", "zustand": "offen", "von": "11:00", "bis": "21:00"},
+    {"eintrag": "innenstadt", "datum": "2026-11-22", "zustand": "zu", "grund": "Totensonntag"},
+    {"eintrag": "innenstadt", "datum": "2026-12-24", "zustand": "offen", "von": "11:00", "bis": "15:00", "grund": "Heiligabend"},
+    {"eintrag": "innenstadt", "datum": "2026-12-25", "zustand": "zu", "grund": "1. Weihnachtstag"},
+    {"eintrag": "innenstadt", "datum": "2026-12-31", "zustand": "nach_saison"},
+    {"eintrag": "winter-village", "datum": "2026-11-19", "zustand": "vor_saison"},
+    {"eintrag": "winter-village", "datum": "2026-11-22", "zustand": "zu", "grund": "Totensonntag"},
+    {"eintrag": "nordstrasse", "datum": "2026-11-22", "zustand": "unbekannt", "grund": "Totensonntag"},
+    {"eintrag": "nordstrasse", "datum": "2026-11-23", "zustand": "offen", "von": "11:30", "bis": "20:30"},
+    {"eintrag": "benrath", "datum": "2026-11-23", "zustand": "zu"},
+    {"eintrag": "benrath", "datum": "2026-11-20", "zustand": "offen", "von": "14:00", "bis": "21:00"},
+    {"eintrag": "benrath", "datum": "2026-11-22", "zustand": "zu", "grund": "Totensonntag"},
+    {"eintrag": "koe-on-ice", "datum": "2026-12-24", "zustand": "zu", "grund": "Heiligabend"},
+    {"eintrag": "koe-on-ice", "datum": "2026-12-26", "zustand": "unbekannt", "grund": "2. Weihnachtstag"},
+    {"eintrag": "koe-on-ice", "datum": "2026-12-31", "zustand": "offen", "von": "11:00", "bis": "18:00", "grund": "Silvester"},
+    {"eintrag": "koe-on-ice", "datum": "2027-01-05", "zustand": "offen", "von": "11:00", "bis": "20:00"},
+    {"eintrag": "koe-on-ice", "datum": "2027-01-11", "zustand": "nach_saison"},
+    {"eintrag": "ohne-zeiten", "datum": "2026-11-25", "zustand": "unbekannt"},
+    {"eintrag": "leer-2027", "datum": "2026-11-25", "zustand": "offen", "von": "12:00", "bis": "20:00"},
+    {"eintrag": "leer-2027", "datum": "2027-01-15", "zustand": "nach_saison"}
+  ],
+  "totensonntag": {"2026": "2026-11-22", "2027": "2027-11-21", "2028": "2028-11-26", "2022": "2022-11-20"}
+}

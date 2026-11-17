@@ -33,6 +33,8 @@ const EXTRAS_FELDER = [
   "bild_fokus", "foto_version",
   // Spielplätze (lib/spielplaetze.ts): Profil, Prüf-Codes, Score – bei allen anderen Orten leer
   "spielplatz",
+  // Weihnachtsmärkte (lib/weihnachtsmaerkte.ts): Saisons, Merkmale, Rollen, Score (ohne Google-Rohwerte)
+  "weihnachtsmarkt",
 ];
 export const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 

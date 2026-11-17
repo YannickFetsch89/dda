@@ -12,6 +12,9 @@ import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
 import { SPIELPLAETZE_VERLINKT } from "@/lib/landing";
+import { WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { heroZahlen } from "@/lib/weihnachtsmaerkte";
+import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 
 export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
@@ -29,8 +32,12 @@ interface Hub {
   fertig: boolean;
 }
 
-// Reihenfolge und Texte laut data/guides.json im Design-Handoff
+// Reihenfolge und Texte laut data/guides.json im Design-Handoff; der Saison-Guide steht während der Saison vorne
+// (Plan Weihnachtsmärkte 5.6, Schalter in lib/schalter.ts)
 const HUBS: Hub[] = [
+  ...(WEIHNACHTSMAERKTE_VERLINKT
+    ? [{ slug: "weihnachtsmaerkte", label: "Weihnachtsmärkte", icon: "storefront", teaser: "Wer heute geöffnet hat – mit Sonderzeiten an den Feiertagen", einheit: "Märkte", fertig: true }]
+    : []),
   { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
   { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },
   { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: true },
@@ -100,12 +107,13 @@ function KachelListe({ anzahl }: { anzahl: Record<string, number> }) {
 /** Anzahl je Hub (Daten gecached über orteLaden) – jede Kachel zählt genau das, was ihr Hub zeigt
  * (Restaurant-Hub inkl. Brauhäuser, Kneipen-Hub inkl. Restaurants mit auch_kneipe). */
 async function anzahlLaden(): Promise<Record<string, number>> {
-  const [restaurants, brauhaeuser, kneipen, clubs, spielplaetze] = await Promise.all([
+  const [restaurants, brauhaeuser, kneipen, clubs, spielplaetze, weihnachtsmaerkte] = await Promise.all([
     orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants(), kneipenLaden(), clubsLaden(), spielplaetzeLaden(),
+    weihnachtsmaerkteLaden(),
   ]);
   return {
     "restaurants-cafes": restaurants.length + brauhaeuser.length, "kneipen-bars": kneipen.length, clubs: clubs.length,
-    spielplaetze: spielplaetze.length,
+    spielplaetze: spielplaetze.length, weihnachtsmaerkte: heroZahlen(weihnachtsmaerkte).anzahl,
   };
 }
 

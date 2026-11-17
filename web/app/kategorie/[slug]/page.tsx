@@ -10,7 +10,7 @@ import { unterkategorienZaehlen } from "@/lib/ableitungen";
 import { eventPoolLaden } from "@/lib/daten";
 import { KATEGORIEN, kategorie, katStil } from "@/lib/kategorien";
 import { KATEGORIE_TEXTE } from "@/lib/landing-texte";
-import { SPIELPLAETZE_VERLINKT } from "@/lib/schalter";
+import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import { LANDING_TAGE, MIN_EINTRAEGE, kategorieGueltig, unterkategoriePfad } from "@/lib/landing";
 import { kategorieEvents, unterkategorieIndexierbar } from "@/lib/landing-listen";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
@@ -27,7 +27,11 @@ export const instant = false;
 
 /** Passende Guides bzw. Seiten zu einer Kategorie (nur, was es gibt). */
 const EXTRA_LINKS: Partial<Record<KategorieSlug, { name: string; pfad: string }[]>> = {
-  food: [{ name: "Restaurants & Cafés", pfad: "/guides/restaurants-cafes" }],
+  // Weihnachtsmärkte ergänzen den Food-Eintrag, ersetzen ihn nicht (Plan Weihnachtsmärkte 5.6)
+  food: [
+    { name: "Restaurants & Cafés", pfad: "/guides/restaurants-cafes" },
+    ...(WEIHNACHTSMAERKTE_VERLINKT ? [{ name: "Weihnachtsmärkte", pfad: "/guides/weihnachtsmaerkte" }] : []),
+  ],
   nightlife: [{ name: "Club-Guide", pfad: "/guides/clubs" }, { name: "Kneipen & Bars", pfad: "/guides/kneipen-bars" }],
   musik: [{ name: "Club-Guide", pfad: "/guides/clubs" }],
   // Spielplätze nur, wenn der Guide verlinkt ist (lib/schalter.ts)
