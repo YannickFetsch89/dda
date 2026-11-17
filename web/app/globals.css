@@ -894,6 +894,15 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .rechtliches li { font-size: 15px; line-height: 1.7; color: var(--ddd-text-body); margin-bottom: 4px; }
 .rechtliches a { color: var(--ddd-gold); text-decoration: underline; }
 .rechtliches code { font-size: 13px; background: var(--ddd-surface); padding: 2px 6px; border-radius: 4px; }
+/* Tabelle „Welche Daten wir verarbeiten“ (Nutzerkonto) – auf schmalen Bildschirmen seitlich scrollbar */
+.rechtliches__tabelle { overflow-x: auto; margin-bottom: 16px; -webkit-overflow-scrolling: touch; }
+.rechtliches table { border-collapse: collapse; min-width: 640px; font-size: 14px; line-height: 1.5; color: var(--ddd-text-body); }
+.rechtliches th, .rechtliches td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--ddd-border); }
+.rechtliches thead th { font-weight: 700; color: var(--ddd-text); }
+.rechtliches tbody th { font-weight: 600; }
+.rechtliches__kasten { border-left: 3px solid var(--ddd-gold); padding-left: 12px; }
+.rechtliches ul ul { margin-top: 4px; margin-bottom: 4px; }
+.rechtliches__liste { list-style: decimal; padding-left: 22px; margin-bottom: 12px; }
 
 
 /* Aktive Chips (Entdecken) – Navy wie im Design */
@@ -2002,6 +2011,79 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
   .sp-naehe__cafes .gd-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: no-preference) { .sp-detail { scroll-behavior: smooth; } html:has(.sp-detail) { scroll-behavior: smooth; } }
+
+/* ---------- Nutzerkonten (Plan 7) ---------- */
+.konto-seite { max-width: 720px; }
+/* Luft zwischen Überschrift und erstem Kasten (Willkommen saß direkt auf dem Fragebogen, 17.11.2026) */
+.konto-seite .seitentitel { margin-bottom: 24px; }
+/* Vor- und Nachname nebeneinander, auf schmalen Bildschirmen untereinander (E16) */
+.konto-stamm { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .konto-stamm { grid-template-columns: 1fr; } }
+.konto-form { max-width: 520px; }
+.formular input[type="password"] {
+  width: 100%; min-width: 0; font: inherit; font-size: 16px; color: var(--ddd-text); background: var(--ddd-bg);
+  border: 1px solid var(--ddd-border); border-radius: var(--r-sm); padding: 10px 12px; min-height: 44px;
+}
+.formular input[type="password"]:focus-visible { outline: 2px solid var(--ddd-link); outline-offset: 1px; border-color: var(--ddd-link); }
+.passwort-feld { position: relative; display: flex; }
+.passwort-feld input { flex: 1; padding-right: 96px !important; }
+.passwort-feld__zeigen {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); height: 34px; padding: 0 10px; border: none;
+  border-radius: var(--r-pill); background: var(--ddd-bg); color: var(--ddd-text); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.konto-umschalter { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: var(--r-pill); background: var(--ddd-subtle); }
+.konto-umschalter button {
+  height: 40px; border: none; border-radius: var(--r-pill); background: transparent; color: var(--ddd-text-muted);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.konto-umschalter button[aria-selected="true"] { background: var(--ddd-surface); color: var(--ddd-text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.konto-textknopf { border: none; background: none; padding: 0; font: inherit; color: var(--ddd-link); text-decoration: underline; cursor: pointer; }
+.konto-hinweis {
+  display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; padding: 16px 18px; border-radius: var(--r-card);
+  background: var(--ddd-subtle); border-left: 4px solid var(--ddd-gold); color: var(--ddd-text-body); font-size: 15px; line-height: 1.5;
+}
+.konto-hinweis > .icon { font-size: 26px; color: var(--ddd-gold); flex-shrink: 0; }
+.konto-hinweis b { color: var(--ddd-text); }
+.konto-hinweis p { margin: 6px 0 0; }
+.konto-hinweis--geraet { margin-top: 24px; border-left-color: var(--ddd-navy); }
+:root[data-theme="dark"] .konto-hinweis--geraet { border-left-color: var(--ddd-link); }
+.konto-bereich { display: flex; flex-direction: column; gap: 20px; }
+.konto-abschnitt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; border: 1px solid var(--ddd-border);
+  border-radius: var(--r-card); background: var(--ddd-surface);
+}
+.konto-abschnitt h2 { font-size: 24px; margin: 0; }
+.konto-abschnitt p { margin: 0; color: var(--ddd-text-body); }
+.konto-abschnitt .formular { width: 100%; }
+.konto-kasten { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--r-md); background: var(--ddd-subtle); width: 100%; }
+.konto-kasten p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ddd-text-body); }
+.konto-kasten--hinweis { border-left: 4px solid var(--ddd-gold); }
+.konto-fb { border: 1px solid var(--ddd-border); border-radius: var(--r-card); background: var(--ddd-surface); overflow: hidden; }
+.konto-fb .fb__inhalt { overflow: visible; padding-bottom: 20px; }
+.konto-fb__einleitung { padding-bottom: 8px; border-bottom: 1px solid var(--ddd-border); }
+.konto-fb__einleitung h2 { font-size: 22px !important; }
+.konto-fb__gruppe { display: flex; flex-direction: column; gap: 8px; }
+.konto-fb__gruppe .fb__chips { padding-bottom: 4px; }
+.konto-fb__kat .icon { color: var(--kat-farbe, var(--ddd-gold)); }
+.konto-fb__fuss { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.konto-fb__fuss .konto-textknopf { align-self: center; color: var(--ddd-text-muted); font-size: 14px; }
+.konto-abschluss { gap: 16px; }
+.merk-vorbei { margin-top: 24px; }
+.merk-vorbei > summary { cursor: pointer; font-weight: 700; font-size: 15px; padding: 8px 0; color: var(--ddd-text); }
+.merk-vorbei .raster { margin-top: 12px; opacity: 0.8; }
+.merk-hinweis {
+  position: fixed; left: 12px; right: 12px; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 60; display: flex; align-items: center;
+  gap: 10px; padding: 12px 12px 12px 16px; border-radius: var(--r-card); background: var(--ddd-navy); color: var(--ddd-on-navy, #fff);
+  font-size: 14px; line-height: 1.4; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); animation: merk-hinweis-ein 0.25s ease-out;
+}
+.merk-hinweis a { color: var(--ddd-gold); text-decoration: underline; font-weight: 700; }
+.merk-hinweis > .icon { color: var(--ddd-gold); font-size: 22px; flex-shrink: 0; }
+.merk-hinweis__x { margin-left: auto; width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border: none; border-radius: 50%; background: rgba(255, 255, 255, 0.12); color: inherit; cursor: pointer; }
+@keyframes merk-hinweis-ein { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .merk-hinweis { animation: none; } }
+@media (min-width: 768px) { .merk-hinweis { left: auto; right: 24px; bottom: 24px; max-width: 440px; } }
+.konto-seite .formular__hinweis a, .konto-hinweis .formular__hinweis a, .merkliste-hinweis a { color: var(--ddd-link); text-decoration: underline; }
+.konto-seite .status a, .konto-hinweis p a:not(.btn) { color: var(--ddd-link); text-decoration: underline; font-weight: 600; }
 
 /* ---------- Weihnachtsmarkt-Guide (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 5.2/5.3/5.7) ---------- */
 .wm-hero h1 { font-size: 34px; }

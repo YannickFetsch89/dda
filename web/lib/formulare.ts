@@ -63,35 +63,65 @@ export function zuGross(request: Request, maxBytes: number): boolean {
 
 // Einfaches Bremslimit im Speicher des Server-Prozesses (pro Formular und IP). Reicht für einen
 // einzelnen Next-Prozess; bei Neustart beginnt es von vorn. Die Zahl der Schlüssel ist hart begrenzt.
-const zugriffe = new Map<string, number[]>();
+// Jeder Schlüssel merkt sich sein EIGENES Fenster (Plan Nutzerkonten 6): Die Bereinigung entfernt einen
+// Schlüssel nur, wenn alle seine Treffer älter sind als sein eigenes Fenster. Vorher galt das Fenster des
+// gerade laufenden Aufrufs für alle – ein 15-Minuten-Limit hätte die Stundenzähler anderer Routen gelöscht.
+interface Zugriffe {
+  fensterMs: number;
+  zeiten: number[];
+}
+const zugriffe = new Map<string, Zugriffe>();
 const MAX_SCHLUESSEL = 10_000;
 let letzteBereinigung = 0;
 
+const abgelaufen = (z: Zugriffe, jetzt: number) => !z.zeiten.some((t) => jetzt - t < z.fensterMs);
+
+function abgelaufeneEntfernen(jetzt: number) {
+  for (const [k, z] of zugriffe) if (abgelaufen(z, jetzt)) zugriffe.delete(k);
+}
+
 export function zuVieleAnfragen(formular: string, ip: string, max: number, fensterMs: number): boolean {
   const jetzt = Date.now();
-  // Höchstens einmal pro Minute: abgelaufene Einträge (IP-Adressen) aus dem Speicher werfen
+  // Höchstens einmal pro Minute: abgelaufene Schlüssel (nach ihrem eigenen Fenster) aus dem Speicher werfen
   if (jetzt - letzteBereinigung > 60_000) {
     letzteBereinigung = jetzt;
-    for (const [k, v] of zugriffe) if (!v.some((t) => jetzt - t < fensterMs)) zugriffe.delete(k);
+    abgelaufeneEntfernen(jetzt);
   }
   const schluessel = `${formular}|${ip}`;
-  const liste = (zugriffe.get(schluessel) ?? []).filter((t) => jetzt - t < fensterMs);
-  if (liste.length >= max) {
-    zugriffe.set(schluessel, liste);
+  const zeiten = (zugriffe.get(schluessel)?.zeiten ?? []).filter((t) => jetzt - t < fensterMs);
+  if (zeiten.length >= max) {
+    zugriffe.set(schluessel, { fensterMs, zeiten });
     return true;
   }
-  liste.push(jetzt);
+  zeiten.push(jetzt);
   zugriffe.delete(schluessel); // neu einfügen → steht in der Map-Reihenfolge hinten (zuletzt genutzt)
-  zugriffe.set(schluessel, liste);
+  zugriffe.set(schluessel, { fensterMs, zeiten });
   if (zugriffe.size > MAX_SCHLUESSEL) {
-    // Erst Abgelaufene entfernen, dann notfalls die am längsten nicht genutzten
-    for (const [k, v] of zugriffe) if (!v.some((t) => jetzt - t < fensterMs)) zugriffe.delete(k);
+    // Erst nach eigenem Fenster Abgelaufene entfernen, dann notfalls die am längsten nicht genutzten
+    abgelaufeneEntfernen(jetzt);
     for (const k of zugriffe.keys()) {
       if (zugriffe.size <= MAX_SCHLUESSEL * 0.8) break;
       zugriffe.delete(k);
     }
   }
   return false;
+}
+
+/** Wie viele Treffer zählt ein Schlüssel gerade noch? (Für Tests und für Fehlversuchs-Zähler.) */
+export function anfragenImFenster(formular: string, ip: string): number {
+  const z = zugriffe.get(`${formular}|${ip}`);
+  if (!z) return 0;
+  const jetzt = Date.now();
+  return z.zeiten.filter((t) => jetzt - t < z.fensterMs).length;
+}
+
+/** Zahl der Schlüssel im Speicher (nur für Tests). */
+export const bremslimitSchluessel = () => zugriffe.size;
+
+/** Speicher leeren (nur für Tests). */
+export function bremslimitZuruecksetzen() {
+  zugriffe.clear();
+  letzteBereinigung = 0;
 }
 
 export const antwort = (status: number, daten: Record<string, unknown>) =>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { MerklisteInhalt } from "@/components/merkliste";
+import { MerklisteInhalt, MerklisteUntertitel } from "@/components/merkliste";
+import { kontenAktiv } from "@/lib/konto/konfig";
 
 export const metadata: Metadata = {
   title: "Merkliste",
@@ -11,10 +12,10 @@ export default function Merkliste() {
     <div className="container">
       <div className="seitentitel">
         <h1 className="d">Merkliste</h1>
-        <span>Nur auf diesem Gerät gespeichert</span>
+        <MerklisteUntertitel />
       </div>
       <div className="sektion">
-        <MerklisteInhalt />
+        <MerklisteInhalt kontenAn={kontenAktiv()} />
       </div>
     </div>
   );

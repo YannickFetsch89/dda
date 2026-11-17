@@ -4,59 +4,28 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { angemeldetOhneAlter, kontomodus, merkAbonnieren, merkenUmschalten, merkSnapshot, SCHLUESSEL } from "@/lib/konto/merk-store";
 
-// ---------- Merkliste (anonym in localStorage) ----------
-
-const MERK_KEY = "ddd-merkliste";
-const MERK_EVENT = "ddd-merkliste-geaendert";
-
-function merklisteLesen(): string[] {
-  try {
-    const roh = window.localStorage.getItem(MERK_KEY);
-    const liste = roh ? JSON.parse(roh) : [];
-    return Array.isArray(liste) ? liste.filter((x) => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-let merkCache: { roh: string | null; liste: string[] } = { roh: null, liste: [] };
-
-function merkSnapshot(): string[] {
-  let roh: string | null = null;
-  try {
-    roh = window.localStorage.getItem(MERK_KEY);
-  } catch {
-    roh = null;
-  }
-  if (roh !== merkCache.roh) merkCache = { roh, liste: merklisteLesen() };
-  return merkCache.liste;
-}
+// ---------- Merkliste (Gerät in localStorage, mit Konto zusätzlich auf dem Server: lib/konto/merk-store.ts) ----------
 
 const LEER: string[] = [];
 
-function merkAbonnieren(callback: () => void) {
-  window.addEventListener(MERK_EVENT, callback);
-  window.addEventListener("storage", callback);
-  return () => {
-    window.removeEventListener(MERK_EVENT, callback);
-    window.removeEventListener("storage", callback);
-  };
-}
-
+/** Gemerkte IDs. Server-Snapshot ist immer leer: gecachte Seiten enthalten keinen Merkzustand (Plan 1.1). */
 export function useMerkliste(): string[] {
   return useSyncExternalStore(merkAbonnieren, merkSnapshot, () => LEER);
 }
 
-function merkenUmschalten(id: string) {
-  const liste = merklisteLesen();
-  const neu = liste.includes(id) ? liste.filter((x) => x !== id) : [...liste, id];
+/** Hinweis nach dem ersten Herz-Klick (Plan 7.2): nur abgemeldet, nur mit Konten-Schalter, nur einmal je Gerät. */
+export const ERSTES_MERKEN_EVENT = "ddd-erstes-merken";
+function erstesMerkenMelden() {
+  if (document.body.dataset.konten !== "1" || kontomodus() || angemeldetOhneAlter()) return;
   try {
-    window.localStorage.setItem(MERK_KEY, JSON.stringify(neu));
+    if (window.localStorage.getItem(SCHLUESSEL.hinweis)) return;
+    window.localStorage.setItem(SCHLUESSEL.hinweis, "1");
   } catch {
-    // Speicher nicht verfügbar (privater Modus) – Merken bleibt dann wirkungslos
+    return;
   }
-  window.dispatchEvent(new Event(MERK_EVENT));
+  window.dispatchEvent(new Event(ERSTES_MERKEN_EVENT));
 }
 
 export function HerzButton({ id, titel, gross = false }: { id: string; titel: string; gross?: boolean }) {
@@ -70,7 +39,7 @@ export function HerzButton({ id, titel, gross = false }: { id: string; titel: st
       onClick={(ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        merkenUmschalten(id);
+        if (merkenUmschalten(id)) erstesMerkenMelden();
       }}
     >
       <span className="icon" aria-hidden data-icon="favorite" />

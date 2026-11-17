@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Konto-Mails zum Eintragen</title>
+<style>
+  body { margin:0; padding:24px 16px; background:#e9ecf1; font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#1B2540; }
+  h1 { font-family:Georgia, 'Times New Roman', Times, serif; font-style:italic; font-weight:normal; margin:0 0 6px; }
+  p.hinweis { margin:0 0 24px; color:#4a5568; font-size:14px; line-height:1.5; }
+  section { max-width:680px; margin:0 auto 40px; }
+  h2 { font-size:17px; margin:0 0 8px; }
+  .zeile { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 8px; font-size:14px; }
+  .zeile code { background:#fff; border:1px solid #cbd5e0; border-radius:6px; padding:6px 8px; }
+  button { font:inherit; font-size:14px; font-weight:700; padding:8px 14px; border:none; border-radius:8px; cursor:pointer; background:#1B2540; color:#fff; }
+  button.ok { background:#2A9D8F; }
+  textarea { width:100%; height:110px; box-sizing:border-box; font:12px/1.4 'Courier New', monospace; border:1px solid #cbd5e0; border-radius:8px; padding:8px; margin:0 0 12px; }
+  iframe { width:100%; height:640px; border:1px solid #cbd5e0; border-radius:8px; background:#fff; }
+</style></head><body>
+<section><h1>Konto-Mails zum Eintragen</h1>
+<p class="hinweis">So geht es: In Supabase unter Authentication → Emails → Templates die passende Vorlage öffnen.
+„Betreff kopieren“ und ins Feld <b>Subject</b> einfügen, dann „HTML kopieren“ und den Inhalt von <b>Message body</b>
+komplett ersetzen. Speichern. Die Ansicht darunter zeigt die Mail mit Beispielwerten.</p></section>
+<section><h2>1. Confirm signup</h2>
+<div class="zeile">Betreff: <code id="betreff-0">Bitte bestätige deine Mailadresse für dies.das</code>
+<button type="button" data-kopie="betreff-0">Betreff kopieren</button>
+<button type="button" data-kopie="html-0">HTML kopieren</button></div>
+<textarea id="html-0" readonly spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="de"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+&lt;meta name="color-scheme" content="light dark"&gt;
+&lt;meta name="supported-color-schemes" content="light dark"&gt;
+&lt;title&gt;Bestätige deine Mailadresse&lt;/title&gt;
+&lt;style&gt;
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="seite" style="margin:0;padding:0;background:#F7F8FA;"&gt;
+&lt;div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;"&gt;Ein Klick, dann ist dein Konto bei dies.das.düsseldorf startklar.&lt;/div&gt;
+&lt;table role="presentation" class="seite" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F8FA;"&gt;
+  &lt;tr&gt;
+    &lt;td class="seite-td" align="center" style="padding:32px 12px;"&gt;
+      &lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"&gt;
+        &lt;tr&gt;
+          &lt;td style="padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;"&gt;
+            &lt;a class="wortmarke" href="https://diesdas.events" style="color:#1B2540;text-decoration:none;"&gt;dies&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;das&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;düsseldorf&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="karte innen" style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;"&gt;
+            &lt;h1 class="titel" style="margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;"&gt;Bestätige deine Mailadresse&lt;/h1&gt;
+            &lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Hallo!&lt;/p&gt;
+&lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Schön, dass du ein Konto bei dies.das.düsseldorf anlegst. Bitte bestätige deine Mailadresse, dann ist deine Merkliste auf allen Geräten dabei.&lt;/p&gt;
+
+&lt;table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="button" bgcolor="#1B2540" style="border-radius:8px;background:#1B2540;"&gt;
+      &lt;a class="button-a" href="{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;amp;art=neu" style="display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;"&gt;Adresse bestätigen&lt;/a&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="kasten" style="background:#F5F0E8;border-left:4px solid #C9A84C;border-radius:6px;padding:12px 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#2D3748;"&gt;Der Link gilt einmal. Öffnest du ihn auf einem anderen Gerät, bist du danach dort angemeldet.&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Klappt der Button nicht? Dann kopiere diesen Link in deinen Browser:&lt;br&gt;&lt;a href="{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;amp;art=neu" style="color:#457B9D;word-break:break-all;"&gt;{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;amp;art=neu&lt;/a&gt;&lt;/p&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Du hast kein Konto angelegt? Dann ignoriere diese Mail einfach, es passiert nichts.&lt;/p&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="fuss" style="padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;"&gt;
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf&lt;br&gt;
+            &lt;a href="https://diesdas.events/impressum" style="color:#718096;"&gt;Impressum&lt;/a&gt; ·
+            &lt;a href="https://diesdas.events/datenschutz" style="color:#718096;"&gt;Datenschutz&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</textarea>
+<iframe title="Confirm signup" srcdoc="<!doctype html>
+<html lang=&quot;de&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;>
+<meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;>
+<title>Bestätige deine Mailadresse</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+</style>
+</head>
+<body class=&quot;seite&quot; style=&quot;margin:0;padding:0;background:#F7F8FA;&quot;>
+<div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;&quot;>Ein Klick, dann ist dein Konto bei dies.das.düsseldorf startklar.</div>
+<table role=&quot;presentation&quot; class=&quot;seite&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background:#F7F8FA;&quot;>
+  <tr>
+    <td class=&quot;seite-td&quot; align=&quot;center&quot; style=&quot;padding:32px 12px;&quot;>
+      <table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:560px;&quot;>
+        <tr>
+          <td style=&quot;padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;&quot;>
+            <a class=&quot;wortmarke&quot; href=&quot;https://diesdas.events&quot; style=&quot;color:#1B2540;text-decoration:none;&quot;>dies<span style=&quot;color:#C9A84C;&quot;>.</span>das<span style=&quot;color:#C9A84C;&quot;>.</span>düsseldorf</a>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;karte innen&quot; style=&quot;background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;&quot;>
+            <h1 class=&quot;titel&quot; style=&quot;margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;&quot;>Bestätige deine Mailadresse</h1>
+            <p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Hallo!</p>
+<p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Schön, dass du ein Konto bei dies.das.düsseldorf anlegst. Bitte bestätige deine Mailadresse, dann ist deine Merkliste auf allen Geräten dabei.</p>
+
+<table role=&quot;presentation&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:8px 0 24px;&quot;>
+  <tr>
+    <td class=&quot;button&quot; bgcolor=&quot;#1B2540&quot; style=&quot;border-radius:8px;background:#1B2540;&quot;>
+      <a class=&quot;button-a&quot; href=&quot;https://diesdas.events/konto/bestaetigen#token_hash=pkce_8f2c1e0b9d7a4c3e5f6a1b2c3d4e5f60&amp;amp;art=neu&quot; style=&quot;display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;&quot;>Adresse bestätigen</a>
+    </td>
+  </tr>
+</table>
+
+<table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:0 0 20px;&quot;>
+  <tr>
+    <td class=&quot;kasten&quot; style=&quot;background:#F5F0E8;border-left:4px solid #C9A84C;border-radius:6px;padding:12px 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#2D3748;&quot;>Der Link gilt einmal. Öffnest du ihn auf einem anderen Gerät, bist du danach dort angemeldet.</td>
+  </tr>
+</table>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Klappt der Button nicht? Dann kopiere diesen Link in deinen Browser:<br><a href=&quot;https://diesdas.events/konto/bestaetigen#token_hash=pkce_8f2c1e0b9d7a4c3e5f6a1b2c3d4e5f60&amp;amp;art=neu&quot; style=&quot;color:#457B9D;word-break:break-all;&quot;>https://diesdas.events/konto/bestaetigen#token_hash=pkce_8f2c1e0b9d7a4c3e5f6a1b2c3d4e5f60&amp;amp;art=neu</a></p>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Du hast kein Konto angelegt? Dann ignoriere diese Mail einfach, es passiert nichts.</p>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;fuss&quot; style=&quot;padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;&quot;>
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf<br>
+            <a href=&quot;https://diesdas.events/impressum&quot; style=&quot;color:#718096;&quot;>Impressum</a> ·
+            <a href=&quot;https://diesdas.events/datenschutz&quot; style=&quot;color:#718096;&quot;>Datenschutz</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+"></iframe></section>
+<section><h2>2. Reset Password</h2>
+<div class="zeile">Betreff: <code id="betreff-1">Neues Passwort für dies.das</code>
+<button type="button" data-kopie="betreff-1">Betreff kopieren</button>
+<button type="button" data-kopie="html-1">HTML kopieren</button></div>
+<textarea id="html-1" readonly spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="de"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+&lt;meta name="color-scheme" content="light dark"&gt;
+&lt;meta name="supported-color-schemes" content="light dark"&gt;
+&lt;title&gt;Neues Passwort festlegen&lt;/title&gt;
+&lt;style&gt;
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="seite" style="margin:0;padding:0;background:#F7F8FA;"&gt;
+&lt;div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;"&gt;Hier legst du ein neues Passwort für dein Konto fest.&lt;/div&gt;
+&lt;table role="presentation" class="seite" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F8FA;"&gt;
+  &lt;tr&gt;
+    &lt;td class="seite-td" align="center" style="padding:32px 12px;"&gt;
+      &lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"&gt;
+        &lt;tr&gt;
+          &lt;td style="padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;"&gt;
+            &lt;a class="wortmarke" href="https://diesdas.events" style="color:#1B2540;text-decoration:none;"&gt;dies&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;das&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;düsseldorf&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="karte innen" style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;"&gt;
+            &lt;h1 class="titel" style="margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;"&gt;Neues Passwort festlegen&lt;/h1&gt;
+            &lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Hallo!&lt;/p&gt;
+&lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Jemand möchte das Passwort für dein Konto bei dies.das.düsseldorf zurücksetzen. Warst du das? Dann lege hier ein neues fest:&lt;/p&gt;
+
+&lt;table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="button" bgcolor="#1B2540" style="border-radius:8px;background:#1B2540;"&gt;
+      &lt;a class="button-a" href="{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;amp;art=reset" style="display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;"&gt;Neues Passwort festlegen&lt;/a&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="kasten" style="background:#F5F0E8;border-left:4px solid #C9A84C;border-radius:6px;padding:12px 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#2D3748;"&gt;Der Link gilt eine Stunde und nur einmal. Klappt er nicht, fordere auf der Website einfach einen neuen an.&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Klappt der Button nicht? Dann kopiere diesen Link in deinen Browser:&lt;br&gt;&lt;a href="{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;amp;art=reset" style="color:#457B9D;word-break:break-all;"&gt;{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;amp;art=reset&lt;/a&gt;&lt;/p&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Warst du das nicht? Dann ignoriere diese Mail. Dein Passwort bleibt, wie es ist.&lt;/p&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="fuss" style="padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;"&gt;
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf&lt;br&gt;
+            &lt;a href="https://diesdas.events/impressum" style="color:#718096;"&gt;Impressum&lt;/a&gt; ·
+            &lt;a href="https://diesdas.events/datenschutz" style="color:#718096;"&gt;Datenschutz&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</textarea>
+<iframe title="Reset Password" srcdoc="<!doctype html>
+<html lang=&quot;de&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;>
+<meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;>
+<title>Neues Passwort festlegen</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+</style>
+</head>
+<body class=&quot;seite&quot; style=&quot;margin:0;padding:0;background:#F7F8FA;&quot;>
+<div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;&quot;>Hier legst du ein neues Passwort für dein Konto fest.</div>
+<table role=&quot;presentation&quot; class=&quot;seite&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background:#F7F8FA;&quot;>
+  <tr>
+    <td class=&quot;seite-td&quot; align=&quot;center&quot; style=&quot;padding:32px 12px;&quot;>
+      <table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:560px;&quot;>
+        <tr>
+          <td style=&quot;padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;&quot;>
+            <a class=&quot;wortmarke&quot; href=&quot;https://diesdas.events&quot; style=&quot;color:#1B2540;text-decoration:none;&quot;>dies<span style=&quot;color:#C9A84C;&quot;>.</span>das<span style=&quot;color:#C9A84C;&quot;>.</span>düsseldorf</a>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;karte innen&quot; style=&quot;background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;&quot;>
+            <h1 class=&quot;titel&quot; style=&quot;margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;&quot;>Neues Passwort festlegen</h1>
+            <p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Hallo!</p>
+<p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Jemand möchte das Passwort für dein Konto bei dies.das.düsseldorf zurücksetzen. Warst du das? Dann lege hier ein neues fest:</p>
+
+<table role=&quot;presentation&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:8px 0 24px;&quot;>
+  <tr>
+    <td class=&quot;button&quot; bgcolor=&quot;#1B2540&quot; style=&quot;border-radius:8px;background:#1B2540;&quot;>
+      <a class=&quot;button-a&quot; href=&quot;https://diesdas.events/konto/bestaetigen#token_hash=pkce_8f2c1e0b9d7a4c3e5f6a1b2c3d4e5f60&amp;amp;art=reset&quot; style=&quot;display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;&quot;>Neues Passwort festlegen</a>
+    </td>
+  </tr>
+</table>
+
+<table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:0 0 20px;&quot;>
+  <tr>
+    <td class=&quot;kasten&quot; style=&quot;background:#F5F0E8;border-left:4px solid #C9A84C;border-radius:6px;padding:12px 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.5;color:#2D3748;&quot;>Der Link gilt eine Stunde und nur einmal. Klappt er nicht, fordere auf der Website einfach einen neuen an.</td>
+  </tr>
+</table>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Klappt der Button nicht? Dann kopiere diesen Link in deinen Browser:<br><a href=&quot;https://diesdas.events/konto/bestaetigen#token_hash=pkce_8f2c1e0b9d7a4c3e5f6a1b2c3d4e5f60&amp;amp;art=reset&quot; style=&quot;color:#457B9D;word-break:break-all;&quot;>https://diesdas.events/konto/bestaetigen#token_hash=pkce_8f2c1e0b9d7a4c3e5f6a1b2c3d4e5f60&amp;amp;art=reset</a></p>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Warst du das nicht? Dann ignoriere diese Mail. Dein Passwort bleibt, wie es ist.</p>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;fuss&quot; style=&quot;padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;&quot;>
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf<br>
+            <a href=&quot;https://diesdas.events/impressum&quot; style=&quot;color:#718096;&quot;>Impressum</a> ·
+            <a href=&quot;https://diesdas.events/datenschutz&quot; style=&quot;color:#718096;&quot;>Datenschutz</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+"></iframe></section>
+<section><h2>3. Reauthentication</h2>
+<div class="zeile">Betreff: <code id="betreff-2">Dein Bestätigungscode für dies.das</code>
+<button type="button" data-kopie="betreff-2">Betreff kopieren</button>
+<button type="button" data-kopie="html-2">HTML kopieren</button></div>
+<textarea id="html-2" readonly spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="de"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+&lt;meta name="color-scheme" content="light dark"&gt;
+&lt;meta name="supported-color-schemes" content="light dark"&gt;
+&lt;title&gt;Dein Bestätigungscode&lt;/title&gt;
+&lt;style&gt;
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="seite" style="margin:0;padding:0;background:#F7F8FA;"&gt;
+&lt;div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;"&gt;Der Code für die Änderung deines Passworts.&lt;/div&gt;
+&lt;table role="presentation" class="seite" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F8FA;"&gt;
+  &lt;tr&gt;
+    &lt;td class="seite-td" align="center" style="padding:32px 12px;"&gt;
+      &lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"&gt;
+        &lt;tr&gt;
+          &lt;td style="padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;"&gt;
+            &lt;a class="wortmarke" href="https://diesdas.events" style="color:#1B2540;text-decoration:none;"&gt;dies&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;das&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;düsseldorf&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="karte innen" style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;"&gt;
+            &lt;h1 class="titel" style="margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;"&gt;Dein Bestätigungscode&lt;/h1&gt;
+            &lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Hallo!&lt;/p&gt;
+&lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Du möchtest dein Passwort bei dies.das.düsseldorf ändern. Dein Bestätigungscode:&lt;/p&gt;
+
+&lt;table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="kasten" style="background:#F5F0E8;border-radius:8px;padding:14px 22px;font-family:'Courier New',Courier,monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#1B2540;"&gt;{{ .Token }}&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Warst du das nicht? Dann ignoriere diese Mail und ändere vorsichtshalber dein Passwort.&lt;/p&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="fuss" style="padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;"&gt;
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf&lt;br&gt;
+            &lt;a href="https://diesdas.events/impressum" style="color:#718096;"&gt;Impressum&lt;/a&gt; ·
+            &lt;a href="https://diesdas.events/datenschutz" style="color:#718096;"&gt;Datenschutz&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</textarea>
+<iframe title="Reauthentication" srcdoc="<!doctype html>
+<html lang=&quot;de&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;>
+<meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;>
+<title>Dein Bestätigungscode</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+</style>
+</head>
+<body class=&quot;seite&quot; style=&quot;margin:0;padding:0;background:#F7F8FA;&quot;>
+<div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;&quot;>Der Code für die Änderung deines Passworts.</div>
+<table role=&quot;presentation&quot; class=&quot;seite&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background:#F7F8FA;&quot;>
+  <tr>
+    <td class=&quot;seite-td&quot; align=&quot;center&quot; style=&quot;padding:32px 12px;&quot;>
+      <table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:560px;&quot;>
+        <tr>
+          <td style=&quot;padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;&quot;>
+            <a class=&quot;wortmarke&quot; href=&quot;https://diesdas.events&quot; style=&quot;color:#1B2540;text-decoration:none;&quot;>dies<span style=&quot;color:#C9A84C;&quot;>.</span>das<span style=&quot;color:#C9A84C;&quot;>.</span>düsseldorf</a>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;karte innen&quot; style=&quot;background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;&quot;>
+            <h1 class=&quot;titel&quot; style=&quot;margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;&quot;>Dein Bestätigungscode</h1>
+            <p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Hallo!</p>
+<p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Du möchtest dein Passwort bei dies.das.düsseldorf ändern. Dein Bestätigungscode:</p>
+
+<table role=&quot;presentation&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:4px 0 24px;&quot;>
+  <tr>
+    <td class=&quot;kasten&quot; style=&quot;background:#F5F0E8;border-radius:8px;padding:14px 22px;font-family:'Courier New',Courier,monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#1B2540;&quot;>482915</td>
+  </tr>
+</table>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Warst du das nicht? Dann ignoriere diese Mail und ändere vorsichtshalber dein Passwort.</p>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;fuss&quot; style=&quot;padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;&quot;>
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf<br>
+            <a href=&quot;https://diesdas.events/impressum&quot; style=&quot;color:#718096;&quot;>Impressum</a> ·
+            <a href=&quot;https://diesdas.events/datenschutz&quot; style=&quot;color:#718096;&quot;>Datenschutz</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+"></iframe></section>
+<section><h2>4. Change Email Address</h2>
+<div class="zeile">Betreff: <code id="betreff-3">Änderung deiner Mailadresse bei dies.das</code>
+<button type="button" data-kopie="betreff-3">Betreff kopieren</button>
+<button type="button" data-kopie="html-3">HTML kopieren</button></div>
+<textarea id="html-3" readonly spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="de"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+&lt;meta name="color-scheme" content="light dark"&gt;
+&lt;meta name="supported-color-schemes" content="light dark"&gt;
+&lt;title&gt;Mailadresse ändern&lt;/title&gt;
+&lt;style&gt;
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="seite" style="margin:0;padding:0;background:#F7F8FA;"&gt;
+&lt;div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;"&gt;Eine Änderung der Mailadresse geht bei uns zurzeit nur persönlich.&lt;/div&gt;
+&lt;table role="presentation" class="seite" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F8FA;"&gt;
+  &lt;tr&gt;
+    &lt;td class="seite-td" align="center" style="padding:32px 12px;"&gt;
+      &lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"&gt;
+        &lt;tr&gt;
+          &lt;td style="padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;"&gt;
+            &lt;a class="wortmarke" href="https://diesdas.events" style="color:#1B2540;text-decoration:none;"&gt;dies&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;das&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;düsseldorf&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="karte innen" style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;"&gt;
+            &lt;h1 class="titel" style="margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;"&gt;Mailadresse ändern&lt;/h1&gt;
+            &lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Hallo!&lt;/p&gt;
+&lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Für dein Konto bei dies.das.düsseldorf wurde eine Änderung der Mailadresse angefragt. Das geht bei uns zurzeit nur persönlich: Schreib uns dazu einfach an &lt;a href="mailto:moin@rocktician.com" style="color:#457B9D;"&gt;moin@rocktician.com&lt;/a&gt;.&lt;/p&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Warst du das nicht? Dann ignoriere diese Mail. Es ändert sich nichts.&lt;/p&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="fuss" style="padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;"&gt;
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf&lt;br&gt;
+            &lt;a href="https://diesdas.events/impressum" style="color:#718096;"&gt;Impressum&lt;/a&gt; ·
+            &lt;a href="https://diesdas.events/datenschutz" style="color:#718096;"&gt;Datenschutz&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</textarea>
+<iframe title="Change Email Address" srcdoc="<!doctype html>
+<html lang=&quot;de&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;>
+<meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;>
+<title>Mailadresse ändern</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+</style>
+</head>
+<body class=&quot;seite&quot; style=&quot;margin:0;padding:0;background:#F7F8FA;&quot;>
+<div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;&quot;>Eine Änderung der Mailadresse geht bei uns zurzeit nur persönlich.</div>
+<table role=&quot;presentation&quot; class=&quot;seite&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background:#F7F8FA;&quot;>
+  <tr>
+    <td class=&quot;seite-td&quot; align=&quot;center&quot; style=&quot;padding:32px 12px;&quot;>
+      <table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:560px;&quot;>
+        <tr>
+          <td style=&quot;padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;&quot;>
+            <a class=&quot;wortmarke&quot; href=&quot;https://diesdas.events&quot; style=&quot;color:#1B2540;text-decoration:none;&quot;>dies<span style=&quot;color:#C9A84C;&quot;>.</span>das<span style=&quot;color:#C9A84C;&quot;>.</span>düsseldorf</a>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;karte innen&quot; style=&quot;background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;&quot;>
+            <h1 class=&quot;titel&quot; style=&quot;margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;&quot;>Mailadresse ändern</h1>
+            <p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Hallo!</p>
+<p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Für dein Konto bei dies.das.düsseldorf wurde eine Änderung der Mailadresse angefragt. Das geht bei uns zurzeit nur persönlich: Schreib uns dazu einfach an <a href=&quot;mailto:moin@rocktician.com&quot; style=&quot;color:#457B9D;&quot;>moin@rocktician.com</a>.</p>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Warst du das nicht? Dann ignoriere diese Mail. Es ändert sich nichts.</p>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;fuss&quot; style=&quot;padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;&quot;>
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf<br>
+            <a href=&quot;https://diesdas.events/impressum&quot; style=&quot;color:#718096;&quot;>Impressum</a> ·
+            <a href=&quot;https://diesdas.events/datenschutz&quot; style=&quot;color:#718096;&quot;>Datenschutz</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+"></iframe></section>
+<section><h2>5. Magic Link</h2>
+<div class="zeile">Betreff: <code id="betreff-4">Anmeldung bei dies.das</code>
+<button type="button" data-kopie="betreff-4">Betreff kopieren</button>
+<button type="button" data-kopie="html-4">HTML kopieren</button></div>
+<textarea id="html-4" readonly spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="de"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+&lt;meta name="color-scheme" content="light dark"&gt;
+&lt;meta name="supported-color-schemes" content="light dark"&gt;
+&lt;title&gt;Anmeldung bei dies.das&lt;/title&gt;
+&lt;style&gt;
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="seite" style="margin:0;padding:0;background:#F7F8FA;"&gt;
+&lt;div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;"&gt;Bei uns meldest du dich mit Mailadresse und Passwort an.&lt;/div&gt;
+&lt;table role="presentation" class="seite" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F8FA;"&gt;
+  &lt;tr&gt;
+    &lt;td class="seite-td" align="center" style="padding:32px 12px;"&gt;
+      &lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"&gt;
+        &lt;tr&gt;
+          &lt;td style="padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;"&gt;
+            &lt;a class="wortmarke" href="https://diesdas.events" style="color:#1B2540;text-decoration:none;"&gt;dies&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;das&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;düsseldorf&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="karte innen" style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;"&gt;
+            &lt;h1 class="titel" style="margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;"&gt;Anmeldung bei dies.das&lt;/h1&gt;
+            &lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Hallo!&lt;/p&gt;
+&lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Für dein Konto bei dies.das.düsseldorf wurde eine Anmeldung per Link angefragt. Diese Anmeldeart bieten wir nicht an. Melde dich bitte mit Mailadresse und Passwort an.&lt;/p&gt;
+
+&lt;table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="button" bgcolor="#1B2540" style="border-radius:8px;background:#1B2540;"&gt;
+      &lt;a class="button-a" href="{{ .SiteURL }}/konto/anmelden" style="display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;"&gt;Zur Anmeldung&lt;/a&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Warst du das nicht? Dann ignoriere diese Mail. Es passiert nichts.&lt;/p&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="fuss" style="padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;"&gt;
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf&lt;br&gt;
+            &lt;a href="https://diesdas.events/impressum" style="color:#718096;"&gt;Impressum&lt;/a&gt; ·
+            &lt;a href="https://diesdas.events/datenschutz" style="color:#718096;"&gt;Datenschutz&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</textarea>
+<iframe title="Magic Link" srcdoc="<!doctype html>
+<html lang=&quot;de&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;>
+<meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;>
+<title>Anmeldung bei dies.das</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+</style>
+</head>
+<body class=&quot;seite&quot; style=&quot;margin:0;padding:0;background:#F7F8FA;&quot;>
+<div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;&quot;>Bei uns meldest du dich mit Mailadresse und Passwort an.</div>
+<table role=&quot;presentation&quot; class=&quot;seite&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background:#F7F8FA;&quot;>
+  <tr>
+    <td class=&quot;seite-td&quot; align=&quot;center&quot; style=&quot;padding:32px 12px;&quot;>
+      <table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:560px;&quot;>
+        <tr>
+          <td style=&quot;padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;&quot;>
+            <a class=&quot;wortmarke&quot; href=&quot;https://diesdas.events&quot; style=&quot;color:#1B2540;text-decoration:none;&quot;>dies<span style=&quot;color:#C9A84C;&quot;>.</span>das<span style=&quot;color:#C9A84C;&quot;>.</span>düsseldorf</a>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;karte innen&quot; style=&quot;background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;&quot;>
+            <h1 class=&quot;titel&quot; style=&quot;margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;&quot;>Anmeldung bei dies.das</h1>
+            <p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Hallo!</p>
+<p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Für dein Konto bei dies.das.düsseldorf wurde eine Anmeldung per Link angefragt. Diese Anmeldeart bieten wir nicht an. Melde dich bitte mit Mailadresse und Passwort an.</p>
+
+<table role=&quot;presentation&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:8px 0 24px;&quot;>
+  <tr>
+    <td class=&quot;button&quot; bgcolor=&quot;#1B2540&quot; style=&quot;border-radius:8px;background:#1B2540;&quot;>
+      <a class=&quot;button-a&quot; href=&quot;https://diesdas.events/konto/anmelden&quot; style=&quot;display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;&quot;>Zur Anmeldung</a>
+    </td>
+  </tr>
+</table>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Warst du das nicht? Dann ignoriere diese Mail. Es passiert nichts.</p>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;fuss&quot; style=&quot;padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;&quot;>
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf<br>
+            <a href=&quot;https://diesdas.events/impressum&quot; style=&quot;color:#718096;&quot;>Impressum</a> ·
+            <a href=&quot;https://diesdas.events/datenschutz&quot; style=&quot;color:#718096;&quot;>Datenschutz</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+"></iframe></section>
+<section><h2>6. Invite user</h2>
+<div class="zeile">Betreff: <code id="betreff-5">Einladung zu dies.das</code>
+<button type="button" data-kopie="betreff-5">Betreff kopieren</button>
+<button type="button" data-kopie="html-5">HTML kopieren</button></div>
+<textarea id="html-5" readonly spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="de"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+&lt;meta name="color-scheme" content="light dark"&gt;
+&lt;meta name="supported-color-schemes" content="light dark"&gt;
+&lt;title&gt;Einladung zu dies.das&lt;/title&gt;
+&lt;style&gt;
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="seite" style="margin:0;padding:0;background:#F7F8FA;"&gt;
+&lt;div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;"&gt;Ein Konto legst du bei uns selbst an.&lt;/div&gt;
+&lt;table role="presentation" class="seite" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F8FA;"&gt;
+  &lt;tr&gt;
+    &lt;td class="seite-td" align="center" style="padding:32px 12px;"&gt;
+      &lt;table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"&gt;
+        &lt;tr&gt;
+          &lt;td style="padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;"&gt;
+            &lt;a class="wortmarke" href="https://diesdas.events" style="color:#1B2540;text-decoration:none;"&gt;dies&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;das&lt;span style="color:#C9A84C;"&gt;.&lt;/span&gt;düsseldorf&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="karte innen" style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;"&gt;
+            &lt;h1 class="titel" style="margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;"&gt;Einladung zu dies.das&lt;/h1&gt;
+            &lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Hallo!&lt;/p&gt;
+&lt;p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;"&gt;Du hast eine Einladung zu dies.das.düsseldorf erhalten. Einladungen nutzen wir nicht. Ein Konto legst du auf unserer Website selbst an, sobald das möglich ist.&lt;/p&gt;
+
+&lt;table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"&gt;
+  &lt;tr&gt;
+    &lt;td class="button" bgcolor="#1B2540" style="border-radius:8px;background:#1B2540;"&gt;
+      &lt;a class="button-a" href="{{ .SiteURL }}/konto/anmelden" style="display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;"&gt;Zu dies.das&lt;/a&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;p class="leise" style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;"&gt;Du weißt nichts davon? Dann ignoriere diese Mail.&lt;/p&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+          &lt;td class="fuss" style="padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;"&gt;
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf&lt;br&gt;
+            &lt;a href="https://diesdas.events/impressum" style="color:#718096;"&gt;Impressum&lt;/a&gt; ·
+            &lt;a href="https://diesdas.events/datenschutz" style="color:#718096;"&gt;Datenschutz&lt;/a&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</textarea>
+<iframe title="Invite user" srcdoc="<!doctype html>
+<html lang=&quot;de&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;>
+<meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;>
+<title>Einladung zu dies.das</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .seite, .seite-td { background:#0D1117 !important; }
+    .karte { background:#161B26 !important; border-color:#2D3748 !important; }
+    .karte p, .karte td, .titel { color:#F7F8FA !important; }
+    .leise, .leise a, .fuss, .fuss a { color:#A0AEC0 !important; }
+    .wortmarke { color:#F7F8FA !important; }
+    .kasten { background:#1F2533 !important; color:#F7F8FA !important; }
+    .button { background:#C9A84C !important; }
+    .button-a { color:#1B2540 !important; }
+  }
+  @media (max-width: 600px) { .innen { padding:24px 20px !important; } }
+</style>
+</head>
+<body class=&quot;seite&quot; style=&quot;margin:0;padding:0;background:#F7F8FA;&quot;>
+<div style=&quot;display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;&quot;>Ein Konto legst du bei uns selbst an.</div>
+<table role=&quot;presentation&quot; class=&quot;seite&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background:#F7F8FA;&quot;>
+  <tr>
+    <td class=&quot;seite-td&quot; align=&quot;center&quot; style=&quot;padding:32px 12px;&quot;>
+      <table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:560px;&quot;>
+        <tr>
+          <td style=&quot;padding:0 4px 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-style:italic;font-size:24px;line-height:1;&quot;>
+            <a class=&quot;wortmarke&quot; href=&quot;https://diesdas.events&quot; style=&quot;color:#1B2540;text-decoration:none;&quot;>dies<span style=&quot;color:#C9A84C;&quot;>.</span>das<span style=&quot;color:#C9A84C;&quot;>.</span>düsseldorf</a>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;karte innen&quot; style=&quot;background:#FFFFFF;border:1px solid #E2E8F0;border-top:4px solid #C9A84C;border-radius:12px;padding:32px 36px;&quot;>
+            <h1 class=&quot;titel&quot; style=&quot;margin:0 0 18px;font-family:Georgia, 'Times New Roman', Times, serif;font-weight:normal;font-size:28px;line-height:1.2;color:#1B2540;&quot;>Einladung zu dies.das</h1>
+            <p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Hallo!</p>
+<p style=&quot;margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2D3748;&quot;>Du hast eine Einladung zu dies.das.düsseldorf erhalten. Einladungen nutzen wir nicht. Ein Konto legst du auf unserer Website selbst an, sobald das möglich ist.</p>
+
+<table role=&quot;presentation&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin:8px 0 24px;&quot;>
+  <tr>
+    <td class=&quot;button&quot; bgcolor=&quot;#1B2540&quot; style=&quot;border-radius:8px;background:#1B2540;&quot;>
+      <a class=&quot;button-a&quot; href=&quot;https://diesdas.events/konto/anmelden&quot; style=&quot;display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;&quot;>Zu dies.das</a>
+    </td>
+  </tr>
+</table>
+<p class=&quot;leise&quot; style=&quot;margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#718096;&quot;>Du weißt nichts davon? Dann ignoriere diese Mail.</p>
+          </td>
+        </tr>
+        <tr>
+          <td class=&quot;fuss&quot; style=&quot;padding:20px 4px 0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.6;color:#718096;&quot;>
+            dies.das.düsseldorf · Rocktician e. K., Erkrather Str. 401, 40231 Düsseldorf<br>
+            <a href=&quot;https://diesdas.events/impressum&quot; style=&quot;color:#718096;&quot;>Impressum</a> ·
+            <a href=&quot;https://diesdas.events/datenschutz&quot; style=&quot;color:#718096;&quot;>Datenschutz</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+"></iframe></section>
+<script>
+  // Kopieren in die Zwischenablage; ohne Clipboard-API (z. B. bei file://) über Markieren und execCommand
+  document.addEventListener("click", async (e) => {
+    const knopf = e.target.closest("button[data-kopie]");
+    if (!knopf) return;
+    const quelle = document.getElementById(knopf.dataset.kopie);
+    const text = quelle.value ?? quelle.textContent;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+    if (!ok && quelle.select) { quelle.focus(); quelle.select(); ok = document.execCommand("copy"); }
+    const alt = knopf.textContent;
+    knopf.textContent = ok ? "Kopiert ✓" : "Bitte markieren und Strg+C";
+    knopf.classList.toggle("ok", ok);
+    setTimeout(() => { knopf.textContent = alt; knopf.classList.remove("ok"); }, 2000);
+  });
+</script>
+</body></html>

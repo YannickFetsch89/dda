@@ -10,6 +10,7 @@ import { ZEITRAUM_OPTIONEN, plusTage } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { stadtteilPfad } from "@/lib/landing";
 import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { kontenAktiv } from "@/lib/konto/konfig";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
 export const KONTAKT_MAIL = "hallo@diesdas.events";
@@ -46,6 +47,12 @@ export function Kopf() {
           <Link href="/merkliste" className="icon-btn nur-desktop" aria-label="Merkliste">
             <Icon name="favorite" />
           </Link>
+          {/* Immer „Konto“: Der Kopf ist statisch, ein wechselnder Text würde nach dem Laden flackern (Plan 7.3) */}
+          {kontenAktiv() && (
+            <Link href="/konto" className="icon-btn nur-desktop" aria-label="Konto">
+              <Icon name="person" />
+            </Link>
+          )}
           <Link href="/event-melden" className="btn btn--gold nur-desktop">
             Event melden
           </Link>
@@ -68,6 +75,7 @@ export function Kopf() {
               {SPIELPLAETZE_VERLINKT && <Link href="/guides/spielplaetze">Spielplätze</Link>}
               {/* Trennstrich unter den Guides: kommt mit der Zwischenüberschrift (border-top wie bei „Guides“) */}
               <span className="popover__titel">Service</span>
+              {kontenAktiv() && <Link href="/konto">Konto</Link>}
               <Link href="/merkliste">Merkliste</Link>
               <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>
@@ -172,6 +180,7 @@ export async function Fuss() {
           <a href={`mailto:${KONTAKT_MAIL}?subject=Veranstalter`}>Für Veranstalter</a>
           <Link href="/#newsletter">Newsletter</Link>
           <Link href="/merkliste">Merkliste</Link>
+          {kontenAktiv() && <Link href="/konto">Konto</Link>}
         </div>
       </div>
       {/* Rechtliches mittig ganz unten, mit schmaler Trennlinie darüber */}
@@ -179,6 +188,7 @@ export async function Fuss() {
         <div className="fuss__unten">
           <Link href="/impressum">Impressum</Link>
           <Link href="/datenschutz">Datenschutz</Link>
+          {kontenAktiv() && <Link href="/nutzungsbedingungen">Nutzungsbedingungen</Link>}
         </div>
       </div>
     </footer>

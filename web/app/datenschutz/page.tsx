@@ -1,5 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { kontenAktiv } from "@/lib/konto/konfig";
+import { KontoAbschnitt } from "./konto-abschnitt";
+
+/**
+ * Stand mit Nutzerkonten (Plan Nutzerkonten Schritt 8): auf den Monat setzen, in dem KONTEN_AKTIV eingeschaltet wird.
+ * Ohne Schalter gilt weiter der bisherige Stand.
+ */
+const STAND_MIT_KONTEN = "November 2026";
+const STAND_OHNE_KONTEN = "Oktober 2026";
 
 export const metadata: Metadata = {
   title: "Datenschutzerklärung",
@@ -7,10 +16,14 @@ export const metadata: Metadata = {
 };
 
 export default function DatenschutzSeite() {
+  // Mit Konten kommt Abschnitt 13 „Nutzerkonto“ dazu, die bisherigen Abschnitte 13–17 werden zu 14–18
+  const konten = kontenAktiv();
+  const nr = (alt: number) => (konten && alt >= 13 ? alt + 1 : alt);
+  const stand = konten ? STAND_MIT_KONTEN : STAND_OHNE_KONTEN;
   return (
     <div className="container sektion rechtliches">
       <h1 className="d">Datenschutzerklärung</h1>
-      <p className="klein">Stand: Oktober 2026</p>
+      <p className="klein">Stand: {stand}</p>
 
       <h2>1. Verantwortlicher</h2>
       <p>
@@ -53,6 +66,13 @@ export default function DatenschutzSeite() {
         erhoben. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse). Die Logfiles werden
         nach 30 Tagen automatisch gelöscht.
       </p>
+      {konten && (
+        <p>
+          Über den Mailserver unseres Hosting-Anbieters versenden wir außerdem die E-Mails zum Nutzerkonto
+          (Abschnitt 13). Dabei verarbeitet der Anbieter Ihre E-Mail-Adresse und den Inhalt der jeweiligen E-Mail in
+          unserem Auftrag.
+        </p>
+      )}
 
       <h2>4. SSL-Verschlüsselung</h2>
       <p>
@@ -69,6 +89,26 @@ export default function DatenschutzSeite() {
           <b>Technisch notwendige Cookies:</b> Diese Cookies sind für den Betrieb der Website erforderlich
           (z.&thinsp;B. Speicherung Ihrer Cookie-Einstellungen, Theme-Präferenz, Merkliste). Rechtsgrundlage
           ist Art. 6 Abs. 1 lit. f DSGVO.
+          {konten && (
+            <>
+              {" "}Wenn Sie sich in Ihrem Nutzerkonto anmelden, setzen wir zwei weitere technisch notwendige Cookies:
+              <ul>
+                <li>
+                  <b>ddd_sitzung</b> enthält die Anmeldedaten Ihrer Sitzung. Es ist für Skripte auf der Seite nicht
+                  lesbar (HttpOnly) und wird nur an die Konto-Funktionen unseres Servers geschickt, nicht bei normalen
+                  Seitenaufrufen. Laufzeit: 30 Tage, verlängert bei Nutzung. Nach einem Klick auf „Passwort vergessen“
+                  gilt es nur eine Stunde.
+                </li>
+                <li>
+                  <b>ddd_konto</b> enthält nur „0“ oder „1“ und sagt der Seite, ob Sie angemeldet sind. So zeigt die
+                  Seite Ihre Merkliste im richtigen Zustand an, ohne Ihre Anmeldedaten bei jedem Seitenaufruf
+                  mitzuschicken. Laufzeit wie die Sitzung, gelöscht beim Abmelden.
+                </li>
+              </ul>
+              Beide Cookies sind unbedingt erforderlich, damit eine von Ihnen gewünschte Anmeldung über mehrere Seiten
+              hinweg bestehen bleibt (§ 25 Abs. 2 Nr. 2 TDDDG). Sie werden nur gesetzt, wenn Sie sich anmelden.
+            </>
+          )}
         </li>
         <li>
           <b>Analyse-Cookies (Google Analytics):</b> Diese Cookies werden nur gesetzt, wenn Sie dem über
@@ -115,11 +155,35 @@ export default function DatenschutzSeite() {
           Speicherung Ihrer Entscheidung, Google-Maps-Karten auf Event-Seiten dauerhaft anzuzeigen – nur wenn Sie
           „Karte anzeigen“ wählen; bei „Nur dieses Mal“ wird nichts gespeichert (siehe Abschnitt 9)
         </li>
+        {konten && (
+          <>
+            <li>
+              wenn Sie angemeldet sind: eine Kopie Ihrer Konto-Merkliste und noch nicht übertragene Änderungen, damit die
+              Merkliste auch bei schlechter Verbindung sofort reagiert
+            </li>
+            <li>
+              Merkungen, die nur auf diesem Gerät gespeichert werden dürfen (Abschnitt 13, „Besonders schützenswerte
+              Events“)
+            </li>
+            <li>ein Merker, dass Sie den Hinweis auf das Nutzerkonto nach dem ersten Merken schon gesehen haben</li>
+          </>
+        )}
       </ul>
-      <p>
-        Diese Daten werden ausschließlich lokal in Ihrem Browser gespeichert und nicht an uns oder Dritte
-        übermittelt. Sie können diese Daten jederzeit über die Browser-Einstellungen löschen.
-      </p>
+      {konten ? (
+        <p>
+          Ohne Nutzerkonto werden diese Daten ausschließlich lokal in Ihrem Browser gespeichert und nicht an uns oder
+          Dritte übermittelt. Wenn Sie angemeldet sind, wird Ihre Merkliste in Ihrem Konto gespeichert (Abschnitt 13).
+          Auf dem Gerät liegt dann nur eine Kopie, die beim Abmelden gelöscht wird. Beim ersten Anmelden übernehmen wir
+          die bisher nur auf dem Gerät gespeicherte Merkliste in Ihr Konto, wenn Ihr Konto noch keine Merkliste hatte;
+          sonst fragen wir vorher nach. Sie können die lokal gespeicherten Daten jederzeit über die
+          Browser-Einstellungen löschen.
+        </p>
+      ) : (
+        <p>
+          Diese Daten werden ausschließlich lokal in Ihrem Browser gespeichert und nicht an uns oder Dritte
+          übermittelt. Sie können diese Daten jederzeit über die Browser-Einstellungen löschen.
+        </p>
+      )}
 
       <h2>8. Social-Media-Auftritte</h2>
       <p>
@@ -205,8 +269,10 @@ export default function DatenschutzSeite() {
           <b>Supabase:</b> Wir nutzen Supabase als Datenbank-Backend für die Speicherung von Event-Daten.
           Supabase wird von Supabase, Inc., 970 Toa Payoh North #07-04, Singapore 318992 betrieben.
           Die Daten liegen auf Supabase-Servern (AWS, Region EU, Frankfurt). Neben Event-Daten speichern wir dort
-          Newsletter-Anmeldungen (Abschnitt 11) sowie über „Event melden“ eingereichte Angaben und Bilder
-          (Abschnitt 12). Ihr Browser verbindet sich dabei nicht direkt mit Supabase – die Formulare werden an
+          Newsletter-Anmeldungen (Abschnitt 11){konten ? "," : " sowie"} über „Event melden“ eingereichte Angaben und Bilder
+          (Abschnitt 12)
+          {konten && " sowie Nutzerkonten und Merklisten (Abschnitt 13). Supabase stellt außerdem die Anmeldung für Nutzerkonten bereit"}
+          . Ihr Browser verbindet sich dabei nicht direkt mit Supabase – die Formulare werden an
           unseren Server gesendet, der die Daten weiterleitet.{" "}
           <a href="https://supabase.com/privacy" target="_blank" rel="noopener">
             Datenschutzerklärung von Supabase
@@ -257,7 +323,9 @@ export default function DatenschutzSeite() {
         (Art. 6 Abs. 1 lit. f DSGVO).
       </p>
 
-      <h2>13. Kontaktaufnahme</h2>
+      {konten && <KontoAbschnitt nr={13} />}
+
+      <h2>{nr(13)}. Kontaktaufnahme</h2>
       <p>
         Wenn Sie uns per E-Mail kontaktieren, werden Ihre Angaben einschließlich der von Ihnen angegebenen
         Kontaktdaten zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert.
@@ -266,7 +334,7 @@ export default function DatenschutzSeite() {
         Interesse).
       </p>
 
-      <h2>14. Ihre Rechte</h2>
+      <h2>{nr(14)}. Ihre Rechte</h2>
       <p>Sie haben jederzeit das Recht auf:</p>
       <ul>
         <li><b>Auskunft</b> über Ihre bei uns gespeicherten personenbezogenen Daten (Art. 15 DSGVO)</li>
@@ -281,20 +349,28 @@ export default function DatenschutzSeite() {
         Zur Ausübung Ihrer Rechte wenden Sie sich bitte an:{" "}
         <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>
       </p>
+      {konten && (
+        <p>
+          Wenn Sie ein Nutzerkonto haben, können Sie viele dieser Rechte direkt im Konto ausüben: Einwilligungen
+          widerrufen, der Beliebtheits-Zählung widersprechen, Ihre Daten herunterladen und Ihr Konto löschen.
+        </p>
+      )}
       <p>
         Sie haben außerdem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer
         personenbezogenen Daten zu beschweren.
       </p>
 
-      <h2>15. Keine Weitergabe an Dritte</h2>
+      <h2>{nr(15)}. Keine Weitergabe an Dritte</h2>
       <p>
         Eine Übermittlung Ihrer persönlichen Daten an Dritte zu anderen als den im Folgenden aufgeführten
         Zwecken findet nicht statt. Wir geben Ihre persönlichen Daten nur an Dritte weiter, wenn Sie Ihre
         ausdrückliche Einwilligung erteilt haben, die Weitergabe zur Geltendmachung von Rechtsansprüchen
         erforderlich ist oder eine gesetzliche Verpflichtung besteht.
+        {konten &&
+          " Keine Weitergabe in diesem Sinne ist die Verarbeitung durch Dienstleister, die Daten in unserem Auftrag und nach unseren Weisungen verarbeiten (Auftragsverarbeiter nach Art. 28 DSGVO), insbesondere unser Hosting-Anbieter (einschließlich E-Mail-Versand) und Supabase."}
       </p>
 
-      <h2>16. Widerspruch gegen Werbe-Mails</h2>
+      <h2>{nr(16)}. Widerspruch gegen Werbe-Mails</h2>
       <p>
         Der Nutzung von im Rahmen der Impressumspflicht veröffentlichten Kontaktdaten zur Übersendung von
         nicht ausdrücklich angeforderter Werbung und Informationsmaterialien wird hiermit widersprochen. Der
@@ -302,9 +378,9 @@ export default function DatenschutzSeite() {
         von Werbeinformationen vor.
       </p>
 
-      <h2>17. Aktualität und Änderung dieser Datenschutzerklärung</h2>
+      <h2>{nr(17)}. Aktualität und Änderung dieser Datenschutzerklärung</h2>
       <p>
-        Diese Datenschutzerklärung ist aktuell gültig und hat den Stand Oktober 2026. Durch die
+        Diese Datenschutzerklärung ist aktuell gültig und hat den Stand {stand}. Durch die
         Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben
         kann es notwendig werden, diese Datenschutzerklärung zu ändern. Die jeweils aktuelle Fassung kann
         jederzeit auf dieser Seite abgerufen werden.

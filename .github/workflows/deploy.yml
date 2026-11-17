@@ -19,11 +19,14 @@ jobs:
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          # Schalter Nutzerkonten (Plan Nutzerkonten E10, Schritt 8): GitHub → Settings → Secrets and variables →
+          # Actions → Variables → KONTEN_AKTIV = 1. Fehlt die Variable oder ist sie nicht „1“, sind die Konten aus.
+          KONTEN_AKTIV: ${{ vars.KONTEN_AKTIV }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY
+          envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY,KONTEN_AKTIV
           script: |
             cd /home/dies_das_duesseldorfadmin/dda
 
@@ -77,6 +80,17 @@ jobs:
               fi
               echo "Service Key in web/.env.local gesetzt"
             fi
+
+            # Schalter Nutzerkonten in web/.env.local – immer ausdrücklich gesetzt (1 oder 0), damit kein alter Wert
+            # auf dem Server stehen bleibt. Die statischen Seiten lesen ihn beim Build, daher vor „npm run build“.
+            if [ "$KONTEN_AKTIV" = "1" ]; then KONTEN_WERT=1; else KONTEN_WERT=0; fi
+            touch web/.env.local
+            if grep -q "^KONTEN_AKTIV=" web/.env.local; then
+              sed -i "s|^KONTEN_AKTIV=.*|KONTEN_AKTIV=$KONTEN_WERT|" web/.env.local
+            else
+              echo "KONTEN_AKTIV=$KONTEN_WERT" >> web/.env.local
+            fi
+            echo "Nutzerkonten-Schalter: KONTEN_AKTIV=$KONTEN_WERT"
 
             # Umgebungsvariablen für uv/Python
             export LD_LIBRARY_PATH="/home/dies_das_duesseldorfadmin/.local/lib:$LD_LIBRARY_PATH"

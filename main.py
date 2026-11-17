@@ -222,6 +222,14 @@ async def _schritte_ausfuehren(report: LaufReport):
     except Exception as e:
         logger.error("Meldungen-Aufräumen fehlgeschlagen: %s", e)
 
+    # Schritt 2c: Löschfristen der Nutzerkonten (unbestätigt, ohne Alter, unter 16; Plan Nutzerkonten 9.3)
+    logger.info("--- Schritt 2c: Nutzerkonten aufräumen ---")
+    try:
+        from pipeline.konten_aufraeumen import konten_aufraeumen
+        konten_aufraeumen()
+    except Exception as e:
+        logger.error("Konten-Aufräumen fehlgeschlagen: %s", e)
+
     # Schritt 3: Kategorisierung
     logger.info("--- Schritt 3: Kategorisierung ---")
     from pipeline import categorizer

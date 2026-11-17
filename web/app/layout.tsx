@@ -3,6 +3,8 @@ import { DM_Serif_Display, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { DetailsVerhalten, TabBar } from "@/components/client";
 import { CookieBanner } from "@/components/cookie-banner";
+import { KontoSync, MerkHinweis } from "@/components/konto";
+import { kontenAktiv } from "@/lib/konto/konfig";
 import { DatenHinweis, Fuss, KategorieLeiste, Kopf } from "@/components/rahmen";
 import { STANDARD_BILD, markeJsonLd } from "@/lib/seo";
 import { jsonLdText } from "@/lib/json-ld";
@@ -45,7 +47,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(markeJsonLd(process.env.SITE_URL ?? "https://diesdas.events")) }} />
       </head>
-      <body>
+      {/* data-konten: Schalter KONTEN_AKTIV beim Build, für Client-Bausteine (Hinweis nach dem ersten Merken) */}
+      <body data-konten={kontenAktiv() ? "1" : undefined}>
         <DatenHinweis />
         <Kopf />
         <KategorieLeiste />
@@ -53,6 +56,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Fuss />
         <TabBar />
         <DetailsVerhalten />
+        {kontenAktiv() && (
+          <>
+            <KontoSync />
+            <MerkHinweis />
+          </>
+        )}
         <CookieBanner />
       </body>
     </html>
