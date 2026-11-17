@@ -11,8 +11,11 @@ import { adresseNormal, adressSchluessel } from "@/lib/konto/pruefungen";
 import { kontoAntwort, kontoRoute, ZEIT } from "@/lib/konto/route";
 
 /**
- * ANNAHME bis zum Vorversuch (Plan 5.1 Schritt 13, Schritt 4 in Abschnitt 15): Der Bestätigungslink wird mit
- * type „email“ geprüft („signup“ gilt bei Supabase als veraltet). Der Vorversuch legt den Typ fest.
+ * Typ des Bestätigungslinks (Plan 5.1 Schritt 13): „email“ („signup“ gilt bei Supabase als veraltet).
+ * BESTÄTIGT am 17.11.2026: Der Auftraggeber hat lokal gegen das echte Supabase-Projekt registriert, den Link aus der
+ * Mail geöffnet und landete angemeldet auf /konto/willkommen; „Passwort vergessen“ (recovery) ebenso.
+ * Der Ersatz-Code steht nicht in unserer Bestätigungsmail (docs/konto-mails/1-confirm-signup.html); der Code-Zweig
+ * unten bleibt für den Fall, dass er später ergänzt wird.
  */
 export const BESTAETIGUNG_TYP: EmailOtpType = "email";
 
