@@ -53,6 +53,25 @@ export const TEXT = {
 } as const;
 
 /**
+ * Gestufte Anzeige (Entscheidung des Auftraggebers vom 17.11.2026, laut ihm vom Anwalt freigegeben): je Häkchen
+ * höchstens zwei Sätze sichtbar, der Rest unter „Mehr dazu“. Der Wortlaut bleibt unverändert und vollständig auf der
+ * Seite: kurz + " " + mehr ergibt genau den Text, der als Nachweis gespeichert ist (Test in tests/konto-texte.test.ts).
+ * Satzgrenze: Satzzeichen, Leerraum, dann ein Großbuchstabe (so bleiben „Abs. 1 lit. f“ und „dies.das“ ganz).
+ */
+export function ersteSaetze(text: string, anzahl: number): { kurz: string; mehr: string } {
+  const teile = text.split(/(?<=[.!?:])\s+(?=[A-ZÄÖÜ])/);
+  return { kurz: teile.slice(0, anzahl).join(" "), mehr: teile.slice(anzahl).join(" ") };
+}
+
+export const GESTUFT = {
+  personalisierung: ersteSaetze(TEXT.personalisierung, 2),
+  sensibelErklaerung: ersteSaetze(TEXT.sensibelErklaerung, 1),
+  sensibel: ersteSaetze(TEXT.sensibel, 1),
+  widerspruchErklaerung: ersteSaetze(TEXT.widerspruchErklaerung, 1),
+  geburtstag: ersteSaetze(TEXT.geburtstag, 2),
+} as const;
+
+/**
  * Wortlaute, wie sie als Nachweis in public.einwilligungstexte stehen (Plan 4.4), je Art. Vom Anwalt freigegeben
  * (Mitteilung des Auftraggebers vom 17.11.2026). Das SQL erzeugt web/scripts/einwilligungstexte-sql.mjs aus dieser
  * Konstante; der Test tests/konto-texte.test.ts vergleicht die Prüfsummen im SQL mit diesem Code.

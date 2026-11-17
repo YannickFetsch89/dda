@@ -141,6 +141,56 @@ export function Meldung({ art = "info", children }: { art?: "info" | "fehler" | 
   );
 }
 
+type Gestuft = { kurz: string; mehr: string };
+
+/**
+ * Ein Häkchen mit gestuftem Text (17.11.2026): höchstens zwei Sätze sichtbar, der Rest unter „Mehr dazu“. Der Text
+ * bleibt vollständig auf der Seite (GESTUFT in lib/konto/texte.ts). „Mehr dazu“ steht außerhalb des label, damit ein
+ * Klick darauf das Häkchen nicht umschaltet.
+ */
+export function EinwilligungFeld({
+  titel, intro, label, labelTitel, checked, disabled, onChange, className = "",
+}: {
+  titel?: string;
+  intro?: Gestuft;
+  label: Gestuft;
+  labelTitel?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (an: boolean) => void;
+  className?: string;
+}) {
+  // Endet der ausgeklappte Teil mit einem Doppelpunkt (Überleitung zum Häkchen), steht dort ein Punkt
+  const mehr = [intro?.mehr, label.mehr].filter(Boolean).map((t) => (t as string).replace(/:$/, "."));
+  return (
+    <div className={`konto-einw ${className}`}>
+      {(titel || intro?.kurz) && (
+        <p>
+          {titel && <b>{titel}</b>} {intro?.kurz}
+        </p>
+      )}
+      <label className="formular__check">
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+        <span>
+          {labelTitel && <b>{labelTitel} </b>}
+          {label.kurz}
+        </span>
+      </label>
+      {mehr.length > 0 && (
+        <details className="konto-mehr">
+          <summary>
+            Mehr dazu
+            <span className="icon" aria-hidden data-icon="expand_more" />
+          </summary>
+          {mehr.map((t) => (
+            <p key={t}>{t}</p>
+          ))}
+        </details>
+      )}
+    </div>
+  );
+}
+
 /** Art.-13-Hinweis unter jedem Formular mit Mailadresse */
 export function Art13Hinweis() {
   return (

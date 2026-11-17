@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { InteressenFragebogen, KEINE, type AbschlussWerte, type Antworten, type FragebogenDaten } from "./interessen-fragebogen";
-import { Meldung, PasswortFeld, fehlerText, konto } from "./konto";
+import { EinwilligungFeld, Meldung, PasswortFeld, fehlerText, konto } from "./konto";
 import { abmelden, lokalAbmelden, nurGeraetHochladen, uebernahmePruefen, zurueckAufsGeraet } from "@/lib/konto/merk-store";
-import { TEXT } from "@/lib/konto/texte";
+import { GESTUFT, TEXT } from "@/lib/konto/texte";
 
 const UNTER16 = "dies.das-Konten gibt es ab 16 Jahren. Dein Konto wird daher gelöscht.";
 
@@ -261,29 +261,38 @@ function Einwilligungen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<v
   return (
     <section className="konto-abschnitt">
       <h2 className="d">Deine Einwilligungen</h2>
-      <label className="formular__check">
-        <input type="checkbox" checked={ich.personalisierung} disabled={sendet}
-          onChange={(e) => setzen({ art: "personalisierung", erteilt: e.target.checked })} />
-        <span><b>Interessen speichern und Empfehlungen.</b> {TEXT.personalisierung}</span>
-      </label>
-      <label className="formular__check">
-        <input type="checkbox" checked={ich.sensible_events_erlaubt} disabled={sendet}
-          onChange={(e) => {
-            if (!e.target.checked && !window.confirm(TEXT.widerrufSensibel)) return;
-            void setzen({ art: "sensible_events", erteilt: e.target.checked });
-          }} />
-        <span><b>Sensible Events im Konto speichern.</b> {TEXT.sensibelErklaerung} {TEXT.sensibel}</span>
-      </label>
-      <label className="formular__check">
-        <input type="checkbox" checked={ich.widerspruch_zaehlung} disabled={sendet}
-          onChange={(e) => setzen({ art: "analyse", erteilt: !e.target.checked })} />
-        <span><b>Meine Merkliste nicht anonym mitzählen.</b> {TEXT.widerspruchErklaerung}</span>
-      </label>
-      <label className="formular__check">
-        <input type="checkbox" checked={ich.geburtstagsmail} disabled={sendet || !ich.geburtsdatum}
-          onChange={(e) => setzen({ art: "geburtstagsmail", erteilt: e.target.checked })} />
-        <span><b>Geburtstagsmail.</b> {TEXT.geburtstag}</span>
-      </label>
+      <EinwilligungFeld
+        labelTitel="Interessen speichern und Empfehlungen."
+        label={GESTUFT.personalisierung}
+        checked={ich.personalisierung}
+        disabled={sendet}
+        onChange={(an) => setzen({ art: "personalisierung", erteilt: an })}
+      />
+      <EinwilligungFeld
+        labelTitel="Sensible Events im Konto speichern."
+        intro={GESTUFT.sensibelErklaerung}
+        label={GESTUFT.sensibel}
+        checked={ich.sensible_events_erlaubt}
+        disabled={sendet}
+        onChange={(an) => {
+          if (!an && !window.confirm(TEXT.widerrufSensibel)) return;
+          void setzen({ art: "sensible_events", erteilt: an });
+        }}
+      />
+      <EinwilligungFeld
+        labelTitel="Meine Merkliste nicht anonym mitzählen."
+        label={GESTUFT.widerspruchErklaerung}
+        checked={ich.widerspruch_zaehlung}
+        disabled={sendet}
+        onChange={(an) => setzen({ art: "analyse", erteilt: !an })}
+      />
+      <EinwilligungFeld
+        labelTitel="Geburtstagsmail."
+        label={GESTUFT.geburtstag}
+        checked={ich.geburtstagsmail}
+        disabled={sendet || !ich.geburtsdatum}
+        onChange={(an) => setzen({ art: "geburtstagsmail", erteilt: an })}
+      />
       {fehler && <Meldung art="fehler">{fehler}</Meldung>}
     </section>
   );

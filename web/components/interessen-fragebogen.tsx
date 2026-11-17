@@ -4,8 +4,8 @@
 // Die Antworten bleiben bis „Fertig“ nur im Zustand dieser Komponente – kein localStorage, keine Anfrage.
 import { useState } from "react";
 import { Icon } from "./karten";
-import { Meldung } from "./konto";
-import { TEXT } from "@/lib/konto/texte";
+import { EinwilligungFeld, Meldung } from "./konto";
+import { GESTUFT, TEXT } from "@/lib/konto/texte";
 import type { CSSProperties } from "react";
 
 export interface FragebogenDaten {
@@ -98,6 +98,16 @@ export function InteressenFragebogen({
   };
   const hatAntworten = !verworfen && Object.values(a).some((l) => l.length);
 
+  // „Alle“-Buttons: wählen sichtbar alles aus; ist schon alles gewählt, hebt ein zweiter Klick die Auswahl auf
+  const alleKategorien = daten.kategorien.map((k) => k.slug);
+  const alleKatAn = alleKategorien.length > 0 && alleKategorien.every((k) => a.kategorien.includes(k));
+  const sichtbareUnter = daten.kategorien
+    .filter((k) => a.kategorien.includes(k.slug))
+    .flatMap((k) => k.unter.map((u) => `${k.slug}/${u.slug}`));
+  const alleUnterAn = sichtbareUnter.length > 0 && sichtbareUnter.every((u) => a.unterkategorien.includes(u));
+  const duesseldorf = daten.bezirke.flatMap((b) => b.stadtteile.map((s) => s.slug));
+  const ganzDuesseldorfAn = duesseldorf.length > 0 && duesseldorf.every((s) => a.stadtteile.includes(s));
+
   // Im Konto mit schon erteilter Einwilligung (a): kein Abschluss nötig, gleich speichern
   if (schritt === "abschluss" && modus === "interessen" && personalisierungGilt) {
     return (
@@ -150,7 +160,11 @@ export function InteressenFragebogen({
           )}
           <h2 className="d" id="fb-frage">Worauf hast du Lust?</h2>
           <div className="fb__chips">
-            {chip(!a.kategorien.length, () => setA({ ...a, kategorien: [], unterkategorien: [] }), <><Icon name="done_all" />Von allem etwas</>)}
+            {chip(
+              alleKatAn,
+              () => setA(alleKatAn ? { ...a, kategorien: [], unterkategorien: [] } : { ...a, kategorien: alleKategorien }),
+              <><Icon name="done_all" />Von allem etwas</>,
+            )}
           </div>
           <div className="fb__karten">
             {daten.kategorien.map((k) => {
@@ -176,7 +190,18 @@ export function InteressenFragebogen({
       {schritt === "unter" && (
         <div className="fb__inhalt">
           <h2 className="d" id="fb-frage">Was genau?</h2>
-          <p className="fb__hinweis">Nichts gewählt heißt: alles aus diesen Kategorien.</p>
+          <div className="fb__chips">
+            {chip(
+              alleUnterAn,
+              () => setA({
+                ...a,
+                unterkategorien: alleUnterAn
+                  ? a.unterkategorien.filter((u) => !sichtbareUnter.includes(u))
+                  : [...new Set([...a.unterkategorien, ...sichtbareUnter])],
+              }),
+              <><Icon name="done_all" />Alle Kategorien</>,
+            )}
+          </div>
           {daten.kategorien.filter((k) => a.kategorien.includes(k.slug) && k.unter.length).map((k) => (
             <div key={k.slug} className="konto-fb__gruppe">
               <b>{k.name}</b>
@@ -196,7 +221,16 @@ export function InteressenFragebogen({
         <div className="fb__inhalt">
           <h2 className="d" id="fb-frage">Wo bist du unterwegs?</h2>
           <div className="fb__chips">
-            {chip(!a.stadtteile.length, () => setA({ ...a, stadtteile: [] }), <><Icon name="explore" />Überall in Düsseldorf</>)}
+            {chip(
+              ganzDuesseldorfAn,
+              () => setA({
+                ...a,
+                stadtteile: ganzDuesseldorfAn
+                  ? a.stadtteile.filter((s) => !duesseldorf.includes(s))
+                  : [...new Set([...a.stadtteile, ...duesseldorf])],
+              }),
+              <><Icon name="explore" />Überall in Düsseldorf</>,
+            )}
           </div>
           {[...daten.bezirke, { name: "Nachbarstädte", stadtteile: daten.nachbarn }].map((b) => (
             <div key={b.name} className="konto-fb__gruppe">
@@ -270,33 +304,36 @@ export function InteressenFragebogen({
         >
           <h2 className="d" id="fb-frage">Fast fertig</h2>
           {hatAntworten && (
-            <label className="formular__check">
-              <input type="checkbox" checked={werte.interessen_ok} onChange={(e) => setWerte({ ...werte, interessen_ok: e.target.checked })} />
-              <span>{TEXT.personalisierung}</span>
-            </label>
+            <EinwilligungFeld
+              label={GESTUFT.personalisierung}
+              checked={werte.interessen_ok}
+              onChange={(an) => setWerte({ ...werte, interessen_ok: an })}
+            />
           )}
           {modus === "onboarding" && (
             <>
-              <div className="konto-kasten">
-                <p><b>Datenschutz ist uns hier besonders wichtig.</b> {TEXT.sensibelErklaerung}</p>
-                <label className="formular__check">
-                  <input type="checkbox" checked={werte.sensibel_ok} onChange={(e) => setWerte({ ...werte, sensibel_ok: e.target.checked })} />
-                  <span>{TEXT.sensibel}</span>
-                </label>
-              </div>
-              <div className="konto-kasten konto-kasten--hinweis">
-                <p><b>Dein Widerspruchsrecht:</b> {TEXT.widerspruchErklaerung}</p>
-                <label className="formular__check">
-                  <input type="checkbox" checked={werte.widerspruch} onChange={(e) => setWerte({ ...werte, widerspruch: e.target.checked })} />
-                  <span>{TEXT.widerspruch}</span>
-                </label>
-              </div>
-              <div className="konto-kasten">
-                <label className="formular__check">
-                  <input type="checkbox" checked={werte.geburtstagsmail_ok} onChange={(e) => setWerte({ ...werte, geburtstagsmail_ok: e.target.checked })} />
-                  <span>{TEXT.geburtstag}</span>
-                </label>
-              </div>
+              <EinwilligungFeld
+                className="konto-kasten"
+                titel="Datenschutz ist uns hier besonders wichtig."
+                intro={GESTUFT.sensibelErklaerung}
+                label={GESTUFT.sensibel}
+                checked={werte.sensibel_ok}
+                onChange={(an) => setWerte({ ...werte, sensibel_ok: an })}
+              />
+              <EinwilligungFeld
+                className="konto-kasten konto-kasten--hinweis"
+                titel="Dein Widerspruchsrecht:"
+                intro={GESTUFT.widerspruchErklaerung}
+                label={{ kurz: TEXT.widerspruch, mehr: "" }}
+                checked={werte.widerspruch}
+                onChange={(an) => setWerte({ ...werte, widerspruch: an })}
+              />
+              <EinwilligungFeld
+                className="konto-kasten"
+                label={GESTUFT.geburtstag}
+                checked={werte.geburtstagsmail_ok}
+                onChange={(an) => setWerte({ ...werte, geburtstagsmail_ok: an })}
+              />
             </>
           )}
           {modus === "interessen" && !hatAntworten && <p className="fb__hinweis">Du hast keine Interessen ausgewählt.</p>}

@@ -47,9 +47,10 @@ export function Kopf() {
           <Link href="/merkliste" className="icon-btn nur-desktop" aria-label="Merkliste">
             <Icon name="favorite" />
           </Link>
-          {/* Immer „Konto“: Der Kopf ist statisch, ein wechselnder Text würde nach dem Laden flackern (Plan 7.3) */}
+          {/* Immer „Mein Konto“: Der Kopf ist statisch, ein wechselnder Text würde nach dem Laden flackern (Plan 7.3).
+              Mobil und am Desktop sichtbar, mobil rechts neben der Suche (17.11.2026). */}
           {kontenAktiv() && (
-            <Link href="/konto" className="icon-btn nur-desktop" aria-label="Konto">
+            <Link href="/konto" className="icon-btn" aria-label="Mein Konto" title="Mein Konto">
               <Icon name="person" />
             </Link>
           )}
@@ -75,7 +76,7 @@ export function Kopf() {
               {SPIELPLAETZE_VERLINKT && <Link href="/guides/spielplaetze">Spielplätze</Link>}
               {/* Trennstrich unter den Guides: kommt mit der Zwischenüberschrift (border-top wie bei „Guides“) */}
               <span className="popover__titel">Service</span>
-              {kontenAktiv() && <Link href="/konto">Konto</Link>}
+              {kontenAktiv() && <Link href="/konto">Mein Konto</Link>}
               <Link href="/merkliste">Merkliste</Link>
               <Link href="/event-melden">Event melden</Link>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 4px 12px", fontSize: 14, fontWeight: 600 }}>
@@ -180,7 +181,7 @@ export async function Fuss() {
           <a href={`mailto:${KONTAKT_MAIL}?subject=Veranstalter`}>Für Veranstalter</a>
           <Link href="/#newsletter">Newsletter</Link>
           <Link href="/merkliste">Merkliste</Link>
-          {kontenAktiv() && <Link href="/konto">Konto</Link>}
+          {kontenAktiv() && <Link href="/konto">Mein Konto</Link>}
         </div>
       </div>
       {/* Rechtliches mittig ganz unten, mit schmaler Trennlinie darüber */}

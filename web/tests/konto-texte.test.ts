@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TEXTVERSIONEN } from "@/lib/konto/konfig";
-import { NACHWEIS_TEXT } from "@/lib/konto/texte";
+import { GESTUFT, NACHWEIS_TEXT, TEXT } from "@/lib/konto/texte";
 
 const DB = join(__dirname, "..", "..", "database");
 const sha = (t: string) => createHash("sha256").update(t, "utf8").digest("hex");
@@ -30,6 +30,24 @@ describe("Einwilligungstexte", () => {
     expect(summen.get(version), `keine Prüfsumme für ${version} – SQL neu erzeugen und neue Version vergeben`).toBe(
       sha(NACHWEIS_TEXT[art].text),
     );
+  });
+
+  it("gestufte Anzeige: kurz + mehr ergibt genau den Wortlaut, sichtbar höchstens zwei Sätze", () => {
+    const quelle = {
+      personalisierung: TEXT.personalisierung,
+      sensibelErklaerung: TEXT.sensibelErklaerung,
+      sensibel: TEXT.sensibel,
+      widerspruchErklaerung: TEXT.widerspruchErklaerung,
+      geburtstag: TEXT.geburtstag,
+    } as const;
+    for (const [art, text] of Object.entries(quelle)) {
+      const g = GESTUFT[art as keyof typeof GESTUFT];
+      expect(g.mehr, art).not.toBe("");
+      expect(`${g.kurz} ${g.mehr}`, art).toBe(text);
+      expect(g.kurz.split(/(?<=[.!?:])\s+(?=[A-ZÄÖÜ])/).length, art).toBeLessThanOrEqual(2);
+    }
+    // „Abs. 1 lit. f“ bleibt im ersten Satz
+    expect(GESTUFT.widerspruchErklaerung.kurz).toContain("Art. 6 Abs. 1 lit. f DSGVO).");
   });
 
   it("jede Art hat einen Nachweis-Text", () => {
