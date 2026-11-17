@@ -176,7 +176,8 @@ function ErneutSenden({ email }: { email: string }) {
 export function BestaetigenSeite() {
   const router = useRouter();
   const gelesen = useRef(false);
-  const [link, setLink] = useState<{ tokenHash: string; art: "neu" | "reset" } | null | "leer">(null);
+  const [link, setLink] = useState<{ tokenHash: string; art: "neu" | "reset" | "email" } | null | "leer">(null);
+  const [erledigt, setErledigt] = useState<string | null>(null);
   const [sendet, setSendet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -187,7 +188,7 @@ export function BestaetigenSeite() {
     gelesen.current = true;
     const frag = new URLSearchParams(window.location.hash.slice(1));
     const tokenHash = frag.get("token_hash");
-    const art = frag.get("art") === "reset" ? "reset" : "neu";
+    const art = frag.get("art") === "reset" ? "reset" : frag.get("art") === "email" ? "email" : "neu";
     // Fragment sofort aus der Adresszeile entfernen (Plan 5.2)
     if (window.location.hash) history.replaceState(null, "", window.location.pathname + window.location.search);
     // Ohne Fragment angekommen (z. B. Outlook Safe Links): Code-Eingabe bzw. neuer Link
@@ -199,6 +200,11 @@ export function BestaetigenSeite() {
     setFehler(null);
     const a = await konto("link-pruefen", "POST", body);
     setSendet(false);
+    // Mailadresse ändern: kein Weiterleiten, sondern Meldung (erster bzw. zweiter Link)
+    if (a.status === 200 && typeof a.daten.meldung === "string" && body.art === "email") {
+      setErledigt(a.daten.meldung);
+      return;
+    }
     if (a.status === 200 && typeof a.daten.ziel === "string") {
       if (body.art === "neu") void uebernahmePruefen();
       router.push(a.daten.ziel);
@@ -208,6 +214,13 @@ export function BestaetigenSeite() {
   }
 
   if (link === null) return null;
+  if (erledigt) {
+    return (
+      <Meldung art="ok">
+        {erledigt} <Link href="/konto">Zum Konto</Link>
+      </Meldung>
+    );
+  }
   if (link !== "leer" && link.art === "reset" && !link.tokenHash) {
     return (
       <Meldung>
@@ -237,16 +250,28 @@ export function BestaetigenSeite() {
   }
   return (
     <div className="formular konto-form">
-      <p>{link.art === "reset" ? "Klick auf den Button, um ein neues Passwort festzulegen." : "Fast geschafft: Klick auf den Button, um deine Mailadresse zu bestätigen."}</p>
+      <p>
+        {link.art === "reset"
+          ? "Klick auf den Button, um ein neues Passwort festzulegen."
+          : link.art === "email"
+            ? "Klick auf den Button, um die Änderung deiner Mailadresse zu bestätigen."
+            : "Fast geschafft: Klick auf den Button, um deine Mailadresse zu bestätigen."}
+      </p>
       {fehler && (
         <Meldung art="fehler">
           {fehler}{" "}
-          {link.art === "reset" ? <Link href="/konto/passwort-vergessen">Neuen Link anfordern</Link> : <Link href="/konto/anmelden">Zur Anmeldung</Link>}
+          {link.art === "reset" ? (
+            <Link href="/konto/passwort-vergessen">Neuen Link anfordern</Link>
+          ) : link.art === "email" ? (
+            <Link href="/konto">Zum Konto</Link>
+          ) : (
+            <Link href="/konto/anmelden">Zur Anmeldung</Link>
+          )}
         </Meldung>
       )}
       <div className="formular__aktionen">
         <button type="button" className="btn btn--navy btn--gross" disabled={sendet} onClick={() => pruefen({ token_hash: link.tokenHash, art: link.art })}>
-          {link.art === "reset" ? "Neues Passwort festlegen" : "Adresse bestätigen"}
+          {link.art === "reset" ? "Neues Passwort festlegen" : link.art === "email" ? "Änderung bestätigen" : "Adresse bestätigen"}
         </button>
       </div>
     </div>

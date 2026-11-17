@@ -42,6 +42,29 @@ export async function passwortAendern(email: string, aktuell: string, neu: strin
   return setzenMitClient(client, neu);
 }
 
+export type MailErgebnis = { ok: true } | { ok: false; grund: "aktuell_falsch" | "vorhanden" | "fehler" };
+
+/**
+ * Mailadresse im Konto ändern (17.11.2026, statt „schreib uns“): aktuelles Passwort per frischer Anmeldung prüfen,
+ * dann updateUser({ email }). Mit „Secure email change“ schickt Supabase je eine Mail an die alte und die neue
+ * Adresse (Vorlage „Change Email Address“, Link art=email); erst wenn beide bestätigt sind, gilt die neue Adresse.
+ * Die frische Prüf-Sitzung wird danach wieder beendet.
+ */
+export async function mailAendern(email: string, aktuell: string, neu: string): Promise<MailErgebnis> {
+  const client = authClientAnfrage();
+  if (!client) return { ok: false, grund: "fehler" };
+  const { data, error } = await client.auth.signInWithPassword({ email, password: aktuell });
+  if (error || !data.session) return { ok: false, grund: "aktuell_falsch" };
+  const { error: aendernFehler } = await client.auth.updateUser({ email: neu });
+  await client.auth.signOut({ scope: "local" }).catch(() => undefined);
+  if (aendernFehler) {
+    if (aendernFehler.code === "email_exists" || aendernFehler.code === "user_already_exists") return { ok: false, grund: "vorhanden" };
+    console.warn(`Mailadresse ändern: Supabase meldet ${aendernFehler.code ?? aendernFehler.status ?? "Fehler"}`);
+    return { ok: false, grund: "fehler" };
+  }
+  return { ok: true };
+}
+
 /** Aktuelles Passwort prüfen, ohne etwas zu ändern (Konto löschen, Plan 5.7). */
 export async function passwortStimmt(email: string, passwort: string): Promise<boolean> {
   const client = authClientAnfrage();

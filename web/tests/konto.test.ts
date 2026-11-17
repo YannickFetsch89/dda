@@ -346,6 +346,8 @@ const ROUTEN: [string, string, () => Promise<unknown>][] = [
   ["merkliste/uebernehmen", "POST", () => import("@/app/api/konto/merkliste/uebernehmen/route")],
   ["export", "GET", () => import("@/app/api/konto/export/route")],
   ["loeschen", "POST", () => import("@/app/api/konto/loeschen/route")],
+  ["stammdaten", "PUT", () => import("@/app/api/konto/stammdaten/route")],
+  ["email-aendern", "POST", () => import("@/app/api/konto/email-aendern/route")],
 ];
 
 describe("Schalter aus", () => {
@@ -586,6 +588,67 @@ describe("abschluss", () => {
     const { POST } = await import("@/app/api/konto/abschluss/route");
     await POST(anfrage("/api/konto/abschluss", "POST", { ...STAMM, vorname: "  Anna   Lena ", nachname: "O’Brien-Müller" }, sitzung()), ctx());
     expect(zustand.rpc[0].args).toMatchObject({ vorname: "Anna Lena", nachname: "O’Brien-Müller" });
+  });
+});
+
+describe("Mailadresse ändern (17.11.2026)", () => {
+  const sitzungsAntwort = { data: { session: { access_token: gueltig(), refresh_token: "r2", user: { id: A } } }, error: null };
+  it("prüft das aktuelle Passwort und ruft updateUser mit der neuen Adresse", async () => {
+    const aufrufe: unknown[] = [];
+    zustand.auth.signInWithPassword = async () => sitzungsAntwort;
+    zustand.auth.updateUser = async (a: unknown) => (aufrufe.push(a), { data: {}, error: null });
+    const { POST } = await import("@/app/api/konto/email-aendern/route");
+    const res = await POST(anfrage("/api/konto/email-aendern", "POST", { neu: " Neu@Example.org ", aktuell: "altespasswort" }, sitzung()), ctx());
+    expect(res.status).toBe(200);
+    expect(aufrufe).toEqual([{ email: "neu@example.org" }]);
+  });
+  it("falsches Passwort → 403, keine Änderung", async () => {
+    let geaendert = false;
+    zustand.auth.signInWithPassword = async () => ({ data: { session: null }, error: { code: "invalid_credentials" } });
+    zustand.auth.updateUser = async () => ((geaendert = true), { data: {}, error: null });
+    const { POST } = await import("@/app/api/konto/email-aendern/route");
+    const res = await POST(anfrage("/api/konto/email-aendern", "POST", { neu: "neu@example.org", aktuell: "falsch" }, sitzung()), ctx());
+    expect(res.status).toBe(403);
+    expect(geaendert).toBe(false);
+  });
+  it("gleiche Adresse → 400, vergebene Adresse → 409", async () => {
+    const { POST } = await import("@/app/api/konto/email-aendern/route");
+    const gleich = await POST(anfrage("/api/konto/email-aendern", "POST", { neu: "a@example.org", aktuell: "x" }, sitzung()), ctx());
+    expect(gleich.status).toBe(400);
+    zustand.auth.signInWithPassword = async () => sitzungsAntwort;
+    zustand.auth.updateUser = async () => ({ data: {}, error: { code: "email_exists" } });
+    const vergeben = await POST(anfrage("/api/konto/email-aendern", "POST", { neu: "b@example.org", aktuell: "x" }, sitzung()), ctx());
+    expect(vergeben.status).toBe(409);
+  });
+  it("Link art=email: erster Link ohne Sitzung → Meldung, zweiter mit Sitzung → Cookie", async () => {
+    const { POST } = await import("@/app/api/konto/link-pruefen/route");
+    const typen: unknown[] = [];
+    zustand.auth.verifyOtp = async (a: unknown) => (typen.push((a as { type: string }).type), { data: { session: null, user: null }, error: null });
+    const halb = await POST(anfrage("/api/konto/link-pruefen", "POST", { token_hash: "abc", art: "email" }), ctx());
+    expect(halb.status).toBe(200);
+    expect((await halb.json()).meldung).toContain("andere Adresse");
+    expect(halb.headers.get("set-cookie") ?? "").not.toContain("ddd_sitzung=");
+    zustand.auth.verifyOtp = async (a: unknown) => (typen.push((a as { type: string }).type), sitzungsAntwort);
+    const fertig = await POST(anfrage("/api/konto/link-pruefen", "POST", { token_hash: "abc", art: "email" }), ctx());
+    expect((await fertig.json()).meldung).toContain("neue Mailadresse");
+    expect(fertig.headers.get("set-cookie")).toContain("ddd_sitzung=");
+    expect(typen).toEqual(["email_change", "email_change"]);
+  });
+});
+
+describe("Export als Auskunft nach Art. 15", () => {
+  it("enthält die Angaben nach Art. 15 und keine Kennzeichnung sensibel", async () => {
+    zustand.auth.admin = { getUserById: async () => ({ data: { user: null }, error: null }) } as unknown as () => unknown;
+    const { GET } = await import("@/app/api/konto/export/route");
+    const res = await GET(anfrage("/api/konto/export", "GET", undefined, sitzung()), ctx());
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const daten = JSON.parse(text);
+    expect(Object.keys(daten.auskunft_art_15)).toEqual(expect.arrayContaining([
+      "zwecke_und_rechtsgrundlagen", "empfaenger", "drittland", "speicherdauer", "herkunft", "deine_rechte",
+    ]));
+    expect(text).not.toMatch(/sensibel/i);
+    expect(res.headers.get("content-disposition")).toContain("diesdas-auskunft.json");
   });
 });
 

@@ -43,9 +43,13 @@ const button = (href, text) => `
   </tr>
 </table>`;
 
-/** Ersatz-Link unter dem Button, falls der Button nicht funktioniert */
-const ersatzLink = (href) =>
-  klein(`Klappt der Button nicht? Dann kopiere diesen Link in deinen Browser:<br><a href="${href}" style="color:${F.link};word-break:break-all;">${href}</a>`);
+/**
+ * Ersatz-Link unter dem Button, falls der Button nicht funktioniert. Bewusst OHNE die lange Adresse als Text:
+ * GMX & Co. am Desktop brechen sie nicht um, die Mail wird dadurch breiter als das Lesefenster und dann
+ * verkleinert dargestellt (Live-Test 17.11.2026). Der Link lässt sich weiter anklicken oder per Rechtsklick kopieren.
+ */
+const ersatzLink = (href, text) =>
+  klein(`Klappt der Button nicht? Dann nutze diesen Link: <a href="${href}" style="color:${F.link};font-weight:700;">${text}</a>`);
 
 const kasten = (html) => `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
@@ -120,6 +124,7 @@ function geruest({ titel, vorschau, inhalt }) {
 
 const LINK_NEU = "{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;art=neu";
 const LINK_RESET = "{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;art=reset";
+const LINK_EMAIL = "{{ .SiteURL }}/konto/bestaetigen#token_hash={{ .TokenHash }}&amp;art=email";
 
 const VORLAGEN = [
   {
@@ -134,7 +139,7 @@ const VORLAGEN = [
         absatz("Schön, dass du ein Konto bei dies.das.düsseldorf anlegst. Bitte bestätige deine Mailadresse, dann ist deine Merkliste auf allen Geräten dabei."),
         button(LINK_NEU, "Adresse bestätigen"),
         kasten("Der Link gilt einmal. Öffnest du ihn auf einem anderen Gerät, bist du danach dort angemeldet."),
-        ersatzLink(LINK_NEU),
+        ersatzLink(LINK_NEU, "Adresse bestätigen"),
         klein("Du hast kein Konto angelegt? Dann ignoriere diese Mail einfach, es passiert nichts."),
       ].join("\n"),
     }),
@@ -151,7 +156,7 @@ const VORLAGEN = [
         absatz("Jemand möchte das Passwort für dein Konto bei dies.das.düsseldorf zurücksetzen. Warst du das? Dann lege hier ein neues fest:"),
         button(LINK_RESET, "Neues Passwort festlegen"),
         kasten("Der Link gilt eine Stunde und nur einmal. Klappt er nicht, fordere auf der Website einfach einen neuen an."),
-        ersatzLink(LINK_RESET),
+        ersatzLink(LINK_RESET, "Neues Passwort festlegen"),
         klein("Warst du das nicht? Dann ignoriere diese Mail. Dein Passwort bleibt, wie es ist."),
       ].join("\n"),
     }),
@@ -175,13 +180,18 @@ const VORLAGEN = [
     datei: "4-change-email",
     supabase: "Change Email Address",
     betreff: "Änderung deiner Mailadresse bei dies.das",
+    // Seit 17.11.2026 im Konto selbst änderbar. Mit „Secure email change“ geht diese Mail an die alte UND die neue
+    // Adresse, jeweils mit eigenem Link; die neue Adresse gilt erst, wenn beide bestätigt sind.
     html: geruest({
       titel: "Mailadresse ändern",
-      vorschau: "Eine Änderung der Mailadresse geht bei uns zurzeit nur persönlich.",
+      vorschau: "Bitte bestätige die Änderung deiner Mailadresse.",
       inhalt: [
         absatz("Hallo!"),
-        absatz(`Für dein Konto bei dies.das.düsseldorf wurde eine Änderung der Mailadresse angefragt. Das geht bei uns zurzeit nur persönlich: Schreib uns dazu einfach an <a href="mailto:moin@rocktician.com" style="color:${F.link};">moin@rocktician.com</a>.`),
-        klein("Warst du das nicht? Dann ignoriere diese Mail. Es ändert sich nichts."),
+        absatz("Für dein Konto bei dies.das.düsseldorf soll die Mailadresse von <b>{{ .Email }}</b> auf <b>{{ .NewEmail }}</b> geändert werden. Bitte bestätige das:"),
+        button(LINK_EMAIL, "Änderung bestätigen"),
+        kasten("Diese Mail geht an deine bisherige und an deine neue Adresse. Die Änderung gilt, sobald du beide Links bestätigt hast."),
+        ersatzLink(LINK_EMAIL, "Änderung bestätigen"),
+        klein("Warst du das nicht? Dann ignoriere diese Mail, es ändert sich nichts. Ändere vorsichtshalber dein Passwort."),
       ].join("\n"),
     }),
   },
@@ -212,6 +222,36 @@ const VORLAGEN = [
         absatz("Du hast eine Einladung zu dies.das.düsseldorf erhalten. Einladungen nutzen wir nicht. Ein Konto legst du auf unserer Website selbst an, sobald das möglich ist."),
         button("{{ .SiteURL }}/konto/anmelden", "Zu dies.das"),
         klein("Du weißt nichts davon? Dann ignoriere diese Mail."),
+      ].join("\n"),
+    }),
+  },
+  // Sicherheits-Hinweise (Supabase: Authentication → Emails, Bereich „Security“ bzw. Notifications), falls angeboten
+  {
+    datei: "7-password-changed",
+    supabase: "Password changed (Hinweis)",
+    betreff: "Dein Passwort bei dies.das wurde geändert",
+    html: geruest({
+      titel: "Passwort geändert",
+      vorschau: "Das Passwort für dein Konto wurde gerade geändert.",
+      inhalt: [
+        absatz("Hallo!"),
+        absatz("Das Passwort für dein Konto bei dies.das.düsseldorf ({{ .Email }}) wurde gerade geändert."),
+        kasten("Warst du das nicht? Dann setz dein Passwort sofort über „Passwort vergessen“ neu und schreib uns an moin@rocktician.com."),
+        button("{{ .SiteURL }}/konto/passwort-vergessen", "Passwort neu setzen"),
+      ].join("\n"),
+    }),
+  },
+  {
+    datei: "8-email-changed",
+    supabase: "Email address changed (Hinweis)",
+    betreff: "Deine Mailadresse bei dies.das wurde geändert",
+    html: geruest({
+      titel: "Mailadresse geändert",
+      vorschau: "Die Mailadresse deines Kontos wurde geändert.",
+      inhalt: [
+        absatz("Hallo!"),
+        absatz("Die Mailadresse deines Kontos bei dies.das.düsseldorf wurde von <b>{{ .OldEmail }}</b> auf <b>{{ .Email }}</b> geändert."),
+        kasten("Warst du das nicht? Dann schreib uns bitte sofort an moin@rocktician.com."),
       ].join("\n"),
     }),
   },

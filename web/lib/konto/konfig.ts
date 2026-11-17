@@ -68,6 +68,11 @@ export const MELDUNG = {
   // Entscheidung des Auftraggebers vom 17.11.2026: Eine schon bestätigte Adresse wird bei der Registrierung genannt
   // (statt der neutralen Antwort aus Plan 5.1), damit niemand vergeblich auf eine Mail wartet.
   schonRegistriert: "Für diese Mailadresse gibt es schon ein Konto. Melde dich einfach an.",
+  mailAendernUnterwegs:
+    "Fast geschafft! Wir haben dir zwei Mails geschickt, an deine bisherige und an deine neue Adresse. Bestätige die " +
+    "Änderung über die Links in beiden Mails. Bis dahin gilt deine bisherige Adresse.",
+  mailHalb: "Danke! Bitte bestätige die Änderung jetzt noch über den Link in der Mail an deine andere Adresse.",
+  mailFertig: "Deine neue Mailadresse ist bestätigt. Ab jetzt meldest du dich damit an.",
   ungueltig: "Ungültige Anfrage.",
   unter16: "dies.das-Konten gibt es ab 16 Jahren. Dein Konto wird daher gelöscht.",
   geloescht: "Dein Konto und deine Merkliste sind gelöscht.",

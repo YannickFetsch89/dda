@@ -198,7 +198,7 @@ export function KontoSeite() {
       <section className="konto-abschnitt">
         <h2 className="d">Dein Konto</h2>
         <p>Deine Mailadresse: <b>{ich.email}</b></p>
-        <p className="formular__hinweis">Adresse ändern? Schreib uns an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>.</p>
+        <MailAendern />
       </section>
 
       {!ich.mindestalter_bestaetigt || !ich.onboarding_fertig_am ? (
@@ -222,7 +222,8 @@ export function KontoSeite() {
       <section className="konto-abschnitt">
         <h2 className="d">Deine Daten</h2>
         <a href="/api/konto/export" className="btn btn--outline btn--klein" download>Deine Daten herunterladen</a>
-        <p className="formular__hinweis">Eine vollständige Auskunft nach Art. 15 DSGVO bekommst du auch per Mail an moin@rocktician.com.</p>
+        {/* Gleiche Datei: Kontodaten plus die Angaben nach Art. 15 Abs. 1 und 2 DSGVO (17.11.2026) */}
+        <a href="/api/konto/export" className="link" download>Eine vollständige Auskunft nach Art. 15 DSGVO herunterladen.</a>
       </section>
 
       <section className="konto-abschnitt">
@@ -384,6 +385,57 @@ function UeberDich({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<void> 
   );
 }
 
+/** Mailadresse selbst ändern (17.11.2026): neue Adresse + aktuelles Passwort, Bestätigung über beide Adressen. */
+function MailAendern() {
+  const [offen, setOffen] = useState(false);
+  const [neu, setNeu] = useState("");
+  const [aktuell, setAktuell] = useState("");
+  const [text, setText] = useState<{ art: "ok" | "fehler"; t: string } | null>(null);
+  const [sendet, setSendet] = useState(false);
+  if (!offen) {
+    return (
+      <>
+        <button type="button" className="btn btn--outline btn--klein" onClick={() => { setOffen(true); setText(null); }}>
+          Mailadresse ändern
+        </button>
+        {text && <Meldung art={text.art}>{text.t}</Meldung>}
+      </>
+    );
+  }
+  return (
+    <form
+      className="formular"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setSendet(true);
+        const a = await konto("email-aendern", "POST", { neu, aktuell });
+        setSendet(false);
+        setAktuell("");
+        if (a.status === 200) {
+          setText({ art: "ok", t: String(a.daten.meldung) });
+          setNeu("");
+          setOffen(false);
+        } else setText({ art: "fehler", t: fehlerText(a) });
+      }}
+    >
+      <div className="formular__feld">
+        <label className="formular__label" htmlFor="mail-neu">Neue Mailadresse</label>
+        <input id="mail-neu" type="email" autoComplete="email" maxLength={254} required value={neu} onChange={(e) => setNeu(e.target.value)} />
+      </div>
+      <PasswortFeld id="mail-pw" label="Aktuelles Passwort" wert={aktuell} setzen={setAktuell} autocomplete="current-password" />
+      <p className="formular__hinweis">
+        Wir schicken je eine Mail an deine bisherige und an deine neue Adresse. Die neue Adresse gilt, sobald du beide
+        Links bestätigt hast.
+      </p>
+      {text && <Meldung art={text.art}>{text.t}</Meldung>}
+      <div className="formular__aktionen">
+        <button type="submit" className="btn btn--navy" disabled={sendet}>Ändern</button>
+        <button type="button" className="link konto-textknopf" onClick={() => { setOffen(false); setText(null); }}>Abbrechen</button>
+      </div>
+    </form>
+  );
+}
+
 function PasswortAendern() {
   const [offen, setOffen] = useState(false);
   const [aktuell, setAktuell] = useState("");
@@ -433,7 +485,7 @@ function AbmeldenKnoepfe() {
     const ok = await abmelden(ueberall);
     setSendet(false);
     if (!ok) return setFehler(true);
-    router.push("/merkliste");
+    router.push("/konto/abgemeldet");
     router.refresh();
   };
   return (

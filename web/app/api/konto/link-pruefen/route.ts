@@ -25,7 +25,7 @@ const FALSCH = { fehler: MELDUNG.linkFalsch, code: "link" };
 export const POST = kontoRoute(
   { anmeldung: false, json: true, aendernd: true, limit: { name: "link-pruefen", max: 30, fensterMs: ZEIT.STUNDE } },
   async ({ body, lokal }) => {
-    const art = body.art === "reset" ? "reset" : body.art === "neu" ? "neu" : null;
+    const art = body.art === "reset" ? "reset" : body.art === "neu" ? "neu" : body.art === "email" ? "email" : null;
     if (!art) return kontoAntwort(400, FALSCH);
     const auth = authClientAnfrage();
     if (!auth) return kontoAntwort(503, { fehler: MELDUNG.nichtVerfuegbar });
@@ -33,6 +33,17 @@ export const POST = kontoRoute(
     const tokenHash = typeof body.token_hash === "string" ? body.token_hash.trim() : "";
     const code = typeof body.code === "string" ? body.code.replace(/\s/g, "") : "";
     let ergebnis;
+
+    // Mailadresse ändern (17.11.2026): zwei Links (alte und neue Adresse). Nach dem ersten gibt Supabase keine Sitzung
+    // zurück, nach dem zweiten eine mit der neuen Adresse – die kommt dann ins Cookie dieses Browsers.
+    if (art === "email") {
+      if (!tokenHash || tokenHash.length > 200) return kontoAntwort(400, FALSCH);
+      const r = await auth.auth.verifyOtp({ token_hash: tokenHash, type: "email_change" });
+      if (r.error) return kontoAntwort(400, FALSCH);
+      if (!r.data.session) return kontoAntwort(200, { ok: true, meldung: MELDUNG.mailHalb });
+      const { setCookies } = await sitzungStarten(r.data.session, lokal, null);
+      return kontoAntwort(200, { ok: true, meldung: MELDUNG.mailFertig }, setCookies);
+    }
 
     if (tokenHash) {
       if (tokenHash.length > 200) return kontoAntwort(400, FALSCH);
