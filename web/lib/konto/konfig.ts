@@ -65,6 +65,9 @@ export const MELDUNG = {
   passwortRegel: "Das Passwort braucht mindestens 10 und höchstens 72 Zeichen.",
   zuViele: "Zu viele Versuche in kurzer Zeit. Bitte versuch es später noch einmal.",
   nichtVerfuegbar: "Konten sind gerade nicht verfügbar.",
+  // Entscheidung des Auftraggebers vom 17.11.2026: Eine schon bestätigte Adresse wird bei der Registrierung genannt
+  // (statt der neutralen Antwort aus Plan 5.1), damit niemand vergeblich auf eine Mail wartet.
+  schonRegistriert: "Für diese Mailadresse gibt es schon ein Konto. Melde dich einfach an.",
   ungueltig: "Ungültige Anfrage.",
   unter16: "dies.das-Konten gibt es ab 16 Jahren. Dein Konto wird daher gelöscht.",
   geloescht: "Dein Konto und deine Merkliste sind gelöscht.",

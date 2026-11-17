@@ -1,5 +1,8 @@
-// Konto anlegen (Plan 5.1 Schritte 1–2). Antwortet IMMER gleich (200, gleicher Text), egal ob die Adresse neu,
-// unbestätigt, bestätigt oder Supabase gerade nicht erreichbar ist – sonst ließe sich ausspähen, wer ein Konto hat.
+// Konto anlegen (Plan 5.1 Schritte 1–2). Antwortet gleich (200, gleicher Text), ob die Adresse neu, unbestätigt oder
+// Supabase gerade nicht erreichbar ist. AUSNAHME seit 17.11.2026 (Entscheidung des Auftraggebers): Gibt es zur Adresse
+// schon ein BESTÄTIGTES Konto, sagt die Route das (409 „vorhanden“) und die Seite schickt zur Anmeldung – sonst wartet
+// die Person vergeblich auf eine Mail (Supabase schickt in dem Fall keine). Damit lässt sich prüfen, ob eine Adresse
+// ein Konto hat; das Bremslimit (10/Std je IP, 3/Std je Adresse) bleibt die Grenze dafür.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { zuVieleAnfragen } from "@/lib/formulare";
 import { authClientAnfrage, kontoDienstClient } from "@/lib/konto/clients";
@@ -9,6 +12,7 @@ import { adresseNormal, adressSchluessel, nachweisImZeitfenster, passwortPruefen
 import { kontoAntwort, kontoRoute, ZEIT } from "@/lib/konto/route";
 
 const NEUTRAL = { ok: true, meldung: MELDUNG.registriert };
+const VORHANDEN = { fehler: MELDUNG.schonRegistriert, code: "vorhanden" };
 
 export const POST = kontoRoute(
   { anmeldung: false, json: true, aendernd: true, limit: { name: "registrieren", max: 10, fensterMs: ZEIT.STUNDE } },
@@ -44,12 +48,14 @@ export const POST = kontoRoute(
       const { data, error } = await auth.auth.signUp({ email, password: body.passwort as string });
       const eingang = Date.now();
       if (error) {
+        if (error.code === "user_already_exists" || error.code === "email_exists") return kontoAntwort(409, VORHANDEN);
         console.warn(`Registrieren: Supabase meldet ${error.code ?? error.status ?? "Fehler"}`);
         return kontoAntwort(200, NEUTRAL);
       }
       const user = data.user;
+      // Leere identities = bestätigtes Konto mit dieser Adresse (Supabase schickt keine Mail) → zur Anmeldung
+      if (user && (user.identities?.length ?? 0) === 0) return kontoAntwort(409, VORHANDEN);
       // Nachweis nur für ein Konto, das durch genau diese Anfrage entstanden ist (Plan 5.1 Schritt 2)
-      // Leere identities = Adresse gab es schon (Supabase verschleiert das) – dann bewusst kein Nachweis, ohne Log.
       if (user && (user.identities?.length ?? 0) > 0) {
         if (nachweisImZeitfenster(user.created_at, eingang)) {
           await nachweisSetzen(dienst, user.id);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { InteressenFragebogen, KEINE, type AbschlussWerte, type Antworten, type FragebogenDaten } from "./interessen-fragebogen";
-import { EinwilligungFeld, Meldung, PasswortFeld, fehlerText, konto } from "./konto";
+import { EinwilligungFeld, Meldung, PasswortFeld, Rueckfrage, fehlerText, konto } from "./konto";
 import { abmelden, lokalAbmelden, nurGeraetHochladen, uebernahmePruefen, zurueckAufsGeraet } from "@/lib/konto/merk-store";
 import { GESTUFT, TEXT } from "@/lib/konto/texte";
 
@@ -235,16 +235,23 @@ export function KontoSeite() {
   );
 }
 
+function interessenAnzahl(ich: Ich): number {
+  const p = ich.praeferenzen;
+  return (p.kategorien?.length ?? 0) + (p.unterkategorien?.length ?? 0) + (p.stadtteile?.length ?? 0) + (p.merkmale?.length ?? 0) + (p.orte?.length ?? 0);
+}
+
 function interessenKurz(ich: Ich): string {
   if (!ich.personalisierung) return "Keine Interessen gespeichert.";
-  const p = ich.praeferenzen;
-  const n = (p.kategorien?.length ?? 0) + (p.unterkategorien?.length ?? 0) + (p.stadtteile?.length ?? 0) + (p.merkmale?.length ?? 0) + (p.orte?.length ?? 0);
+  const n = interessenAnzahl(ich);
   return n ? `${n} Angaben gespeichert.` : "Gespeichert: keine besonderen Vorlieben.";
 }
 
 function Einwilligungen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<void> }) {
   const [fehler, setFehler] = useState<string | null>(null);
   const [sendet, setSendet] = useState(false);
+  // Rückfrage vor dem Widerruf (a), wenn Interessen gespeichert sind: Sie werden sofort gelöscht (17.11.2026)
+  const [frageLoeschen, setFrageLoeschen] = useState(false);
+  const hatInteressen = ich.personalisierung && interessenAnzahl(ich) > 0;
 
   async function setzen(body: Record<string, unknown>) {
     setSendet(true);
@@ -266,8 +273,31 @@ function Einwilligungen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<v
         label={GESTUFT.personalisierung}
         checked={ich.personalisierung}
         disabled={sendet}
-        onChange={(an) => setzen({ art: "personalisierung", erteilt: an })}
+        onChange={(an) => {
+          if (!an && hatInteressen) {
+            setFrageLoeschen(true);
+            return;
+          }
+          void setzen({ art: "personalisierung", erteilt: an });
+        }}
       />
+      <Rueckfrage
+        offen={frageLoeschen}
+        titel="Interessen löschen?"
+        ja="Interessen löschen"
+        nein="Interessen behalten"
+        onAbbrechen={() => setFrageLoeschen(false)}
+        onNein={() => setFrageLoeschen(false)}
+        onJa={() => {
+          setFrageLoeschen(false);
+          void setzen({ art: "personalisierung", erteilt: false });
+        }}
+      >
+        <p>
+          Wenn du den Haken entfernst, löschen wir deine gespeicherten Interessen sofort. Das lässt sich nicht
+          rückgängig machen. Du kannst sie später neu angeben.
+        </p>
+      </Rueckfrage>
       <EinwilligungFeld
         labelTitel="Sensible Events im Konto speichern."
         intro={GESTUFT.sensibelErklaerung}

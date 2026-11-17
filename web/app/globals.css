@@ -2058,6 +2058,17 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .konto-kasten { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--r-md); background: var(--ddd-subtle); width: 100%; }
 .konto-kasten p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ddd-text-body); }
 .konto-kasten--hinweis { border-left: 4px solid var(--ddd-gold); }
+/* Rückfrage-Popup (Interessen speichern / löschen, 17.11.2026) */
+.konto-dialog { position: fixed; width: min(520px, calc(100vw - 32px)); max-width: none; padding: 24px; border: none; border-radius: var(--r-card); background: var(--ddd-surface); color: var(--ddd-text); box-shadow: var(--sh-l); }
+.konto-dialog::backdrop { background: rgba(13, 17, 23, 0.55); backdrop-filter: blur(2px); }
+.konto-dialog h2 { font-size: 24px; margin: 0 32px 12px 0; }
+.konto-dialog__text { display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.55; color: var(--ddd-text-body); }
+.konto-dialog__text p { margin: 0; }
+.konto-dialog__text blockquote { margin: 0; padding-left: 12px; border-left: 3px solid var(--ddd-border); font-size: 14px; }
+.konto-dialog__knoepfe { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.konto-dialog__knoepfe .btn { justify-content: center; text-align: center; white-space: normal; }
+@media (max-width: 480px) { .konto-dialog__knoepfe { grid-template-columns: 1fr; } }
+.konto-dialog__zu { position: absolute; top: 12px; right: 12px; }
 /* Gestufte Einwilligungstexte: kurz sichtbar, Rest unter „Mehr dazu“ (17.11.2026) */
 .konto-einw { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .konto-einw > p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ddd-text-body); }

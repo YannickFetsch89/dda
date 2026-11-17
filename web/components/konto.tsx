@@ -3,7 +3,7 @@
 // Anfrage-Helfer und kleine Formular-Teile. Die Seiten unter /konto sind statische Hüllen; alles Persönliche
 // kommt hier über /api/konto/* (Plan 3.1).
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ERSTES_MERKEN_EVENT } from "./client";
 import { abarbeiten, abgleichen, kontomodus, uebernahmePruefen } from "@/lib/konto/merk-store";
 
@@ -138,6 +138,44 @@ export function Meldung({ art = "info", children }: { art?: "info" | "fehler" | 
       <span className="icon" aria-hidden data-icon={art === "fehler" ? "error" : art === "ok" ? "check_circle" : "info"} />
       <div>{children}</div>
     </div>
+  );
+}
+
+/**
+ * Rückfrage als Popup (17.11.2026): Interessen ohne Häkchen abschicken bzw. gespeicherte Interessen widerrufen. Beide
+ * Buttons sind gleich gestaltet, damit die Wahl frei bleibt. Escape bzw. Schließen zählt als „Abbrechen“ (nichts passiert).
+ */
+export function Rueckfrage({
+  offen, titel, children, ja, nein, onJa, onNein, onAbbrechen,
+}: {
+  offen: boolean;
+  titel: string;
+  children: ReactNode;
+  ja: string;
+  nein: string;
+  onJa: () => void;
+  onNein: () => void;
+  onAbbrechen: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (offen && !d.open) d.showModal();
+    if (!offen && d.open) d.close();
+  }, [offen]);
+  return (
+    <dialog ref={ref} className="konto-dialog" aria-labelledby="konto-dialog-titel" onCancel={(e) => { e.preventDefault(); onAbbrechen(); }}>
+      <h2 className="d" id="konto-dialog-titel">{titel}</h2>
+      <div className="konto-dialog__text">{children}</div>
+      <div className="konto-dialog__knoepfe">
+        <button type="button" className="btn btn--outline btn--gross" onClick={onNein}>{nein}</button>
+        <button type="button" className="btn btn--outline btn--gross" onClick={onJa}>{ja}</button>
+      </div>
+      <button type="button" className="konto-dialog__zu icon-btn" aria-label="Schließen" onClick={onAbbrechen}>
+        <span className="icon" aria-hidden data-icon="close" />
+      </button>
+    </dialog>
   );
 }
 

@@ -4,7 +4,7 @@
 // Die Antworten bleiben bis „Fertig“ nur im Zustand dieser Komponente – kein localStorage, keine Anfrage.
 import { useState } from "react";
 import { Icon } from "./karten";
-import { EinwilligungFeld, Meldung } from "./konto";
+import { EinwilligungFeld, Meldung, Rueckfrage } from "./konto";
 import { GESTUFT, TEXT } from "@/lib/konto/texte";
 import type { CSSProperties } from "react";
 
@@ -76,6 +76,8 @@ export function InteressenFragebogen({
   const [a, setA] = useState<Antworten>(start);
   const [verworfen, setVerworfen] = useState(false);
   const [schritt, setSchritt] = useState<Schritt>("kategorien");
+  // Rückfrage, wenn Antworten da sind, das Häkchen (a) aber fehlt (17.11.2026)
+  const [frageInteressen, setFrageInteressen] = useState(false);
   const [werte, setWerte] = useState<AbschlussWerte>({
     interessen_ok: false, sensibel_ok: false, widerspruch: false, geburtstagsmail_ok: false,
     vorname: stammStart?.vorname ?? "", nachname: stammStart?.nachname ?? "", geburtsdatum: stammStart?.geburtsdatum ?? "",
@@ -298,6 +300,10 @@ export function InteressenFragebogen({
           className="fb__inhalt formular konto-abschluss"
           onSubmit={(e) => {
             e.preventDefault();
+            if (hatAntworten && !werte.interessen_ok) {
+              setFrageInteressen(true);
+              return;
+            }
             // Antworten gehen nur mit Häkchen (a) mit (Plan 5.3)
             speichern(werte.interessen_ok && hatAntworten ? a : null, werte);
           }}
@@ -343,6 +349,30 @@ export function InteressenFragebogen({
               Fertig<Icon name="check" />
             </button>
           </div>
+          <Rueckfrage
+            offen={frageInteressen}
+            titel="Interessen speichern?"
+            ja="Interessen speichern"
+            nein="Interessen nicht speichern"
+            onAbbrechen={() => setFrageInteressen(false)}
+            onNein={() => {
+              setFrageInteressen(false);
+              speichern(null, werte);
+            }}
+            onJa={() => {
+              setFrageInteressen(false);
+              const mitHaken = { ...werte, interessen_ok: true };
+              setWerte(mitHaken);
+              speichern(a, mitHaken);
+            }}
+          >
+            <p>
+              Deine Antworten speichern wir nur, wenn du das Häkchen bei den Interessen setzt. Ohne Häkchen verwerfen wir
+              sie, und deine Auswahl aus dem Fragebogen geht verloren.
+            </p>
+            <p>Mit „Interessen speichern“ setzt du das Häkchen:</p>
+            <blockquote>{TEXT.personalisierung}</blockquote>
+          </Rueckfrage>
         </form>
       )}
     </div>

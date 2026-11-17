@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Art13Hinweis, Honeypot, Meldung, PasswortFeld, fehlerText, konto } from "./konto";
+import { MELDUNG } from "@/lib/konto/konfig";
 import { uebernahmePruefen } from "@/lib/konto/merk-store";
 import { weiterPruefen } from "@/lib/konto/weiter";
 
@@ -31,10 +32,12 @@ function AnmeldenFormular() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [nichtBestaetigt, setNichtBestaetigt] = useState(false);
   const [fertig, setFertig] = useState<string | null>(null);
+  const [vorhanden, setVorhanden] = useState(false);
 
   async function absenden(ev: FormEvent) {
     ev.preventDefault();
     setFehler(null);
+    setVorhanden(false);
     setNichtBestaetigt(false);
     setSendet(true);
     if (modus === "anmelden") {
@@ -57,6 +60,12 @@ function AnmeldenFormular() {
       setFertig(typeof a.daten.meldung === "string" ? a.daten.meldung : "Fast geschafft!");
       return;
     }
+    if (a.daten.code === "vorhanden") {
+      // Adresse hat schon ein bestätigtes Konto: direkt zur Anmeldung, Adresse und Passwort bleiben stehen
+      setModus("anmelden");
+      setVorhanden(true);
+      return;
+    }
     setFehler(fehlerText(a));
   }
 
@@ -77,7 +86,7 @@ function AnmeldenFormular() {
         <button type="button" role="tab" aria-selected={modus === "anmelden"} onClick={() => { setModus("anmelden"); setFehler(null); }}>
           Anmelden
         </button>
-        <button type="button" role="tab" aria-selected={modus === "neu"} onClick={() => { setModus("neu"); setFehler(null); }}>
+        <button type="button" role="tab" aria-selected={modus === "neu"} onClick={() => { setModus("neu"); setFehler(null); setVorhanden(false); }}>
           Konto anlegen
         </button>
       </div>
@@ -99,6 +108,9 @@ function AnmeldenFormular() {
           <input type="checkbox" checked={alter} onChange={(e) => setAlter(e.target.checked)} required />
           <span>Ich bin mindestens 16 Jahre alt.</span>
         </label>
+      )}
+      {vorhanden && modus === "anmelden" && (
+        <Meldung>{MELDUNG.schonRegistriert}</Meldung>
       )}
       {fehler && (
         <Meldung art="fehler">

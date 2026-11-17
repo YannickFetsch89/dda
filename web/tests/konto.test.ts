@@ -363,14 +363,26 @@ describe("Schalter aus", () => {
   });
 });
 
-describe("registrieren antwortet immer gleich", () => {
+describe("registrieren: neutral, nur ein bestätigtes Konto wird genannt (Entscheidung 17.11.2026)", () => {
   const faelle: [string, () => unknown][] = [
     ["neu", () => ({ data: { user: { id: A, identities: [{}], created_at: new Date().toISOString() }, session: null }, error: null })],
     ["unbestätigt, anderes Passwort", () => ({ data: { user: { id: A, identities: [{}], created_at: "2026-01-01T00:00:00Z" }, session: null }, error: null })],
-    ["bestätigt, verschleiert", () => ({ data: { user: { id: A, identities: [], created_at: "2026-01-01T00:00:00Z" }, session: null }, error: null })],
-    ["bestätigt, Fehler", () => ({ data: { user: null, session: null }, error: { code: "user_already_exists", message: "User already registered" } })],
     ["Supabase nicht erreichbar", () => Promise.reject(new Error("fetch failed"))],
   ];
+  const vorhanden: [string, () => unknown][] = [
+    ["bestätigt, verschleiert", () => ({ data: { user: { id: A, identities: [], created_at: "2026-01-01T00:00:00Z" }, session: null }, error: null })],
+    ["bestätigt, Fehler", () => ({ data: { user: null, session: null }, error: { code: "user_already_exists", message: "User already registered" } })],
+  ];
+  it.each(vorhanden)("%s → 409 vorhanden, ohne Supabase-Details und ohne Nachweis", async (_name, signUp) => {
+    zustand.auth.signUp = signUp as () => unknown;
+    const { POST } = await import("@/app/api/konto/registrieren/route");
+    const res = await POST(anfrage("/api/konto/registrieren", "POST", { email: "x@example.org", passwort: "langespasswort", alter_ok: true }), ctx());
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe("vorhanden");
+    expect(JSON.stringify(body)).not.toMatch(/user|error|identit/i);
+    expect(zustand.rpc).toHaveLength(0);
+  });
   it.each(faelle)("%s → 200, gleicher Body", async (_name, signUp) => {
     zustand.auth.signUp = signUp as () => unknown;
     zustand.antworten["profiles.select"] = () => ({ data: { mindestalter_bestaetigt_am: null, nutzungsbedingungen_version: null }, error: null });
