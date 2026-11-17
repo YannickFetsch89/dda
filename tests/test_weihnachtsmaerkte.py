@@ -279,3 +279,31 @@ class GoogleLaufTest(unittest.TestCase):
         self.assertIn("Max O''Neil", sql)
         self.assertIn("'bild_fokus', '40%'", sql)
         self.assertIn("-- x: kein Foto", sql)
+
+
+class ScoreRandfaelleTest(unittest.TestCase):
+    """Cursor-Check Stufe 1b: n = 0 und „teilweise“ exakt prüfen."""
+    from scraper.weihnachtsmaerkte import google_lauf as gl  # noqa: E402
+
+    def eintrag(self, s, **kw):
+        return {"schluessel": s, "attraktion": False, "merkmale": {}, "art": [], "saison": None, "eintritt": None, "anfahrt": None, **kw}
+
+    def test_markt_treffer_alle_ohne_bewertung(self):
+        r = self.gl.score_berechnen([self.eintrag("a"), self.eintrag("b")],
+                                    {"a": {"bezug": "markt", "rating": None, "anzahl": 0}, "b": {"bezug": "markt", "rating": 4.0, "anzahl": 0}})
+        self.assertAlmostEqual(r["a"]["teile"]["beliebtheit"], round(0.5 * 0.30 / 0.45, 3))
+        self.assertAlmostEqual(r["b"]["teile"]["beliebtheit"], round(0.5 * 0.30 / 0.45, 3))
+
+    def test_kein_markt_treffer(self):
+        r = self.gl.score_berechnen([self.eintrag("a")], {"a": {"bezug": "ort", "rating": 4.9, "anzahl": 999}})
+        self.assertEqual(r["a"]["teile"]["beliebtheit"], 0.5)
+
+    def test_teilweise_ist_halbes_merkmal(self):
+        r = self.gl.score_berechnen([self.eintrag("a", merkmale={"eisbahn": {"wert": "ja"}, "wc": {"wert": "ja"},
+                                                                  "kunsthandwerk": {"wert": "teilweise"}})], {})
+        self.assertAlmostEqual(r["a"]["teile"]["angebot"], 1.5 / 4)   # wc zählt nicht zum Angebot
+
+    def test_markt_mit_null_bewertungen_neben_bewerteten(self):
+        r = self.gl.score_berechnen([self.eintrag("a"), self.eintrag("b")],
+                                    {"a": {"bezug": "markt", "rating": 4.5, "anzahl": 400}, "b": {"bezug": "markt", "rating": None, "anzahl": 0}})
+        self.assertEqual(r["b"]["teile"]["beliebtheit"], round(((4.5 - 3.5) / 1.5 * 0.30 + 0.0) / 0.45, 3))

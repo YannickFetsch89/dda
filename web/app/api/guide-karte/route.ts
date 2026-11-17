@@ -20,16 +20,16 @@ import {
 import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
 import { spielplatzKartenOrte } from "@/lib/spielplaetze-karte";
 import { istGueltigerTag } from "@/lib/datum";
-import { wmFilterAktiv, wmFilterLesen, wmFiltern, wmSortieren } from "@/lib/weihnachtsmaerkte";
+import { wmFilterAktiv, wmFilterLesen, wmFiltern, wmKartenCache, wmSortieren } from "@/lib/weihnachtsmaerkte";
 import { heuteKurz, weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { weihnachtsmarktKartenOrte } from "@/lib/weihnachtsmaerkte-karte";
 
 const CACHE = "public, max-age=300, stale-while-revalidate=3600";
 
 /** JSON-Antwort, gzip-gepackt wenn der Browser es kann (Next packt Route-Antworten nicht selbst; ~200 KB → ~30 KB). */
-function antwort(request: Request, daten: unknown): Response {
+function antwort(request: Request, daten: unknown, cache: string = CACHE): Response {
   const text = JSON.stringify(daten);
-  const kopf: Record<string, string> = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": CACHE, Vary: "Accept-Encoding" };
+  const kopf: Record<string, string> = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": cache, Vary: "Accept-Encoding" };
   if (!/\bgzip\b/.test(request.headers.get("accept-encoding") ?? "")) return new Response(text, { headers: kopf });
   const gepackt = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Response(gepackt, { headers: { ...kopf, "Content-Encoding": "gzip" } });
@@ -63,7 +63,8 @@ export async function GET(request: Request) {
       const f = wmFilterLesen(sp);
       const bezugTag = istGueltigerTag(sp.tag) ? sp.tag : await heuteKurz();
       const orte = wmFilterAktiv(f) ? wmSortieren(wmFiltern(alle, alle, f, bezugTag), f.sort) : alle;
-      return antwort(request, weihnachtsmarktKartenOrte(orte, alle));
+      // „heute geöffnet“ ohne festen Tag ist eine fertige Tagesmenge → nicht aus geteilten Caches (Cursor-Check Stufe 1b)
+      return antwort(request, weihnachtsmarktKartenOrte(orte, alle), wmKartenCache(sp, CACHE));
     }
     if (sp.hub === "restaurants") {
       const f = filterLesen(sp);

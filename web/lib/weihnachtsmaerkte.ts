@@ -1,6 +1,7 @@
 // Logik des Weihnachtsmarkt-Guides (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 4.3, 4.7, 5.1–5.4).
 // Reine Funktionen ohne Netz und ohne Uhr: das Datum kommt immer von außen (Browser oder dynamischer Seitenteil).
 // Gleiche Öffnungsregeln wie scraper/weihnachtsmaerkte/zeiten.py – beide gegen tests/fixtures/weihnachtsmaerkte_oeffnung.json.
+import { istGueltigerTag } from "./datum";
 import type { DddOrt } from "./typen";
 
 export const WM_BASIS = "/guides/weihnachtsmaerkte";
@@ -321,7 +322,20 @@ export function sortieren(orte: DddOrt[]): DddOrt[] {
   });
 }
 
-/** Top 5 (4.6): genau fünf Ränge nötig, sonst kein Block. Ab dem 31.12. entfällt der Block (5.5/5.8) – das prüft die Seite. */
+/** Top 5 an einem Tag (5.5/5.8): nur vom 01.10. bis 30.12. und nur mit genau fünf Rängen; ohne Tag (Fallback ohne Uhr) nie. */
+export function topFuenfAm(alle: DddOrt[], heute: string | null): DddOrt[] {
+  if (!heute) return [];
+  const md = heute.slice(5);
+  return md >= "10-01" && md <= "12-30" ? topFuenf(alle) : [];
+}
+
+/** Pin-Zustand heute (nur im Browser aufgerufen, Plan E5): offen | zu | saison (vor/nach) | unbekannt. */
+export function pinZustand(saisons: Saisons, heute: string): "offen" | "zu" | "saison" | "unbekannt" {
+  const z = oeffnungAm(saisons, heute).zustand;
+  return z === "offen" || z === "zu" || z === "unbekannt" ? z : "saison";
+}
+
+/** Top 5 (4.6): genau fünf Ränge nötig, sonst kein Block. Das Datumsfenster prüft topFuenfAm. */
 export function topFuenf(alle: DddOrt[]): DddOrt[] {
   const top = alle.filter((o) => wm(o).top5_rang != null).sort((a, b) => wm(a).top5_rang! - wm(b).top5_rang!);
   return top.length === 5 ? top : [];
@@ -437,6 +451,15 @@ export function badgeChips(orte: DddOrt[], alle: DddOrt[], aktiv: string[]): { w
 
 // ---------- Events: Zuordnung zu Einträgen (3.3) und Kurz-Markt-Liste (4.5), Stufe 1b ----------
 
+/**
+ * Cache-Header der Weihnachtsmarkt-Karte je Anfrage: „heute geöffnet“ (offen=1) ohne gültigen ?tag= ist eine fertige
+ * Tagesmenge und darf nicht über Mitternacht hinaus aus geteilten Caches kommen (Cursor-Check Stufe 1b).
+ */
+export function wmKartenCache(sp: Record<string, string | undefined>, oeffentlich: string): string {
+  // gleiche Prüfung wie der Bezugstag in der Route (ungültiger Tag → heute → Tagesmenge)
+  return sp.offen === "1" && !istGueltigerTag(sp.tag) ? "private, no-store" : oeffentlich;
+}
+
 /** Spiegel von data/weihnachtsmaerkte/event_ausschluss.csv (ein Test prüft, dass beide gleich sind). */
 export const EVENT_AUSSCHLUSS = new Set<string>([
   "https://prinz.de/events/leipziger-weihnachtsmarkt/2026-12-12/",
@@ -463,10 +486,17 @@ export function eintragFuerEvent(e: Pick<EventLike, "titel" | "ort">, eintraege:
   return eintraege.find((o) => wm(o).event_muster.some((m) => musterTreffer(m, text))) ?? null;
 }
 
+/** Gleicher Ort trotz anderer Schreibweise: identisch, oder der kürzere (≥ 3 Zeichen) ist der Anfang des längeren („fft“ ↔ „fft düsseldorf …“). */
+export function gleicherOrt(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [kurz, lang] = a.length <= b.length ? [a, b] : [b, a];
+  return kurz.length >= 3 && lang.startsWith(`${kurz} `);
+}
+
 /** Kleine Weihnachtsmärkte aus der Eventtabelle (4.5): höchstens 12, nach Datum, ohne Rauschen und ohne Guide-Einträge. */
 export function kurzMaerkte<E extends EventLike>(events: E[], eintraege: DddOrt[], heute: string, katalog: (st: string | null) => string | null): E[] {
   const jahrEnde = `${heute.slice(0, 4)}-12-31`;
-  const gesehen = new Set<string>();
+  const gesehen: { titel: string; datum: string; ort: string }[] = [];
   const norm = (t: string) => t.toLowerCase().replace(/\s+\d{4}\b/g, "").replace(/\s+in\s+düsseldorf\b/g, "").replace(/[^a-zäöüß0-9]+/g, " ").trim();
   return events
     .filter((e) => KURZ_MUSTER.test(e.titel))
@@ -481,9 +511,11 @@ export function kurzMaerkte<E extends EventLike>(events: E[], eintraege: DddOrt[
     // bei Dubletten gewinnt der kürzere Titel (meist das Original, „… in Düsseldorf“ ist oft ein Sammelportal)
     .sort((a, b) => a.datum.localeCompare(b.datum) || a.titel.length - b.titel.length)
     .filter((e) => {
-      const k = `${norm(e.titel)}|${e.datum}`;
-      if (gesehen.has(k)) return false;
-      gesehen.add(k);
+      // Titel, Datum und Ort (wie terminSchluessel) – zwei gleichnamige Märkte an verschiedenen Orten bleiben getrennt,
+      // „FFT“ und „FFT Düsseldorf – Forum Freies Theater“ gelten als derselbe Ort (gleicherOrt)
+      const k = { titel: norm(e.titel), datum: e.datum, ort: norm(e.ort ?? "") };
+      if (gesehen.some((g) => g.titel === k.titel && g.datum === k.datum && gleicherOrt(g.ort, k.ort))) return false;
+      gesehen.push(k);
       return true;
     })
     .slice(0, 12);

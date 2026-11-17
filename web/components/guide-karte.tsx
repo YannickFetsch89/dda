@@ -9,7 +9,7 @@ import { layers, namedFlavor } from "@protomaps/basemaps";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { heuteBerlin } from "@/lib/datum";
-import { oeffnungAm, type Saisons } from "@/lib/weihnachtsmaerkte";
+import { pinZustand, type Saisons } from "@/lib/weihnachtsmaerkte";
 
 export interface KartenOrt {
   id: string;
@@ -63,16 +63,10 @@ function istDunkel(): boolean {
 }
 
 /** Pin als DOM-Element (Tropfenform mit Icon, siehe 00_global/components.md → Karten). */
-/** Pin-Zustand eines Weihnachtsmarkts heute (Europe/Berlin), nur im Browser: offen | zu | saison (vor/nach) | unbekannt */
-function wmPinZustand(saisons: Saisons): "offen" | "zu" | "saison" | "unbekannt" {
-  const z = oeffnungAm(saisons, heuteBerlin()).zustand;
-  return z === "offen" || z === "zu" || z === "unbekannt" ? z : "saison";
-}
-
 function pinElement(o: KartenOrt): HTMLButtonElement {
   const pin = document.createElement("button");
   pin.type = "button";
-  pin.className = o.wmSaisons ? `gd-pin gd-pin--wm gd-pin--wm-${wmPinZustand(o.wmSaisons)}`
+  pin.className = o.wmSaisons ? `gd-pin gd-pin--wm gd-pin--wm-${pinZustand(o.wmSaisons, heuteBerlin())}`
     : o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}`
     : o.alter ? `gd-pin gd-pin--alter gd-pin--alter-${o.alter}`
     : o.art ? `gd-pin gd-pin--art gd-pin--art-${o.art}`

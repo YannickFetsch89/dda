@@ -284,3 +284,77 @@ describe("Stufe 1b: Kurz-Markt-Liste und Event-Zuordnung", () => {
     expect(eintragFuerEvent({ titel: "x", ort: "" }, [markt({ event_muster: ["(("] })])).toBeNull();
   });
 });
+
+// ---------- Cursor-Check Stufe 1b: fehlende Abdeckung ----------
+import { gleicherOrt, pinZustand, topFuenfAm, wmKartenCache } from "@/lib/weihnachtsmaerkte";
+
+describe("Cursor-Check Stufe 1b", () => {
+  it("Top 5 nur vom 01.10. bis 30.12., ohne Tag nie", () => {
+    const fuenf = [1, 2, 3, 4, 5].map((r) => markt({ top5_rang: r }));
+    expect(topFuenfAm(fuenf, "2026-12-30")).toHaveLength(5);
+    expect(topFuenfAm(fuenf, "2026-12-31")).toEqual([]);
+    expect(topFuenfAm(fuenf, "2026-09-30")).toEqual([]);
+    expect(topFuenfAm(fuenf, null)).toEqual([]);
+  });
+
+  it("Pin-Zustand: offen, zu, Saison, unbekannt", () => {
+    expect(pinZustand(FIXTURE.eintraege.innenstadt, "2026-11-21")).toBe("offen");
+    expect(pinZustand(FIXTURE.eintraege.innenstadt, "2026-11-22")).toBe("zu");
+    expect(pinZustand(FIXTURE.eintraege.innenstadt, "2026-11-18")).toBe("saison");
+    expect(pinZustand(FIXTURE.eintraege.innenstadt, "2026-12-31")).toBe("saison");
+    expect(pinZustand(FIXTURE.eintraege.nordstrasse, "2026-11-22")).toBe("unbekannt");
+  });
+
+  it("Karten-Cache: „heute geöffnet“ ohne gültigen Tag nie aus geteilten Caches", () => {
+    const pub = "public, max-age=300";
+    expect(wmKartenCache({ offen: "1" }, pub)).toBe("private, no-store");
+    expect(wmKartenCache({ offen: "1", tag: "2026-02-31" }, pub)).toBe("private, no-store");
+    expect(wmKartenCache({ offen: "1", tag: "2026-12-24" }, pub)).toBe(pub);
+    expect(wmKartenCache({}, pub)).toBe(pub);
+    expect(wmKartenCache({ tag: "2026-12-24" }, pub)).toBe(pub);
+  });
+
+  it("FAQ 5 verlinkt in 1b den Familien-Filter", () => {
+    const w = faqWerte([markt({ merkmale: { kinderprogramm: { wert: "ja", quelle: "zitat", beleg: "x" } } })], wmFilterHref(WM_STANDARD, { badges: ["familien"] }));
+    expect(w.faq_familien).toContain("(/guides/weihnachtsmaerkte?badge=familien)");
+  });
+
+  it("Kurz-Markt-Liste: Bulle und gleichnamige Märkte an verschiedenen Orten bleiben getrennt", () => {
+    let k = 0;
+    const ev = (titel: string, mehr: Record<string, unknown> = {}) => ({
+      id: `k${++k}`, titel, datum: "2026-12-04", datum_bis: null, ort: "Ort", adresse: null, stadtteil: "Flingern", quelle_name: "Rausgegangen",
+      quelle_url: `https://y.test/${k}`, abgesagt: false, slug: `k-${k}`, kategorie: "sonstiges", ...mehr,
+    });
+    const liste = kurzMaerkte([
+      ev("BULLE WINTERMARKT", { ort: "Bulle Bistro" }),
+      ev("Adventsmarkt der Gemeinde", { ort: "St. Anna" }),
+      ev("Adventsmarkt der Gemeinde", { ort: "St. Paulus", stadtteil: "Düsseltal" }),
+    ], [], "2026-11-17", kanonischerStadtteil);
+    expect(liste.map((e) => `${e.titel}@${e.ort}`).sort()).toEqual(["Adventsmarkt der Gemeinde@St. Anna", "Adventsmarkt der Gemeinde@St. Paulus", "BULLE WINTERMARKT@Bulle Bistro"]);
+  });
+
+  it("Einbaustellen und Foto-Cache stehen im Code (Textprüfung)", () => {
+    const lies = (p: string) => readFileSync(join(__dirname, "..", p), "utf8");
+    // Familie: Link steht im Familien-Eintrag hinter dem Schalter und zeigt auf den Filter des Hubs
+    expect(lies("app/kategorie/[slug]/page.tsx")).toMatch(/familie: \[[\s\S]{0,300}WEIHNACHTSMAERKTE_VERLINKT[\s\S]{0,120}pfad: "\/guides\/weihnachtsmaerkte\?badge=familien"/);
+    // Food/Märkte: Bedingung und Ziel gehören zusammen (Cursor-Recheck Stufe 1b)
+    expect(lies("app/kategorie/[slug]/[unter]/page.tsx")).toMatch(/u\.slug === "maerkte"[\s\S]{0,240}pfad: "\/guides\/weihnachtsmaerkte"/);
+    // Foto-Cache: Weihnachtsmärkte rufen bildQuelle mit dem 30-Tage-Schalter auf, und der Schalter begrenzt expire
+    const foto = lies("app/ort-foto/[slug]/route.ts");
+    expect(foto).toMatch(/bildQuelle\([\s\S]*?ort\?\.typ === "weihnachtsmarkt"/);
+    expect(foto).toMatch(/hoechstens30Tage \? \{ stale: TAG, revalidate: 20 \* TAG, expire: 30 \* TAG \}/);
+  });
+
+  it("Dubletten: „FFT“ und „FFT Düsseldorf – Forum Freies Theater“ sind derselbe Ort (Cursor-Recheck)", () => {
+    expect(gleicherOrt("fft", "fft düsseldorf forum freies theater")).toBe(true);
+    expect(gleicherOrt("st anna", "st paulus")).toBe(false);
+    expect(gleicherOrt("zk", "zk halle")).toBe(false); // zu kurz für einen sicheren Präfix
+    const ev = (ort: string, titel: string) => ({
+      id: `${ort}${titel}`, titel, datum: "2026-12-05", datum_bis: null, ort, adresse: null, stadtteil: "Pempelfort", quelle_name: "x",
+      quelle_url: `https://z.test/${ort}/${titel}`, abgesagt: false, slug: "s", kategorie: "sonstiges",
+    });
+    const liste = kurzMaerkte([ev("FFT Düsseldorf – Forum Freies Theater", "Bücherweihnachtsmarkt 2026 in Düsseldorf"), ev("FFT", "Bücherweihnachtsmarkt 2026")],
+      [], "2026-11-17", kanonischerStadtteil);
+    expect(liste.map((e) => e.titel)).toEqual(["Bücherweihnachtsmarkt 2026"]);
+  });
+});

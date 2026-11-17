@@ -24,7 +24,7 @@ import { jsonLdText } from "@/lib/json-ld";
 import {
   GEBIETE, SAISON_STANDARD, SORTIERUNGEN, WM_BASIS as BASIS, WM_STANDARD, aktuelleSaison, badgeChips, gebietVon, wmFilterAktiv, wmFilterHref, wmFilterLesen,
   wmFiltern, wmSortieren, kurzMaerkte, type WmFilter, datumKurz, datumLang, faqWerte, heroZahlen, hubJahr, istMarkt, listenReihenfolge, rolleText,
-  sonderTage, sonderZelle, sortieren, topFuenf, wm, wmPfad,
+  sonderTage, sonderZelle, sortieren, topFuenfAm, wm, wmPfad,
 } from "@/lib/weihnachtsmaerkte";
 import { heuteKurz, saisonTag, weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { weihnachtsmaerkteListeJsonLd } from "@/lib/weihnachtsmaerkte-json-ld";
@@ -271,7 +271,7 @@ function Legende() {
 function Ansicht({ alle, tag, heute, f }: { alle: DddOrt[]; tag: string | null; heute: string | null; f: WmFilter }) {
   const jahr = Number(heroZahlen(alle).jahr ?? SAISON_STANDARD);
   // Top 5 (Stufe 1b): nur mit fünf Rängen und nur bis zum 30.12. (Plan 5.5/5.8)
-  const top = heute && heute.slice(5) <= "12-30" && heute.slice(5) >= "10-01" ? topFuenf(alle) : [];
+  const top = topFuenfAm(alle, heute);
   // Bezugstag der Filter: gewählter Tag, sonst heute (ohne Uhr im Fallback: Filter „geöffnet“ ist dort nie aktiv)
   const bezugTag = tag ?? heute ?? "";
   const gefiltert = wmFilterAktiv(f);

@@ -136,21 +136,33 @@ def score_berechnen(eintraege: list[dict], google: dict[str, dict]) -> dict[str,
     google: schluessel → {bezug, rating, anzahl} (nur für die Rechnung, wird nicht gespeichert).
     Attraktionen bekommen keinen Score.
     """
-    markt = {s: g for s, g in google.items() if g.get("bezug") == "markt" and g.get("anzahl")}
+    # Plan 4.6 mit Randfällen (Cursor-Check Stufe 1b): Markt-Treffer = google_bezug „markt“ (auch mit 0 Bewertungen);
+    # kein Markt-Treffer → Beliebtheit 0,5 ohne Reichweite; Markt-Treffer, aber alle n = 0 → Bayes 0,5, Reichweite 0
+    def _n(g: dict) -> int | None:
+        return int(g["anzahl"]) if g.get("bezug") == "markt" and isinstance(g.get("anzahl"), (int, float)) else (0 if g.get("bezug") == "markt" else None)
+
+    markt_treffer = {s: g for s, g in google.items() if g.get("bezug") == "markt"}
+    markt = {s: g for s, g in markt_treffer.items() if (_n(g) or 0) > 0 and g.get("rating") is not None}
     C = sum(g["rating"] for g in markt.values()) / len(markt) if markt else None
-    n_max = max((g["anzahl"] for g in markt.values()), default=0)
+    n_max = max((_n(g) or 0 for g in markt.values()), default=0)
     m = 100
     ergebnis = {}
     for e in eintraege:
         if e.get("attraktion"):
             continue
         g = google.get(e["schluessel"]) or {}
-        if g.get("bezug") == "markt" and g.get("anzahl") and C is not None:
-            B = (g["anzahl"] * g["rating"] + m * C) / (g["anzahl"] + m)
+        n = _n(g)
+        if not markt_treffer:
+            bayes, reichweite = 0.5, None                        # kein einziger Markt-Treffer
+        elif n_max == 0:
+            bayes, reichweite = 0.5, 0.0                         # Treffer, aber niemand hat Bewertungen
+        elif n is not None and C is not None:
+            rating = g.get("rating") if n > 0 and g.get("rating") is not None else C
+            B = (n * rating + m * C) / (n + m)
             bayes = min(1.0, max(0.0, (B - 3.5) / 1.5))
-            reichweite = math.log10(g["anzahl"] + 1) / math.log10(n_max + 1) if n_max > 0 else 0.0
+            reichweite = math.log10(n + 1) / math.log10(n_max + 1)
         else:
-            bayes, reichweite = 0.5, (0.5 if markt else None)
+            bayes, reichweite = 0.5, 0.5                         # Ort statt Markt: neutral
         if reichweite is None:   # kein einziger Markt-Treffer: Reichweite entfällt, Gewicht geht an Bayes
             beliebtheit = bayes
         else:
