@@ -29,7 +29,7 @@ export async function WmStartBox() {
   return (
     <section className="sektion wm-startbox" aria-labelledby="wm-startbox-titel">
       <div className="sektionskopf">
-        <h2 className="d" id="wm-startbox-titel"><Icon name="storefront" /> Weihnachtsmärkte heute geöffnet</h2>
+        <h2 className="d" id="wm-startbox-titel"><Icon name="wm:markt" /> Weihnachtsmärkte heute geöffnet</h2>
         <Link href={WM_BASIS}>Alle Weihnachtsmärkte</Link>
       </div>
       {offen.length ? (

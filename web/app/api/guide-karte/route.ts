@@ -19,7 +19,9 @@ import {
 } from "@/lib/spielplaetze";
 import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
 import { spielplatzKartenOrte } from "@/lib/spielplaetze-karte";
-import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
+import { istGueltigerTag } from "@/lib/datum";
+import { wmFilterAktiv, wmFilterLesen, wmFiltern, wmSortieren } from "@/lib/weihnachtsmaerkte";
+import { heuteKurz, weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { weihnachtsmarktKartenOrte } from "@/lib/weihnachtsmaerkte-karte";
 
 const CACHE = "public, max-age=300, stale-while-revalidate=3600";
@@ -57,7 +59,11 @@ export async function GET(request: Request) {
     if (sp.hub === "weihnachtsmaerkte") {
       // Nur Zeiten/Stammdaten, nie ein fertig gerechneter Zustand „offen/zu“ (Antwort ist public und bis 1 h alt, Plan E5)
       const alle = await weihnachtsmaerkteLaden();
-      return antwort(request, weihnachtsmarktKartenOrte(alle));
+      // Gleiche Filter wie der Hub (Stufe 1b); Bezugstag = ?tag= oder heute (höchstens 5 Minuten alt)
+      const f = wmFilterLesen(sp);
+      const bezugTag = istGueltigerTag(sp.tag) ? sp.tag : await heuteKurz();
+      const orte = wmFilterAktiv(f) ? wmSortieren(wmFiltern(alle, alle, f, bezugTag), f.sort) : alle;
+      return antwort(request, weihnachtsmarktKartenOrte(orte, alle));
     }
     if (sp.hub === "restaurants") {
       const f = filterLesen(sp);

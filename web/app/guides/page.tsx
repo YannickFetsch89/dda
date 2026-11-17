@@ -36,7 +36,7 @@ interface Hub {
 // (Plan Weihnachtsmärkte 5.6, Schalter in lib/schalter.ts)
 const HUBS: Hub[] = [
   ...(WEIHNACHTSMAERKTE_VERLINKT
-    ? [{ slug: "weihnachtsmaerkte", label: "Weihnachtsmärkte", icon: "storefront", teaser: "Wer heute geöffnet hat – mit Sonderzeiten an den Feiertagen", einheit: "Märkte", fertig: true }]
+    ? [{ slug: "weihnachtsmaerkte", label: "Weihnachtsmärkte", icon: "wm:markt", teaser: "Wer heute geöffnet hat – mit Sonderzeiten an den Feiertagen", einheit: "Märkte", fertig: true }]
     : []),
   { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
   { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },

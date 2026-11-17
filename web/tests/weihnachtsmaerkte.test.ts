@@ -135,7 +135,8 @@ describe("Rollen, Zahlen, Badges, Sortierung", () => {
     expect(punkte.map((p) => p.id)).not.toContain(gruppe.id);
     const text = JSON.stringify(punkte);
     // „Lange offen“ ist ein Badge, kein Zustand – geprüft werden Werte, keine Wortteile
-    expect(text).not.toMatch(/"rating":\s*[0-9]|score|zustand|"(offen|zu|geschlossen|unbekannt)"/i);
+    // Sonderzeilen dürfen das Feld geschlossen:true tragen (Zeiten), aber nie einen gerechneten Zustand als Wert
+    expect(text).not.toMatch(/"rating":\s*[0-9]|score|zustand|:"(offen|zu|geschlossen|unbekannt)"/i);
   });
 
   it("JSON-LD: Event nur in der Saison, ohne aggregateRating", () => {
@@ -191,5 +192,95 @@ describe("Pfade und Einbau", () => {
     const o = markt({ top5_rang: 7, merkmale: { eisbahn: { wert: "vielleicht" } } });
     expect(wm(o).top5_rang).toBeNull();
     expect(wm(o).merkmale).toEqual({});
+  });
+});
+
+// ---------- Stufe 1b (Plan 7.2) ----------
+import {
+  EVENT_AUSSCHLUSS, badgeChips, eintragFuerEvent, gebietVon, kurzMaerkte, wmFilterHref, wmFilterLesen, wmFiltern, wmSortieren, WM_STANDARD,
+} from "@/lib/weihnachtsmaerkte";
+import { kanonischerStadtteil } from "@/lib/landing";
+
+describe("Stufe 1b: Filter und Chips", () => {
+  const gruppe = markt({ schluessel: "innenstadt", ist_gruppe: true });
+  const teil = markt({ gruppe: "innenstadt", merkmale: { kunsthandwerk: { wert: "ja", quelle: "zitat", beleg: "x" } } }, { name: "Teil" });
+  const eis = markt({ gruppe: "innenstadt", attraktion: true, art: ["eisbahn"], merkmale: { eisbahn: { wert: "ja", quelle: "zitat", beleg: "x" } },
+    saisons: { "2026": FIXTURE.eintraege["koe-on-ice"]["2026"] } }, { name: "Eis" });
+  const benrath = markt({ art: ["schloss", "kunsthandwerk"], merkmale: { kindereisenbahn: { wert: "ja", quelle: "zitat", beleg: "x" } },
+    saisons: { "2026": FIXTURE.eintraege.benrath["2026"] } }, { name: "Benrath", stadtteil: "Benrath" });
+  const neuss = markt({}, { name: "Neuss", stadtteil: "Neuss" });
+  const alle = [gruppe, teil, eis, benrath, neuss];
+
+  it("Parameter lesen: unbekannte Werte fallen weg, Href stabil sortiert", () => {
+    const f = wmFilterLesen({ badge: "kunsthandwerk,quatsch,familien", gebiet: "mond", offen: "1", sort: "name" });
+    expect(f).toEqual({ badges: ["kunsthandwerk", "familien"], gebiet: null, offen: true, sort: "name" });
+    expect(wmFilterHref(f)).toBe("/guides/weihnachtsmaerkte?badge=familien%2Ckunsthandwerk&offen=1&sort=name");
+    expect(wmFilterHref(WM_STANDARD)).toBe("/guides/weihnachtsmaerkte");
+    expect(wmFilterHref(WM_STANDARD, { badges: ["familien"] })).toBe("/guides/weihnachtsmaerkte?badge=familien");
+  });
+
+  it("Gebiete: Gruppe und Teile = Innenstadt, Nachbarstädte eigen", () => {
+    expect([gruppe, teil, eis, benrath, neuss].map(gebietVon)).toEqual(["innenstadt", "innenstadt", "innenstadt", "stadtteile", "neuss"]);
+  });
+
+  it("Filter UND, „heute geöffnet“ über den Bezugstag", () => {
+    const f = { ...WM_STANDARD, badges: ["kunsthandwerk"] };
+    expect(wmFiltern(alle, alle, f, "2026-11-25").map((o) => o.name).sort()).toEqual(["Benrath", "Teil"]);
+    // Mi 25.11.: Benrath (nur Fr–So) zu, Teil offen
+    expect(wmFiltern(alle, alle, { ...f, offen: true }, "2026-11-25").map((o) => o.name)).toEqual(["Teil"]);
+    expect(wmFiltern(alle, alle, { ...WM_STANDARD, gebiet: "neuss" }, "2026-11-25").map((o) => o.name)).toEqual(["Neuss"]);
+    expect(wmSortieren([benrath, teil], "name").map((o) => o.name)).toEqual(["Benrath", "Teil"]);
+  });
+
+  it("Chip-Schwellen: 2 allgemein, 1 für Eisbahn/Riesenrad/Kindereisenbahn, aktive bleiben", () => {
+    const chips = badgeChips(alle.filter((o) => !wm(o).ist_gruppe), alle, []);
+    const werte = chips.map((c) => c.wert);
+    expect(werte).toContain("kunsthandwerk"); // 2 Treffer
+    expect(werte).toContain("eisbahn"); // 1 Treffer reicht
+    expect(werte).toContain("kindereisenbahn");
+    expect(werte).not.toContain("riesenrad"); // 0 Treffer
+    expect(badgeChips([], alle, ["familien"]).map((c) => c.wert)).toEqual(["familien"]);
+  });
+});
+
+describe("Stufe 1b: Kurz-Markt-Liste und Event-Zuordnung", () => {
+  const boehler = markt({ event_muster: ["weihnachtszauber.{0,30}b(ö|oe)hler"] }, { name: "Areal Böhler" });
+  let k = 0;
+  const ev = (titel: string, mehr: Record<string, unknown> = {}) => ({
+    id: `e${++k}`, titel, datum: "2026-12-05", datum_bis: null, ort: "Ort", adresse: null, stadtteil: "Pempelfort", quelle_name: "Rausgegangen",
+    quelle_url: `https://x.test/${k}`, abgesagt: false, slug: `e-${k}`, kategorie: "sonstiges", ...mehr,
+  });
+
+  it("Ausschlussliste ist ein Spiegel von data/weihnachtsmaerkte/event_ausschluss.csv", () => {
+    const csv = readFileSync(join(__dirname, "..", "..", "data", "weihnachtsmaerkte", "event_ausschluss.csv"), "utf8").trim().split(/\r?\n/).slice(1);
+    expect(new Set(csv.map((z) => z.split(",")[0]))).toEqual(EVENT_AUSSCHLUSS);
+  });
+
+  it("Treffer und bekannte Fehltreffer (Leipzig, Hürth, Meetup, Guide-Eintrag, Dublette)", () => {
+    const events = [
+      ev("Bücherweihnachtsmarkt 2026", { stadtteil: "Pempelfort" }),
+      ev("Bücherweihnachtsmarkt 2026 in Düsseldorf", { stadtteil: "Pempelfort" }),
+      ev("1. Alternativer Weihnachtsmarkt", { datum: "2026-12-06", stadtteil: "Flingern" }),
+      ev("Veihnachtsmarkt Düsseldorf: der vegane Weihnachtsmarkt", { datum: "2026-11-28", stadtteil: null, adresse: "Fürstenwall 1, 40219 Düsseldorf" }),
+      ev("Leipziger Weihnachtsmarkt 2026", { stadtteil: "Altstadt", quelle_url: "https://prinz.de/events/leipziger-weihnachtsmarkt/2026-12-12/" }),
+      ev("Gertrudenhof Hundeweihnachtsmarkt", { stadtteil: null, adresse: null }),
+      ev("Secret Hitl€r Friday + Weihnachtsmarkt", { quelle_name: "Meetup.com" }),
+      ev("Weihnachtszauber auf dem Areal Böhler", { stadtteil: "Heerdt" }),
+      ev("Weihnachtsmarkt von gestern", { datum: "2026-11-10" }),
+      ev("Konzert im Advent"),
+    ];
+    const liste = kurzMaerkte(events, [boehler], "2026-11-17", kanonischerStadtteil);
+    expect(liste.map((e) => e.titel)).toEqual([
+      "Veihnachtsmarkt Düsseldorf: der vegane Weihnachtsmarkt",
+      "Bücherweihnachtsmarkt 2026",
+      "1. Alternativer Weihnachtsmarkt",
+    ]);
+  });
+
+  it("Event ↔ Eintrag über event_muster (Titel und Ort, ohne Groß/Klein)", () => {
+    expect(eintragFuerEvent({ titel: "WEIHNACHTSZAUBER auf dem Areal Böhler", ort: "" }, [boehler])?.name).toBe("Areal Böhler");
+    expect(eintragFuerEvent({ titel: "Bücherweihnachtsmarkt", ort: "FFT" }, [boehler])).toBeNull();
+    // ungültiges Muster wirft nie
+    expect(eintragFuerEvent({ titel: "x", ort: "" }, [markt({ event_muster: ["(("] })])).toBeNull();
   });
 });

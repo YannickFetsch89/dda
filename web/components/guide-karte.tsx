@@ -8,6 +8,8 @@ import { Protocol } from "pmtiles";
 import { layers, namedFlavor } from "@protomaps/basemaps";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { heuteBerlin } from "@/lib/datum";
+import { oeffnungAm, type Saisons } from "@/lib/weihnachtsmaerkte";
 
 export interface KartenOrt {
   id: string;
@@ -32,6 +34,8 @@ export interface KartenOrt {
   fokus?: string;
   /** Nur Restaurant-Hub: Art → Pin-Farbe (Restaurant/Imbiss, Café, Brauhaus) */
   art?: "restaurant" | "imbiss" | "cafe" | "brauhaus";
+  /** Nur Weihnachtsmärkte: kompakte Saisons (Zeitraum, Zeiten) – der Zustand „heute offen“ wird im Browser gerechnet (Plan E5) */
+  wmSaisons?: Saisons;
 }
 
 const START = { center: [6.7735, 51.2277] as [number, number], zoom: 12 };
@@ -59,10 +63,17 @@ function istDunkel(): boolean {
 }
 
 /** Pin als DOM-Element (Tropfenform mit Icon, siehe 00_global/components.md → Karten). */
+/** Pin-Zustand eines Weihnachtsmarkts heute (Europe/Berlin), nur im Browser: offen | zu | saison (vor/nach) | unbekannt */
+function wmPinZustand(saisons: Saisons): "offen" | "zu" | "saison" | "unbekannt" {
+  const z = oeffnungAm(saisons, heuteBerlin()).zustand;
+  return z === "offen" || z === "zu" || z === "unbekannt" ? z : "saison";
+}
+
 function pinElement(o: KartenOrt): HTMLButtonElement {
   const pin = document.createElement("button");
   pin.type = "button";
-  pin.className = o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}`
+  pin.className = o.wmSaisons ? `gd-pin gd-pin--wm gd-pin--wm-${wmPinZustand(o.wmSaisons)}`
+    : o.stufe ? `gd-pin gd-pin--stufe gd-pin--stufe-${o.stufe}`
     : o.alter ? `gd-pin gd-pin--alter gd-pin--alter-${o.alter}`
     : o.art ? `gd-pin gd-pin--art gd-pin--art-${o.art}`
     : "gd-pin";
@@ -71,7 +82,7 @@ function pinElement(o: KartenOrt): HTMLButtonElement {
   const icon = document.createElement("span");
   icon.className = "icon";
   // Eigene SVG-Piktogramme („sp:…“, CSS-Maske über data-icon) statt Ligatur-Text
-  if (o.icon.startsWith("sp:")) icon.dataset.icon = o.icon;
+  if (o.icon.startsWith("sp:") || o.icon.startsWith("wm:")) icon.dataset.icon = o.icon;
   else icon.textContent = o.icon;
   pin.appendChild(icon);
   return pin;

@@ -354,6 +354,141 @@ export function rolleText(o: DddOrt): string {
   return "Weihnachtsmarkt";
 }
 
+// ---------- Filter und Sortierung (Stufe 1b, Plan 4.7 und 5.1) ----------
+
+export const FILTER_BADGES = ["familien", "eisbahn", "riesenrad", "kindereisenbahn", "kunsthandwerk", "lange"] as const;
+/** Badges, die eine konkrete Suchfrage beantworten, erscheinen schon ab einem Treffer (4.7). */
+const SCHWELLE_EINS = new Set(["eisbahn", "riesenrad", "kindereisenbahn"]);
+export const GEBIETE = [
+  { wert: "innenstadt", label: "Innenstadt" },
+  { wert: "stadtteile", label: "Düsseldorfer Stadtteile" },
+  { wert: "neuss", label: "Neuss" },
+  { wert: "ratingen", label: "Ratingen" },
+] as const;
+export const SORTIERUNGEN = [
+  { wert: "empfohlen", label: "Empfohlen" },
+  { wert: "name", label: "Name" },
+] as const;
+export type Gebiet = (typeof GEBIETE)[number]["wert"];
+
+export interface WmFilter { badges: string[]; gebiet: Gebiet | null; offen: boolean; sort: "empfohlen" | "name" }
+export const WM_STANDARD: WmFilter = { badges: [], gebiet: null, offen: false, sort: "empfohlen" };
+
+type Roh = Record<string, string | string[] | undefined>;
+const ersterWert = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+/** URL-Parameter lesen: badge=familien,eisbahn · gebiet=innenstadt · offen=1 · sort=name (unbekannte Werte fallen weg). */
+export function wmFilterLesen(sp: Roh): WmFilter {
+  const badgesRoh = ersterWert(sp.badge).split(",").map((b) => b.trim()).filter(Boolean);
+  const gebiet = GEBIETE.find((g) => g.wert === ersterWert(sp.gebiet))?.wert ?? null;
+  return {
+    badges: [...new Set(badgesRoh.filter((b) => (FILTER_BADGES as readonly string[]).includes(b)))],
+    gebiet,
+    offen: ersterWert(sp.offen) === "1",
+    sort: ersterWert(sp.sort) === "name" ? "name" : "empfohlen",
+  };
+}
+
+export const wmFilterAktiv = (f: WmFilter) => f.badges.length > 0 || !!f.gebiet || f.offen || f.sort !== "empfohlen";
+
+/** Filter-URL mit Änderung a (leere Werte fallen weg; Reihenfolge fest, damit gleiche Filter gleiche URLs haben). */
+export function wmFilterHref(f: WmFilter, a: Partial<WmFilter> = {}, tag: string | null = null): string {
+  const n = { ...f, ...a };
+  const p = new URLSearchParams();
+  if (tag) p.set("tag", tag);
+  if (n.badges.length) p.set("badge", [...n.badges].sort().join(","));
+  if (n.gebiet) p.set("gebiet", n.gebiet);
+  if (n.offen) p.set("offen", "1");
+  if (n.sort !== "empfohlen") p.set("sort", n.sort);
+  const q = p.toString();
+  return q ? `${WM_BASIS}?${q}` : WM_BASIS;
+}
+
+export function gebietVon(o: DddOrt): Gebiet {
+  if (o.stadtteil === "Neuss") return "neuss";
+  if (o.stadtteil === "Ratingen") return "ratingen";
+  const d = wm(o);
+  return d.ist_gruppe || d.gruppe === "innenstadt" || d.schluessel === "innenstadt" ? "innenstadt" : "stadtteile";
+}
+
+/** Filtern (UND über Badges, Gebiet, „an diesem Tag geöffnet“). tag = gewählter oder heutiger Tag. */
+export function wmFiltern(orte: DddOrt[], alle: DddOrt[], f: WmFilter, tag: string, ohne: (keyof WmFilter)[] = []): DddOrt[] {
+  return orte.filter((o) => {
+    if (!ohne.includes("badges") && f.badges.length) {
+      const b = new Set(badges(o, alle).map((x) => x.wert));
+      if (!f.badges.every((x) => b.has(x))) return false;
+    }
+    if (!ohne.includes("gebiet") && f.gebiet && gebietVon(o) !== f.gebiet) return false;
+    if (!ohne.includes("offen") && f.offen && oeffnungAm(wm(o).saisons, tag).zustand !== "offen") return false;
+    return true;
+  });
+}
+
+export function wmSortieren(orte: DddOrt[], sort: WmFilter["sort"]): DddOrt[] {
+  return sort === "name" ? [...orte].sort((a, b) => a.name.localeCompare(b.name, "de")) : sortieren(orte);
+}
+
+/** Chips mit Anzahl; Schwelle 2, für Eisbahn/Riesenrad/Kindereisenbahn 1 (4.7). Aktive Chips bleiben immer sichtbar. */
+export function badgeChips(orte: DddOrt[], alle: DddOrt[], aktiv: string[]): { wert: string; label: string; icon: string; anzahl: number }[] {
+  return BADGES.filter((b) => (FILTER_BADGES as readonly string[]).includes(b.wert))
+    .map((b) => ({ ...b, anzahl: orte.filter((o) => badges(o, alle).some((x) => x.wert === b.wert)).length }))
+    .filter((b) => aktiv.includes(b.wert) || b.anzahl >= (SCHWELLE_EINS.has(b.wert) ? 1 : 2));
+}
+
+// ---------- Events: Zuordnung zu Einträgen (3.3) und Kurz-Markt-Liste (4.5), Stufe 1b ----------
+
+/** Spiegel von data/weihnachtsmaerkte/event_ausschluss.csv (ein Test prüft, dass beide gleich sind). */
+export const EVENT_AUSSCHLUSS = new Set<string>([
+  "https://prinz.de/events/leipziger-weihnachtsmarkt/2026-12-12/",
+]);
+/** Titel-Muster für kleine Märkte (4.5). */
+export const KURZ_MUSTER = /weihnachtsmarkt|adventsmarkt|wintermarkt|christkindl|weihnachtsbasar|adventsbasar|veihnachtsmarkt|nikolausmarkt|lichterzauber/i;
+/** Postleitzahlen Düsseldorf, Neuss, Ratingen (4.5). */
+const PLZ_ERLAUBT = (plz: number) => (plz >= 40210 && plz <= 40629) || (plz >= 41460 && plz <= 41472) || (plz >= 40878 && plz <= 40885);
+
+type EventLike = { id: string; titel: string; datum: string; datum_bis: string | null; ort: string; adresse: string | null; stadtteil: string | null;
+  quelle_name: string | null; quelle_url: string | null; abgesagt: boolean; slug: string | null; kategorie: string };
+
+function musterTreffer(muster: string, text: string): boolean {
+  try {
+    return new RegExp(muster, "i").test(text);
+  } catch {
+    return false; // ungültiges Muster prüft schon der Import; hier nie werfen
+  }
+}
+
+/** Guide-Eintrag, den ein Event meint (über event_muster, Titel und Ort). */
+export function eintragFuerEvent(e: Pick<EventLike, "titel" | "ort">, eintraege: DddOrt[]): DddOrt | null {
+  const text = `${e.titel} ${e.ort ?? ""}`;
+  return eintraege.find((o) => wm(o).event_muster.some((m) => musterTreffer(m, text))) ?? null;
+}
+
+/** Kleine Weihnachtsmärkte aus der Eventtabelle (4.5): höchstens 12, nach Datum, ohne Rauschen und ohne Guide-Einträge. */
+export function kurzMaerkte<E extends EventLike>(events: E[], eintraege: DddOrt[], heute: string, katalog: (st: string | null) => string | null): E[] {
+  const jahrEnde = `${heute.slice(0, 4)}-12-31`;
+  const gesehen = new Set<string>();
+  const norm = (t: string) => t.toLowerCase().replace(/\s+\d{4}\b/g, "").replace(/\s+in\s+düsseldorf\b/g, "").replace(/[^a-zäöüß0-9]+/g, " ").trim();
+  return events
+    .filter((e) => KURZ_MUSTER.test(e.titel))
+    .filter((e) => (e.datum_bis ?? e.datum) >= heute && e.datum <= jahrEnde)
+    .filter((e) => !e.abgesagt && e.quelle_name !== "Meetup.com" && !EVENT_AUSSCHLUSS.has(e.quelle_url ?? ""))
+    .filter((e) => {
+      if (katalog(e.stadtteil)) return true;
+      const plz = (e.adresse ?? "").match(/\b(\d{5})\b/);
+      return !!plz && PLZ_ERLAUBT(Number(plz[1]));
+    })
+    .filter((e) => !eintragFuerEvent(e, eintraege))
+    // bei Dubletten gewinnt der kürzere Titel (meist das Original, „… in Düsseldorf“ ist oft ein Sammelportal)
+    .sort((a, b) => a.datum.localeCompare(b.datum) || a.titel.length - b.titel.length)
+    .filter((e) => {
+      const k = `${norm(e.titel)}|${e.datum}`;
+      if (gesehen.has(k)) return false;
+      gesehen.add(k);
+      return true;
+    })
+    .slice(0, 12);
+}
+
 // ---------- FAQ-Antworten aus den Daten (Plan 6.2: feste Satzmuster, Namen und Zeiten aus den Daten) ----------
 
 const link = (o: DddOrt) => `[${o.name}](${wmPfad(o)})`;

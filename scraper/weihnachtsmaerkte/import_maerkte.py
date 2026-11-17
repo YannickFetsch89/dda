@@ -108,7 +108,8 @@ def markt_pruefen(z: dict) -> tuple[dict | None, list[str]]:
     manuell = _zahl(z.get("score_manuell", "")) if z.get("score_manuell") else None
     if z.get("score_manuell") and (manuell is None or not 0 <= manuell <= 10):
         fehler.append(f"{s}: score_manuell muss 0–10 sein")
-    muster = [m for m in (z.get("event_muster") or "").split("|") if m]
+    # Mehrere Muster mit „||“ getrennt (ein einfaches „|“ gehört zum regulären Ausdruck)
+    muster = [m.strip() for m in (z.get("event_muster") or "").split("||") if m.strip()]
     for m in muster:
         try:
             re.compile(m)

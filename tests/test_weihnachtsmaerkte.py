@@ -219,3 +219,63 @@ class SqlTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EventMusterTest(unittest.TestCase):
+    def test_trenner_doppelstrich_laesst_regex_oder_stehen(self):
+        e, fehler = im.markt_pruefen(csv_markt(event_muster=r"k(ö|oe)\s*on\s*ice||deg[- ]winterwelt"))
+        self.assertEqual(fehler, [])
+        self.assertEqual(e["event_muster"], [r"k(ö|oe)\s*on\s*ice", "deg[- ]winterwelt"])
+
+    def test_ungueltiges_muster_ist_fehler(self):
+        e, fehler = im.markt_pruefen(csv_markt(event_muster="(("))
+        self.assertIsNone(e)
+        self.assertTrue(fehler)
+
+
+class GoogleLaufTest(unittest.TestCase):
+    from scraper.weihnachtsmaerkte import google_lauf as gl  # noqa: E402
+
+    def eintrag(self, s, **kw):
+        saison = {"von": "2026-11-19", "bis": "2026-12-30", "zeiten": [{"tage": ["mo", "di", "mi", "do", "fr", "sa", "so"], "von": "11:00", "bis": "20:00"}],
+                  "sonder": [{"datum": "2026-11-22", "geschlossen": True}]}
+        return {"schluessel": s, "attraktion": False, "merkmale": {}, "art": [], "saison": saison, "eintritt": None, "anfahrt": None, **kw}
+
+    def test_score_skala_und_randfaelle(self):
+        gl = self.gl
+        e = [self.eintrag("a", eintritt={"wert": "frei"}, anfahrt={"haltestellen": [{"name": "X"}]},
+                          merkmale={"eisbahn": {"wert": "ja"}, "kunsthandwerk": {"wert": "teilweise"}}),
+             self.eintrag("b"), self.eintrag("rad", attraktion=True)]
+        ohne_google = gl.score_berechnen(e, {})
+        self.assertNotIn("rad", ohne_google)                       # Attraktion ohne Score
+        self.assertTrue(0 <= ohne_google["a"]["wert"] <= 10)
+        self.assertGreater(ohne_google["a"]["wert"], ohne_google["b"]["wert"])
+        self.assertEqual(ohne_google["b"]["teile"]["beliebtheit"], 0.5)  # kein Markt-Treffer → neutral
+        mit = gl.score_berechnen(e, {"a": {"bezug": "markt", "rating": 4.6, "anzahl": 900}, "b": {"bezug": "ort", "rating": 4.9, "anzahl": 5000}})
+        self.assertEqual(mit["b"]["teile"]["beliebtheit"], 0.5)          # Ort-Bewertungen zählen nicht
+        self.assertEqual(mit["b"]["google_bezug"], "ort")
+        null = gl.score_berechnen(e, {"a": {"bezug": "markt", "rating": 4.0, "anzahl": 0}})
+        self.assertTrue(0 <= null["a"]["wert"] <= 10)                    # n_max = 0 wirft nicht
+        self.assertNotIn("rating", json.dumps(mit))                      # keine Rohwerte im Ergebnis
+
+    def test_oeffnungstage_ohne_geschlossene(self):
+        self.assertEqual(self.gl.oeffnungstage(self.eintrag("a")["saison"]), 41)  # 42 Tage − Totensonntag
+
+    def test_bezug_und_treffer(self):
+        gl = self.gl
+        nah = {"id": "p1", "displayName": {"text": "Weihnachtsmarkt Schloss Benrath"}, "location": {"latitude": 51.1612, "longitude": 6.8704}}
+        fern = {"id": "p2", "displayName": {"text": "Weihnachtsmarkt Schloss Benrath"}, "location": {"latitude": 51.2, "longitude": 6.8}}
+        t, art = gl.treffer_waehlen("Weihnachtsmarkt Schloss Benrath", 51.161181, 6.870436, [fern, nah])
+        self.assertEqual((t["id"], art), ("p1", "name"))
+        self.assertEqual(gl.google_bezug(t), "markt")
+        self.assertEqual(gl.google_bezug({"displayName": {"text": "Schloss Benrath"}}), "ort")
+        self.assertEqual(gl.treffer_waehlen("X", 51.0, 6.0, [nah])[1], "kein_treffer")
+
+    def test_foto_sql(self):
+        sql = self.gl.sql_aus_sichtung({"bilk-arcaden": {"foto": 0, "grund": "ohne Gesichter", "fokus": "40%"}, "x": {"foto": None, "grund": "nur Gesichter"}},
+                                       {"bilk-arcaden": [{"name": "places/a/photos/b", "breite": 800, "hoehe": 600, "autor": "Max O'Neil", "autor_url": "https://u"}]},
+                                       "2026-11-17")
+        self.assertIn("extras->'weihnachtsmarkt'->>'schluessel' = 'bilk-arcaden'", sql)
+        self.assertIn("Max O''Neil", sql)
+        self.assertIn("'bild_fokus', '40%'", sql)
+        self.assertIn("-- x: kein Foto", sql)

@@ -2158,3 +2158,36 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-startbox__liste li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
 .wm-startbox__liste a { font-weight: 700; color: var(--ddd-text); }
 @media (min-width: 768px) { .wm-startbox__liste { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* Weihnachtsmarkt-Guide Stufe 1b: Pin-Farben nach Zustand (im Browser gerechnet) und Legende */
+.gd-pin.gd-pin--wm-offen { --pin-bg: #c9a84c; --pin-fg: #1b2540; }
+.gd-pin.gd-pin--wm-zu { --pin-bg: #5f6b7d; --pin-fg: #ffffff; }
+.gd-pin.gd-pin--wm-saison { --pin-bg: #e8e2d4; --pin-fg: #1b2540; }
+.gd-pin.gd-pin--wm-unbekannt { --pin-bg: #ffffff; --pin-fg: #1b2540; }
+.gd-pin.gd-pin--wm-unbekannt::before { border-style: dashed; border-color: #1b2540; }
+.gd-pin.gd-pin--wm.gd-pin--an { --pin-schatten: 0 0 0 3px #1b2540, 0 6px 14px rgba(27, 37, 64, 0.45); }
+.wm-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 13px; font-weight: 600; color: var(--ddd-text-body); }
+.wm-legende li { display: inline-flex; align-items: center; gap: 7px; }
+.wm-legende__punkt { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(27, 37, 64, 0.25); }
+.wm-legende__punkt--offen { background: #c9a84c; }
+.wm-legende__punkt--zu { background: #5f6b7d; }
+.wm-legende__punkt--saison { background: #e8e2d4; }
+.wm-legende__punkt--unbekannt { background: #fff; border: 2px dashed #1b2540; }
+.wm-filter { margin: 8px 0 4px; }
+.wm-treffer { padding-bottom: 6px; }
+.wm-kurz { margin-top: 30px; }
+.wm-kurz h2 { font-size: 24px; margin-bottom: 6px; }
+.wm-kurz ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.wm-kurz li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
+.wm-kurz li a { font-weight: 700; color: var(--ddd-text); }
+@media (min-width: 768px) { .wm-kurz ul { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.wm-eventkasten { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; margin: 16px 0; border-radius: var(--r-card); background: var(--ddd-gold-tint); color: var(--ddd-text); }
+.wm-eventkasten .icon { font-size: 26px; color: var(--ddd-gold-hover); }
+.wm-eventkasten a { font-weight: 700; color: var(--ddd-text); text-decoration: underline; }
+:root[data-theme="dark"] .wm-eventkasten { background: var(--ddd-subtle); }
+.wm-naehe { margin-top: 26px; }
+/* Eigenes Piktogramm Weihnachtsmarkt (Marktbude mit Stern), gleiches Masken-Verfahren wie die sp:-Icons */
+.icon[data-icon^="wm:"]::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background: currentColor;
+  -webkit-mask: var(--wm-icon) center / contain no-repeat; mask: var(--wm-icon) center / contain no-repeat;
+}
+.icon[data-icon="wm:markt"] { --wm-icon: url("/guides/icons/wm-markt.svg"); }

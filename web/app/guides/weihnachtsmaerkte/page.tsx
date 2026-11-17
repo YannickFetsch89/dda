@@ -15,10 +15,15 @@ import { Icon } from "@/components/karten";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { WM_BILD, WmKarte } from "@/components/wm-karte";
 import { istGueltigerTag, plusTage } from "@/lib/datum";
-import { zahl } from "@/lib/guide-filter";
+import { umschalten, zahl } from "@/lib/guide-filter";
+import { eventPoolLaden } from "@/lib/daten";
+import { kanonischerStadtteil } from "@/lib/landing";
+import { eventPfad } from "@/lib/pfade";
+import { ScrollReihe } from "@/components/scroll-reihe";
 import { jsonLdText } from "@/lib/json-ld";
 import {
-  WM_BASIS as BASIS, aktuelleSaison, datumKurz, datumLang, faqWerte, heroZahlen, hubJahr, istMarkt, listenReihenfolge, rolleText,
+  GEBIETE, SAISON_STANDARD, SORTIERUNGEN, WM_BASIS as BASIS, WM_STANDARD, aktuelleSaison, badgeChips, gebietVon, wmFilterAktiv, wmFilterHref, wmFilterLesen,
+  wmFiltern, wmSortieren, kurzMaerkte, type WmFilter, datumKurz, datumLang, faqWerte, heroZahlen, hubJahr, istMarkt, listenReihenfolge, rolleText,
   sonderTage, sonderZelle, sortieren, topFuenf, wm, wmPfad,
 } from "@/lib/weihnachtsmaerkte";
 import { heuteKurz, saisonTag, weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
@@ -57,7 +62,7 @@ function Hero({ alle, jahr }: { alle: DddOrt[]; jahr: string | null }) {
   return (
     <section className="gd-hero gd-hero--abend wm-hero">
       <div className="gd-hero__bild">
-        <BildImg src={WM_BILD} alt="" icon="storefront" eager />
+        <BildImg src={WM_BILD} alt="" icon="wm:markt" eager />
       </div>
       <div className="gd-hero__verlauf" aria-hidden />
       <div className="gd-hero__inhalt container">
@@ -148,6 +153,27 @@ function SonderzeitenTabelle({ alle, jahr }: { alle: DddOrt[]; jahr: number }) {
   );
 }
 
+/** Kleine Weihnachtsmärkte an einzelnen Tagen aus dem Eventkalender (4.5, Stufe 1b); entfällt ohne Treffer. */
+async function KurzMaerkte({ alle }: { alle: DddOrt[] }) {
+  const pool = await eventPoolLaden();
+  const liste = kurzMaerkte(pool.events, alle, pool.heute, kanonischerStadtteil);
+  if (!liste.length) return null;
+  return (
+    <section className="container wm-kurz" aria-labelledby="wm-kurz-titel">
+      <h2 className="d" id="wm-kurz-titel">Kleine Weihnachtsmärkte an einzelnen Tagen</h2>
+      <p className="muted">Basare, Adventsmärkte von Vereinen und Kirchengemeinden und andere Märkte, die nur einen oder wenige Tage stattfinden – aus unserem Eventkalender.</p>
+      <ul>
+        {liste.map((e) => (
+          <li key={e.id}>
+            <Link href={eventPfad(e)}>{e.titel}</Link>
+            <span className="muted">{[datumKurz(e.datum), e.uhrzeit ? `${e.uhrzeit} Uhr` : null, e.ort].filter(Boolean).join(" · ")}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Liste({ alle, tag }: { alle: DddOrt[]; tag: string | null }) {
   return (
     <div className="wm-liste">
@@ -165,31 +191,132 @@ function Liste({ alle, tag }: { alle: DddOrt[]; tag: string | null }) {
   );
 }
 
-function Ansicht({ alle, tag, heute }: { alle: DddOrt[]; tag: string | null; heute: string | null }) {
-  const jahr = Number(heroZahlen(alle).jahr ?? "2026");
+function Chip({ href, aktiv, children, icon }: { href: string; aktiv: boolean; children: React.ReactNode; icon?: string }) {
+  return (
+    <Link href={href} scroll={false} className={`gd-chip gd-chip--gross ${aktiv ? "gd-chip--an" : ""}`} aria-current={aktiv || undefined}>
+      {icon && <Icon name={icon} />}
+      {children}
+    </Link>
+  );
+}
+
+/** Filterleiste (Stufe 1b): Badges (UND), Gebiet, „an diesem Tag geöffnet“, Sortierung. Alle Filter-URLs noindex. */
+function Filter({ alle, f, tag, bezugTag }: { alle: DddOrt[]; f: WmFilter; tag: string | null; bezugTag: string }) {
+  const href = (a: Partial<WmFilter>) => wmFilterHref(f, a, tag);
+  const fuerBadges = wmFiltern(alle.filter((o) => !wm(o).ist_gruppe), alle, f, bezugTag, ["badges"]);
+  const chips = badgeChips(fuerBadges, alle, f.badges);
+  const vorhanden = new Set(alle.map(gebietVon));
+  const gebiete = GEBIETE.filter((g) => vorhanden.has(g.wert));
+  return (
+    <div className="gd-filter wm-filter" id="gd-filter" tabIndex={-1}>
+      <div className="gd-filter__innen">
+        {chips.length > 0 && (
+          <div className="gd-zeile">
+            <span className="gd-zeile__label">Was es gibt</span>
+            <ScrollReihe className="gd-zeile__chips" label="Besonderheiten">
+              {chips.map((c) => (
+                <Chip key={c.wert} href={href({ badges: umschalten(f.badges, c.wert) })} aktiv={f.badges.includes(c.wert)} icon={f.badges.includes(c.wert) ? "check" : c.icon}>
+                  {c.label}<span className="gd-chip__zahl">{c.anzahl}</span>
+                </Chip>
+              ))}
+            </ScrollReihe>
+          </div>
+        )}
+        {gebiete.length > 1 && (
+          <div className="gd-zeile">
+            <span className="gd-zeile__label">Wo</span>
+            <ScrollReihe className="gd-zeile__chips" label="Gebiet">
+              <Chip href={href({ gebiet: null })} aktiv={!f.gebiet}>Alle</Chip>
+              {gebiete.map((g) => <Chip key={g.wert} href={href({ gebiet: f.gebiet === g.wert ? null : g.wert })} aktiv={f.gebiet === g.wert}>{g.label}</Chip>)}
+            </ScrollReihe>
+          </div>
+        )}
+        <div className="gd-zeile">
+          <span className="gd-zeile__label">Öffnung</span>
+          <ScrollReihe className="gd-zeile__chips" label="Öffnung">
+            <Chip href={href({ offen: !f.offen })} aktiv={f.offen} icon={f.offen ? "check" : "schedule"}>
+              {tag ? "An diesem Tag geöffnet" : "Heute geöffnet"}
+            </Chip>
+          </ScrollReihe>
+        </div>
+        <div className="gd-filter__fuss">
+          <details className="gd-sort">
+            <summary>
+              <Icon name="sort" className="muted" />
+              <span className="gd-sort__label muted">Sortieren:</span>
+              <b>{SORTIERUNGEN.find((s) => s.wert === f.sort)?.label}</b>
+              <Icon name="expand_more" />
+            </summary>
+            <div className="gd-menue">
+              {SORTIERUNGEN.map((s) => <Link key={s.wert} href={href({ sort: s.wert })} scroll={false} className={s.wert === f.sort ? "is-aktiv" : ""}>{s.label}</Link>)}
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Legende() {
+  return (
+    <ul className="wm-legende" aria-label="Farben auf der Karte">
+      <li><span className="wm-legende__punkt wm-legende__punkt--offen" aria-hidden />Heute geöffnet</li>
+      <li><span className="wm-legende__punkt wm-legende__punkt--zu" aria-hidden />Heute geschlossen</li>
+      <li><span className="wm-legende__punkt wm-legende__punkt--saison" aria-hidden />Noch nicht oder nicht mehr in der Saison</li>
+      <li><span className="wm-legende__punkt wm-legende__punkt--unbekannt" aria-hidden />Zeit nicht veröffentlicht</li>
+    </ul>
+  );
+}
+
+function Ansicht({ alle, tag, heute, f }: { alle: DddOrt[]; tag: string | null; heute: string | null; f: WmFilter }) {
+  const jahr = Number(heroZahlen(alle).jahr ?? SAISON_STANDARD);
   // Top 5 (Stufe 1b): nur mit fünf Rängen und nur bis zum 30.12. (Plan 5.5/5.8)
   const top = heute && heute.slice(5) <= "12-30" && heute.slice(5) >= "10-01" ? topFuenf(alle) : [];
+  // Bezugstag der Filter: gewählter Tag, sonst heute (ohne Uhr im Fallback: Filter „geöffnet“ ist dort nie aktiv)
+  const bezugTag = tag ?? heute ?? "";
+  const gefiltert = wmFilterAktiv(f);
+  const ergebnis = gefiltert ? wmSortieren(wmFiltern(alle.filter((o) => !wm(o).ist_gruppe), alle, f, bezugTag), f.sort) : [];
+  const abfrage = wmFilterHref(f, {}, tag).split("?")[1] ?? "";
   return (
     <>
       <div className="container">
         <Tagesleiste tag={tag} heute={heute} jahr={jahr} />
         {tag && <p className="gd-status"><span>Zeiten für {datumKurz(tag)}{tag.slice(0, 4)}</span><Link href={BASIS} scroll={false} className="gd-status__reset">Zurück zu heute</Link></p>}
-        {top.length === 5 && (
+        {top.length === 5 && !gefiltert && (
           <section className="wm-top" aria-labelledby="wm-top-titel">
             <h2 className="d" id="wm-top-titel">Unsere Top 5</h2>
             <div className="gd-grid gd-grid--3" role="list">{top.map((o) => <WmKarte key={o.id} o={o} alle={alle} tag={tag} />)}</div>
           </section>
         )}
-        <Liste alle={alle} tag={tag} />
+        <Filter alle={alle} f={f} tag={tag} bezugTag={bezugTag} />
+        {gefiltert ? (
+          <>
+            <div className="gd-status">
+              <span>{zahl(ergebnis.length)} {ergebnis.length === 1 ? "Eintrag" : "Einträge"}</span>
+              <Link href={tag ? `${BASIS}?tag=${tag}` : BASIS} scroll={false} className="gd-status__reset">Filter zurücksetzen</Link>
+            </div>
+            {ergebnis.length ? (
+              <div className="gd-grid gd-grid--3 wm-treffer" role="list">{ergebnis.map((o) => <WmKarte key={o.id} o={o} alle={alle} tag={tag} />)}</div>
+            ) : (
+              <div className="gd-leer">Kein Markt passt zu diesen Filtern. <Link href={BASIS} scroll={false}>Filter zurücksetzen</Link></div>
+            )}
+          </>
+        ) : (
+          <Liste alle={alle} tag={tag} />
+        )}
+        <h2 className="d wm-zwischentitel">Alle Märkte auf der Karte</h2>
+        <Legende />
+        <GuideKarteLazy quelle={`/api/guide-karte?hub=weihnachtsmaerkte${abfrage ? `&${abfrage}` : ""}`} />
       </div>
     </>
   );
 }
 
 async function GefilterteAnsicht({ searchParams, alle }: { searchParams: Promise<SP>; alle: DddOrt[] }) {
-  const tag = tagAus(await searchParams);
-  await connection(); // Uhr erst zur Anfrage lesen (Morgen/Samstag, Top-5-Fenster), nie beim Vorrendern
-  return <Ansicht alle={alle} tag={tag} heute={await heuteKurz()} />;
+  const sp = await searchParams;
+  const tag = tagAus(sp);
+  await connection(); // Uhr erst zur Anfrage lesen (Morgen/Samstag, Top-5-Fenster, „heute geöffnet“), nie beim Vorrendern
+  return <Ansicht alle={alle} tag={tag} heute={await heuteKurz()} f={wmFilterLesen(sp)} />;
 }
 
 export default async function Weihnachtsmaerkte(props: { searchParams: Promise<SP> }) {
@@ -203,16 +330,17 @@ export default async function Weihnachtsmaerkte(props: { searchParams: Promise<S
       <div className="container">
         <GuideEinleitung seite="weihnachtsmaerkte" werte={{ anzahl: zahl(maerkte.length) }} />
       </div>
-      <Suspense fallback={<Ansicht alle={alle} tag={null} heute={null} />}>
+      <Suspense fallback={<Ansicht alle={alle} tag={null} heute={null} f={WM_STANDARD} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />
       </Suspense>
       <div className="container">
-        <h2 className="d wm-zwischentitel">Alle Märkte auf der Karte</h2>
-        <GuideKarteLazy quelle="/api/guide-karte?hub=weihnachtsmaerkte" />
         <OrtLinkListe orte={alle} alleHref={BASIS} max={200} pfad={wmPfad} typLabel={rolleText} einheit="Märkte und Attraktionen" />
       </div>
       <SonderzeitenTabelle alle={alle} jahr={jahr} />
-      <GuideSeoText seite="weihnachtsmaerkte" werte={{ anzahl: zahl(maerkte.length), ...faqWerte(alle) }} />
+      <Suspense fallback={null}>
+        <KurzMaerkte alle={alle} />
+      </Suspense>
+      <GuideSeoText seite="weihnachtsmaerkte" werte={{ anzahl: zahl(maerkte.length), ...faqWerte(alle, wmFilterHref(WM_STANDARD, { badges: ["familien"] })) }} />
       <div className="container wm-quellen muted">
         <p>
           <Icon name="info" /> Zeiten und Angaben laut Veranstaltern und Düsseldorf Tourismus (visitduesseldorf.de); Beschreibungen in eigenen Worten.

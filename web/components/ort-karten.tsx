@@ -46,7 +46,7 @@ const TYP_ICON: Record<string, string> = {
   spielplatz: "sp:spielplatz",
   ausflug: "hiking",
   wochenendtipp: "luggage",
-  weihnachtsmarkt: "storefront",
+  weihnachtsmarkt: "wm:markt",
 };
 
 export function typIcon(typ: string): string {

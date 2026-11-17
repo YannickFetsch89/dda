@@ -16,7 +16,7 @@ export const WM_BILD = "/guides/weihnachtsmaerkte.webp";
 export function wmIcon(o: DddOrt): string {
   const d = wm(o);
   if (d.attraktion) return d.art.includes("eisbahn") ? "ice_skating" : "attractions";
-  return "storefront";
+  return "wm:markt";
 }
 
 export function BadgeListe({ liste, max = 3 }: { liste: Badge[]; max?: number }) {

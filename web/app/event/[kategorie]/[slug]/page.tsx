@@ -4,6 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
 import { Bild, EventKarte, Icon, KatBadge, eventPfad } from "@/components/karten";
+import { WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { KURZ_MUSTER, WM_BASIS, eintragFuerEvent, wmPfad } from "@/lib/weihnachtsmaerkte";
+import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { eventLaden, eventPoolLaden } from "@/lib/daten";
 import { filtern, istKostenlos, istOnline, nachBeliebtheit } from "@/lib/ableitungen";
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
@@ -108,6 +111,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
     : [];
   // Guide-Ort: nur echte Clubs (typ club), exakt über die gepflegten Schreibweisen – auch_club-Orte haben eine andere Haupt-URL
   const club = clubs.find((o) => o.typ === "club" && (clubProfil(o)?.eventOrte ?? []).includes(e.ort)) ?? null;
+  // Weihnachtsmarkt-Guide (Plan Weihnachtsmärkte 3.3/5.6, Stufe 1b): Event meint einen Guide-Eintrag → Markt-Kasten,
+  // sonst bei Weihnachtsmarkt im Titel ein Link auf den Hub. Nur mit Schalter.
+  const wmEintraege = WEIHNACHTSMAERKTE_VERLINKT ? await weihnachtsmaerkteLaden() : [];
+  const wmEintrag = WEIHNACHTSMAERKTE_VERLINKT ? eintragFuerEvent(e, wmEintraege) : null;
+  const wmHubLink = WEIHNACHTSMAERKTE_VERLINKT && !wmEintrag && KURZ_MUSTER.test(e.titel);
 
   return (
     <article>
@@ -245,6 +253,22 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                 <h2 className="d">Worum geht&apos;s</h2>
                 <BeschreibungText text={e.beschreibung} />
               </section>
+            )}
+
+            {wmEintrag && (
+              <p className="wm-eventkasten">
+                <Icon name="wm:markt" />
+                <span>
+                  Alle Infos zum Markt – Öffnungszeiten, Sonderzeiten, Anfahrt und Besonderheiten:{" "}
+                  <Link href={wmPfad(wmEintrag)}>{wmEintrag.name}</Link>
+                </span>
+              </p>
+            )}
+            {wmHubLink && (
+              <p className="wm-eventkasten">
+                <Icon name="wm:markt" />
+                <span>Wer hat heute geöffnet? <Link href={WM_BASIS}>Alle Weihnachtsmärkte in Düsseldorf</Link></span>
+              </p>
             )}
           </div>
 

@@ -13,6 +13,7 @@ import { LANDING_TAGE, kategoriePfad, unterkategorieGueltig, unterkategoriePfad 
 import { unterkategorieEvents, unterkategorieIndexierbar, unterkategorieText } from "@/lib/landing-listen";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { seitenMetadaten } from "@/lib/seo";
+import { WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import type { KategorieSlug } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
@@ -89,6 +90,10 @@ export default async function UnterkategorieSeite({ params }: Props) {
       )}
 
       <LinkChips titel={`Mehr aus ${k.name}`} links={[{ name: `Alle ${k.name}-Events`, pfad: katPfad }, ...geschwister]} />
+      {/* Food/Märkte: Weihnachtsmarkt-Guide (Plan Weihnachtsmärkte 5.6, Stufe 1b) */}
+      {WEIHNACHTSMAERKTE_VERLINKT && kat === "food" && u.slug === "maerkte" && (
+        <LinkChips titel="Passend dazu" links={[{ name: "Alle Weihnachtsmärkte im Überblick", pfad: "/guides/weihnachtsmaerkte" }]} />
+      )}
       <LinkChips titel="Weiter stöbern" links={[{ name: "Heute", pfad: "/heute" }, { name: "Wochenende", pfad: "/wochenende" }, { name: "Kostenlos", pfad: "/kostenlos" }]} />
     </div>
   );

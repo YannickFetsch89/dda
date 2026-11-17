@@ -35,7 +35,11 @@ const EXTRA_LINKS: Partial<Record<KategorieSlug, { name: string; pfad: string }[
   nightlife: [{ name: "Club-Guide", pfad: "/guides/clubs" }, { name: "Kneipen & Bars", pfad: "/guides/kneipen-bars" }],
   musik: [{ name: "Club-Guide", pfad: "/guides/clubs" }],
   // Spielplätze nur, wenn der Guide verlinkt ist (lib/schalter.ts)
-  ...(SPIELPLAETZE_VERLINKT ? { familie: [{ name: "Spielplätze", pfad: "/guides/spielplaetze" }] } : {}),
+  // Familie: Spielplätze (Schalter) und Weihnachtsmärkte mit Familienprogramm (Plan Weihnachtsmärkte 5.6, Stufe 1b)
+  familie: [
+    ...(SPIELPLAETZE_VERLINKT ? [{ name: "Spielplätze", pfad: "/guides/spielplaetze" }] : []),
+    ...(WEIHNACHTSMAERKTE_VERLINKT ? [{ name: "Weihnachtsmärkte für Familien", pfad: "/guides/weihnachtsmaerkte?badge=familien" }] : []),
+  ],
 };
 
 const kommende = kategorieEvents;

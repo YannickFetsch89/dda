@@ -5,17 +5,21 @@ export const instant = false;
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { BeschreibungText } from "@/components/beschreibung-text";
 import { BildImg, GoogleKarte } from "@/components/client";
 import { Icon } from "@/components/karten";
 import { InfoZeile } from "@/components/ort-detail";
+import { ortPfad } from "@/components/ort-karten";
+import { kneipenLaden } from "@/lib/kneipen-daten";
+import { entfernungM, entfernungText } from "@/lib/spielplaetze";
 import { BadgeListe, WM_BILD, WmKarte, wmIcon } from "@/components/wm-karte";
 import { WmZustand } from "@/components/wm-zustand";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { jsonLdText } from "@/lib/json-ld";
 import { inStadtteil } from "@/lib/landing";
-import { ortBildAutorUrl, ortBildFokus, ortBildUrl, slugDekodieren } from "@/lib/orte";
+import { orteLaden, ortBildAutorUrl, ortBildFokus, ortBildUrl, slugDekodieren } from "@/lib/orte";
 import { seitenMetadaten } from "@/lib/seo";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddOrt } from "@/lib/typen";
@@ -145,6 +149,38 @@ function Merkmale({ ort }: { ort: DddOrt }) {
   );
 }
 
+/**
+ * „In der Nähe“ (Plan 5.3, Stufe 1b): bis zu 2 Cafés und 2 Kneipen ≤ 800 m aus den bestehenden Guides – bewusst als
+ * reine Textliste ohne Google-Fotos und -Bewertungen (Google-EWR-Bedingungen, Schritt 7a).
+ */
+async function InDerNaehe({ ort }: { ort: DddOrt }) {
+  if (ort.latitude == null || ort.longitude == null) return null;
+  const p = { lat: ort.latitude, lng: ort.longitude };
+  const [cafes, kneipen] = await Promise.all([orteLaden("cafe"), kneipenLaden()]);
+  const naechste = (liste: DddOrt[], typ: string) =>
+    liste
+      .filter((o) => o.typ === typ && o.latitude != null && o.longitude != null)
+      .map((o) => ({ o, m: entfernungM(p, { lat: o.latitude!, lng: o.longitude! }) }))
+      .filter((x) => x.m <= 800)
+      .sort((a, b) => a.m - b.m)
+      .slice(0, 2);
+  const treffer = [...naechste(cafes, "cafe").map((x) => ({ ...x, art: "Café" })), ...naechste(kneipen, "kneipe").map((x) => ({ ...x, art: "Kneipe oder Bar" }))];
+  if (!treffer.length) return null;
+  return (
+    <section className="sp-block wm-naehe" aria-labelledby="wm-naehe-titel">
+      <h2 className="d" id="wm-naehe-titel">Zum Aufwärmen in der Nähe</h2>
+      <ul className="wm-startbox__liste">
+        {treffer.map(({ o, m, art }) => (
+          <li key={o.id}>
+            <Link href={ortPfad(o)}>{o.name}</Link>
+            <span className="muted">{art} · {entfernungText(m)} entfernt</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default async function WeihnachtsmarktDetail(props: Props) {
   const ort = await laden(props);
   if (!ort) notFound();
@@ -226,6 +262,10 @@ export default async function WeihnachtsmarktDetail(props: Props) {
               <div className="gd-grid gd-grid--3" role="list">{geschwister.map((t) => <WmKarte key={t.id} o={t} alle={alle} tag={null} klein />)}</div>
             </section>
           )}
+
+          <Suspense fallback={null}>
+            <InDerNaehe ort={ort} />
+          </Suspense>
 
           <div className="sp-stand muted">
             <p><b>Stand der Angaben:</b> {s?.stand ? datumLang(s.stand) : "unbekannt"}</p>
