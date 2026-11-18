@@ -37,7 +37,12 @@ SPIELSTAETTEN: dict[str, list[str]] = {
     "Stahlwerk": ["Stahlwerk Düsseldorf"],
     "Savoy Theater": ["Savoy Theater Düsseldorf"],
     "UFA-Palast": ["UFA Palast Düsseldorf", "UFA-Palast Düsseldorf"],
-    "Metropol Kino": ["Metropol Kino Düsseldorf"],
+    "Metropol Kino": ["Metropol Kino Düsseldorf", "Metropol"],
+    # FFT im KAP1: Säle mit Haus davor (wie zakk – Halle), der Scraper schreibt das seit 18.11.2026 selbst
+    "FFT Düsseldorf – Bühne I": ["Bühne I"],
+    "FFT Düsseldorf – Bühne II": ["Bühne II"],
+    "Salon des Amateurs": ["Salon des Amateurs Düsseldorf"],
+    "Drachental Games": ["Drachental"],  # gleiche Adresse (Wagnerstraße 14)
     # Kultur
     "Tanzhaus NRW": ["Tanzhaus NRW Düsseldorf", "tanzhaus nrw"],
     "NRW-Forum": ["NRW-Forum Düsseldorf"],

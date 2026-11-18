@@ -22,6 +22,13 @@ class GebietTest(unittest.TestCase):
             ev("Planetarium Erkrath"),
             ev("Neanderthal Museum"),
             ev("Café Aroma", "Dorfstraße 34, Meerbusch"),
+            # Nachtrag 18.11.2026 (Kandidatenliste)
+            ev("Grugahalle Essen"),
+            ev("Theater Essen-Süd"),
+            ev("LUTZ, theaterhagen"),
+            ev("Wuppertaler Miniaturland"),
+            ev("Stadthalle Kleve"),
+            ev("Theater Gütersloh - Haupteingang"),
         ]:
             with self.subTest(ort=e["ort"]):
                 self.assertIsNotNone(grund_ausserhalb(e))
@@ -40,6 +47,9 @@ class GebietTest(unittest.TestCase):
             ev("Neusser Tor"),
             ev("Meetup Düsseldorf (Online)"),
             ev("Düsseldorf"),
+            ev("Theater an der Luegallee"),
+            ev("Gare Du Neuss"),
+            ev("Das Rheinische Landestheater"),
         ]:
             with self.subTest(ort=e["ort"]):
                 self.assertIsNone(grund_ausserhalb(e))

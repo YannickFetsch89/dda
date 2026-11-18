@@ -55,11 +55,13 @@ class OrtsnamenTest(unittest.TestCase):
         self.assertTrue(aehnliches_event(stadt, {**stadt, "ort": "Düsseldorf", "quelle_name": "Rausgegangen"}))
 
     def test_reihen_basis_der_namen(self):
-        # Namen ohne Trenner, damit die Reihen den ganzen Ort zählen – einzige Ausnahme: „zakk – Halle“
+        # Namen ohne Trenner, damit die Reihen den ganzen Ort zählen – Ausnahmen mit Absicht: „zakk – Halle“ und die
+        # FFT-Säle (18.11.2026): Ein Stück auf Bühne I und Bühne II ist eine Reihe am FFT, ort_basis zählt das Haus
         from pipeline.reihen_zuordnen import ort_basis
         trenner = (" – ", " — ", " - ", " / ", "(", ")")
         mit_trenner = [n for n in SPIELSTAETTEN if any(t in n for t in trenner)]
-        self.assertEqual(mit_trenner, ["zakk – Halle"])
+        self.assertEqual(sorted(mit_trenner), ["FFT Düsseldorf – Bühne I", "FFT Düsseldorf – Bühne II", "zakk – Halle"])
+        self.assertEqual(ort_basis("FFT Düsseldorf – Bühne I"), ort_basis("FFT Düsseldorf – Bühne II"))
         self.assertEqual(ort_basis(einheitlicher_name("D'haus — Central")), "dhaus im central")
         self.assertNotEqual(ort_basis(einheitlicher_name("D'haus — Central")), ort_basis("Central"))
         self.assertEqual(ort_basis(einheitlicher_name("zakk Halle")), ort_basis("zakk – Halle"))

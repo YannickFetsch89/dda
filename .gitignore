@@ -29,6 +29,10 @@ data/weihnachtsmaerkte/*
 !data/weihnachtsmaerkte/merkmale.csv
 !data/weihnachtsmaerkte/event_ausschluss.csv
 !data/weihnachtsmaerkte/bilder.csv
+# Ausnahme Ortsseiten (Plan docs/plan-locations-2026-11-18.md, Schritt 1): Kandidatenliste zur Sichtung eingecheckt
+!data/spielstaetten/
+data/spielstaetten/*
+!data/spielstaetten/kandidaten.csv
 
 # Playwright
 playwright/.auth/

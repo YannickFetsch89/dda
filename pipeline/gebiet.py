@@ -36,6 +36,10 @@ STAEDTE_EINDEUTIG = [
     "Wülfrath", "Jüchen", "Willich", "Viersen", "Moers", "Bonn", "Aachen", "Berlin", "Hamburg", "München",
     "Frankfurt am Main", "Stuttgart", "Münster", "Bielefeld", "Hannover", "Dresden", "Nürnberg", "Bremen",
     "Gladbeck", "Bottrop", "Recklinghausen", "Hagen", "Wesel", "Kempen", "Tönisvorst", "Korschenbroich",
+    # Nachtrag 18.11.2026 (Kandidatenliste Ortsseiten): weitere Städte aus PRINZ.de und Meetup
+    "Kleve", "Winsen", "Gütersloh", "Herne", "Witten", "Unna", "Siegen", "Paderborn", "Düren", "Bergisch Gladbach",
+    "Venlo", "Roermond", "Amsterdam", "Lünen", "Castrop-Rauxel", "Marl", "Dinslaken", "Emmerich", "Xanten", "Goch",
+    "Geldern", "Nettetal", "Heinsberg", "Erkelenz", "Rees", "Hückeswagen", "Wermelskirchen", "Leichlingen", "Burscheid",
 ]
 # Mehrdeutig (normales Wort oder Teil von Düsseldorfer Namen): nur als eigener Abschnitt
 STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Mülheim", "Frankfurt"]
@@ -44,6 +48,8 @@ STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Mülheim", "Frankfur
 AUSWAERTIGE_ORTE = {
     "neanderthal museum", "schloss dyck", "visiodrom", "fzw", "szene 10", "cabaret queue",
     "kulturraffinerie k714", "kulturfabrik krefeld", "galerie für zeitgenössische kunst",
+    # Nachtrag 18.11.2026: Stadt nur als Wortteil oder Adjektiv im Namen
+    "grugahalle", "theater essen süd", "zeche carl", "kokerei zollverein", "theaterhagen", "wuppertaler miniaturland",
 }
 
 _PLZ = re.compile(r"(?<!\d)(\d{5})(?!\d)")
@@ -76,7 +82,8 @@ def grund_ausserhalb(event: dict) -> Optional[str]:
         if m:
             return f"Stadt {m.group(1)}"
     n = _norm(ort)
-    if any(n == o or n.startswith(o + " ") for o in AUSWAERTIGE_ORTE):
+    # Ganzes Wort bzw. Wortfolge irgendwo im Namen („LUTZ, theaterhagen“, „Grugahalle Essen“)
+    if any(re.search(r"(^|\s)" + re.escape(o) + r"(\s|$)", n) for o in AUSWAERTIGE_ORTE):
         return "auswärtiger Ort"
     return None
 

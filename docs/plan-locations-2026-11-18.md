@@ -128,7 +128,17 @@ Rausgegangen arbeitet mit Partnern. Die Häuser liefern Texte und Bilder offenba
 - **Bilder** unter `/ort-bilder/orte/<slug>.webp`, nicht unter `/orte/…`, weil der Proxy diese Pfade als Seiten prüft. Das ist dieselbe Lehre wie bei `/guides/` und `/ort-bilder/`.
 
 ### 3.6 Bilder und Rechte (Entscheidung E4)
-Der Auftraggeber möchte Bilder der Veranstalter bzw. Häuser. Das geht nur mit **Erlaubnis** und **Bildnachweis**.
+**Entschieden (18.11.2026, Abschnitt 5):**
+- Bilder kommen direkt von der Website oder dem Pressebereich des Hauses bzw. Veranstalters.
+- Die Freigaben holt der Auftraggeber nachträglich ein, das Risiko trägt er.
+- Umgesetzt wird das so:
+  - Herkunft (Seiten-URL, Abrufdatum) und Bildnachweis stehen je Bild in der CSV.
+  - Der Nachweis „Foto: © <Haus>“ mit Link wird immer angezeigt.
+  - Auf Wunsch eines Hauses wird ein Bild sofort entfernt: Zeile löschen und neu bauen.
+  - Bilder von Portalen (Rausgegangen u. a.) bleiben ausgeschlossen, weil die Rechte dort nicht beim Haus liegen.
+- Die Tabelle unten bleibt als Übersicht der Wege.
+
+Der Auftraggeber möchte Bilder der Veranstalter bzw. Häuser. Rechtlich sauber geht das nur mit **Erlaubnis** und **Bildnachweis**.
 
 | Weg | Rechte | Aufwand | Bewertung |
 |---|---|---|---|
@@ -186,7 +196,51 @@ Code: `pipeline/gebiet.py` (neu, in `main.py` als Schritt 1c), `scraper/tier2/op
 
 4. **Namensvarianten** in `pipeline/ortsnamen.py` ergänzt. Der Kulturschlachthof R25 hat die richtige Adresse Rather Straße 25, 40476 Düsseldorf (Derendorf), bisher stand dort die Adresse des Stahlwerks.
 
-## 7. Ursprünglich offene Fragen (beantwortet in Abschnitt 5)
+**Nachtrag 18.11.2026 (aus der Kandidatenliste):**
+- Der Gebietsfilter kennt weitere Städte und Orte: Kleve, Winsen, Gütersloh, Rees, Grugahalle Essen, Theater Essen-Süd, theaterhagen, Wuppertaler Miniaturland u. a.
+- Das FFT schreibt seine Säle mit Haus davor („FFT Düsseldorf – Bühne I/II“), bisher stand dort nur „Bühne I“.
+- Weitere Varianten: Metropol, Drachental, „salon des amateurs“.
+- SQL: `database/gebiet_bereinigung_2026-11-18_2.sql` (26 Events) und `database/ortsnamen_2026-11-18_2.sql` (49 Events → 5 Namen).
+
+## 7. Ergebnis Schritt 1: Kandidatenliste (18.11.2026)
+
+**Datei:** `data/spielstaetten/kandidaten.csv` (Semikolon, UTF-8 mit BOM, öffnet in Excel). Erzeugt von `python -m scraper.orte.spielstaetten_kandidaten` (nur lesend).
+
+**Grundlage:** 4.967 Events der letzten 12 Monate und alle kommenden, Namen vereinheitlicht, Gebietsfilter angewandt.
+
+**Ergebnis:** 354 Häuser mit mindestens 2 Events.
+
+| Vorschlag | Anzahl |
+|---|---|
+| neue Ortsseite | 236 |
+| Guide- oder Club-Seite vorhanden (Events dort zeigen, `/orte/…` leitet weiter) | 33 |
+| keine Seite: Treffpunkt/Straße | 42 |
+| keine Seite: allgemeine Angabe | 21 |
+| keine Seite: online | 14 |
+| keine Seite: Meetup-Gruppe ohne Ort | 8 |
+
+**Spalten:**
+- haus, vorschlag, art_vorschlag
+- Events (12 Monate + kommend), davon kommend
+- saele: mit Anzahl. Der Zusatz „eigene Seite“ ist der Vorschlag nach E6 ab 20 Events.
+- adresse, plz, stadtteil (jeweils die häufigste Angabe)
+- guide_status, schreibweisen, quellen
+- hinweis: gleiche Adresse wie ein anderes Haus (möglicher Dublette) oder Adresse fehlt
+- **zum Ausfüllen:** entscheidung (ja/nein), name_korrigiert, art_korrigiert, bemerkung_auftraggeber
+
+**Bekannte Grenzen der Liste:**
+- Die Art ist ein Vorschlag aus Stichwörtern. 99 der 236 neuen Orte stehen auf „Sonstiges“ und brauchen bei der Sichtung eine Art.
+- Bei 60 % der neuen Orte fehlt die Adresse in den Events. Sie kommt in Schritt 2 aus Google Places (Text Search) bzw. von der Website des Hauses.
+- Mögliche Dubletten sind nur markiert, nicht zusammengeführt. Beispiele:
+  - Tanzhaus NRW und Capitol Theater: gleiche Adresse, aber zwei Häuser
+  - Holocafe an zwei Adressen
+  - Bambi und NRW-Forum: eine Adresse
+
+  Zusammengeführt wird erst nach der Sichtung (E5).
+- Stadtbüchereien (E7 je Filiale): Die Quelle liefert die Filiale noch nicht. Alle 331 Events stehen mit der Adresse der Zentralbibliothek in der Datenbank. Der Scraper muss in Schritt 2 die Filiale auslesen.
+- Auffällig in den Club-Verknüpfungen: „Theater an der Kö“ ist dem „Kö Club“ zugeordnet. Das ist wahrscheinlich falsch und wird in Schritt 2 geprüft.
+
+## 8. Ursprünglich offene Fragen (beantwortet in Abschnitt 5)
 - **E1 URL:** `/orte/<slug>` (Vorschlag) oder `/locations/<slug>`?
 - **E2 Schwelle:** Seite ab ≥ 3 Events in 12 Monaten oder ≥ 1 kommendem Event mit Adresse (≈ 230–260 Seiten)? Oder enger, ab ≥ 5 (≈ 140)?
 - **E3 Gebiet:** nur Düsseldorf + Neuss + Ratingen (wie die Guides) oder auch Duisburg, Krefeld, Erkrath …, wenn dort regelmäßig Events stattfinden?

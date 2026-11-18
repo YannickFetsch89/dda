@@ -139,7 +139,12 @@ def _ort_erkennen(text: str) -> str:
     for schluessel, ort in ORT_MAP.items():
         if schluessel in text_klein:
             return ort
-    return text.strip() or ORT_STANDARD
+    # Unbekannte Säle (z. B. „Bühne I“, „Bühne II“ im KAP1) mit dem Haus davor – sonst stand nur „Bühne I“ in der
+    # Datenbank, ohne Bezug zum FFT (Bestandsaufnahme Ortsseiten, 18.11.2026)
+    text = text.strip()
+    if not text or "fft" in text_klein:
+        return text or ORT_STANDARD
+    return f"{ORT_STANDARD} – {text}"
 
 
 def _events_aus_json_ld(soup: BeautifulSoup, heute: date) -> list[dict]:
