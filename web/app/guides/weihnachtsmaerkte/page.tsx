@@ -84,7 +84,7 @@ function Hero({ alle, jahr }: { alle: DddOrt[]; jahr: string | null }) {
 }
 
 /**
- * Zeile „Wann“ im Filterkasten (Auftraggeber 18.11.2026): Heute (ohne Parameter), Morgen und Samstag nur im
+ * Zeile „Wann“ im Filterkasten (Auftraggeber 18.11.2026): Heute (ohne Parameter), Morgen, Samstag und Sonntag nur im
  * dynamischen Teil, feste Sondertage und der Kalender der übrigen Seiten (statt des Browser-Datumsfelds).
  */
 function TagesZeile({ tag, heute, jahr }: { tag: string | null; heute: string | null; jahr: number }) {
@@ -93,8 +93,11 @@ function TagesZeile({ tag, heute, jahr }: { tag: string | null; heute: string | 
     eintraege.push({ label: "Morgen", datum: plusTage(heute, 1) });
     const bisSamstag = (6 - new Date(`${heute}T12:00:00Z`).getUTCDay() + 7) % 7 || 7;
     eintraege.push({ label: "Samstag", datum: plusTage(heute, bisSamstag) });
+    const bisSonntag = (7 - new Date(`${heute}T12:00:00Z`).getUTCDay()) % 7 || 7;
+    eintraege.push({ label: "Sonntag", datum: plusTage(heute, bisSonntag) });
   }
-  for (const t of sonderTage(jahr)) if (["Totensonntag", "Heiligabend", "2. Weihnachtstag", "Silvester"].includes(t.name)) eintraege.push({ label: t.name, datum: t.datum });
+  // Feste Tage ohne Totensonntag, dafür mit 1. Weihnachtstag (Auftraggeber 18.11.2026)
+  for (const t of sonderTage(jahr)) if (["Heiligabend", "1. Weihnachtstag", "2. Weihnachtstag", "Silvester"].includes(t.name)) eintraege.push({ label: t.name, datum: t.datum });
   // Ein im Kalender gewählter Tag, der keinem Chip entspricht, markiert den Kalender-Knopf
   const eigenerTag = !!tag && !eintraege.some((e) => e.datum === tag);
   return (
@@ -105,7 +108,7 @@ function TagesZeile({ tag, heute, jahr }: { tag: string | null; heute: string | 
           const aktiv = (e.datum ?? null) === tag;
           return (
             <Link key={e.label} href={e.datum ? `${BASIS}?tag=${e.datum}` : BASIS} scroll={false} className={`gd-chip gd-chip--gross${aktiv ? " gd-chip--an" : ""}`} aria-current={aktiv || undefined}>
-              {e.label}{e.datum && e.label !== "Morgen" && e.label !== "Samstag" ? <span className="gd-chip__zahl">{datumLang(e.datum).slice(0, 6)}</span> : null}
+              {e.label}{e.datum && !["Morgen", "Samstag", "Sonntag"].includes(e.label) ? <span className="gd-chip__zahl">{datumLang(e.datum).slice(0, 6)}</span> : null}
             </Link>
           );
         })}
