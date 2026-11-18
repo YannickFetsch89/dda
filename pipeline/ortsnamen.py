@@ -54,7 +54,7 @@ SPIELSTAETTEN: dict[str, list[str]] = {
     "Kasematten": ["Kasematten Düsseldorf"],
     "Maxhaus": ["maxhaus"],
     "KaBARett FLiN": ["Kabarett FLiN"],
-    "R25 Kulturschlachthof": ["R25-Kulturschlachthof"],
+    "R25 Kulturschlachthof": ["R25-Kulturschlachthof", "Kulturschlachthof R25", "R25 - Kulturschlachthof"],
     # Ohne Trenner: „Central – D'haus“ hätte für die Reihen nur „Central“ als Ort gezählt und mit dem Ort „Central“
     # vermischt (ort_basis schneidet am Strich – Cursor-Review 12.11.)
     "D'haus im Central": ["D'haus — Central"],
@@ -70,7 +70,8 @@ SPIELSTAETTEN: dict[str, list[str]] = {
     "Velvet": ["VELVET"],
     "Ampere": ["AMPERE Düsseldorf"],
     "Klub Kulb": ["KLUB KULB"],
-    "Rudas Studios": ["Rudas Studios Düsseldorf"],
+    "Rudas Studios": ["Rudas Studios Düsseldorf", "Rudas Studios Club"],
+    "Roncalli's Apollo Varieté": ["Roncalli's Apollo Variete", "Roncallis Apollo Varieté", "Apollo Varieté Düsseldorf"],
     "Boston Club": ["Boston Club Düsseldorf e.V."],
     "Holy Craft Beer Bar": ["HOLY CRAFT Beer Bar"],
     "hirschchen": ["*hirschchen"],
@@ -80,6 +81,7 @@ SPIELSTAETTEN: dict[str, list[str]] = {
     # Sport und Freizeit
     "Cosmo Sports": ["COSMO SPORTS"],
     "Superblock Boulderhalle": ["Superblock - Boulderhalle Düsseldorf", "Superblock"],
+    "Rundum Yoga": ["Rundum Yoga-Studio", "Rundum Yoga Studio", "Rundum Yoga Studio Pempelfort"],
     # Nur die Stadt (allgemeine Angabe, bleibt allgemein – aber mit Umlaut)
     "Düsseldorf": ["Dusseldorf"],
     # Plätze und Treffpunkte, die eindeutig ein Ort sind

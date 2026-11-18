@@ -180,6 +180,12 @@ async def _schritte_ausfuehren(report: LaufReport):
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
     report.kennzahl(events_gesammelt=len(alle_events))
 
+    # Schritt 1c: Nur Düsseldorf, Neuss, Ratingen (Plan Locations E3, 18.11.2026 – z. B. PRINZ.de liefert die
+    # ganze Region, die Oper auch Vorstellungen im Theater Duisburg)
+    logger.info("--- Schritt 1c: Gebietsfilter ---")
+    from pipeline.gebiet import gebiet_filtern
+    alle_events = gebiet_filtern(alle_events)
+
     # Schritt 1d: In-Memory-Deduplizierung mit Merge-Logik
     logger.info("--- Schritt 1d: In-Memory-Deduplizierung ---")
     from pipeline.deduplication import deduplizieren

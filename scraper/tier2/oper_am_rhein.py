@@ -303,13 +303,14 @@ def _event_aus_performance(performance_el, heute: date) -> Optional[dict]:
             ort = QUELLE_NAME
 
         # --- Adresse: aus itemprop="address" (im versteckten Location-Block) ---
+        # Die Standard-Adresse (Opernhaus Düsseldorf) nur für Vorstellungen dort. Andere Spielorte (Theater Duisburg,
+        # „UFO am Rather Carré“ …) bekamen sie bisher auch und standen dann falsch in Pempelfort bzw. der Altstadt
+        # (Bestandsaufnahme 18.11.2026). Duisburg fällt danach im Gebietsfilter heraus (pipeline/gebiet.py).
+        im_opernhaus = ort == QUELLE_NAME or "opernhaus düsseldorf" in ort.lower()
         adresse_el = performance_el.select_one("[itemprop='address']")
-        if adresse_el:
-            adresse = _text_bereinigen(adresse_el.get_text(strip=True))
-            if not adresse:
-                adresse = STANDARD_ADRESSE
-        else:
-            adresse = STANDARD_ADRESSE
+        adresse = _text_bereinigen(adresse_el.get_text(strip=True)) if adresse_el else ""
+        if not adresse:
+            adresse = STANDARD_ADRESSE if im_opernhaus else None
 
         # --- Kategorie ---
         css_klassen = performance_el.get("class", [])

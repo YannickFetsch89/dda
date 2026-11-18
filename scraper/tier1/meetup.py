@@ -150,6 +150,29 @@ def _beschreibung_bereinigen(text: str) -> Optional[str]:
 
 # --- Primärstrategie: GraphQL API (gql2) ---------------------------------
 
+_PLATZHALTER_PLZ = re.compile(r"\bmeetup\d+\b", re.I)
+
+
+def adresse_bauen(strasse: Optional[str], plz: Optional[str], stadt: Optional[str]) -> Optional[str]:
+    """
+    Adresse aus den Meetup-Feldern. Meetup setzt außerhalb der USA Platzhalter wie „meetup9“ statt einer
+    Postleitzahl (Bestandsaufnahme 18.11.2026: „Franklinstraße 5, 40479 meetup9 Düsseldorf“). Nur eine echte
+    fünfstellige PLZ wird übernommen, und nur, wenn sie nicht schon in der Straßenangabe steht.
+    """
+    strasse = _PLATZHALTER_PLZ.sub("", strasse or "").strip(" ,")
+    stadt = _PLATZHALTER_PLZ.sub("", stadt or "").strip(" ,")
+    plz = (plz or "").strip()
+    if not re.fullmatch(r"\d{5}", plz) or plz in strasse:
+        plz = ""
+    hinten = " ".join(t for t in (plz, stadt) if t)
+    if strasse and hinten and stadt and stadt.lower() in strasse.lower():
+        hinten = plz
+    if strasse and hinten and re.search(r"\d{5}$", strasse):
+        return f"{strasse} {hinten}"  # „Franklinstraße 5, 40479“ + „Düsseldorf“
+    teile = [t for t in (strasse, hinten) if t]
+    return ", ".join(teile) if teile else None
+
+
 def _event_aus_gql_eintrag(eintrag: dict, heute: date) -> Optional[dict]:
     """Wandelt einen GraphQL Event-Eintrag in ein DiesDasDüsseldorf Event-Dict um."""
     try:
@@ -180,12 +203,7 @@ def _event_aus_gql_eintrag(eintrag: dict, heute: date) -> Optional[dict]:
         # Adresse zusammenbauen
         adresse = None
         if isinstance(venue, dict) and not eintrag.get("isOnline"):
-            teile = [
-                venue.get("address"),
-                venue.get("postalCode"),
-                venue.get("city"),
-            ]
-            adresse = " ".join(t for t in teile if t) or None
+            adresse = adresse_bauen(venue.get("address"), venue.get("postalCode"), venue.get("city"))
 
         quelle_url = eintrag.get("eventUrl") or BASE_URL
 

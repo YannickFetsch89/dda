@@ -29,7 +29,7 @@ QUELLE_STADTTEIL: dict[str, str] = {
     "Stadtbüchereien Düsseldorf": "Friedrichstadt",
     "Stahlwerk Düsseldorf": "Lierenfeld",
     "Rudas Studios": "Lierenfeld",
-    "Kulturschlachthof R25": "Lierenfeld",
+    "Kulturschlachthof R25": "Derendorf",  # Rather Straße 25 (18.11.2026, vorher fälschlich Lierenfeld)
     # d.live betreibt mehrere Hallen in verschiedenen Stadtteilen (Arena Stockum, Mitsubishi Electric Halle Oberbilk,
     # PSD Bank Dome Rath, Castello Reisholz) – deshalb KEIN Pauschalwert für die Quelle, die Halle entscheidet (Venue-Liste)
     "Mitsubishi Electric HALLE": "Oberbilk",
@@ -75,8 +75,10 @@ VENUE_STADTTEIL: dict[str, str] = {
     # --- Lierenfeld ---
     "Stahlwerk": "Lierenfeld",
     "Rudas Studios": "Lierenfeld",
-    "Kulturschlachthof R25": "Lierenfeld",
-    "Kulturschlachthof": "Lierenfeld",
+    # Kulturschlachthof R25 liegt in Derendorf (Rather Straße 25), nicht in Lierenfeld (18.11.2026)
+    "Kulturschlachthof R25": "Derendorf",
+    "R25 Kulturschlachthof": "Derendorf",
+    "Kulturschlachthof": "Derendorf",
     # --- Altstadt ---
     "Salon des Amateurs": "Altstadt",
     "Kunstsammlung NRW": "Altstadt",

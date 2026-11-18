@@ -12,7 +12,8 @@ Techno, House und experimentelle Sounds in Düsseldorf.
 
 URL: https://kulturschlachthof.de
 RA-Venue: https://ra.co/clubs/133380
-Adresse: Reisholzer Str. 25, 40721 Hilden (Nähe Düsseldorf)
+Adresse: Rather Straße 25, 40476 Düsseldorf (Derendorf) – korrigiert am 18.11.2026; vorher stand hier Hilden und im
+Code die Adresse des Stahlwerks (Ronsdorfer Str. 134)
 Erstellt: 2026-03-05
 """
 import logging
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 QUELLE_NAME = "Kulturschlachthof R25"
 ORT_STANDARD = "Kulturschlachthof R25"
-ADRESSE_STANDARD = "Ronsdorfer Str. 134, 40233 Düsseldorf"
+ADRESSE_STANDARD = "Rather Straße 25, 40476 Düsseldorf"
 RA_VENUE_ID = 133380
 
 
