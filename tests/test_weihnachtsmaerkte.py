@@ -307,3 +307,75 @@ class ScoreRandfaelleTest(unittest.TestCase):
         r = self.gl.score_berechnen([self.eintrag("a"), self.eintrag("b")],
                                     {"a": {"bezug": "markt", "rating": 4.5, "anzahl": 400}, "b": {"bezug": "markt", "rating": None, "anzahl": 0}})
         self.assertEqual(r["b"]["teile"]["beliebtheit"], round(((4.5 - 3.5) / 1.5 * 0.30 + 0.0) / 0.45, 3))
+
+
+class BilderTest(unittest.TestCase):
+    """Eigene Bilder (Veranstalter) – scraper/weihnachtsmaerkte/bilder.py."""
+
+    def setUp(self):
+        import tempfile
+        from scraper.weihnachtsmaerkte import bilder as b
+        self.b = b
+        self.tmp = tempfile.TemporaryDirectory()
+        self.roh = Path(self.tmp.name)
+        (self.roh / "nord.jpg").write_bytes(b"x")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def zeile(self, **k):
+        z = {"schluessel": "nordstrasse", "datei": "nord.jpg", "nachweis": "Foto: IG Nordstraße", "link": "",
+             "erlaubnis": "E-Mail 18.11.2026", "fokus": ""}
+        z.update(k)
+        return z
+
+    def test_gueltige_zeile_und_nachweis_ohne_foto_praefix(self):
+        gut, fehler = self.b.zeilen_pruefen([self.zeile()], {"nordstrasse"}, self.roh)
+        self.assertEqual(fehler, [])
+        self.assertEqual(gut[0]["nachweis"], "IG Nordstraße")
+
+    def test_ohne_erlaubnis_kein_bild(self):
+        gut, fehler = self.b.zeilen_pruefen([self.zeile(erlaubnis="")], {"nordstrasse"}, self.roh)
+        self.assertEqual(gut, [])
+        self.assertIn("Erlaubnis", fehler[0])
+
+    def test_unbekannter_schluessel_fehlende_datei_pfad_und_link(self):
+        faelle = [self.zeile(schluessel="gibtsnicht"), self.zeile(datei="fehlt.jpg"), self.zeile(datei="../nord.jpg"),
+                  self.zeile(link="http://x.de"), self.zeile(fokus="mitte"), self.zeile(nachweis="", link="https://x.de")]
+        for z in faelle:
+            gut, fehler = self.b.zeilen_pruefen([z], {"nordstrasse"}, self.roh)
+            self.assertEqual(gut, [], z)
+            self.assertEqual(len(fehler), 1, z)
+
+    def test_doppelter_schluessel(self):
+        gut, fehler = self.b.zeilen_pruefen([self.zeile(), self.zeile()], {"nordstrasse"}, self.roh)
+        self.assertEqual(len(gut), 1)
+        self.assertIn("doppelt", fehler[0])
+
+    def test_sql_setzt_bild_nachweis_und_verwirft_alten_fokus(self):
+        gut, _ = self.b.zeilen_pruefen([self.zeile(nachweis="Schausteller O'Brien", link="https://nordstrasse.de", fokus="35%")],
+                                       {"nordstrasse"}, self.roh)
+        sql = self.b.sql_bauen(gut, "2026-11-18")
+        self.assertIn("bild_url = '/guides/weihnachtsmaerkte/nordstrasse.webp'", sql)
+        self.assertIn("bild_attribution = 'Schausteller O''Brien'", sql)
+        self.assertIn("(extras - 'bild_link' - 'bild_fokus') || jsonb_build_object(", sql)
+        self.assertIn("'bild_link', 'https://nordstrasse.de'", sql)
+        self.assertIn("'bild_fokus', '35%'", sql)
+        self.assertIn("->>'schluessel' = 'nordstrasse'", sql)
+        ohne, _ = self.b.zeilen_pruefen([self.zeile()], {"nordstrasse"}, self.roh)
+        self.assertNotIn("'bild_link',", self.b.sql_bauen(ohne, "2026-11-18"))
+
+    def test_umwandeln_verkleinert_und_speichert_webp(self):
+        from PIL import Image
+        Image.new("RGB", (3200, 1600), "red").save(self.roh / "gross.png")
+        breite, hoehe = self.b.bild_umwandeln(self.roh / "gross.png", self.roh / "aus" / "x.webp")
+        self.assertEqual((breite, hoehe), (1600, 800))
+        with Image.open(self.roh / "aus" / "x.webp") as i:
+            self.assertEqual(i.format, "WEBP")
+
+    def test_eigenes_foto_ohne_nachweis(self):
+        gut, fehler = self.b.zeilen_pruefen([self.zeile(nachweis="")], {"nordstrasse"}, self.roh)
+        self.assertEqual(fehler, [])
+        sql = self.b.sql_bauen(gut, "2026-11-18")
+        self.assertIn("bild_attribution = NULL", sql)
+        self.assertIn("(eigenes, ohne Nachweis)", sql)

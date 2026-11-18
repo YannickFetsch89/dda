@@ -161,6 +161,14 @@ export function spielplatzEntscheidung(o: OrtKopf | null): Pruefung {
 }
 
 /**
+ * Weihnachtsmärkte, die mit einem anderen zusammengelegt und danach gelöscht wurden: alter Slug → verbliebener Slug.
+ * Schadow-Markt = Märchen-Markt am Schadowplatz (Auftraggeber 18.11.2026).
+ */
+export const WM_ZUSAMMENGELEGT: Readonly<Record<string, string>> = {
+  "schadow-markt-stadtmitte": "maerchen-markt-stadtmitte",
+};
+
+/**
  * Weihnachtsmärkte (Plan Weihnachtsmärkte 5.5): sichtbar = aktiv und Typ, ohne Score. Nie freigeschaltet oder unbekannt → 404.
  * Abgeschaltet (inaktiv mit freigeschaltet_am) → dauerhaft auf den Hub (es gibt keine Stadtteilseiten).
  */
@@ -192,7 +200,11 @@ function sichtbarerHub(o: OrtKopf): Exclude<OrtHub, "clubs" | "spielplaetze" | "
 export function ortEntscheidung(hub: OrtHub, slug: string, o: OrtKopf | null): Pruefung {
   if (hub === "spielplaetze") return spielplatzEntscheidung(o);
   // Vor jedem Zugriff auf HUB_TYPEN – der neue Hub steht dort nicht (Plan Weihnachtsmärkte 5.5)
-  if (hub === "weihnachtsmaerkte") return weihnachtsmarktEntscheidung(o);
+  if (hub === "weihnachtsmaerkte") {
+    // Zusammengelegter, aus der Tabelle gelöschter Eintrag → dauerhaft auf den verbliebenen (nie 404 für eine indexierte URL)
+    const neu = o ? undefined : WM_ZUSAMMENGELEGT[slug];
+    return neu ? { art: "umleiten", ziel: `/guides/weihnachtsmaerkte/${neu}` } : weihnachtsmarktEntscheidung(o);
+  }
   if (!o) return FEHLT;
   if (hub === "clubs") {
     if (clubSichtbar(o)) return WEITER;

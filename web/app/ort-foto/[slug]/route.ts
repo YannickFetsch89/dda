@@ -1,6 +1,7 @@
 // Liefert das Foto eines Ortes über den eigenen Server aus (Bild-Proxy, siehe lib/bild-proxy.ts).
 //
 // - Eigenes Bild (orte.bild_url): wird geholt, auf der Platte gecached und durchgereicht.
+//   Liegt es in web/public/guides/… (lib/orte.ts lokalesBild), verweist die Route nur per 308 dorthin.
 // - Google-Foto (orte.extras.google_foto.name): Die Bildadresse wird serverseitig bei der Places API
 //   abgefragt (skipHttpRedirect → photoUri, ohne Key) und das Bild durchgereicht. Der Browser spricht
 //   dabei nie mit Google, der API-Key verlässt nie den Server. Google-Bilder werden nicht dauerhaft
@@ -12,7 +13,7 @@ import type { NextRequest } from "next/server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
 import { clubLaden } from "@/lib/clubs-daten";
 import { istSichtbarerClub } from "@/lib/clubs";
-import { ortLaden, slugDekodieren } from "@/lib/orte";
+import { lokalesBild, ortLaden, slugDekodieren } from "@/lib/orte";
 import { spielplatzLaden } from "@/lib/spielplaetze-daten";
 import { weihnachtsmarktLaden } from "@/lib/weihnachtsmaerkte-daten";
 
@@ -113,6 +114,9 @@ async function bildQuelle(slug: string, eigenes: string | null, google: string |
 export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
   const slug = slugDekodieren((await ctx.params).slug);
   const ort = slug ? await fotoOrt(slug) : null;
+  // Bild aus web/public (z. B. vom Veranstalter): direkt dorthin verweisen, nicht durch den Proxy holen
+  const lokal = lokalesBild(ort?.bild_url);
+  if (lokal) return new Response(null, { status: 308, headers: { Location: lokal, "Cache-Control": `public, max-age=${TAG}` } });
   const kennung = slug ? fotoKennung(ort) : null;
   // Ohne Foto gar nicht erst in den Cache bzw. zu Google
   const quelle = slug && kennung && (kennung.eigenes || kennung.google)

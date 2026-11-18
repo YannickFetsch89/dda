@@ -358,3 +358,43 @@ describe("Cursor-Check Stufe 1b", () => {
     expect(liste.map((e) => e.titel)).toEqual(["Bücherweihnachtsmarkt 2026"]);
   });
 });
+
+import { lokalesBild, ortBildAutorUrl, ortBildUrl } from "@/lib/orte";
+
+describe("Eigene Bilder (Veranstalter) mit Bildnachweis", () => {
+  const mitBild = (bild_url: string | null, extras: Record<string, unknown> = {}) => {
+    const o = markt({});
+    return { ...o, bild_url, bild_attribution: "IG Nordstraße", extras: { ...o.extras, ...extras } };
+  };
+  const google = { google_foto: { name: "places/abc/photos/def", autor_url: "https://maps.google.com/maps/contrib/1" } };
+
+  it("Bild aus web/public wird direkt ausgeliefert, mit Version gegen alten Browser-Cache", () => {
+    expect(ortBildUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", google))).toBe("/guides/weihnachtsmaerkte/nordstrasse.webp");
+    expect(ortBildUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", { foto_version: 3 }))).toBe("/guides/weihnachtsmaerkte/nordstrasse.webp?v=3");
+  });
+
+  it("nur das enge Muster gilt als lokal – alles andere läuft weiter über den Proxy", () => {
+    for (const falsch of ["/guides/../secret.webp", "//evil.example/x.webp", "/guides/weihnachtsmaerkte/x.svg", "/guides/x.webp", "https://x.de/a.webp", null]) {
+      expect(lokalesBild(falsch)).toBeNull();
+    }
+    const fremd = mitBild("https://veranstalter.de/bild.jpg");
+    expect(ortBildUrl(fremd)).toBe(`/ort-foto/${fremd.slug}`);
+  });
+
+  it("Link im Bildnachweis: beim eigenen Bild bild_link (nur https), beim Google-Foto der Urheber", () => {
+    expect(ortBildAutorUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", { ...google, bild_link: "https://nordstrasse.de" }))).toBe("https://nordstrasse.de/");
+    expect(ortBildAutorUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", { ...google, bild_link: "javascript:alert(1)" }))).toBeNull();
+    expect(ortBildAutorUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", google))).toBeNull();
+    expect(ortBildAutorUrl(mitBild(null, google))).toBe("https://maps.google.com/maps/contrib/1");
+  });
+});
+
+describe("Zusammengelegte Märkte (Schadow-Markt = Märchen-Markt, 18.11.2026)", () => {
+  it("gelöschter Schadow-Markt leitet dauerhaft auf den Märchen-Markt, andere unbekannte Slugs bleiben 404", () => {
+    expect(ortEntscheidung("weihnachtsmaerkte", "schadow-markt-stadtmitte", null)).toEqual({ art: "umleiten", ziel: "/guides/weihnachtsmaerkte/maerchen-markt-stadtmitte" });
+    expect(ortEntscheidung("weihnachtsmaerkte", "gibt-es-nicht", null)).toEqual({ art: "fehlt" });
+  });
+  it("Übersichtstext nennt den Schadow-Markt nicht mehr getrennt", () => {
+    expect(JSON.stringify(GUIDE_TEXTE)).not.toContain("Schadow-Markt");
+  });
+});

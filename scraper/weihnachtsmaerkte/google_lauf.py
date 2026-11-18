@@ -59,7 +59,6 @@ SUCHTEXT = {
     "innenstadt": "Weihnachtsmarkt Düsseldorf Marktplatz Rathaus",
     "altstadt-markt": "Weihnachtsmarkt Flinger Straße Düsseldorf",
     "maerchen-markt": "Weihnachtsmarkt Schadowplatz Düsseldorf",
-    "schadow-markt": "Weihnachtsmarkt Schadowstraße Düsseldorf",
     "bilk-arcaden": "Weihnachtsmarkt Düsseldorf Arcaden Bilk",
     "areal-boehler": "Weihnachtszauber Areal Böhler Düsseldorf",
 }

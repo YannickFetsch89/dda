@@ -479,8 +479,8 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
         titel: "Ein Markt, viele Plätze",
         absaetze: [
           "Der Düsseldorfer Weihnachtsmarkt ist kein einzelner Platz, sondern eine Reihe von Themenmärkten, die zu Fuß " +
-            "zusammenhängen: der Altstadt-Markt zwischen Flinger Straße und Marktstraße, der Märchen-Markt auf dem " +
-            "Schadowplatz, der Schadow-Markt, das Winter Village auf der Königsallee und die Weihnachtspromenade am " +
+            "zusammenhängen: der Altstadt-Markt zwischen Flinger Straße und Marktstraße, der Märchen-Markt am " +
+            "Schadowplatz, das Winter Village auf der Königsallee und die Weihnachtspromenade am " +
             "Rheinufer. Dazu kommen die Eisbahn auf dem Corneliusplatz und das Riesenrad auf dem Burgplatz, die eigene " +
             "Öffnungszeiten haben und länger laufen als die Märkte. Wer einen Abend einplant, kann vom Rhein über die " +
             "Altstadt bis zur Kö laufen und kommt an allen vorbei.",

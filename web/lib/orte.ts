@@ -31,6 +31,8 @@ const EXTRAS_FELDER = [
   "vorher_typ",
   // Bildausschnitt („unten“/„oben“) und Bildversion (neue URL nach einem Bildtausch → kein alter Browser-Cache)
   "bild_fokus", "foto_version",
+  // Link zum Bildnachweis eines eigenen Bildes (z. B. Seite des Veranstalters), siehe ortBildAutorUrl
+  "bild_link",
   // Spielplätze (lib/spielplaetze.ts): Profil, Prüf-Codes, Score – bei allen anderen Orten leer
   "spielplatz",
   // Weihnachtsmärkte (lib/weihnachtsmaerkte.ts): Saisons, Merkmale, Rollen, Score (ohne Google-Rohwerte)
@@ -105,15 +107,29 @@ function googleFoto(o: DddOrt): GoogleFoto | null {
 }
 
 /**
+ * Bild, das auf unserem eigenen Server liegt (web/public/guides/…), z. B. vom Veranstalter geliefert
+ * (Auftraggeber 17.11.2026). Nur dieses enge Muster – alles andere läuft weiter über den Bild-Proxy.
+ */
+const LOKALES_BILD = /^\/guides\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpg|png)$/;
+
+export function lokalesBild(bildUrl: string | null | undefined): string | null {
+  return typeof bildUrl === "string" && LOKALES_BILD.test(bildUrl) ? bildUrl : null;
+}
+
+/**
  * Bild-Adresse eines Ortes: eigenes Bild (bild_url) hat Vorrang,
  * sonst das Google-Foto über die eigene Route /ort-foto/[slug] (Key bleibt auf dem Server).
+ * Ein Bild aus web/public wird direkt ausgeliefert (kein Umweg über den Proxy).
  */
 export function ortBildUrl(o: DddOrt): string | null {
-  // Immer über den eigenen Server – auch ein eigenes bild_url kann auf einem fremden Server liegen
+  const version = o.extras.foto_version;
+  const v = typeof version === "number" && version > 1 ? `?v=${version}` : "";
+  const lokal = lokalesBild(o.bild_url);
+  if (lokal) return `${lokal}${v}`;
+  // Sonst immer über den eigenen Server – auch ein eigenes bild_url kann auf einem fremden Server liegen
   const eigenesBild = !!o.bild_url && !o.bild_url.includes("key=");
   if (!(eigenesBild || googleFoto(o)) || !o.slug) return null;
-  const version = o.extras.foto_version;
-  return `/ort-foto/${encodeURIComponent(o.slug)}${typeof version === "number" && version > 1 ? `?v=${version}` : ""}`;
+  return `/ort-foto/${encodeURIComponent(o.slug)}${v}`;
 }
 
 /**
@@ -129,9 +145,15 @@ export function ortBildFokus(o: DddOrt): string | undefined {
   return undefined;
 }
 
-/** Urheber-Link des Google-Fotos (Google verlangt die Nennung beim Foto). */
+/**
+ * Link im Bildnachweis: beim Google-Foto der Urheber (Google verlangt die Nennung beim Foto),
+ * beim eigenen Bild der gepflegte Link aus extras.bild_link (z. B. Seite des Veranstalters).
+ */
 export function ortBildAutorUrl(o: DddOrt): string | null {
-  if (o.bild_url && !o.bild_url.includes("key=")) return null;
+  if (o.bild_url && !o.bild_url.includes("key=")) {
+    const link = sichereUrl(o.extras.bild_link);
+    return link && link.startsWith("https://") ? link : null;
+  }
   const url = googleFoto(o)?.autor_url;
   return typeof url === "string" && url.startsWith("https://") ? url : null;
 }

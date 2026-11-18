@@ -28,6 +28,7 @@ data/weihnachtsmaerkte/*
 !data/weihnachtsmaerkte/saison-2026.csv
 !data/weihnachtsmaerkte/merkmale.csv
 !data/weihnachtsmaerkte/event_ausschluss.csv
+!data/weihnachtsmaerkte/bilder.csv
 
 # Playwright
 playwright/.auth/
