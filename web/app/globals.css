@@ -2140,7 +2140,6 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-badge .icon { font-size: 15px; color: var(--ddd-gold-hover); }
 .wm-badge--tipp { background: var(--ddd-gold); color: #1b2540; }
 .wm-badge--tipp .icon { color: #1b2540; }
-.wm-top { margin: 18px 0 8px; }
 .wm-sonder { margin-top: 34px; }
 .wm-sonder h2 { font-size: 24px; margin-bottom: 6px; }
 .wm-sonder > p { font-size: 14px; margin-bottom: 12px; }
@@ -2149,9 +2148,11 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-sonder__tabelle th, .wm-sonder__tabelle td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--ddd-subtle); vertical-align: top; }
 .wm-sonder__tabelle thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ddd-text-muted); white-space: nowrap; }
 .wm-sonder__tabelle tbody th a { color: var(--ddd-text); font-weight: 700; }
-.wm-zelle--zu { color: var(--ddd-error); font-weight: 600; }
+/* Sonderzeiten (Auftraggeber 18.11.2026): „geschlossen“ normal, Öffnungszeiten grün (nicht fett), letzter Tag fett */
+.wm-zelle--auf { color: #1e7a4c; } /* dunkles Grün: auf Weiß gut lesbar (Kontrast > 4.5:1) */
+:root[data-theme="dark"] .wm-zelle--auf { color: #5fd08f; }
+.wm-zelle--letzter { font-weight: 700; }
 .wm-zelle--offen-unbekannt { color: var(--ddd-text-muted); font-style: italic; }
-.wm-zelle--leer { color: var(--ddd-text-muted); }
 /* Mobil: jede Zeile als Karte statt breiter Tabelle (5.7) */
 @media (max-width: 767px) {
   .wm-sonder__rahmen { box-shadow: none; background: transparent; overflow: visible; }
@@ -2199,8 +2200,13 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-kurz { margin-top: 30px; }
 .wm-kurz h2 { font-size: 24px; margin-bottom: 6px; }
 .wm-kurz ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
-.wm-kurz li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
-.wm-kurz li a { font-weight: 700; color: var(--ddd-text); }
+.wm-kurz li { border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
+/* Ganze Karte ist der Link (Auftraggeber 18.11.2026) */
+.wm-kurz__karte { display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 10px 14px; border-radius: inherit; color: inherit; text-decoration: none; transition: box-shadow .15s ease, transform .15s ease; }
+.wm-kurz__karte:hover { box-shadow: var(--sh-l, var(--sh-m)); transform: translateY(-1px); }
+.wm-kurz__karte:focus-visible { outline: 2px solid var(--ddd-gold); outline-offset: 2px; }
+.wm-kurz__titel { font-weight: 700; color: var(--ddd-text); }
+.wm-kurz__karte:hover .wm-kurz__titel { text-decoration: underline; }
 @media (min-width: 768px) { .wm-kurz ul { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .wm-eventkasten { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; margin: 16px 0; border-radius: var(--r-card); background: var(--ddd-gold-tint); color: var(--ddd-text); }
 .wm-eventkasten .icon { font-size: 26px; color: var(--ddd-gold-hover); }

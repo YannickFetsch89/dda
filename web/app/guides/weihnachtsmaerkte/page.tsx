@@ -1,5 +1,6 @@
 // Guide-Hub Weihnachtsmärkte (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 5.2; Stufe 1a)
 //
+// Aufbau (18.11.2026): Hero, Einleitung, Liste mit Filtern, kleine Märkte, Karte, Sonderzeiten, Linkliste, FAQ.
 // Erste HTML-Antwort mit Inhalt: Hero, Einleitung, Liste mit Zeitraum und Badges, Sonderzeiten-Tabelle und FAQ stehen
 // außerhalb der Suspense-Grenze bzw. als deren Fallback. „Heute geöffnet“ rechnet nur der Browser (Plan E5). Nur der
 // gewählte Tag (?tag=YYYY-MM-DD) wartet auf searchParams und wird auf dem Server gerechnet (noindex, Canonical auf den Hub).
@@ -24,7 +25,7 @@ import { jsonLdText } from "@/lib/json-ld";
 import {
   GEBIETE, SAISON_STANDARD, SORTIERUNGEN, WM_BASIS as BASIS, WM_STANDARD, aktuelleSaison, badgeChips, gebietVon, wmFilterAktiv, wmFilterHref, wmFilterLesen,
   wmFiltern, wmSortieren, kurzMaerkte, type WmFilter, datumKurz, datumLang, faqWerte, heroZahlen, hubJahr, istMarkt, listenReihenfolge, rolleText,
-  sonderTage, sonderZelle, sortieren, topFuenfAm, wm, wmPfad,
+  sonderTage, sonderZelle, sortieren, wm, wmPfad,
 } from "@/lib/weihnachtsmaerkte";
 import { heuteKurz, saisonTag, weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { weihnachtsmaerkteListeJsonLd } from "@/lib/weihnachtsmaerkte-json-ld";
@@ -119,10 +120,7 @@ function SonderzeitenTabelle({ alle, jahr }: { alle: DddOrt[]; jahr: number }) {
   return (
     <section className="container wm-sonder" aria-labelledby="wm-sonder-titel">
       <h2 className="d" id="wm-sonder-titel">Sonderzeiten auf einen Blick</h2>
-      <p className="muted">
-        Nur Zeiten, die die Veranstalter veröffentlicht haben. „–“ heißt: An diesem Tag läuft der Markt nicht (noch nicht oder nicht mehr).
-        Die Teilmärkte der Innenstadt haben die Zeiten der Innenstadt.
-      </p>
+      <p className="muted">Die Teilmärkte der Innenstadt haben die Zeiten der Innenstadt.</p>
       <div className="wm-sonder__rahmen">
         <table className="wm-sonder__tabelle">
           <thead>
@@ -139,10 +137,12 @@ function SonderzeitenTabelle({ alle, jahr }: { alle: DddOrt[]; jahr: number }) {
                 <tr key={o.id}>
                   <th scope="row"><Link href={wmPfad(o)}>{o.name}</Link></th>
                   {tage.map((t) => {
-                    const z = sonderZelle(wm(o).saisons, t.datum);
-                    return <td key={t.datum} data-label={t.name} className={`wm-zelle wm-zelle--${z === "geschlossen" ? "zu" : z === "–" ? "leer" : z === "nicht veröffentlicht" ? "offen-unbekannt" : "auf"}`}>{z}</td>;
+                    // Außerhalb der Saison („–“) ebenfalls „geschlossen“ – übersichtlicher (Auftraggeber 18.11.2026)
+                    const roh = sonderZelle(wm(o).saisons, t.datum);
+                    const z = roh === "–" ? "geschlossen" : roh;
+                    return <td key={t.datum} data-label={t.name} className={`wm-zelle wm-zelle--${z === "geschlossen" ? "zu" : z === "nicht veröffentlicht" ? "offen-unbekannt" : "auf"}`}>{z}</td>;
                   })}
-                  <td data-label="Letzter Tag">{s ? datumKurz(s.bis) : "–"}</td>
+                  <td data-label="Letzter Tag" className="wm-zelle--letzter">{s ? datumKurz(s.bis) : "geschlossen"}</td>
                 </tr>
               );
             })}
@@ -165,8 +165,11 @@ async function KurzMaerkte({ alle }: { alle: DddOrt[] }) {
       <ul>
         {liste.map((e) => (
           <li key={e.id}>
-            <Link href={eventPfad(e)}>{e.titel}</Link>
-            <span className="muted">{[datumKurz(e.datum), e.uhrzeit ? `${e.uhrzeit} Uhr` : null, e.ort].filter(Boolean).join(" · ")}</span>
+            {/* Ganze Karte klickbar (Auftraggeber 18.11.2026) */}
+            <Link href={eventPfad(e)} className="wm-kurz__karte">
+              <span className="wm-kurz__titel">{e.titel}</span>
+              <span className="muted">{[datumKurz(e.datum), e.uhrzeit ? `${e.uhrzeit} Uhr` : null, e.ort].filter(Boolean).join(" · ")}</span>
+            </Link>
           </li>
         ))}
       </ul>
@@ -268,10 +271,12 @@ function Legende() {
   );
 }
 
-function Ansicht({ alle, tag, heute, f }: { alle: DddOrt[]; tag: string | null; heute: string | null; f: WmFilter }) {
+/**
+ * Aufbau (Auftraggeber 18.11.2026): alle Märkte mit Filtern → kleine Märkte an einzelnen Tagen (`kurz`) → Karte.
+ * Kein eigener Top-5-Block mehr (bei rund acht Märkten doppelt); die Top-5-Ränge sortieren die Liste weiter nach vorn.
+ */
+function Ansicht({ alle, tag, heute, f, kurz }: { alle: DddOrt[]; tag: string | null; heute: string | null; f: WmFilter; kurz?: React.ReactNode }) {
   const jahr = Number(heroZahlen(alle).jahr ?? SAISON_STANDARD);
-  // Top 5 (Stufe 1b): nur mit fünf Rängen und nur bis zum 30.12. (Plan 5.5/5.8)
-  const top = topFuenfAm(alle, heute);
   // Bezugstag der Filter: gewählter Tag, sonst heute (ohne Uhr im Fallback: Filter „geöffnet“ ist dort nie aktiv)
   const bezugTag = tag ?? heute ?? "";
   const gefiltert = wmFilterAktiv(f);
@@ -282,12 +287,6 @@ function Ansicht({ alle, tag, heute, f }: { alle: DddOrt[]; tag: string | null; 
       <div className="container">
         <Tagesleiste tag={tag} heute={heute} jahr={jahr} />
         {tag && <p className="gd-status"><span>Zeiten für {datumKurz(tag)}{tag.slice(0, 4)}</span><Link href={BASIS} scroll={false} className="gd-status__reset">Zurück zu heute</Link></p>}
-        {top.length === 5 && !gefiltert && (
-          <section className="wm-top" aria-labelledby="wm-top-titel">
-            <h2 className="d" id="wm-top-titel">Unsere Top 5</h2>
-            <div className="gd-grid gd-grid--3" role="list">{top.map((o) => <WmKarte key={o.id} o={o} alle={alle} tag={tag} />)}</div>
-          </section>
-        )}
         <Filter alle={alle} f={f} tag={tag} bezugTag={bezugTag} />
         {gefiltert ? (
           <>
@@ -304,6 +303,9 @@ function Ansicht({ alle, tag, heute, f }: { alle: DddOrt[]; tag: string | null; 
         ) : (
           <Liste alle={alle} tag={tag} />
         )}
+      </div>
+      {kurz}
+      <div className="container">
         <h2 className="d wm-zwischentitel">Alle Märkte auf der Karte</h2>
         <Legende />
         <GuideKarteLazy quelle={`/api/guide-karte?hub=weihnachtsmaerkte${abfrage ? `&${abfrage}` : ""}`} />
@@ -312,17 +314,23 @@ function Ansicht({ alle, tag, heute, f }: { alle: DddOrt[]; tag: string | null; 
   );
 }
 
-async function GefilterteAnsicht({ searchParams, alle }: { searchParams: Promise<SP>; alle: DddOrt[] }) {
+async function GefilterteAnsicht({ searchParams, alle, kurz }: { searchParams: Promise<SP>; alle: DddOrt[]; kurz: React.ReactNode }) {
   const sp = await searchParams;
   const tag = tagAus(sp);
-  await connection(); // Uhr erst zur Anfrage lesen (Morgen/Samstag, Top-5-Fenster, „heute geöffnet“), nie beim Vorrendern
-  return <Ansicht alle={alle} tag={tag} heute={await heuteKurz()} f={wmFilterLesen(sp)} />;
+  await connection(); // Uhr erst zur Anfrage lesen (Morgen/Samstag, „heute geöffnet“), nie beim Vorrendern
+  return <Ansicht alle={alle} tag={tag} heute={await heuteKurz()} f={wmFilterLesen(sp)} kurz={kurz} />;
 }
 
 export default async function Weihnachtsmaerkte(props: { searchParams: Promise<SP> }) {
   const alle = sortieren(await weihnachtsmaerkteLaden());
   const jahr = Number(heroZahlen(alle).jahr ?? "2026");
   const maerkte = alle.filter(istMarkt);
+  // Kleine Märkte (Eventkalender) zwischen Liste und Karte – eigene Suspense-Grenze, die Liste wartet nicht darauf
+  const kurz = (
+    <Suspense fallback={null}>
+      <KurzMaerkte alle={alle} />
+    </Suspense>
+  );
   return (
     <div className="gd-seite wm-seite">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(weihnachtsmaerkteListeJsonLd(alle, SITE_URL)) }} />
@@ -330,16 +338,13 @@ export default async function Weihnachtsmaerkte(props: { searchParams: Promise<S
       <div className="container">
         <GuideEinleitung seite="weihnachtsmaerkte" werte={{ anzahl: zahl(maerkte.length) }} />
       </div>
-      <Suspense fallback={<Ansicht alle={alle} tag={null} heute={null} f={WM_STANDARD} />}>
-        <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />
+      <Suspense fallback={<Ansicht alle={alle} tag={null} heute={null} f={WM_STANDARD} kurz={kurz} />}>
+        <GefilterteAnsicht searchParams={props.searchParams} alle={alle} kurz={kurz} />
       </Suspense>
+      <SonderzeitenTabelle alle={alle} jahr={jahr} />
       <div className="container">
         <OrtLinkListe orte={alle} alleHref={BASIS} max={200} pfad={wmPfad} typLabel={rolleText} einheit="Märkte und Attraktionen" />
       </div>
-      <SonderzeitenTabelle alle={alle} jahr={jahr} />
-      <Suspense fallback={null}>
-        <KurzMaerkte alle={alle} />
-      </Suspense>
       <GuideSeoText seite="weihnachtsmaerkte" werte={{ anzahl: zahl(maerkte.length), ...faqWerte(alle, wmFilterHref(WM_STANDARD, { badges: ["familien"] })) }} />
       <div className="container wm-quellen muted">
         <p>
