@@ -46,12 +46,11 @@ export function WmKarte({ o, alle, tag, klein = false }: { o: DddOrt; alle: DddO
   return (
     <article className={`gd-karte wm-karte${klein ? " wm-karte--klein" : ""}`} role="listitem">
       <Link href={wmPfad(o)} className="gd-karte__link">
-        {!klein && (
-          <div className="gd-karte__bild">
-            <BildImg src={bild ?? WM_BILD} ersatz={bild ? WM_BILD : null} alt="" icon={wmIcon(o)} fokus={ortBildFokus(o)} />
-            {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
-          </div>
-        )}
+        {/* Auch die kleinen Karten der Teilmärkte zeigen ein Bild (Auftraggeber 18.11.2026) */}
+        <div className="gd-karte__bild">
+          <BildImg src={bild ?? WM_BILD} ersatz={bild ? WM_BILD : null} alt="" icon={wmIcon(o)} fokus={ortBildFokus(o)} />
+          {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
+        </div>
         <div className="gd-karte__text">
           <span className="gd-typ"><Icon name={wmIcon(o)} />{rolleText(o)}</span>
           <h3 className="gd-karte__name d">{o.name}</h3>

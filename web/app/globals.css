@@ -2110,22 +2110,42 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 /* ---------- Weihnachtsmarkt-Guide (Plan docs/plan-weihnachtsmaerkte-2026-11-17.md, 5.2/5.3/5.7) ---------- */
 .wm-hero h1 { font-size: 34px; }
 .wm-zwischentitel { margin: 28px 0 12px; font-size: 24px; }
-.wm-tage { margin: 18px 0 6px; display: flex; flex-direction: column; gap: 10px; }
-.wm-tage ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
-.wm-tage .gd-chip { min-height: 44px; }
-.wm-tage__form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--ddd-text-body); }
-.wm-tage__form input { min-height: 44px; padding: 0 10px; border-radius: var(--r-xs); border: 1px solid var(--ddd-border, #d9dce3); background: var(--ddd-surface); color: var(--ddd-text); font: inherit; }
-.wm-tage__form .gd-knopf { min-height: 44px; }
-.wm-liste { display: flex; flex-direction: column; gap: 22px; padding: 14px 0 6px; }
-.wm-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.wm-gruppe__teile { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
-.wm-einzeln { display: grid; grid-template-columns: minmax(0, 1fr); }
+/* Filterkasten (Auftraggeber 18.11.2026): Tag, Besonderheiten, Gebiet und Öffnung in einem Kasten, Kalender wie auf den übrigen Seiten */
+.wm-filter { margin: 18px 0 6px; border: 0; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
+.wm-filter .gd-filter__innen { gap: 12px; padding: 14px 14px 16px; }
+.wm-filter .gd-zeile + .gd-zeile { padding-top: 12px; border-top: 1px solid var(--ddd-border); }
+.wm-filter .gd-scroll, .wm-filter .gd-zeile__chips { margin: 0; }
+.wm-filter .gd-scroll > .gd-zeile__chips, .wm-filter .gd-zeile__chips { padding: 0; }
+.wm-tage .kalender-toggle { flex: none; }
+.wm-tage .kalender-toggle__knopf { gap: 6px; }
+.wm-tage .kalender-toggle__icon { font-size: 18px; }
+.wm-filter .gd-zeile__label { width: 92px; }
+/* Kalender-Knopf: überall „Kalender“; auf dem Handy nur das Symbol, damit die Tages-Chips Platz haben */
+.wm-tage .kalender-toggle__text--mobil { display: none; }
+.wm-tage .kalender-toggle__text--gross { display: inline; }
+@media (max-width: 599px) {
+  .wm-tage .kalender-toggle__text--gross { display: none; }
+  .wm-tage .kalender-toggle__knopf { width: 44px; padding: 0; justify-content: center; }
+}
 @media (min-width: 768px) {
-  .wm-gruppe { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; }
-  .wm-gruppe__teile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wm-filter .gd-filter__innen { gap: 14px; padding: 18px 22px 20px; }
+  .wm-filter .gd-zeile + .gd-zeile { padding-top: 14px; }
+}
+/* Liste: Gruppe (Innenstadt) quer über die volle Breite, darunter ihre Teilmärkte mit Bild im Raster */
+.wm-liste { display: flex; flex-direction: column; gap: 22px; padding: 18px 0 6px; }
+.wm-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.wm-gruppe__teile { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.wm-einzeln { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 600px) { .wm-gruppe__teile { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) {
   .wm-liste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wm-liste > .wm-gruppe { grid-column: 1 / -1; }
+  .wm-gruppe__teile { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wm-gruppe > .wm-karte:not(.wm-karte--klein) .gd-karte__link { flex-direction: row; }
+  .wm-gruppe > .wm-karte:not(.wm-karte--klein) .gd-karte__bild { flex: 0 0 48%; aspect-ratio: auto; min-height: 260px; }
+  .wm-gruppe > .wm-karte:not(.wm-karte--klein) .gd-karte__text { justify-content: center; padding: 24px 28px; }
 }
+.wm-karte--klein .gd-karte__bild { aspect-ratio: 16 / 10; }
 .wm-karte--klein .gd-karte__text { padding: 12px 14px 14px; gap: 5px; }
 .wm-karte--klein .gd-karte__name { font-size: 16px; }
 .wm-zustand { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ddd-text-body); }
@@ -2195,7 +2215,6 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-legende__punkt--zu { background: #5f6b7d; }
 .wm-legende__punkt--saison { background: #e8e2d4; }
 .wm-legende__punkt--unbekannt { background: #fff; border: 2px dashed #1b2540; }
-.wm-filter { margin: 8px 0 4px; }
 .wm-treffer { padding-bottom: 6px; }
 .wm-kurz { margin-top: 30px; }
 .wm-kurz h2 { font-size: 24px; margin-bottom: 6px; }

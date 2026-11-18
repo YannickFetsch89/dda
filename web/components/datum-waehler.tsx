@@ -26,6 +26,13 @@ interface Props {
   mitZeitraum?: boolean;
   /** Aktuell gewählter Zeitraum (von ≠ bis) – im Zeitraum-Modus markiert */
   zeitraum?: { von: string; bis: string };
+  /** URL-Parameter für das gewählte Datum (Standard „datum“; Weihnachtsmarkt-Guide: „tag“) */
+  param?: string;
+  /** Wählbarer Bereich (YYYY-MM-DD); Standard: heute bis heute + 59 Tage */
+  min?: string;
+  max?: string;
+  /** Nach dem Wählen nach oben scrollen (Standard ja; Guides mit Filtern bleiben an der Stelle) */
+  scroll?: boolean;
 }
 
 type Modus = "tag" | "zeitraum";
@@ -42,11 +49,13 @@ export function EigenerZeitraumKnopf({ aktiv, className = "chip" }: { aktiv: boo
   );
 }
 
-export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, gewaehlt, mitZeitraum = false, zeitraum }: Props) {
+export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, gewaehlt, mitZeitraum = false, zeitraum, param = "datum", min, max, scroll = true }: Props) {
   const router = useRouter();
   const heuteDate = new Date(heute + "T00:00:00");
-  const maxDate = new Date(heuteDate);
-  maxDate.setDate(maxDate.getDate() + 59);
+  const minStr = min ?? heute;
+  const minDate = new Date(minStr + "T00:00:00");
+  const maxDate = max ? new Date(max + "T00:00:00") : new Date(heuteDate);
+  if (!max) maxDate.setDate(maxDate.getDate() + 59);
   const istZeitraum = !!zeitraum && zeitraum.von !== zeitraum.bis;
   const startTag = istZeitraum ? zeitraum!.von : gewaehlt;
   const start = startTag && /^\d{4}-\d{2}-\d{2}$/.test(startTag) ? new Date(startTag + "T00:00:00") : heuteDate;
@@ -86,15 +95,15 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
     else setMonat(monat - 1);
   }
 
-  const kannZurueck = !(jahr === heuteDate.getFullYear() && monat === heuteDate.getMonth());
-  const kannVor = !(jahr === maxDate.getFullYear() && monat > maxDate.getMonth());
+  const kannZurueck = jahr * 12 + monat > minDate.getFullYear() * 12 + minDate.getMonth();
+  const kannVor = jahr * 12 + monat < maxDate.getFullYear() * 12 + maxDate.getMonth();
 
   function oeffnen(datum: string, ereignis: React.MouseEvent<HTMLButtonElement>) {
     const qs = new URLSearchParams(parameter);
-    qs.set("datum", datum);
+    qs.set(param, datum);
     // Steckt der Kalender in einem aufklappbaren Menü (<details>), dieses schließen
     ereignis.currentTarget.closest("details")?.removeAttribute("open");
-    router.push(`${ziel}?${qs.toString()}`);
+    router.push(`${ziel}?${qs.toString()}`, { scroll });
     // Laufende Auswahl beenden – der Kalender bleibt auf /entdecken nach dem Wählen sichtbar
     setAnfang(null);
     setZeiger(null);
@@ -160,7 +169,7 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
           if (tag === null) return <span key={`leer-${i}`} />;
           const d = new Date(jahr, monat, tag);
           const str = tagStr(d);
-          const vergangen = str < heute;
+          const vergangen = str < minStr;
           const zuWeit = d > maxDate;
           const istHeute = str === heute;
           const istGewaehlt = modus === "tag" && str === gewaehlt;
@@ -198,8 +207,11 @@ export function DatumWaehler({ heute, ziel = "/entdecken", onWahl, parameter, ge
  * blauen Ring (Auftraggeber 16.11.2026). Unter 1200 px öffnet er mittig über einer Abdunklung; Tippen daneben oder
  * Escape schließt ihn.
  */
-export function KalenderToggle({ heute, ziel, gewaehlt, zeitraum, klasse = "" }: {
+export function KalenderToggle({ heute, ziel, gewaehlt, zeitraum, klasse = "", knopfKlasse = "chip chip--navy", mitZeitraum = true, param, min, max, scroll }: {
   heute: string; ziel?: string; gewaehlt?: string; zeitraum?: { von: string; bis: string }; klasse?: string;
+  /** Klassen des Knopfs (Startseite: navy Pille; Guides: gd-chip) */
+  knopfKlasse?: string;
+  mitZeitraum?: boolean; param?: string; min?: string; max?: string; scroll?: boolean;
 }) {
   const [offen, setOffen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -222,7 +234,7 @@ export function KalenderToggle({ heute, ziel, gewaehlt, zeitraum, klasse = "" }:
 
   return (
     <div className={`kalender-toggle ${klasse}`} ref={ref}>
-      <button type="button" className="chip chip--navy kalender-toggle__knopf" onClick={() => setOffen(!offen)} aria-label={offen ? "Kalender schließen" : "Kalender öffnen"} aria-expanded={offen}>
+      <button type="button" className={`${knopfKlasse} kalender-toggle__knopf`} onClick={() => setOffen(!offen)} aria-label={offen ? "Kalender schließen" : "Kalender öffnen"} aria-expanded={offen}>
         <span className="icon kalender-toggle__icon" aria-hidden data-icon="calendar_month" />
         {/* Desktop „Kalender“, mobil „Kalender öffnen“ (Pille in der Reihe der Schnellfilter, Auftraggeber 16.11.2026) */}
         <span className="kalender-toggle__text kalender-toggle__text--gross">{offen ? "Schließen" : "Kalender"}</span>
@@ -232,7 +244,7 @@ export function KalenderToggle({ heute, ziel, gewaehlt, zeitraum, klasse = "" }:
         <>
           <div className="kalender-hintergrund" aria-hidden onClick={() => setOffen(false)} />
           <div className="kalender-dropdown" role="dialog" aria-label="Datum wählen">
-            <DatumWaehler heute={heute} ziel={ziel} gewaehlt={gewaehlt} zeitraum={zeitraum} mitZeitraum onWahl={() => setOffen(false)} />
+            <DatumWaehler heute={heute} ziel={ziel} gewaehlt={gewaehlt} zeitraum={zeitraum} mitZeitraum={mitZeitraum} param={param} min={min} max={max} scroll={scroll} onWahl={() => setOffen(false)} />
           </div>
         </>
       )}

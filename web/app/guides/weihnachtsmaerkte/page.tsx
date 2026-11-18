@@ -21,9 +21,10 @@ import { eventPoolLaden } from "@/lib/daten";
 import { kanonischerStadtteil } from "@/lib/landing";
 import { eventPfad } from "@/lib/pfade";
 import { ScrollReihe } from "@/components/scroll-reihe";
+import { KalenderToggle } from "@/components/datum-waehler";
 import { jsonLdText } from "@/lib/json-ld";
 import {
-  GEBIETE, SAISON_STANDARD, SORTIERUNGEN, WM_BASIS as BASIS, WM_STANDARD, aktuelleSaison, badgeChips, gebietVon, wmFilterAktiv, wmFilterHref, wmFilterLesen,
+  GEBIETE, SAISON_STANDARD, WM_BASIS as BASIS, WM_STANDARD, aktuelleSaison, badgeChips, gebietVon, wmFilterAktiv, wmFilterHref, wmFilterLesen,
   wmFiltern, wmSortieren, kurzMaerkte, type WmFilter, datumKurz, datumLang, faqWerte, heroZahlen, hubJahr, istMarkt, listenReihenfolge, rolleText,
   sonderTage, sonderZelle, sortieren, wm, wmPfad,
 } from "@/lib/weihnachtsmaerkte";
@@ -82,8 +83,11 @@ function Hero({ alle, jahr }: { alle: DddOrt[]; jahr: string | null }) {
   );
 }
 
-/** Tagesleiste: Heute (ohne Parameter), Morgen und Samstag nur im dynamischen Teil, feste Sondertage, Datum wählen. */
-function Tagesleiste({ tag, heute, jahr }: { tag: string | null; heute: string | null; jahr: number }) {
+/**
+ * Zeile „Wann“ im Filterkasten (Auftraggeber 18.11.2026): Heute (ohne Parameter), Morgen und Samstag nur im
+ * dynamischen Teil, feste Sondertage und der Kalender der übrigen Seiten (statt des Browser-Datumsfelds).
+ */
+function TagesZeile({ tag, heute, jahr }: { tag: string | null; heute: string | null; jahr: number }) {
   const eintraege: { label: string; datum: string | null }[] = [{ label: "Heute", datum: null }];
   if (heute) {
     eintraege.push({ label: "Morgen", datum: plusTage(heute, 1) });
@@ -91,26 +95,34 @@ function Tagesleiste({ tag, heute, jahr }: { tag: string | null; heute: string |
     eintraege.push({ label: "Samstag", datum: plusTage(heute, bisSamstag) });
   }
   for (const t of sonderTage(jahr)) if (["Totensonntag", "Heiligabend", "2. Weihnachtstag", "Silvester"].includes(t.name)) eintraege.push({ label: t.name, datum: t.datum });
+  // Ein im Kalender gewählter Tag, der keinem Chip entspricht, markiert den Kalender-Knopf
+  const eigenerTag = !!tag && !eintraege.some((e) => e.datum === tag);
   return (
-    <nav className="wm-tage" aria-label="Tag wählen">
-      <ul>
+    <div className="gd-zeile wm-tage">
+      <span className="gd-zeile__label">Wann</span>
+      <ScrollReihe className="gd-zeile__chips" label="Tag wählen">
         {eintraege.map((e) => {
           const aktiv = (e.datum ?? null) === tag;
           return (
-            <li key={e.label}>
-              <Link href={e.datum ? `${BASIS}?tag=${e.datum}` : BASIS} scroll={false} className={`gd-chip gd-chip--gross${aktiv ? " gd-chip--an" : ""}`} aria-current={aktiv || undefined}>
-                {e.label}{e.datum && e.label !== "Morgen" && e.label !== "Samstag" ? <span className="gd-chip__zahl">{datumLang(e.datum).slice(0, 6)}</span> : null}
-              </Link>
-            </li>
+            <Link key={e.label} href={e.datum ? `${BASIS}?tag=${e.datum}` : BASIS} scroll={false} className={`gd-chip gd-chip--gross${aktiv ? " gd-chip--an" : ""}`} aria-current={aktiv || undefined}>
+              {e.label}{e.datum && e.label !== "Morgen" && e.label !== "Samstag" ? <span className="gd-chip__zahl">{datumLang(e.datum).slice(0, 6)}</span> : null}
+            </Link>
           );
         })}
-      </ul>
-      <form action={BASIS} method="get" className="wm-tage__form">
-        <label htmlFor="wm-tag">Datum wählen</label>
-        <input id="wm-tag" type="date" name="tag" defaultValue={tag ?? undefined} min={`${jahr}-11-01`} max={`${jahr + 1}-01-15`} />
-        <button type="submit" className="gd-knopf">Anzeigen</button>
-      </form>
-    </nav>
+      </ScrollReihe>
+      <KalenderToggle
+        heute={heute ?? tag ?? `${jahr}-11-19`}
+        ziel={BASIS}
+        param="tag"
+        min={`${jahr}-11-01`}
+        max={`${jahr + 1}-01-15`}
+        gewaehlt={tag ?? undefined}
+        mitZeitraum={false}
+        scroll={false}
+        klasse="wm-tage__kalender"
+        knopfKlasse={`gd-chip gd-chip--gross${eigenerTag ? " gd-chip--an" : ""}`}
+      />
+    </div>
   );
 }
 
@@ -203,8 +215,8 @@ function Chip({ href, aktiv, children, icon }: { href: string; aktiv: boolean; c
   );
 }
 
-/** Filterleiste (Stufe 1b): Badges (UND), Gebiet, „an diesem Tag geöffnet“, Sortierung. Alle Filter-URLs noindex. */
-function Filter({ alle, f, tag, bezugTag }: { alle: DddOrt[]; f: WmFilter; tag: string | null; bezugTag: string }) {
+/** Filterkasten: Tag, Badges (UND), Gebiet, „an diesem Tag geöffnet“. Keine Sortierwahl – immer „empfohlen“ (18.11.2026). Filter-URLs noindex. */
+function Filter({ alle, f, tag, bezugTag, heute, jahr }: { alle: DddOrt[]; f: WmFilter; tag: string | null; bezugTag: string; heute: string | null; jahr: number }) {
   const href = (a: Partial<WmFilter>) => wmFilterHref(f, a, tag);
   const fuerBadges = wmFiltern(alle.filter((o) => !wm(o).ist_gruppe), alle, f, bezugTag, ["badges"]);
   const chips = badgeChips(fuerBadges, alle, f.badges);
@@ -213,6 +225,7 @@ function Filter({ alle, f, tag, bezugTag }: { alle: DddOrt[]; f: WmFilter; tag: 
   return (
     <div className="gd-filter wm-filter" id="gd-filter" tabIndex={-1}>
       <div className="gd-filter__innen">
+        <TagesZeile tag={tag} heute={heute} jahr={jahr} />
         {chips.length > 0 && (
           <div className="gd-zeile">
             <span className="gd-zeile__label">Was es gibt</span>
@@ -242,19 +255,6 @@ function Filter({ alle, f, tag, bezugTag }: { alle: DddOrt[]; f: WmFilter; tag: 
             </Chip>
           </ScrollReihe>
         </div>
-        <div className="gd-filter__fuss">
-          <details className="gd-sort">
-            <summary>
-              <Icon name="sort" className="muted" />
-              <span className="gd-sort__label muted">Sortieren:</span>
-              <b>{SORTIERUNGEN.find((s) => s.wert === f.sort)?.label}</b>
-              <Icon name="expand_more" />
-            </summary>
-            <div className="gd-menue">
-              {SORTIERUNGEN.map((s) => <Link key={s.wert} href={href({ sort: s.wert })} scroll={false} className={s.wert === f.sort ? "is-aktiv" : ""}>{s.label}</Link>)}
-            </div>
-          </details>
-        </div>
       </div>
     </div>
   );
@@ -275,8 +275,10 @@ function Legende() {
  * Aufbau (Auftraggeber 18.11.2026): alle Märkte mit Filtern → kleine Märkte an einzelnen Tagen (`kurz`) → Karte.
  * Kein eigener Top-5-Block mehr (bei rund acht Märkten doppelt); die Top-5-Ränge sortieren die Liste weiter nach vorn.
  */
-function Ansicht({ alle, tag, heute, f, kurz }: { alle: DddOrt[]; tag: string | null; heute: string | null; f: WmFilter; kurz?: React.ReactNode }) {
+function Ansicht({ alle, tag, heute, f: roh, kurz }: { alle: DddOrt[]; tag: string | null; heute: string | null; f: WmFilter; kurz?: React.ReactNode }) {
   const jahr = Number(heroZahlen(alle).jahr ?? SAISON_STANDARD);
+  // Immer nach Empfehlung sortiert (Sortierwahl entfernt, Auftraggeber 18.11.2026); alte ?sort=-Links wirken nicht mehr
+  const f: WmFilter = { ...roh, sort: WM_STANDARD.sort };
   // Bezugstag der Filter: gewählter Tag, sonst heute (ohne Uhr im Fallback: Filter „geöffnet“ ist dort nie aktiv)
   const bezugTag = tag ?? heute ?? "";
   const gefiltert = wmFilterAktiv(f);
@@ -285,9 +287,8 @@ function Ansicht({ alle, tag, heute, f, kurz }: { alle: DddOrt[]; tag: string | 
   return (
     <>
       <div className="container">
-        <Tagesleiste tag={tag} heute={heute} jahr={jahr} />
         {tag && <p className="gd-status"><span>Zeiten für {datumKurz(tag)}{tag.slice(0, 4)}</span><Link href={BASIS} scroll={false} className="gd-status__reset">Zurück zu heute</Link></p>}
-        <Filter alle={alle} f={f} tag={tag} bezugTag={bezugTag} />
+        <Filter alle={alle} f={f} tag={tag} bezugTag={bezugTag} heute={heute} jahr={jahr} />
         {gefiltert ? (
           <>
             <div className="gd-status">
