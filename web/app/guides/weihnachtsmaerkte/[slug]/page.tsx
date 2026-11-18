@@ -235,7 +235,7 @@ export default async function WeihnachtsmarktDetail(props: Props) {
           {(st || ort.adresse) && <p className="sp-detail__lage muted"><Icon name="location_on" />{[st, ort.adresse].filter(Boolean).join(" · ")}</p>}
           <p className="wm-detail__zustand"><WmZustand saisons={saisonsKompakt(d.saisons)} mitUhrzeit /></p>
           <BadgeListe liste={badges(ort, alle)} max={8} />
-          <BeschreibungText text={ort.beschreibung} />
+          <BeschreibungText text={ort.beschreibung} fett />
 
           <Zeitentabelle ort={ort} gruppe={gruppe} />
           <Merkmale ort={ort} />

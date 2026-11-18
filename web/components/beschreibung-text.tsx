@@ -1,7 +1,14 @@
 // Event-Beschreibung mit Absätzen und Listen (Texte aus Veranstalter-Quellen sind gegliedert)
-import { beschreibungsBloecke } from "@/lib/beschreibung";
+import { beschreibungsBloecke, fettTeile } from "@/lib/beschreibung";
 
-export function BeschreibungText({ text }: { text: string | null | undefined }) {
+/** Zeile mit „**fett**“ als <strong>, sonst unverändert (nur wenn die Seite es einschaltet). */
+function Zeile({ text, fett }: { text: string; fett: boolean }) {
+  if (!fett) return <>{text}</>;
+  return <>{fettTeile(text).map((t, i) => (t.fett ? <strong key={i}>{t.text}</strong> : <span key={i}>{t.text}</span>))}</>;
+}
+
+/** `fett`: „**Wort**“ fett darstellen – nur für eigene redaktionelle Texte (Weihnachtsmärkte), nicht für Quelltexte. */
+export function BeschreibungText({ text, fett = false }: { text: string | null | undefined; fett?: boolean }) {
   const bloecke = beschreibungsBloecke(text);
   if (!bloecke.length) return null;
   return (
@@ -10,7 +17,7 @@ export function BeschreibungText({ text }: { text: string | null | undefined }) 
         b.art === "liste" ? (
           <ul key={i}>
             {b.punkte.map((p, j) => (
-              <li key={j}>{p}</li>
+              <li key={j}><Zeile text={p} fett={fett} /></li>
             ))}
           </ul>
         ) : (
@@ -18,7 +25,7 @@ export function BeschreibungText({ text }: { text: string | null | undefined }) 
             {b.zeilen.map((z, j) => (
               <span key={j}>
                 {j > 0 && <br />}
-                {z}
+                <Zeile text={z} fett={fett} />
               </span>
             ))}
           </p>

@@ -35,9 +35,29 @@ export function beschreibungsBloecke(text: string | null | undefined): Beschreib
   return bloecke;
 }
 
-/** Fließtext ohne Umbrüche und Listenzeichen, an einer Wortgrenze gekürzt („…“). */
+const FETT = /\*\*([^*\n]+?)\*\*/g;
+
+/** „**Wort**“-Hervorhebungen entfernen (für Meta-Description, JSON-LD und andere Klartext-Stellen). */
+export function ohneFett(text: string): string {
+  return text.replace(FETT, "$1");
+}
+
+/** Zeile in normale und fette Teile zerlegen („**Wort**“, nur redaktionelle Texte wie die Weihnachtsmärkte). */
+export function fettTeile(zeile: string): { text: string; fett: boolean }[] {
+  const teile: { text: string; fett: boolean }[] = [];
+  let pos = 0;
+  for (const m of zeile.matchAll(FETT)) {
+    if (m.index > pos) teile.push({ text: zeile.slice(pos, m.index), fett: false });
+    teile.push({ text: m[1], fett: true });
+    pos = m.index + m[0].length;
+  }
+  if (pos < zeile.length) teile.push({ text: zeile.slice(pos), fett: false });
+  return teile;
+}
+
+/** Fließtext ohne Umbrüche, Listenzeichen und „**“, an einer Wortgrenze gekürzt („…“). */
 export function kurzBeschreibung(text: string | null | undefined, max = 160): string | null {
-  const flach = (text ?? "")
+  const flach = ohneFett(text ?? "")
     .replace(/\r\n?/g, "\n")
     .split("\n")
     .map((z) => z.trim().replace(LISTENPUNKT, ""))

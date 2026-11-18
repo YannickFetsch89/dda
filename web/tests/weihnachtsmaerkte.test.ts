@@ -415,3 +415,22 @@ describe("Karten-API packt nicht selbst (18.11.2026)", () => {
     expect(quelle).not.toMatch(/["']Content-Encoding["']\s*:/);
   });
 });
+
+import { fettTeile, kurzBeschreibung, ohneFett } from "@/lib/beschreibung";
+
+describe("Fett in Beschreibungen (Weihnachtsmärkte, 18.11.2026)", () => {
+  it("zerlegt **Wort** in fette Teile, einzelne Sternchen bleiben Text", () => {
+    expect(fettTeile("Rund **15.000 LEDs** am **Kö-Bogen**.")).toEqual([
+      { text: "Rund ", fett: false }, { text: "15.000 LEDs", fett: true }, { text: " am ", fett: false },
+      { text: "Kö-Bogen", fett: true }, { text: ".", fett: false },
+    ]);
+    expect(fettTeile("Preis * ab 5 €")).toEqual([{ text: "Preis * ab 5 €", fett: false }]);
+  });
+  it("Meta-Description und JSON-LD ohne Sternchen", () => {
+    expect(ohneFett("Die **Weihnachtspromenade** gibt es seit **2024**.")).toBe("Die Weihnachtspromenade gibt es seit 2024.");
+    expect(kurzBeschreibung("Der **Altstadt-Markt** liegt\n\nmitten in der Altstadt.")).toBe("Der Altstadt-Markt liegt mitten in der Altstadt.");
+    const j = JSON.stringify(weihnachtsmarktJsonLd(markt({}, { beschreibung: "Mit **Eisbahn**." }), "https://diesdas.events", "2026-11-20"));
+    expect(j).toContain("Mit Eisbahn.");
+    expect(j).not.toContain("**");
+  });
+});

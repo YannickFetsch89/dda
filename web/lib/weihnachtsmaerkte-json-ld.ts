@@ -1,6 +1,7 @@
 // Strukturierte Daten des Weihnachtsmarkt-Guides (Plan 5.2/5.3): Event nur während der Saison, sonst Place.
 // Kein aggregateRating, keine Google-Werte.
 import { brotkrumenJsonLd } from "./kneipen-json-ld";
+import { ohneFett } from "./beschreibung";
 import type { DddOrt } from "./typen";
 import { WM_BASIS, aktuelleSaison, istIndexierbar, wm, wmPfad } from "./weihnachtsmaerkte";
 
@@ -27,14 +28,14 @@ export function weihnachtsmarktJsonLd(o: DddOrt, siteUrl: string, heute: string)
   const s = aktuelleSaison(d.saisons);
   const url = `${siteUrl}${wmPfad(o)}`;
   if (!s || heute > s.bis) {
-    return { "@context": "https://schema.org", ...ort(o), url, ...(o.beschreibung ? { description: o.beschreibung } : {}) };
+    return { "@context": "https://schema.org", ...ort(o), url, ...(o.beschreibung ? { description: ohneFett(o.beschreibung) } : {}) };
   }
   return {
     "@context": "https://schema.org",
     "@type": "Event",
     name: `${o.name} ${s.jahr}`,
     url,
-    ...(o.beschreibung ? { description: o.beschreibung } : {}),
+    ...(o.beschreibung ? { description: ohneFett(o.beschreibung) } : {}),
     startDate: s.von,
     endDate: s.bis,
     eventStatus: "https://schema.org/EventScheduled",
