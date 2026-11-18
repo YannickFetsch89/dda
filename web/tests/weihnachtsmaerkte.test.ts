@@ -263,14 +263,18 @@ describe("Stufe 1b: Kurz-Markt-Liste und Event-Zuordnung", () => {
       ev("1. Alternativer Weihnachtsmarkt", { datum: "2026-12-06", stadtteil: "Flingern" }),
       ev("Veihnachtsmarkt Düsseldorf: der vegane Weihnachtsmarkt", { datum: "2026-11-28", stadtteil: null, adresse: "Fürstenwall 1, 40219 Düsseldorf" }),
       ev("Leipziger Weihnachtsmarkt 2026", { stadtteil: "Altstadt", quelle_url: "https://prinz.de/events/leipziger-weihnachtsmarkt/2026-12-12/" }),
-      ev("Gertrudenhof Hundeweihnachtsmarkt", { stadtteil: null, adresse: null }),
+      ev("Gertrudenhof Hundeweihnachtsmarkt", { stadtteil: null, adresse: null, ort: "Erlebnisbauernhof Gertrudenhof" }),
+      ev("Adventsmarkt in Hürth", { stadtteil: null, adresse: "Hauptstraße 1, 50354 Hürth" }),
+      ev("Oberbilker Lichterzauber", { datum: "2026-11-21", stadtteil: null, adresse: null, ort: "Josef-Saal" }),
       ev("Secret Hitl€r Friday + Weihnachtsmarkt", { quelle_name: "Meetup.com" }),
       ev("Weihnachtszauber auf dem Areal Böhler", { stadtteil: "Heerdt" }),
       ev("Weihnachtsmarkt von gestern", { datum: "2026-11-10" }),
       ev("Konzert im Advent"),
     ];
     const liste = kurzMaerkte(events, [boehler], "2026-11-17", kanonischerStadtteil);
+    // Ohne Adresse und Stadtteil durchgelassen (18.11.2026), Gertrudenhof (Hürth) und PLZ außerhalb bleiben draußen
     expect(liste.map((e) => e.titel)).toEqual([
+      "Oberbilker Lichterzauber",
       "Veihnachtsmarkt Düsseldorf: der vegane Weihnachtsmarkt",
       "Bücherweihnachtsmarkt 2026",
       "1. Alternativer Weihnachtsmarkt",

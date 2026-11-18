@@ -150,7 +150,9 @@ def saison_pruefen(z: dict) -> tuple[dict | None, list[str]]:
         return None, [f"{s}: {fehler} – Saison wird nicht geschrieben"]
     if z.get("quelle") not in SAISON_QUELLEN:
         return None, [f"{s}: quelle muss toubiz, veranstalter oder auftraggeber sein"]
-    if not z.get("beleg") or not z.get("url") or not z.get("stand"):
+    # Angaben vom Auftraggeber (z. B. Flyer, 18.11.2026) brauchen keine URL – Beleg und Stand bleiben Pflicht
+    url_pflicht = z.get("quelle") != "auftraggeber"
+    if not z.get("beleg") or (url_pflicht and not z.get("url")) or not z.get("stand"):
         return None, [f"{s}: Saison ohne beleg/url/stand – nicht geschrieben"]
     return {"von": z.get("von") or None, "bis": z.get("bis") or None, "zeiten": zeiten, "sonder": sonder,
             "quelle": z["quelle"], "beleg": z["beleg"], "url": z["url"], "stand": z["stand"]}, []

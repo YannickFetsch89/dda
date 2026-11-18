@@ -464,6 +464,11 @@ export const EVENT_AUSSCHLUSS = new Set<string>([
 ]);
 /** Titel-Muster für kleine Märkte (4.5). */
 export const KURZ_MUSTER = /weihnachtsmarkt|adventsmarkt|wintermarkt|christkindl|weihnachtsbasar|adventsbasar|veihnachtsmarkt|nikolausmarkt|lichterzauber/i;
+/**
+ * Veranstaltungsorte außerhalb, die in Düsseldorfer Quellen regelmäßig ohne Adresse auftauchen (Event-Ort enthält das Muster).
+ * Seit Märkte ohne Adresse durchgelassen werden (18.11.2026) nötig – wiederkehrende Orte hier, Einzelfälle in event_ausschluss.csv.
+ */
+export const ORTE_AUSSERHALB = /gertrudenhof/i; // Erlebnisbauernhof Gertrudenhof, Hürth
 /** Postleitzahlen Düsseldorf, Neuss, Ratingen (4.5). */
 const PLZ_ERLAUBT = (plz: number) => (plz >= 40210 && plz <= 40629) || (plz >= 41460 && plz <= 41472) || (plz >= 40878 && plz <= 40885);
 
@@ -503,7 +508,10 @@ export function kurzMaerkte<E extends EventLike>(events: E[], eintraege: DddOrt[
     .filter((e) => {
       if (katalog(e.stadtteil)) return true;
       const plz = (e.adresse ?? "").match(/\b(\d{5})\b/);
-      return !!plz && PLZ_ERLAUBT(Number(plz[1]));
+      if (plz) return PLZ_ERLAUBT(Number(plz[1]));
+      // Weder PLZ noch Stadtteil bekannt: durchlassen – die Quellen sind auf Düsseldorf ausgerichtet (Auftraggeber 18.11.2026).
+      // Märkte anderer Städte ohne Adresse kommen in data/weihnachtsmaerkte/event_ausschluss.csv (EVENT_AUSSCHLUSS).
+      return !e.stadtteil && !ORTE_AUSSERHALB.test(`${e.ort ?? ""} ${e.titel}`);
     })
     .filter((e) => !eintragFuerEvent(e, eintraege))
     // bei Dubletten gewinnt der kürzere Titel (meist das Original, „… in Düsseldorf“ ist oft ein Sammelportal)
