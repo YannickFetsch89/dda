@@ -369,12 +369,12 @@ describe("Eigene Bilder (Veranstalter) mit Bildnachweis", () => {
   const google = { google_foto: { name: "places/abc/photos/def", autor_url: "https://maps.google.com/maps/contrib/1" } };
 
   it("Bild aus web/public wird direkt ausgeliefert, mit Version gegen alten Browser-Cache", () => {
-    expect(ortBildUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", google))).toBe("/guides/weihnachtsmaerkte/nordstrasse.webp");
-    expect(ortBildUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", { foto_version: 3 }))).toBe("/guides/weihnachtsmaerkte/nordstrasse.webp?v=3");
+    expect(ortBildUrl(mitBild("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp", google))).toBe("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp");
+    expect(ortBildUrl(mitBild("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp", { foto_version: 3 }))).toBe("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp?v=3");
   });
 
   it("nur das enge Muster gilt als lokal – alles andere läuft weiter über den Proxy", () => {
-    for (const falsch of ["/guides/../secret.webp", "//evil.example/x.webp", "/guides/weihnachtsmaerkte/x.svg", "/guides/x.webp", "https://x.de/a.webp", null]) {
+    for (const falsch of ["/ort-bilder/../secret.webp", "//evil.example/x.webp", "/ort-bilder/weihnachtsmaerkte/x.svg", "/ort-bilder/x.webp", "/guides/weihnachtsmaerkte/x.webp", "https://x.de/a.webp", null]) {
       expect(lokalesBild(falsch)).toBeNull();
     }
     const fremd = mitBild("https://veranstalter.de/bild.jpg");
@@ -382,9 +382,9 @@ describe("Eigene Bilder (Veranstalter) mit Bildnachweis", () => {
   });
 
   it("Link im Bildnachweis: beim eigenen Bild bild_link (nur https), beim Google-Foto der Urheber", () => {
-    expect(ortBildAutorUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", { ...google, bild_link: "https://nordstrasse.de" }))).toBe("https://nordstrasse.de/");
-    expect(ortBildAutorUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", { ...google, bild_link: "javascript:alert(1)" }))).toBeNull();
-    expect(ortBildAutorUrl(mitBild("/guides/weihnachtsmaerkte/nordstrasse.webp", google))).toBeNull();
+    expect(ortBildAutorUrl(mitBild("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp", { ...google, bild_link: "https://nordstrasse.de" }))).toBe("https://nordstrasse.de/");
+    expect(ortBildAutorUrl(mitBild("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp", { ...google, bild_link: "javascript:alert(1)" }))).toBeNull();
+    expect(ortBildAutorUrl(mitBild("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp", google))).toBeNull();
     expect(ortBildAutorUrl(mitBild(null, google))).toBe("https://maps.google.com/maps/contrib/1");
   });
 });
@@ -396,5 +396,14 @@ describe("Zusammengelegte Märkte (Schadow-Markt = Märchen-Markt, 18.11.2026)",
   });
   it("Übersichtstext nennt den Schadow-Markt nicht mehr getrennt", () => {
     expect(JSON.stringify(GUIDE_TEXTE)).not.toContain("Schadow-Markt");
+  });
+});
+
+describe("Eigene Bilder liegen außerhalb der Pfadprüfung", () => {
+  it("proxy.ts prüft /ort-bilder/… nicht als Seite (unter /guides/<hub>/ wären die Bilder 404)", () => {
+    expect(routeVon("/ort-bilder/weihnachtsmaerkte/nordstrasse.webp")).toBeNull();
+    expect(routeVon("/guides/weihnachtsmaerkte/nordstrasse.webp")).not.toBeNull();
+    const proxy = readFileSync(join(__dirname, "..", "proxy.ts"), "utf8");
+    expect(proxy).not.toContain("/ort-bilder");
   });
 });

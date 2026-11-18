@@ -13,7 +13,7 @@ Ablauf:
      erlaubnis   – Pflicht: wer wann schriftlich erlaubt hat (z. B. „E-Mail Veranstalter 18.11.2026“)
      fokus       – optional: Bildausschnitt „oben“, „unten“ oder „35%“
 3. python -m scraper.weihnachtsmaerkte.bilder --dry-run   # prüft nur
-   python -m scraper.weihnachtsmaerkte.bilder             # WebP nach web/public/guides/weihnachtsmaerkte/ + SQL
+   python -m scraper.weihnachtsmaerkte.bilder             # WebP nach web/public/ort-bilder/weihnachtsmaerkte/ + SQL
 4. Bilder committen/deployen, danach die SQL im Supabase SQL-Editor ausführen (erst dann zeigt die Website sie –
    vorher zeigt bild_url auf eine Datei, die live noch fehlt).
 
@@ -39,8 +39,8 @@ DATEN = _WURZEL / "data" / "weihnachtsmaerkte"
 BILDER_CSV = DATEN / "bilder.csv"
 ROH = DATEN / "bilder-roh"
 MAERKTE_CSV = DATEN / "maerkte.csv"
-ZIEL = _WURZEL / "web" / "public" / "guides" / "weihnachtsmaerkte"
-WEB_PFAD = "/guides/weihnachtsmaerkte"
+ZIEL = _WURZEL / "web" / "public" / "ort-bilder" / "weihnachtsmaerkte"
+WEB_PFAD = "/ort-bilder/weihnachtsmaerkte"  # nicht unter /guides/<hub>/ – dort prüft proxy.ts jeden Pfad als Detailseite
 
 MAX_BREITE = 1600
 QUALITAET = 80

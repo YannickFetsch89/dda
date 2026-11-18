@@ -107,10 +107,11 @@ function googleFoto(o: DddOrt): GoogleFoto | null {
 }
 
 /**
- * Bild, das auf unserem eigenen Server liegt (web/public/guides/…), z. B. vom Veranstalter geliefert
+ * Bild, das auf unserem eigenen Server liegt (web/public/ort-bilder/<hub>/…), z. B. vom Veranstalter geliefert
  * (Auftraggeber 17.11.2026). Nur dieses enge Muster – alles andere läuft weiter über den Bild-Proxy.
  */
-const LOKALES_BILD = /^\/guides\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpg|png)$/;
+// Nicht unter /guides/<hub>/: dort prüft proxy.ts jeden Pfad als Detailseite (Bilder wären live 404, 18.11.2026)
+const LOKALES_BILD = /^\/ort-bilder\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpg|png)$/;
 
 export function lokalesBild(bildUrl: string | null | undefined): string | null {
   return typeof bildUrl === "string" && LOKALES_BILD.test(bildUrl) ? bildUrl : null;

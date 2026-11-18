@@ -356,7 +356,7 @@ class BilderTest(unittest.TestCase):
         gut, _ = self.b.zeilen_pruefen([self.zeile(nachweis="Schausteller O'Brien", link="https://nordstrasse.de", fokus="35%")],
                                        {"nordstrasse"}, self.roh)
         sql = self.b.sql_bauen(gut, "2026-11-18")
-        self.assertIn("bild_url = '/guides/weihnachtsmaerkte/nordstrasse.webp'", sql)
+        self.assertIn("bild_url = '/ort-bilder/weihnachtsmaerkte/nordstrasse.webp'", sql)
         self.assertIn("bild_attribution = 'Schausteller O''Brien'", sql)
         self.assertIn("(extras - 'bild_link' - 'bild_fokus') || jsonb_build_object(", sql)
         self.assertIn("'bild_link', 'https://nordstrasse.de'", sql)

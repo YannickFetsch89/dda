@@ -1,7 +1,7 @@
 // Liefert das Foto eines Ortes über den eigenen Server aus (Bild-Proxy, siehe lib/bild-proxy.ts).
 //
 // - Eigenes Bild (orte.bild_url): wird geholt, auf der Platte gecached und durchgereicht.
-//   Liegt es in web/public/guides/… (lib/orte.ts lokalesBild), verweist die Route nur per 308 dorthin.
+//   Liegt es in web/public/ort-bilder/… (lib/orte.ts lokalesBild), verweist die Route nur per 308 dorthin.
 // - Google-Foto (orte.extras.google_foto.name): Die Bildadresse wird serverseitig bei der Places API
 //   abgefragt (skipHttpRedirect → photoUri, ohne Key) und das Bild durchgereicht. Der Browser spricht
 //   dabei nie mit Google, der API-Key verlässt nie den Server. Google-Bilder werden nicht dauerhaft
