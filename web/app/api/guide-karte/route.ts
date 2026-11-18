@@ -26,13 +26,15 @@ import { weihnachtsmarktKartenOrte } from "@/lib/weihnachtsmaerkte-karte";
 
 const CACHE = "public, max-age=300, stale-while-revalidate=3600";
 
-/** JSON-Antwort, gzip-gepackt wenn der Browser es kann (Next packt Route-Antworten nicht selbst; ~200 KB → ~30 KB). */
-function antwort(request: Request, daten: unknown, cache: string = CACHE): Response {
-  const text = JSON.stringify(daten);
-  const kopf: Record<string, string> = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": cache, Vary: "Accept-Encoding" };
-  if (!/\bgzip\b/.test(request.headers.get("accept-encoding") ?? "")) return new Response(text, { headers: kopf });
-  const gepackt = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
-  return new Response(gepackt, { headers: { ...kopf, "Content-Encoding": "gzip" } });
+/**
+ * JSON-Antwort, ungepackt: Seit Next.js 16.4.6 packt der Server Route-Antworten selbst. Das frühere eigene gzip wurde
+ * dadurch doppelt gepackt (ein Content-Encoding-Kopf, zwei gzip-Schichten) – der Browser konnte die Kartenpunkte
+ * nicht mehr lesen, alle Guide-Karten zeigten „konnten nicht geladen werden“ (17./18.11.2026).
+ */
+function antwort(daten: unknown, cache: string = CACHE): Response {
+  return new Response(JSON.stringify(daten), {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": cache, Vary: "Accept-Encoding" },
+  });
 }
 
 export async function GET(request: Request) {
@@ -42,19 +44,19 @@ export async function GET(request: Request) {
     if (sp.hub === "kneipen") {
       const f = kneipenFilterLesen(sp);
       const orte = sortieren(kneipenFiltern(await kneipenLaden(), f), f.sort);
-      return antwort(request, kartenOrte(orte));
+      return antwort(kartenOrte(orte));
     }
     if (sp.hub === "clubs") {
       const f = clubFilterLesen(sp);
       // Liste neben der Karte: erst Top-Empfehlungen, dann B, dann C – innerhalb nach gewählter Sortierung
       const sortiert = clubsSortieren(clubsFiltern(await clubsLaden(), f), f.sort);
       const orte = ["a", "b", "c"].flatMap((s) => sortiert.filter((o) => clubStufe(o) === s));
-      return antwort(request, clubKartenOrte(orte));
+      return antwort(clubKartenOrte(orte));
     }
     if (sp.hub === "spielplaetze") {
       const f = spielplatzFilterLesen(sp);
       const orte = spielplaetzeSortieren(spielplaetzeFiltern(await spielplaetzeLaden(), f, ortStadtteilSlug), f.sort);
-      return antwort(request, spielplatzKartenOrte(orte));
+      return antwort(spielplatzKartenOrte(orte));
     }
     if (sp.hub === "weihnachtsmaerkte") {
       // Nur Zeiten/Stammdaten, nie ein fertig gerechneter Zustand „offen/zu“ (Antwort ist public und bis 1 h alt, Plan E5)
@@ -64,7 +66,7 @@ export async function GET(request: Request) {
       const bezugTag = istGueltigerTag(sp.tag) ? sp.tag : await heuteKurz();
       const orte = wmFilterAktiv(f) ? wmSortieren(wmFiltern(alle, alle, f, bezugTag), f.sort) : alle;
       // „heute geöffnet“ ohne festen Tag ist eine fertige Tagesmenge → nicht aus geteilten Caches (Cursor-Check Stufe 1b)
-      return antwort(request, weihnachtsmarktKartenOrte(orte, alle), wmKartenCache(sp, CACHE));
+      return antwort(weihnachtsmarktKartenOrte(orte, alle), wmKartenCache(sp, CACHE));
     }
     if (sp.hub === "restaurants") {
       const f = filterLesen(sp);
@@ -72,7 +74,7 @@ export async function GET(request: Request) {
       const orte = sortieren(filtern([...eigene, ...brauhaeuser], f), f.sort);
       // Pin-Farbe nach Art: Restaurant/Imbiss, Café, Brauhaus (Brauhäuser kommen als Kneipen mit Unterart)
       const art = new Map(orte.map((o) => [o.id, o.typ === "kneipe" ? "brauhaus" : o.typ] as const));
-      return antwort(request, kartenOrte(orte).map((k) => ({ ...k, art: art.get(k.id) as KartenOrt["art"] })));
+      return antwort(kartenOrte(orte).map((k) => ({ ...k, art: art.get(k.id) as KartenOrt["art"] })));
     }
     return Response.json({ fehler: "Unbekannter Hub" }, { status: 400 });
   } catch (err) {

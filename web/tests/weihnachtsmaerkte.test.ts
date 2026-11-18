@@ -407,3 +407,11 @@ describe("Eigene Bilder liegen außerhalb der Pfadprüfung", () => {
     expect(proxy).not.toContain("/ort-bilder");
   });
 });
+
+describe("Karten-API packt nicht selbst (18.11.2026)", () => {
+  it("kein eigenes gzip – Next.js 16.4.6 packt selbst, sonst doppelt gepackt und alle Guide-Karten leer", () => {
+    const quelle = readFileSync(join(__dirname, "..", "app", "api", "guide-karte", "route.ts"), "utf8");
+    expect(quelle).not.toContain("CompressionStream");
+    expect(quelle).not.toMatch(/["']Content-Encoding["']\s*:/);
+  });
+});

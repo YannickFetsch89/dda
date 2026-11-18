@@ -13,7 +13,7 @@ Ablauf:
      erlaubnis   – Pflicht: wer wann schriftlich erlaubt hat (z. B. „E-Mail Veranstalter 18.11.2026“)
      fokus       – optional: Bildausschnitt „oben“, „unten“ oder „35%“
 3. python -m scraper.weihnachtsmaerkte.bilder --dry-run   # prüft nur
-   python -m scraper.weihnachtsmaerkte.bilder             # WebP nach web/public/ort-bilder/weihnachtsmaerkte/ + SQL
+   python -m scraper.weihnachtsmaerkte.bilder [--nur a,b] # WebP nach web/public/ort-bilder/weihnachtsmaerkte/ + SQL
 4. Bilder committen/deployen, danach die SQL im Supabase SQL-Editor ausführen (erst dann zeigt die Website sie –
    vorher zeigt bild_url auf eine Datei, die live noch fehlt).
 
@@ -152,6 +152,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     p = argparse.ArgumentParser(description="Weihnachtsmärkte: eigene Bilder umwandeln und SQL erzeugen")
     p.add_argument("--dry-run", action="store_true", help="nur prüfen, nichts schreiben")
+    p.add_argument("--nur", help="nur diese Schlüssel (kommagetrennt) umwandeln und in die SQL schreiben")
     a = p.parse_args()
 
     bekannte = {z["schluessel"] for z in csv_lesen(MAERKTE_CSV) if z.get("schluessel")}
@@ -161,6 +162,14 @@ def main():
     if fehler:
         logger.error("%d Fehler – bitte bilder.csv korrigieren, nichts geschrieben", len(fehler))
         sys.exit(1)
+    if a.nur:
+        # Nur neue Bilder – schon eingespielte nicht noch einmal umwandeln und ihre Bildversion nicht erneut hochzählen
+        gewuenscht = {s.strip() for s in a.nur.split(",") if s.strip()}
+        unbekannt = gewuenscht - {z["schluessel"] for z in zeilen}
+        if unbekannt:
+            logger.error("--nur: nicht in bilder.csv: %s", ", ".join(sorted(unbekannt)))
+            sys.exit(1)
+        zeilen = [z for z in zeilen if z["schluessel"] in gewuenscht]
     if not zeilen:
         logger.info("bilder.csv enthält keine Bilder")
         return
@@ -177,6 +186,10 @@ def main():
             sys.exit(1)
     heute = date.today().isoformat()
     sql = _WURZEL / "database" / f"weihnachtsmarkt_bilder_{heute}.sql"
+    nr = 2
+    while sql.exists():  # eine schon (vielleicht ausgeführte) SQL vom selben Tag nie überschreiben
+        sql = _WURZEL / "database" / f"weihnachtsmarkt_bilder_{heute}_{nr}.sql"
+        nr += 1
     sql.write_text(sql_bauen(zeilen, heute), encoding="utf-8")
     logger.info("SQL: %s (%d Bilder) – erst nach dem Deploy ausführen", sql.relative_to(_WURZEL), len(zeilen))
 
