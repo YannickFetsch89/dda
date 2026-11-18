@@ -73,7 +73,8 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   const ortTreffer = orteSuchen(alleOrte, p.q);
   const { heute } = pool;
 
-  const z = zeitraumAuflösen(p.datum ?? "woche", heute);
+  // Mit Suchbegriff und ohne gewählten Zeitraum: alle 60 Tage durchsuchen, nicht nur diese Woche (18.11.2026)
+  const z = zeitraumAuflösen(p.datum ?? (p.q?.trim() ? "alle" : "woche"), heute);
   const sort = SORTIERUNGEN.some((s) => s.key === p.sort) ? p.sort! : "beliebt";
   const seite = Math.max(1, Math.min(50, Number(p.seite) || 1));
   const preis = p.preis === "kostenlos" || p.preis === "bezahlt" ? p.preis : undefined;

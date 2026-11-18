@@ -5,6 +5,7 @@ import { KATEGORIEN } from "./kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, bezirkVon } from "./stadtteile";
 import { findetStatt, heuteBerlin, istLanglaeufer, plusTage, tageZwischen, wochenende } from "./datum";
 import { basisTitel, norm } from "./termine";
+import { sucheTrifft } from "./suche";
 import type { DddEvent, EventPool, KategorieSlug } from "./typen";
 
 // ---------- Einzel-Eigenschaften ----------
@@ -167,7 +168,7 @@ export interface Filter {
 }
 
 export function filtern(events: DddEvent[], f: Filter): DddEvent[] {
-  const suche = f.suche?.trim().toLowerCase();
+  const suche = f.suche?.trim();
   const thema = f.thema ? THEMEN.find((t) => t.name === f.thema) : undefined;
   return events.filter((e) => {
     if (!findetStatt(e, f.von, f.bis, f.mitLanglaeufern)) return false;
@@ -182,8 +183,8 @@ export function filtern(events: DddEvent[], f: Filter): DddEvent[] {
     if (f.tageszeit && !tageszeiten(e).includes(f.tageszeit)) return false;
     if (thema && !themaPasst(e, thema.muster)) return false;
     if (suche) {
-      const heuhaufen = `${e.titel} ${e.ort} ${e.stadtteil ?? ""} ${e.beschreibung ?? ""}`.toLowerCase();
-      if (!heuhaufen.includes(suche)) return false;
+      // Wortweise und fehlertolerant (lib/suche.ts, 18.11.2026)
+      if (!sucheTrifft(`${e.titel} ${e.ort} ${e.stadtteil ?? ""} ${e.beschreibung ?? ""}`, suche)) return false;
     }
     return true;
   });
