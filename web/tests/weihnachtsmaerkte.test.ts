@@ -8,7 +8,7 @@ import { GUIDE_TEXTE } from "@/lib/guide-texte";
 import { ortEntscheidung, pfadPruefen, routeVon, weihnachtsmarktEntscheidung } from "@/lib/pfad-pruefung";
 import type { DddOrt } from "@/lib/typen";
 import {
-  aktuelleSaison, badges, faqWerte, feiertag, heroZahlen, hubJahr, istIndexierbar, jetztText, listenReihenfolge, oeffnungAm, oeffnungText,
+  BADGES, aktuelleSaison, badges, faqWerte, feiertag, heroZahlen, hubJahr, istIndexierbar, jetztText, listenReihenfolge, oeffnungAm, oeffnungText,
   saisonFuer, sonderTage, sonderZelle, sortieren, topFuenf, totensonntag, wm, type Saisons,
 } from "@/lib/weihnachtsmaerkte";
 import { weihnachtsmarktJsonLd } from "@/lib/weihnachtsmaerkte-json-ld";
@@ -432,5 +432,13 @@ describe("Fett in Beschreibungen (Weihnachtsmärkte, 18.11.2026)", () => {
     const j = JSON.stringify(weihnachtsmarktJsonLd(markt({}, { beschreibung: "Mit **Eisbahn**." }), "https://diesdas.events", "2026-11-20"));
     expect(j).toContain("Mit Eisbahn.");
     expect(j).not.toContain("**");
+  });
+});
+
+describe("Kein „Unser Tipp“-Badge mehr (18.11.2026)", () => {
+  it("auch Top-5-Märkte bekommen kein Tipp-Badge", () => {
+    const o = markt({ top5_rang: 1 });
+    expect(badges(o, [o]).map((b) => b.wert)).not.toContain("tipp");
+    expect(BADGES.map((b) => b.wert)).not.toContain("tipp");
   });
 });

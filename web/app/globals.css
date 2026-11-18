@@ -2169,7 +2169,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-sonder__tabelle thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ddd-text-muted); white-space: nowrap; }
 .wm-sonder__tabelle tbody th a { color: var(--ddd-text); font-weight: 700; }
 /* Sonderzeiten (Auftraggeber 18.11.2026): „geschlossen“ normal, Öffnungszeiten grün (nicht fett), letzter Tag fett */
-.wm-zelle--auf { color: #1e7a4c; } /* dunkles Grün: auf Weiß gut lesbar (Kontrast > 4.5:1) */
+.wm-zelle--auf { color: #1e7a4c; font-weight: 700; } /* dunkles Grün, fett (Auftraggeber 18.11.2026) */
 :root[data-theme="dark"] .wm-zelle--auf { color: #5fd08f; }
 .wm-zelle--letzter { font-weight: 700; }
 .wm-zelle--offen-unbekannt { color: var(--ddd-text-muted); font-style: italic; }
@@ -2232,6 +2232,10 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-eventkasten a { font-weight: 700; color: var(--ddd-text); text-decoration: underline; }
 :root[data-theme="dark"] .wm-eventkasten { background: var(--ddd-subtle); }
 .wm-naehe { margin-top: 26px; }
+.wm-naehe__liste li { padding: 0; }
+.wm-naehe__liste a { font-weight: 400; }
+/* Detailseite: „Alle Weihnachtsmärkte“ als goldener Button mit Markt-Symbol (Auftraggeber 18.11.2026) */
+.wm-alle-knopf { width: 100%; }
 /* Eigenes Piktogramm Weihnachtsmarkt (Marktbude mit Stern), gleiches Masken-Verfahren wie die sp:-Icons */
 .icon[data-icon^="wm:"]::before {
   content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background: currentColor;

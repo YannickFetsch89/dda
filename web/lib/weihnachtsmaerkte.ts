@@ -259,7 +259,6 @@ export function heroZahlen(alle: DddOrt[]): { anzahl: number; von: string | null
 
 export interface Badge { wert: string; label: string; icon: string }
 export const BADGES: Badge[] = [
-  { wert: "tipp", label: "Unser Tipp", icon: "star" },
   { wert: "familien", label: "Für Familien", icon: "child_care" },
   { wert: "eisbahn", label: "Mit Eisbahn", icon: "ice_skating" },
   { wert: "riesenrad", label: "Mit Riesenrad", icon: "attractions" },
@@ -288,14 +287,13 @@ function gruppenMerkmale(o: DddOrt, alle: DddOrt[]): Set<string> {
   return m;
 }
 
-/** Badges eines Eintrags in fester Reihenfolge (4.7), nur aus belegten Daten. */
+/** Badges eines Eintrags in fester Reihenfolge (4.7), nur aus belegten Daten. Ohne „Unser Tipp“ (Auftraggeber 18.11.2026). */
 export function badges(o: DddOrt, alle: DddOrt[]): Badge[] {
   const d = wm(o);
   const m = gruppenMerkmale(o, alle);
   const s = aktuelleSaison(d.saisons);
   const tage = new Set((s?.zeiten ?? []).flatMap((z) => z.tage));
   const treffer: Record<string, boolean> = {
-    tipp: d.top5_rang != null,
     familien: ["kinderprogramm", "karussell", "kindereisenbahn", "puppenbuehne"].some((x) => m.has(x)),
     eisbahn: m.has("eisbahn"),
     riesenrad: m.has("riesenrad"),

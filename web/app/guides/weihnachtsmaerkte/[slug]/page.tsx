@@ -69,7 +69,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const heute = await saisonTag();
   const jahr = s && heute <= s.bis ? ` ${s.jahr}` : "";
   const zeitraum = s ? `${datumLang(s.von)} bis ${datumLang(s.bis)}` : null;
-  const b = badges(ort, [ort]).filter((x) => x.wert !== "tipp").slice(0, 2).map((x) => x.label);
+  const b = badges(ort, [ort]).slice(0, 2).map((x) => x.label);
   return seitenMetadaten({
     pfad: wmPfad(ort),
     titel: `${ort.name}${jahr}: Öffnungszeiten, Anfahrt & Infos`,
@@ -122,11 +122,6 @@ function Zeitentabelle({ ort, gruppe }: { ort: DddOrt; gruppe: DddOrt | null }) 
         An Feiertagen ohne eigene Angabe (z. B. Totensonntag) hat der Veranstalter keine Zeit veröffentlicht – dann steht oben „nicht veröffentlicht“.
         {s.geerbt?.length && gruppe ? <> Gleiche Zeiten wie der <Link href={wmPfad(gruppe)}>{gruppe.name}</Link>.</> : null}
       </p>
-      {s.url && (
-        <p className="muted wm-zeiten__quelle">
-          Laut <a href={s.url} target="_blank" rel="noopener noreferrer">{domain(s.url)}</a>{s.stand ? `, Stand ${datumLang(s.stand)}` : ""}
-        </p>
-      )}
     </section>
   );
 }
@@ -169,11 +164,14 @@ async function InDerNaehe({ ort }: { ort: DddOrt }) {
   return (
     <section className="sp-block wm-naehe" aria-labelledby="wm-naehe-titel">
       <h2 className="d" id="wm-naehe-titel">Zum Aufwärmen in der Nähe</h2>
-      <ul className="wm-startbox__liste">
+      <ul className="wm-startbox__liste wm-naehe__liste">
         {treffer.map(({ o, m, art }) => (
           <li key={o.id}>
-            <Link href={ortPfad(o)}>{o.name}</Link>
-            <span className="muted">{art} · {entfernungText(m)} entfernt</span>
+            {/* Ganze Kachel klickbar (Auftraggeber 18.11.2026) */}
+            <Link href={ortPfad(o)} className="wm-kurz__karte">
+              <span className="wm-kurz__titel">{o.name}</span>
+              <span className="muted">{art} · {entfernungText(m)} entfernt</span>
+            </Link>
           </li>
         ))}
       </ul>
@@ -195,7 +193,6 @@ export default async function WeihnachtsmarktDetail(props: Props) {
   const st = ort.stadtteil ? stadtteilName(ort.stadtteil) : null;
   const ziel = ort.latitude != null && ort.longitude != null ? `${ort.latitude},${ort.longitude}` : [ort.name, ort.adresse ?? "Düsseldorf"].join(", ");
   const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ziel)}`;
-  const s = aktuelleSaison(d.saisons);
   const anfahrt = d.anfahrt ?? (gruppe ? wm(gruppe).anfahrt : null);
   const krumen = [
     { name: "Start", pfad: "/" },
@@ -204,7 +201,6 @@ export default async function WeihnachtsmarktDetail(props: Props) {
     { name: ort.name, pfad: wmPfad(ort) },
   ];
   const jsonLd = [weihnachtsmarktJsonLd(ort, SITE_URL, heute), brotkrumenJsonLd(SITE_URL, krumen)];
-  const quellen = [...new Set([d.quelle_url, s?.url, d.toubiz_url].filter((u): u is string => !!u && /^https:\/\//.test(u)))];
 
   return (
     <div className="container gd-detail gd-seite sp-seite sp-detail wm-detail">
@@ -268,10 +264,6 @@ export default async function WeihnachtsmarktDetail(props: Props) {
           </Suspense>
 
           <div className="sp-stand muted">
-            <p><b>Stand der Angaben:</b> {s?.stand ? datumLang(s.stand) : "unbekannt"}</p>
-            {quellen.length > 0 && (
-              <p><b>Quellen:</b> {quellen.map((u, i) => <span key={u}>{i > 0 ? ", " : ""}<a href={u} target="_blank" rel="noopener noreferrer nofollow">{domain(u)}</a></span>)}</p>
-            )}
             <p>Angaben ohne Gewähr. Die Veranstalter können Zeiten kurzfristig ändern, etwa bei Sturm – im Zweifel vorher auf der Seite des Veranstalters nachsehen.</p>
           </div>
         </div>
@@ -283,7 +275,7 @@ export default async function WeihnachtsmarktDetail(props: Props) {
             <a href={routeUrl} target="_blank" rel="noopener noreferrer" className="gd-knopf gd-knopf--navy">
               <Icon name="directions" />Route planen
             </a>
-            <Link href={BASIS} className="link">Alle Weihnachtsmärkte in Düsseldorf</Link>
+            <Link href={BASIS} className="btn btn--gold wm-alle-knopf"><Icon name="wm:markt" />Alle Weihnachtsmärkte</Link>
           </div>
         </aside>
       </div>
