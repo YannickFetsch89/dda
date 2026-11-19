@@ -72,6 +72,16 @@ export interface SeitenAngaben {
  */
 export const ROBOTS_INDEX = { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } as const;
 
+/** Für robots.txt gesperrte Pfade (Begründung in app/robots.ts) */
+export const ROBOTS_GESPERRT = [
+  "/api/",
+  "/?", // Startseite mit Datum (/?datum=…)
+  "/entdecken?",
+  "/wochenende?",
+  "/stadtteile?",
+  "/guides/*?", // Filter der Guides (?genre=, ?stadtteil=, ?tag=, …)
+];
+
 export function seitenMetadaten({ pfad, titel, beschreibung, bild, bildAlt, noindex = false }: SeitenAngaben): Metadata {
   // Eigenes Bild (Event-Foto/Symbolbild – dieselbe URL, die der Mensch sieht), sonst das Standardbild
   const alt = bildAlt ?? titel;
