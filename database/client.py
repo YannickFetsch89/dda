@@ -54,7 +54,9 @@ _VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
 # Spalten, die zum Abgleich bestehender Events geladen werden
 # (beschreibung_quelle: Beschreibung wurde aus einer Veranstalter-Seite umgeschrieben, siehe
 # pipeline/beschreibung_quellen.py – Spalte muss in der DB existieren)
-_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + ["beschreibung_quelle"] + _ANREICHERBARE_FELDER)
+# ort_id: Ortszuordnung (Plan docs/plan-locations-2026-11-18.md, 3.4) – für die Dubletten-Regel nach Häusern und
+# zum Ergänzen einer fehlenden Zuordnung. Spalte muss in der DB existieren (database/orte_spielstaetten_2026-11-19.sql).
+_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + ["beschreibung_quelle", "ort_id"] + _ANREICHERBARE_FELDER)
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
@@ -92,6 +94,11 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
         Dict mit Feldern die aktualisiert werden sollen (leer = kein Update nötig)
     """
     update: dict = {}
+
+    # Ortszuordnung: nur ergänzen, wenn sie fehlt – nie NULL und nie eine vorhandene ersetzen (das tut nur der
+    # Nachtrag mit einem Treffer des gespeicherten Namens, Plan Locations 3.4)
+    if neu.get("ort_id") and not bestehendes.get("ort_id"):
+        update["ort_id"] = neu["ort_id"]
 
     for feld in _ANREICHERBARE_FELDER:
         db_wert = bestehendes.get(feld)
@@ -138,7 +145,9 @@ def _tagesbestand(db: Client, datum: str, cache: dict[str, list[dict]]) -> list[
                 .eq("datum", datum)
                 .execute()
             )
-            cache[datum] = list(antwort.data or [])
+            # Haus der Zuordnung für die Dubletten-Regel (ohne Index aus Schritt 1d: Namensvergleich wie bisher)
+            from pipeline.ort_zuordnung import annotieren
+            cache[datum] = [annotieren(z) for z in (antwort.data or [])]
         except Exception as e:
             logger.warning("Tagesbestand für %s nicht ladbar: %s", datum, str(e))
             cache[datum] = []
@@ -333,7 +342,8 @@ def events_speichern(events: list[dict]) -> dict:
                 antwort = db.table("events").insert(datensatz).execute()
                 # Für den Ähnlichkeitsabgleich späterer Events dieses Laufs merken
                 if datum in tagesbestand and antwort.data:
-                    tagesbestand[datum].append(antwort.data[0])
+                    from pipeline.ort_zuordnung import annotieren
+                    tagesbestand[datum].append(annotieren(antwort.data[0]))
                 gespeichert += 1
                 neu_pro_quelle[event.get("_scraper") or event.get("quelle_name") or "?"] += 1
 

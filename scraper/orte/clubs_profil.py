@@ -37,6 +37,7 @@ from pipeline.beschreibung_quellen import _gesperrt, seite_laden, seiten_text  #
 from scraper.orte.bars_einordnen import _norm as _text_norm  # noqa: E402
 from scraper.orte.bars_einordnen import belegt  # noqa: E402
 from scraper.orte.google_places import alle_zeilen  # noqa: E402
+from pipeline.ort_zuordnung import ausgeschlossen, nicht_im_ort  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("clubs_profil")
@@ -256,8 +257,11 @@ def _phrase(text: str) -> str:
 _ALLGEMEIN = {"duesseldorf", "altstadt", "neuss", "ratingen", "kultur", "online", "innenstadt", "stadtmitte"}
 
 
-def event_orte(name: str, alle_orte: set[str]) -> list[str]:
-    """Schreibweisen dieses Orts im Eventkalender (für „Nächste Events hier“)."""
+def event_orte(name: str, alle_orte: set[str], slug: str | None = None) -> list[str]:
+    """
+    Schreibweisen dieses Orts im Eventkalender (für „Nächste Events hier“ und die Ortszuordnung).
+    Schreibweisen aus EVENT_ORTE_AUSSCHLUSS (pipeline/ort_zuordnung.py) dieses Clubs kommen nie dazu.
+    """
     eigener, phrase = ort_schluessel(name), _phrase(name)
     # Kurzformen: Alias-Schlüssel steckt im Namen („…kommunikation (zakk)“ → „zakk“)
     aliase = [a for teil, liste in ALIASE.items() if teil in _key(name) for a in liste]
@@ -270,9 +274,9 @@ def event_orte(name: str, alle_orte: set[str]) -> list[str]:
             continue
         text = f" {' '.join(_woerter(ort))} "
         # „zakk – nicht im zakk“ gehört nicht dazu, „Pitcher, nicht im Freien“ schon
-        # … aber nicht „nicht im Saal, sondern im Pitcher Club“: dort findet es im Club statt
-        if any((m := re.search(rf" nicht im((?: \w+){{0,4}}) {re.escape(n)} ", text))
-               and not re.search(r"\b(sondern|aber|dafür)\b", m.group(1)) for n in namen):
+        # … aber nicht „nicht im Saal, sondern im Pitcher Club“: dort findet es im Club statt.
+        # Gemeinsame Regel mit der Ortszuordnung (Plan Locations 3.4)
+        if nicht_im_ort(ort, namen) or ausgeschlossen(slug, ort):
             continue
         ort_phrase = _phrase(ort)
         # Gleich; sonst Teiltreffer nur ab 6 Zeichen und nur als ganze Wörter („Stone im Ratinger Hof“) –
@@ -730,15 +734,28 @@ def manuell_korrigieren(o: dict, profil: dict) -> None:
 
 
 def club_orte(db) -> list[dict]:
-    spalten = ("id, name, typ, adresse, stadtteil, webseite, beschreibung, highlight, google_rating, "
+    spalten = ("id, name, slug, typ, adresse, stadtteil, webseite, beschreibung, highlight, google_rating, "
                "google_bewertungen_anzahl, qualitaets_score, aktiv, extras")
     # Filter in der Abfrage – sonst kämen die extras (mit Bewertungstexten) aller ~2.000 Orte mit
     return [o for o in alle_zeilen(db, "orte", spalten, lambda q: q.or_("typ.eq.club,extras->>auch_club.eq.true"))
             if o["typ"] == "club" or (o.get("extras") or {}).get("auch_club")]
 
 
+def event_orte_vereinigen(ort: dict, neu: list[str]) -> list[str]:
+    """
+    event_orte wächst nur (Plan Locations 3.4): neu gefundene Schreibweisen plus die gespeicherten. Die neue Liste
+    entsteht aus den Events der letzten 180 Tage – ohne Vereinigung fiele eine Schreibweise heraus, sobald 180 Tage
+    kein Event mit ihr kam. Entfernt wird nur über EVENT_ORTE_AUSSCHLUSS (und die Regel „nicht im …“).
+    """
+    gespeichert = (((ort.get("extras") or {}).get("club") or {}).get("event_orte")) or []
+    namen = [x for x in [_phrase(ort.get("name") or "")] if x]
+    behalten = {s for s in gespeichert
+                if s and not ausgeschlossen(ort.get("slug"), s) and not nicht_im_ort(s, namen)}
+    return sorted(set(neu) | behalten)
+
+
 def _events_fuer(ort: dict, kalender: list[dict], alle_orte: set[str]) -> tuple[list[str], list[dict]]:
-    namen = event_orte(ort["name"], alle_orte)
+    namen = event_orte_vereinigen(ort, event_orte(ort["name"], alle_orte, ort.get("slug")))
     return namen, [e for e in kalender if e.get("ort") in namen]
 
 
@@ -839,6 +856,25 @@ def profil_speichern(db, o: dict, ki: dict, profil: dict, score: dict) -> None:
         if profil["unterart"]:
             extras["club_unterart"] = profil["unterart"]
     speichern(db, o, extras, spalten)
+
+
+def nicht_im_pruefen() -> int:
+    """
+    Lese-Prüfung (Plan Locations 3.4, vor Deploy-Punkt 2): gespeicherte Club-Schreibweisen, die nach nicht_im_ort
+    nicht zum Club gehören. Erwartet 0. Ändert nichts. „Pitcher, nicht im Freien“ zählt nicht als Fund.
+    """
+    from database.client import get_supabase_client
+
+    funde = 0
+    for o in club_orte(get_supabase_client()):
+        namen = [x for x in [_phrase(o["name"])] if x]
+        namen += [a for teil, liste in ALIASE.items() if teil in _key(o["name"]) for a in liste]
+        for s in ((o.get("extras") or {}).get("club") or {}).get("event_orte") or []:
+            if nicht_im_ort(s, namen):
+                funde += 1
+                print(f"{o['name']}: „{s}“ gehört nach nicht_im_ort nicht zum Club")
+    print(f"Funde: {funde} (erwartet 0)")
+    return funde
 
 
 def neu_pruefen(dry_run: bool) -> None:
@@ -944,7 +980,13 @@ def freischalten(dry_run: bool) -> None:
             if o.get("aktiv") != aktiv:
                 print(f"{'aktiv  ' if aktiv else 'inaktiv'} {o['name']}")
                 if not dry_run:
-                    db.table("orte").update({"aktiv": aktiv}).eq("id", o["id"]).execute()
+                    # Der Schutz-Trigger (Plan Locations 3.3 Punkt 8) bricht das Abschalten eines Clubs mit aktiven
+                    # Sälen oder als Ziel einer Weiterleitung ab – je Zeile abfangen, ins Log, weitermachen
+                    try:
+                        db.table("orte").update({"aktiv": aktiv}).eq("id", o["id"]).execute()
+                    except Exception as e:
+                        logger.error("Club „%s“ nicht %s (aktive Säle oder Weiterleitungen?): %s",
+                                     o["name"], "aktiviert" if aktiv else "abgeschaltet", e)
         elif umtypen_erlaubt(o):
             setzen = {"unterart": ex.get("club_unterart") or profil.get("unterart") or "club", "hub": "clubs",
                       "vorher_typ": o["typ"]}
@@ -1023,8 +1065,13 @@ def main():
     parser.add_argument("--freigeben", help="Nach Sichtprüfung freigeben: exakte Namen, durch „;“ getrennt")
     parser.add_argument("--freigabe-entziehen", help="Freigabe zurücknehmen: exakte Namen, durch „;“ getrennt")
     parser.add_argument("--neu-pruefen", action="store_true", help="Gespeicherte KI-Antworten erneut prüfen (ohne KI)")
+    parser.add_argument("--nicht-im-pruefen", action="store_true",
+                        help="Lese-Prüfung vor Deploy-Punkt 2 (Plan Locations 3.4): gespeicherte Schreibweisen, "
+                             "die nach nicht_im_ort nicht zum Club gehören (erwartet 0)")
     args = parser.parse_args()
-    if args.freigeben or args.freigabe_entziehen:
+    if args.nicht_im_pruefen:
+        nicht_im_pruefen()
+    elif args.freigeben or args.freigabe_entziehen:
         freigeben(args.freigeben or args.freigabe_entziehen, bool(args.freigabe_entziehen), args.dry_run)
     elif args.neu_pruefen:
         neu_pruefen(args.dry_run)

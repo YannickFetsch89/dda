@@ -59,6 +59,24 @@ class GebietTest(unittest.TestCase):
         self.assertEqual([e["ort"] for e in bleiben], ["Kunsthalle Düsseldorf"])
 
 
+class GebietNachtragTest(unittest.TestCase):
+    """Nachtrag 19.11.2026, Plan docs/plan-locations-2026-11-18.md, 3.16."""
+
+    def test_draussen(self):
+        for ort, adresse in [("Stadthalle Mülheim", ""), ("Theater Mülheim", ""), ("Kirche", "Hochdahl"),
+                             ("Kirche", "Büderich"), ("Bar", "Osterath"), ("Mayersche Essen", "Mayersche Essen")]:
+            with self.subTest(ort=ort, adresse=adresse):
+                self.assertIsNotNone(grund_ausserhalb({"ort": ort, "adresse": adresse}))
+
+    def test_drin(self):
+        for ort, adresse in [("Bar", "Mülheimer Straße 5, 40221 Düsseldorf"), ("Unterbacher See", "Unterbach"),
+                             ("Kirche", "Hamm"), ("Bar", "Berliner Allee 52, 40212 Düsseldorf"),
+                             ("Bar", "Erkrather Straße 1, 40233 Düsseldorf"), ("Bar", "Kölner Straße 1, 40227 Düsseldorf"),
+                             ("Bar", "Duisburger Straße 1, 40477 Düsseldorf"), ("Bar", "Neusser Straße 1, 40219 Düsseldorf")]:
+            with self.subTest(ort=ort, adresse=adresse):
+                self.assertIsNone(grund_ausserhalb({"ort": ort, "adresse": adresse}))
+
+
 class MeetupAdresseTest(unittest.TestCase):
     def test_platzhalter_plz(self):
         self.assertEqual(adresse_bauen("Franklinstraße 5, 40479", "meetup9", "Düsseldorf"), "Franklinstraße 5, 40479 Düsseldorf")

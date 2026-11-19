@@ -39,7 +39,7 @@ from pipeline.indexnow import kategorie_web
 
 logger = logging.getLogger(__name__)
 
-SPALTEN = "id,slug,titel,datum,uhrzeit,ort,quelle_name,quelle_url,kategorie,abgesagt,bild_url,beschreibung,preis,adresse,erstellt_am"
+SPALTEN = "id,slug,titel,datum,uhrzeit,ort,quelle_name,quelle_url,kategorie,abgesagt,bild_url,beschreibung,preis,adresse,erstellt_am,ort_id"
 FUELL_FELDER = ["bild_url", "beschreibung", "preis", "adresse"]
 
 
@@ -66,7 +66,19 @@ def events_laden(ab: str) -> list[dict]:
         alle += seite
         start += 1000
         if len(seite) < 1000:
-            return alle
+            return _haeuser_annotieren(alle)
+
+
+def _haeuser_annotieren(events: list[dict]) -> list[dict]:
+    """Haus der Ortszuordnung für die Dubletten-Regel (Plan Locations 3.4); ohne Index gilt der Namensvergleich."""
+    try:
+        from database.client import get_supabase_client
+        from pipeline.ort_zuordnung import annotieren, index_laden
+        index = index_laden(get_supabase_client())
+        return [annotieren(e, index) for e in events]
+    except Exception as e:
+        logger.warning("Ortszuordnung nicht ladbar, Dubletten nur über den Namen: %s", e)
+        return events
 
 
 def jazz_schmiede_zeiten() -> dict[tuple[str, str], str]:

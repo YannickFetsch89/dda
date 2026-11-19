@@ -8,7 +8,7 @@ import sys
 from datetime import date
 
 from config import LOG_LEVEL, LOG_DIR, SCHEDULER_UHRZEIT
-from database.client import events_speichern
+from database.client import events_speichern, get_supabase_client
 from pipeline.lauf_report import LaufReport
 from scraper.tier1 import (
     rausgegangen,
@@ -188,14 +188,26 @@ async def _schritte_ausfuehren(report: LaufReport):
     from pipeline.gebiet import gebiet_filtern
     alle_events = gebiet_filtern(alle_events)
 
-    # Schritt 1d: In-Memory-Deduplizierung mit Merge-Logik
-    logger.info("--- Schritt 1d: In-Memory-Deduplizierung ---")
+    # Schritt 1d: Ortszuordnung events.ort_id (Plan Locations 3.4) – vor der Deduplizierung, damit die Dubletten-
+    # Regel nach Häusern greift. Ohne Index (Fehler) läuft alles wie bisher über den Namen.
+    logger.info("--- Schritt 1d: Ortszuordnung ---")
+    orte_index = None
+    try:
+        from pipeline.ort_zuordnung import index_laden, zuordnen_alle
+        orte_index = index_laden(get_supabase_client())
+        zuordnung = zuordnen_alle(alle_events, orte_index)
+        report.kennzahl(ort_treffer=zuordnung["treffer"], ort_mehrdeutig_neu=zuordnung["mehrdeutig"])
+    except Exception as e:
+        logger.error("Ortszuordnung fehlgeschlagen (weiter ohne ort_id): %s", e)
+
+    # Schritt 1e: In-Memory-Deduplizierung mit Merge-Logik
+    logger.info("--- Schritt 1e: In-Memory-Deduplizierung ---")
     from pipeline.deduplication import deduplizieren
     alle_events = deduplizieren(alle_events)
     report.kennzahl(events_nach_dedup=len(alle_events))
 
-    # Schritt 1e: Stadtteil-Zuordnung
-    logger.info("--- Schritt 1e: Stadtteil-Zuordnung ---")
+    # Schritt 1f: Stadtteil-Zuordnung
+    logger.info("--- Schritt 1f: Stadtteil-Zuordnung ---")
     from pipeline.stadtteil_mapper import stadtteil_batch_zuordnen
     alle_events = stadtteil_batch_zuordnen(alle_events)
 
@@ -213,6 +225,17 @@ async def _schritte_ausfuehren(report: LaufReport):
         speicher_fehler=stats["fehler"],
     )
     report.neu_pro_quelle_setzen(stats.get("neu_pro_quelle") or {})
+
+    # Ortszuordnung über den ganzen Bestand prüfen (Plan Locations 3.4): gespeicherte ort_id ohne Treffer oder
+    # mehrdeutig – nur Meldung, nichts wird geändert. Eine Zahl über 0 heißt: Lösung vergessen bzw. doppelte Schreibweise.
+    if orte_index is not None:
+        try:
+            from pipeline.ort_zuordnung import bestand_pruefen
+            pruefung = bestand_pruefen(get_supabase_client(), orte_index)
+            report.kennzahl(ort_id_ohne_treffer=pruefung["ort_id_ohne_treffer"],
+                            ort_id_mehrdeutig=pruefung["ort_id_mehrdeutig"])
+        except Exception as e:
+            logger.error("Prüfung der Ortszuordnung fehlgeschlagen: %s", e)
 
     # Schritt 2a: Reihen (wiederkehrende Events) erkennen und zuordnen – für /reihe/<slug>
     logger.info("--- Schritt 2a: Reihen zuordnen ---")

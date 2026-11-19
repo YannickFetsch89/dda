@@ -132,8 +132,33 @@ def _teile_passen(a: set[str], b: set[str]) -> bool:
     return klein <= gross and (len(klein) >= 2 or len(next(iter(klein))) >= 5)
 
 
+def _ort_haus_regel(a: dict, b: dict) -> Optional[bool]:
+    """
+    Regel über die Ortszuordnung (Plan docs/plan-locations-2026-11-18.md, 3.4) – None heißt: Namensvergleich.
+    Die internen Felder _haus_id/_kette setzt pipeline/ort_zuordnung.annotieren(); ohne geladene Häuser fehlen sie,
+    und es gilt der heutige Namensvergleich (z. B. in rausgegangen_nachziehen.py).
+    - gleiche ort_id → gleicher Ort
+    - beide zugeordnet, verschiedene Häuser → verschiedener Ort
+    - gleiches Haus, verschiedene Säle → Namensvergleich („zakk – Studio“ ~ „zakk - Zentrum für …“)
+    - Kette auf einer Seite, andere ohne ort_id → nur bei passender Adresse
+    """
+    id_a, id_b = a.get("ort_id"), b.get("ort_id")
+    haus_a, haus_b = a.get("_haus_id"), b.get("_haus_id")
+    if id_a and id_b and id_a == id_b:
+        return True
+    if haus_a and haus_b:
+        return None if haus_a == haus_b else False
+    if (a.get("_kette") and not id_b) or (b.get("_kette") and not id_a):
+        from pipeline.ort_zuordnung import adresse_passt
+        return adresse_passt(a.get("adresse"), b.get("adresse"))
+    return None
+
+
 def _ort_passt(a: dict, b: dict) -> bool:
     """Gemeinsamer Ortskern („zakk – Studio“ ~ „zakk - Zentrum für …“); ohne Kern muss der Ortsname gleich sein."""
+    regel = _ort_haus_regel(a, b)
+    if regel is not None:
+        return regel
     # Gleicher einheitlicher Name (pipeline/ortsnamen.py) = gleicher Ort – auch ohne gemeinsames Kernwort
     # („Zentrum für Aktion, Kultur und Kommunikation“ ~ „zakk“, „Dusseldorf, Germany“ ~ „Düsseldorf“)
     if einheitlicher_name(a.get("ort")) and einheitlicher_name(a.get("ort")) == einheitlicher_name(b.get("ort")):
@@ -373,6 +398,14 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
         basis, duplikat = duplikat, basis
 
     merged = dict(basis)
+
+    # Ortszuordnung (Plan Locations 3.4): Treffer des verbleibenden Namens zuerst, sonst der des Duplikats –
+    # nie NULL über einen vorhandenen Wert („zakk – Halle“ von Rausgegangen behält die Saal-ID, wenn die
+    # Veranstalter-Schreibweise keinen Treffer hat)
+    if not merged.get("ort_id") and duplikat.get("ort_id"):
+        for feld in ("ort_id", "_haus_id", "_kette"):
+            if feld in duplikat:
+                merged[feld] = duplikat[feld]
 
     # Uhrzeit: Bei Abweichung gilt die des Veranstalters (Aggregatoren nennen oft den Einlass)
     if (_uhrzeit(duplikat) and _uhrzeit(basis) and _uhrzeit(basis) != _uhrzeit(duplikat)

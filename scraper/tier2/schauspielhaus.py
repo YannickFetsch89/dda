@@ -33,6 +33,14 @@ SPIELPLAN_URL = "https://www.dhaus.de/programm/spielplan/"
 QUELLE_NAME = "Düsseldorfer Schauspielhaus"
 ORT_STANDARD = "Düsseldorfer Schauspielhaus"
 ADRESSE_STANDARD = "Gustaf-Gründgens-Platz 1, 40211 Düsseldorf"
+# Das Central ist eine eigene Spielstätte am Hauptbahnhof (visitduesseldorf.de, „D'haus Central“) – nicht am
+# Gustaf-Gründgens-Platz. Plan docs/plan-locations-2026-11-18.md, Schritt 2.
+ADRESSE_CENTRAL = "Worringer Straße 140, 40210 Düsseldorf"
+
+
+def adresse_fuer(ort: str | None) -> str:
+    """Adresse der Spielstätte: Central (1, 2, Brücke, „im Central“) am Hauptbahnhof, sonst das Schauspielhaus."""
+    return ADRESSE_CENTRAL if re.search(r"^central\b|\bim central\b", ort or "", re.I) else ADRESSE_STANDARD
 KATEGORIE_STANDARD = "kultur"
 
 # Anzahl Monate voraus, die gescrapt werden (aktueller Monat + 5 weitere)
@@ -493,7 +501,7 @@ def _event_aus_container(container, heute: date, kontext_jahr: int, kontext_mona
             "datum": datum,
             "uhrzeit": uhrzeit,
             "ort": ort,
-            "adresse": ADRESSE_STANDARD,
+            "adresse": adresse_fuer(ort),
             "kategorie": KATEGORIE_STANDARD,
             "beschreibung": beschreibung,
             "preis": preis,
@@ -789,7 +797,7 @@ def _events_aus_links_extrahieren(
                 "datum": datum,
                 "uhrzeit": uhrzeit,
                 "ort": ort,
-                "adresse": ADRESSE_STANDARD,
+                "adresse": adresse_fuer(ort),
                 "kategorie": KATEGORIE_STANDARD,
                 "beschreibung": None,
                 "preis": preis,
@@ -978,7 +986,7 @@ def _event_aus_json_ld_eintrag(eintrag: dict, heute: date) -> Optional[dict]:
             "datum": datum,
             "uhrzeit": uhrzeit,
             "ort": ort,
-            "adresse": ADRESSE_STANDARD,
+            "adresse": adresse_fuer(ort),
             "kategorie": KATEGORIE_STANDARD,
             "beschreibung": beschreibung,
             "preis": preis,

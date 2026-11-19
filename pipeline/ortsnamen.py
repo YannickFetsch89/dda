@@ -70,7 +70,9 @@ SPIELSTAETTEN: dict[str, list[str]] = {
     "zakk – Halle": ["zakk Halle"],
     # Clubs und Bars
     "Pitcher Rock HQ": ["Pitcher", "Pitcher - Rock'n'Roll Headquarter Düsseldorf"],
-    "Ratinger Hof": ["Ratinger Hof Düsseldorf"],
+    # „Stone im Ratinger Hof“ ist seit Jahren geschlossen – Events dort finden im Ratinger Hof statt (Auftraggeber
+    # 19.11.2026, Plan Locations Abschnitt 9)
+    "Ratinger Hof": ["Ratinger Hof Düsseldorf", "Stone im Ratinger Hof"],
     "Nachtresidenz": ["Nachtresidenz Düsseldorf"],
     "Velvet": ["VELVET"],
     "Ampere": ["AMPERE Düsseldorf"],

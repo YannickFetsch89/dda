@@ -17,12 +17,14 @@ class OrtsnamenTest(unittest.TestCase):
             ("tanzhaus nrw", "Tanzhaus NRW"),
             ("zakk - Zentrum für Aktion, Kultur und Kommunikation", "zakk"),
             ("Dusseldorf, Germany", "Düsseldorf"),
+            # Stone ist seit Jahren geschlossen – Events finden im Ratinger Hof statt (Auftraggeber 19.11.2026)
+            ("Stone im Ratinger Hof", "Ratinger Hof"),
         ]:
             self.assertEqual(einheitlicher_name(alt), neu, alt)
 
     def test_raeume_und_allgemeines_bleiben(self):
         for ort in ["zakk – Studio", "zakk – Halle", "Düsseldorfer Schauspielhaus – Großes Haus", "Düsseldorfer Schauspielhaus – Kleines Haus",
-                    "Tonhalle Mendelssohn-Saal", "Capitol Theater - Club Saal", "Stone im Ratinger Hof", "Altstadt Düsseldorf",
+                    "Tonhalle Mendelssohn-Saal", "Capitol Theater - Club Saal", "Altstadt Düsseldorf",
                     "Bunker", "Kunstsammlung NRW", "Tiefgarage PSD BANK DOME"]:
             self.assertEqual(einheitlicher_name(ort), ort, ort)
 

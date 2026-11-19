@@ -40,9 +40,13 @@ STAEDTE_EINDEUTIG = [
     "Kleve", "Winsen", "Gütersloh", "Herne", "Witten", "Unna", "Siegen", "Paderborn", "Düren", "Bergisch Gladbach",
     "Venlo", "Roermond", "Amsterdam", "Lünen", "Castrop-Rauxel", "Marl", "Dinslaken", "Emmerich", "Xanten", "Goch",
     "Geldern", "Nettetal", "Heinsberg", "Erkelenz", "Rees", "Hückeswagen", "Wermelskirchen", "Leichlingen", "Burscheid",
+    # Nachtrag 19.11.2026 (Plan Locations 3.16): Ortsteile der Nachbarstädte (Erkrath, Meerbusch) als Vorsorge und
+    # Mülheim als ganzes Wort („Stadthalle Mülheim“ ohne Komma rutschte durch; „Mülheimer Straße“ bleibt, weil 
+    # nach dem „m“ ein Wortende verlangt). Unterbach und Hamm sind Düsseldorfer Stadtteile und stehen NICHT hier.
+    "Hochdahl", "Büderich", "Osterath", "Mülheim",
 ]
 # Mehrdeutig (normales Wort oder Teil von Düsseldorfer Namen): nur als eigener Abschnitt
-STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Mülheim", "Frankfurt"]
+STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Frankfurt"]
 
 # Bekannte Orte außerhalb, deren Name keine Stadt nennt (normalisiert: klein, ohne Satzzeichen)
 AUSWAERTIGE_ORTE = {
@@ -50,6 +54,8 @@ AUSWAERTIGE_ORTE = {
     "kulturraffinerie k714", "kulturfabrik krefeld", "galerie für zeitgenössische kunst",
     # Nachtrag 18.11.2026: Stadt nur als Wortteil oder Adjektiv im Namen
     "grugahalle", "theater essen süd", "zeche carl", "kokerei zollverein", "theaterhagen", "wuppertaler miniaturland",
+    # Nachtrag 19.11.2026 (Kandidatenliste Ortsseiten): Buchhandlung in Essen, „Essen“ ohne eigenen Abschnitt
+    "mayersche essen",
 }
 
 _PLZ = re.compile(r"(?<!\d)(\d{5})(?!\d)")
