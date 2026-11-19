@@ -1,72 +1,62 @@
-# Cursor-Prompt: Prüfung des Plans „Ortsseiten“ (18.11.2026)
+# Cursor-Prompt: Prüfung des Plans „Ortsseiten“, zehnte Fassung (19.11.2026)
 
 Alles unterhalb der Linie in Cursor einfügen (Agent-Modus, Repo DD, Branch `claude/setup-project-structure-5QNOf`).
 
 ---
 
-Du prüfst einen **Plan** für die Website dies.das.düsseldorf (diesdas.events), noch keine Umsetzung. **Ändere keine Dateien und keine Datenbank. Schreib nur einen Befundbericht.**
+Du prüfst die **zehnte Fassung eines Plans** für die Website dies.das.düsseldorf (diesdas.events). Umgesetzt ist davon noch nichts.
+
+**Ändere keine Dateien und keine Datenbank. Schreib nur einen Befundbericht.**
+
+Die neunte Fassung hat Claude selbst geprüft, am Code und mit einer Lese-Abfrage in der Datenbank. Daraus kamen vier Änderungen. Sie stehen ganz oben im Änderungsprotokoll der zehnten Fassung:
+
+1. **`event_orte` der Clubs wächst nur.** Grund: `scores_neu` schreibt die Liste bei jedem Pipeline-Lauf aus den Events der letzten 180 Tage neu. `clubs_profil` leert nie eine `ort_id`.
+2. **Ausschlussliste `EVENT_ORTE_AUSSCHLUSS` im Code.** Sonst würde `scores_neu` eine per SQL gelöste Schreibweise („Theater an der Kö“) noch am selben Tag wieder eintragen. Das Aufräum-SQL läuft erst nach dem Code-Deploy (Deploy-Punkt 2b).
+3. **„zakk – nicht im zakk“ steht laut Datenbank nicht in `event_orte`.** `event_orte()` schließt es schon aus. Die Regel wandert in eine gemeinsame Funktion `nicht_im_ort` für `clubs_profil` und `ort_zuordnen`, ohne pauschales „enthält ‚nicht im‘“.
+4. **Zwei Kennzahlen:** `ort_id_ohne_treffer` und `ort_id_mehrdeutig`.
+
+Prüfe vor allem diese vier Punkte: Sind sie vollständig, widerspruchsfrei und mit dem Code vereinbar? Haben sie neue Fehler eingeführt?
 
 ## Was du lesen sollst
-1. **Den Plan:** `docs/plan-locations-2026-11-18.md`. Abschnitt 5 enthält die Entscheidungen des Auftraggebers E1–E7, Abschnitt 7 das Ergebnis von Schritt 1. Diese Entscheidungen sind gesetzt, prüfe nur, ob der Plan sie richtig und vollständig umsetzt.
-2. **Die Kandidatenliste:** `data/spielstaetten/kandidaten.csv` (Semikolon) und das Skript, das sie erzeugt: `scraper/orte/spielstaetten_kandidaten.py`.
-3. **Den schon umgesetzten Teil** (seit Commit `884d3fc` live, Nachträge in diesem Arbeitsstand):
-   - `pipeline/gebiet.py` (Gebietsfilter, in `main.py` Schritt 1c), `tests/test_gebiet.py`
-   - `pipeline/ortsnamen.py`, `tests/test_ortsnamen.py`, `pipeline/stadtteil_mapper.py`
-   - Scraper: `scraper/tier2/oper_am_rhein.py`, `scraper/tier1/meetup.py`, `scraper/tier2/kulturschlachthof_r25.py`, `scraper/tier2/fft_duesseldorf.py`
-   - SQL: `database/gebiet_bereinigung_2026-11-18*.sql`, `database/datenfehler_2026-11-18.sql`, `database/ortsnamen_2026-11-18*.sql`
-4. **Den Zusammenhang:**
-   - bestehende Orte und Guides: `web/lib/orte.ts`, `web/components/ort-karten.tsx` (`ortPfad`, `ortRoute`), `web/lib/clubs.ts`
-   - Proxy: `web/proxy.ts`, `web/lib/pfad-pruefung.ts`
-   - Eventseite: `web/app/event/[kategorie]/[slug]/page.tsx`
-   - Datenbank: `database/schema_orte.sql`, `database/orte_typ_weihnachtsmarkt_2026-11-17.sql` (CHECK auf `orte.typ`)
-   - Bilder: Weihnachtsmarkt-Guide `scraper/weihnachtsmaerkte/bilder.py`, `data/weihnachtsmaerkte/bilder.csv`
-   - Personalisierung: `docs/konzept-personalisierung-2026-11-18.md` (Baustein B4 „Folgen“)
+1. **Den Plan:** `docs/plan-locations-2026-11-18.md`
+   - Änderungsprotokoll der zehnten Fassung
+   - Abschnitt 3.2 (Club-Verknüpfungen), 3.4, 3.9 (Club-Karten)
+   - Abschnitt 4 (Deploy-Reihenfolge mit Punkt 2b, Schritt 2, Pflicht-Tests)
+   - Ältere Protokolle beschreiben nur den Stand ihrer Fassung.
+2. **Code:**
+   - `scraper/orte/clubs_profil.py`: `event_orte`, `kalender_laden`, `_events_fuer`, `scores_neu`, `neu_pruefen`, `profile_erstellen`, `manuell_korrigieren`, `NICHT_IM_HUB`, `speichern`/`extras_mergen`
+   - `main.py`: Aufruf von `scores_neu`, Reihenfolge zum Speichern
+   - `web/lib/clubs-daten.ts`: `naechsteEvents`
+   - `web/lib/clubs.ts`: `clubProfil`, `eventOrte`
 
-## Bekannte Regeln des Projekts (Verstöße sind Befunde)
-- **Eine URL je Ort (E1 aus dem Orte-Guide):** Ein Ort mit Guide-Seite bekommt keine zweite Seite.
-- **Echte Statuscodes nur im Proxy:**
-  - 404 und 308 entstehen in `web/proxy.ts` mit direkter Antwort bzw. Redirect.
-  - **Nie `NextResponse.rewrite`.** Hinter nginx führt ein Rewrite zu HTTP 500.
-  - Mit cacheComponents streamt das Layout vor `notFound()`, die Seite selbst kann also keine echte 404 liefern.
-- **Bildpfade unter `/ort-bilder/<hub>/…`,** nie unter einem Seitenpfad, den der Proxy prüft. `/orte/…` wäre so ein Pfad.
-- **Der Browser kontaktiert keine Dritten:** Bilder über den eigenen Server, Karte selbst gehostet (MapLibre + PMTiles).
-- **Datenbank:**
-  - SQL nur als Datei in `database/`, der Auftraggeber führt sie aus.
-  - Supabase-Abfragen auf `orte`/`events` seitenweise (mehr als 1.000 Zeilen).
-- **Pipeline-Ortsnamen:** gepflegte Liste ohne unscharfes Zusammenführen. Säle bleiben getrennt. Namen ohne Trenner, Ausnahmen „zakk – Halle“ und die FFT-Säle, weil `reihen_zuordnen.ort_basis` am Trenner schneidet.
-- Keine neue Bibliothek ohne Rückfrage. Texte und Kommentare auf Deutsch.
+## Regeln des Projekts (Verstöße sind Befunde)
+- **Eine URL je Ort.** Echte 404 und 308 nur im Proxy, **nie `NextResponse.rewrite`**.
+- **Der Proxy liest mit dem anonymen Schlüssel** und sieht nur `aktiv = true`.
+- SQL nur als Datei in `database/`. Abfragen seitenweise.
+- Keine neue Bibliothek ohne Rückfrage. Deutsch.
 
 ## Worauf du besonders achten sollst
-1. **Gebietsfilter:**
-   - Gibt es Fehltreffer in Düsseldorf, Neuss oder Ratingen? Denk an Straßen nach Städten (Kölner, Duisburger, Krefelder Straße), Namen mit „Essen“ und „Halle“, die Köln-Düsseldorfer, Stadtteile wie Hamm.
-   - Gibt es Lücken? Orte außerhalb ohne Stadtnamen und ohne Postleitzahl.
-   - Stimmen die PLZ-Bereiche (Düsseldorf 40210–40629, Neuss 41460–41472, Ratingen 40878–40885)?
-   - Läuft der Filter an der richtigen Stelle der Pipeline, auch für alle Quellen?
-2. **SQL-Dateien:** Sicherheit der DELETEs (nur Treffer-IDs, Kaskaden auf `merkliste`, `event_sensibel`, `event_seo_entscheidungen`), Wiederholbarkeit, Reihenfolge.
-3. **Kandidatenliste:**
-   - Stimmen Haus und Saal? Fehlen Zusammenfassungen, oder gibt es falsche?
-   - Stimmen die Klassen (Treffpunkt, online, allgemein, Gruppe)?
-   - Stimmt der Guide-Abgleich?
-   - Nenn Zeilen mit falschem Vorschlag konkret.
-4. **Datenmodell (E5):**
-   - Typ `spielstaette` in `orte` mit Profil in `extras` plus `events.ort_id`: Passt das?
-   - Wie wird `ort_id` gesetzt (Pipeline, Nachtrag), was passiert bei Umbenennung, Zusammenlegung und Löschung eines Orts?
-   - Wie verhält sich `ort_id` zu bestehenden Guide-Orten (Clubs mit `event_orte`) und zu Sälen (E6)?
-   - Ist die Dubletten-Erkennung ausreichend beschrieben?
-5. **Seiten und URLs:**
-   - `/orte/<slug>`, `/orte`, 308 auf Guide-Seiten, 404 für Unbekanntes, Saal-Seiten nach E6 ohne doppelten Inhalt (Canonical?)
-   - indexiert nur mit kommenden Events oder eigenem Text, Sitemap, JSON-LD
-6. **Bilder (E4):** Ist die Umsetzung (Nachweis, Herkunft je Bild, schnelles Entfernen) vollständig, und widerspricht sie dem Projektgrundsatz „keine Dritten im Browser“?
-7. **Lücken im Plan:**
-   - Was fehlt für Schritt 2 (Import, Geo, Stadtbüchereien-Filialen)?
-   - Was fehlt für Schritt 3 (Caching, Performance bei 236+ Seiten, Tests)?
-   - Wie ist der Bezug zu „Folgen“ (B4)?
+1. **Nur wachsendes `event_orte`:**
+   - Gibt es heute einen Fall, in dem eine Schreibweise gewollt aus der Liste fallen muss und künftig nicht mehr fällt, etwa eine Fehlzuordnung durch einen Teiltreffer?
+   - Ist die Ausschlussliste dafür der richtige und einzige Weg?
+   - Wächst die Liste unbegrenzt? Ist das ein Problem für den Club-Score, der `_events_fuer` nutzt?
+2. **Ausschlussliste und Deploy-Punkt 2/2b:**
+   - Ist die Reihenfolge lückenlos: alter Code läuft bis Punkt 2, ab dann ordnet `ort_zuordnen` keine ausgeschlossene Schreibweise mehr zu, und 2b räumt die gespeicherte Liste auf?
+   - Kann zwischen 2 und 2b eine falsche `ort_id` entstehen?
+3. **`nicht_im_ort`:**
+   - Lässt sich die Prüfung aus `event_orte()` so herauslösen, dass `ort_zuordnen` sie mit den Hausnamen der Kandidatenzeile nutzen kann?
+   - Stimmen die drei Testfälle (zakk, Pitcher im Freien, „sondern im Pitcher Club“)?
+4. **Club-Karten ohne eigene Filterlogik in TypeScript:** Ist es vertretbar, dass sie sich nur auf die gespeicherte, bereinigte Liste verlassen?
+5. **Kennzahlen:** Steigen sie jetzt wirklich nicht mehr von selbst?
+6. **Widersprüche** zwischen dem Änderungsprotokoll, Abschnitt 3 und Abschnitt 4.
 
 ## Bericht
-Eine Liste, sortiert nach Schwere (**kritisch / hoch / mittel / gering / Hinweis**). Je Befund:
-- Ort (Datei:Zeile oder Planabschnitt)
-- was falsch ist, mit einem konkreten Beispiel (z. B. Zeile der CSV oder Ortsname, der falsch gefiltert würde)
+Zuerst eine Tabelle mit den 4 Punkten: Bezeichnung, Urteil (**behoben** / **teilweise** / **nicht behoben**), Fundstelle.
+
+Danach neue Befunde, sortiert nach Schwere (**kritisch / hoch / mittel / gering / Hinweis**). Je Befund:
+- Ort
+- was falsch ist, mit einem konkreten Beispiel
 - warum es ein Problem ist
 - Vorschlag
 
-Am Ende: eine Gesamteinschätzung, ob der Plan nach Behebung der Befunde freigabereif ist.
+Am Ende: eine Gesamteinschätzung, ob der Plan freigabereif ist.
