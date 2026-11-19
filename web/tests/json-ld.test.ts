@@ -30,9 +30,20 @@ describe("preisBetrag", () => {
     expect(preisBetrag("15,50 EUR")).toBe(15.5);
     expect(preisBetrag("€ 8")).toBe(8);
   });
-  it("gibt bei mehreren oder keinen Beträgen null zurück", () => {
-    expect(preisBetrag("12 € / ermäßigt 8 €")).toBeNull();
+  it("nimmt bei Spannen und mehreren Beträgen den niedrigsten, ermäßigte nur ohne regulären", () => {
+    expect(preisBetrag("4,00 bis 7,00 €")).toBe(4);
+    expect(preisBetrag("12–18 €")).toBe(12);
+    expect(preisBetrag("VVK 12,50 € / AK 13,00 €")).toBe(12.5);
+    expect(preisBetrag("AK 10,00 €")).toBe(10);
+    expect(preisBetrag("EUR 49")).toBe(49);
+    expect(preisBetrag("12 € / ermäßigt 8 €")).toBe(12);
+    expect(preisBetrag("Kinder 5 €")).toBe(5);
+    expect(preisBetrag("0,00 bis 4,00 €")).toBe(4);
+    expect(preisBetrag("0 €")).toBe(0);
+  });
+  it("gibt ohne Betrag null zurück", () => {
     expect(preisBetrag("siehe Veranstalter")).toBeNull();
+    expect(preisBetrag("Ausverkauft")).toBeNull();
     expect(preisBetrag(null)).toBeNull();
   });
 });
@@ -57,7 +68,8 @@ describe("eventJsonLd", () => {
     expect(d.eventStatus).toBe("https://schema.org/EventScheduled");
     expect(d.location).toMatchObject({ "@type": "Place", name: "Jazz-Schmiede", address: { streetAddress: "Himmelgeister Str. 107g", addressLocality: "Düsseldorf" } });
     expect(d.offers).toEqual({ "@type": "Offer", url: "https://example.org/tickets", price: 12, priceCurrency: "EUR" });
-    expect(d.endDate).toBeUndefined();
+    expect(d.endDate).toBe("2026-11-01");
+    expect(d.offers).not.toHaveProperty("availability");
   });
 
   it("abgesagt → EventCancelled", () => {
@@ -68,6 +80,10 @@ describe("eventJsonLd", () => {
     const d = eventJsonLd({ ...basis, datum_bis: "2026-11-30", preis: "kostenlos" }, SITE, SITE);
     expect(d.endDate).toBe("2026-11-30");
     expect(d.offers).toMatchObject({ price: 0, priceCurrency: "EUR" });
+  });
+
+  it("ausverkauft laut Quelle → availability SoldOut", () => {
+    expect(eventJsonLd({ ...basis, preis: "Ausverkauft" }, SITE, SITE).offers).toMatchObject({ availability: "https://schema.org/SoldOut" });
   });
 
   it("online → VirtualLocation", () => {

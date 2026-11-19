@@ -35,12 +35,36 @@ export function startDatum(e: Pick<DddEvent, "datum" | "uhrzeit">): string {
   return e.uhrzeit ? `${e.datum}T${e.uhrzeit}:00${berlinVersatz(e.datum, e.uhrzeit)}` : e.datum;
 }
 
-/** Eindeutiger Betrag aus dem Preistext ("ab 12 €", "15,50 EUR") – bei mehreren Beträgen null. */
+const ZAHL = String.raw`\d{1,4}(?:[.,]\d{1,2})?`;
+const WAEHRUNG = String.raw`(?:€|eur\b|euro\b)`;
+/** Spanne „4,00 bis 7,00 €“, „12–18 €“: beide Grenzen, auch wenn nur die obere ein €-Zeichen hat */
+const SPANNE = new RegExp(String.raw`(${ZAHL})\s*${WAEHRUNG}?\s*(?:bis|–|—|-)\s*(${ZAHL})\s*${WAEHRUNG}`, "gi");
+const EINZELN = new RegExp(String.raw`(${ZAHL})\s*${WAEHRUNG}|${WAEHRUNG}\s*(${ZAHL})`, "gi");
+/** Beträge, die nur für bestimmte Gruppen gelten – zählen nur, wenn es keinen regulären Betrag gibt */
+const ERMAESSIGT = /erm(?:ä|ae|a)(?:ß|ss)igt|erm\.|kinder|schüler|student|rentner|senior|mitglied|schwerbehindert/i;
+
+/**
+ * Niedrigster Betrag aus dem Preistext für schema.org/Offer.price (Google: „the lowest available price“), z. B.
+ * „ab 12 €“ → 12, „4,00 bis 7,00 €“ → 4, „VVK 12,50 € / AK 13,00 €“ → 12,5. Ermäßigte Beträge zählen nur, wenn es
+ * keinen anderen gibt („12 € / ermäßigt 8 €“ → 12). Ohne Betrag null. (Search Console 19.11.2026: price fehlte bei 26
+ * Events mit mehreren Beträgen; Spannen lieferten bisher die obere Grenze.)
+ */
 export function preisBetrag(preis: string | null): number | null {
   if (!preis) return null;
-  const betraege = [...preis.matchAll(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur\b|euro\b)|(?:€|eur\b)\s*(\d{1,4}(?:[.,]\d{1,2})?)/gi)]
-    .map((m) => Number((m[1] ?? m[2]).replace(",", ".")));
-  return betraege.length === 1 && Number.isFinite(betraege[0]) ? betraege[0] : null;
+  const funde: { wert: number; stelle: number }[] = [];
+  const zahl = (t: string) => Number(t.replace(",", "."));
+  for (const m of preis.matchAll(SPANNE)) funde.push({ wert: zahl(m[1]), stelle: m.index ?? 0 }, { wert: zahl(m[2]), stelle: m.index ?? 0 });
+  for (const m of preis.matchAll(EINZELN)) funde.push({ wert: zahl(m[1] ?? m[2]), stelle: m.index ?? 0 });
+  const gueltig = funde.filter((f) => Number.isFinite(f.wert));
+  if (!gueltig.length) return null;
+  // Gruppenpreis: Hinweis steht im Text vor dem Betrag, seit dem letzten Trenner („/“, „;“, „|“, Zeilenumbruch)
+  const istErmaessigt = (f: { stelle: number }) => ERMAESSIGT.test(preis.slice(0, f.stelle).split(/[/;|\n]/).pop() ?? "");
+  const regulaer = gueltig.filter((f) => !istErmaessigt(f));
+  const werte = (regulaer.length ? regulaer : gueltig).map((f) => f.wert);
+  // 0 € neben echten Preisen („0,00 bis 13,32 €“) ist meist eine Freikarten-Stufe (Kinder, Begleitung) – nicht als Preis
+  // ausgeben, sonst zeigt Google das Event als kostenlos. Kostenlose Events erkennt istKostenlos.
+  const positiv = werte.filter((w) => w > 0);
+  return Math.min(...(positiv.length ? positiv : werte));
 }
 
 function absolut(pfad: string, siteUrl: string): string {
@@ -75,7 +99,8 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
           },
         },
   };
-  if (e.datum_bis && e.datum_bis !== e.datum) daten.endDate = e.datum_bis;
+  // Ende: letzter Tag; bei eintägigen Events der Starttag (Uhrzeit des Endes kennen wir nicht; Search Console 19.11.2026)
+  daten.endDate = e.datum_bis && e.datum_bis > e.datum ? e.datum_bis : e.datum;
   if (e.reihe) {
     daten.superEvent = { "@type": "EventSeries", name: e.reihe.titel, url: `${siteUrl}/reihe/${encodeURIComponent(e.reihe.slug)}` };
   }
@@ -87,6 +112,8 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
       "@type": "Offer",
       url: e.quelle_url,
       ...(betrag !== null ? { price: betrag, priceCurrency: "EUR" } : {}),
+      // Nur, wenn die Quelle es ausdrücklich sagt; sonst keine Angabe (Verfügbarkeit kennen wir nicht)
+      ...(/ausverkauft/i.test(e.preis ?? "") ? { availability: "https://schema.org/SoldOut" } : {}),
     };
   }
   return daten;
