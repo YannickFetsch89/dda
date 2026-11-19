@@ -479,3 +479,21 @@ describe("SEO: strukturierte Daten mit Bild und Angebot (19.11.2026)", () => {
     expect(ohneFoto.offers).toBeUndefined();
   });
 });
+
+import { feiertageOhneAngabe, wochenzeitenBis } from "@/lib/weihnachtsmaerkte";
+
+describe("Zeitentabelle: Hinweise nur, wo sie stimmen (Cursor-Prüfung 19.11.2026)", () => {
+  const zeiten = [{ tage: ["mo", "di", "mi", "do", "fr", "sa", "so"], von: "11:00", bis: "21:00" }];
+  it("Feiertage ohne Sonderzeile werden genannt, solche mit Zeile nicht", () => {
+    const s = { jahr: "2026", von: "2026-11-19", bis: "2026-12-30", zeiten, sonder: [{ datum: "2026-11-22", geschlossen: true }] } as never;
+    expect(feiertageOhneAngabe(s).map((f) => f.name)).toEqual(["Heiligabend", "1. Weihnachtstag", "2. Weihnachtstag"]);
+  });
+  it("Wochenzeiten gelten nur bis 31.12., wenn jeder Januartag eine Sonderzeile hat (Kö on Ice)", () => {
+    const jan = Array.from({ length: 10 }, (_, i) => ({ datum: `2027-01-${String(i + 1).padStart(2, "0")}`, von: "11:00", bis: "20:00" }));
+    const koe = { jahr: "2026", von: "2026-11-06", bis: "2027-01-10", zeiten, sonder: jan } as never;
+    expect(wochenzeitenBis(koe)).toBe("2026-12-31");
+    const konvent = { jahr: "2026", von: "2026-11-14", bis: "2027-01-06", zeiten, sonder: [{ datum: "2027-01-01", geschlossen: true }] } as never;
+    expect(wochenzeitenBis(konvent)).toBeNull();
+    expect(wochenzeitenBis({ jahr: "2026", von: "2026-11-19", bis: "2026-12-30", zeiten, sonder: [] } as never)).toBeNull();
+  });
+});

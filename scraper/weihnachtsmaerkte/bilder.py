@@ -44,6 +44,7 @@ WEB_PFAD = "/ort-bilder/weihnachtsmaerkte"  # nicht unter /guides/<hub>/ – dor
 
 MAX_BREITE = 1600
 QUALITAET = 80
+MAX_BYTES = 380_000  # größere WebP-Dateien mit geringerer Qualität neu speichern (Cursor-Prüfung 19.11.2026)
 _SCHLUESSEL = re.compile(r"[a-z0-9-]+")
 _FOKUS = re.compile(r"oben|unten|(100|[1-9]?\d)%")
 _ENDUNGEN = {".jpg", ".jpeg", ".png", ".webp"}
@@ -144,7 +145,11 @@ def bild_umwandeln(quelle: Path, ziel: Path) -> tuple[int, int]:
     if bild.width > MAX_BREITE:
         bild = bild.resize((MAX_BREITE, round(bild.height * MAX_BREITE / bild.width)), Image.LANCZOS)
     ziel.parent.mkdir(parents=True, exist_ok=True)
-    bild.save(ziel, "WEBP", quality=QUALITAET, method=6)
+    qualitaet = QUALITAET
+    bild.save(ziel, "WEBP", quality=qualitaet, method=6)
+    while ziel.stat().st_size > MAX_BYTES and qualitaet > 60:
+        qualitaet -= 5
+        bild.save(ziel, "WEBP", quality=qualitaet, method=6)
     return bild.width, bild.height
 
 

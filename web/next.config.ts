@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
         source: "/konto/:pfad*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      // Eigene Fotos (web/public/ort-bilder): eine Woche cachen statt max-age=0 (Cursor-Prüfung 19.11.2026).
+      // Getauschte Weihnachtsmarkt-Fotos bekommen über foto_version eine neue URL (?v=), alte Kopien stören also nicht.
+      {
+        source: "/ort-bilder/:pfad*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }],
+      },
     ];
   },
   // Der Restaurant-Guide ist von /restaurants nach /guides/restaurants-cafes umgezogen (Design-Handoff v2)

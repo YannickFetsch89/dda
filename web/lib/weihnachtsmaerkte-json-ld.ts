@@ -68,7 +68,7 @@ export function weihnachtsmaerkteListeJsonLd(orte: DddOrt[], siteUrl: string): R
     {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      name: "Weihnachtsmärkte in Düsseldorf",
+      name: "Weihnachtsmärkte in Düsseldorf, Neuss und Ratingen",
       numberOfItems: liste.length,
       itemListElement: liste.map((o, i) => ({ "@type": "ListItem", position: i + 1, url: `${siteUrl}${wmPfad(o)}`, name: o.name })),
     },

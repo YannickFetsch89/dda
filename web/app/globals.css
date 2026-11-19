@@ -2174,7 +2174,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-zelle--auf { color: #1e7a4c; font-weight: 700; } /* dunkles Grün, fett (Auftraggeber 18.11.2026) */
 :root[data-theme="dark"] .wm-zelle--auf { color: #5fd08f; }
 .wm-zelle--letzter { font-weight: 700; }
-.wm-zelle--offen-unbekannt { color: var(--ddd-text-muted); font-style: italic; }
+.wm-zelle--offen-unbekannt { color: #5c6b80; font-style: italic; } /* dunkler als --ddd-text-muted: Kontrast ≥ 4,5:1 auf Weiß (Cursor-Prüfung 19.11.2026) */
+:root[data-theme="dark"] .wm-zelle--offen-unbekannt { color: var(--ddd-text-muted); }
 /* Mobil: jede Zeile als Karte statt breiter Tabelle (5.7) */
 @media (max-width: 767px) {
   .wm-sonder__rahmen { box-shadow: none; background: transparent; overflow: visible; }

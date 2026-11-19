@@ -226,6 +226,31 @@ export function sonderTage(jahr: number): { datum: string; name: string }[] {
   ];
 }
 
+type SaisonMitZeitraum = WmSaison & { von: string; bis: string; jahr: string };
+
+/** Feste Tage im Zeitraum ohne eigene Sonderzeile – nur für sie gilt der Hinweis „nicht veröffentlicht“ (Cursor-Prüfung 19.11.2026). */
+export function feiertageOhneAngabe(s: SaisonMitZeitraum): { datum: string; name: string }[] {
+  const mitAngabe = new Set((s.sonder ?? []).map((x) => x.datum));
+  return sonderTage(Number(s.jahr)).filter((t) => t.datum >= s.von && t.datum <= s.bis && !mitAngabe.has(t.datum));
+}
+
+/**
+ * Reicht die Saison ins neue Jahr und hat dort jeder Tag eine eigene Sonderzeile (Kö on Ice: Januar-Zeiten), gelten die
+ * Wochenzeiten nur bis zum 31.12. – dann dieses Datum, sonst null (Cursor-Prüfung 19.11.2026).
+ */
+export function wochenzeitenBis(s: SaisonMitZeitraum): string | null {
+  const jahresende = `${s.jahr}-12-31`;
+  if (s.bis <= jahresende) return null;
+  const mitAngabe = new Set((s.sonder ?? []).map((x) => x.datum));
+  const tag = utc(jahresende);
+  for (;;) {
+    tag.setUTCDate(tag.getUTCDate() + 1);
+    const datum = tag.toISOString().slice(0, 10);
+    if (datum > s.bis) return jahresende;
+    if (!mitAngabe.has(datum)) return null;
+  }
+}
+
 /** Zelle der Sonderzeiten-Tabelle: „–“ außerhalb des Zeitraums, sonst Zeit, „geschlossen“ oder „nicht veröffentlicht“. */
 export function sonderZelle(saisons: Saisons, datum: string): string {
   const o = oeffnungAm(saisons, datum);

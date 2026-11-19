@@ -25,7 +25,7 @@ import { stadtteilName } from "@/lib/stadtteile";
 import type { DddOrt } from "@/lib/typen";
 import {
   WM_BASIS as BASIS, aktuelleSaison, badges, datumKurz, datumLang, istIndexierbar, rolleText, saisonsKompakt, sonderZeilen,
-  wm, wmPfad, wochenZeilen,
+  wm, wmPfad, wochenZeilen, feiertageOhneAngabe, wochenzeitenBis,
 } from "@/lib/weihnachtsmaerkte";
 import { saisonTag, weihnachtsmaerkteLaden, weihnachtsmarktLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { weihnachtsmarktJsonLd } from "@/lib/weihnachtsmaerkte-json-ld";
@@ -93,7 +93,11 @@ function Zeitentabelle({ ort, gruppe }: { ort: DddOrt; gruppe: DddOrt | null }) 
     );
   }
   const woche = wochenZeilen(s);
-  const sonder = sonderZeilen(s);
+  // Feste Tage ohne Angabe als eigene Zeile „nicht veröffentlicht“ – der Hinweis darunter nur, wenn es solche Tage gibt
+  const ohneAngabe = feiertageOhneAngabe(s);
+  const sonder = [...sonderZeilen(s), ...ohneAngabe.map((f) => ({ datum: f.datum, name: f.name, text: "nicht veröffentlicht" }))]
+    .sort((a, b) => a.datum.localeCompare(b.datum));
+  const wocheBis = wochenzeitenBis(s);
   return (
     <section className="sp-block wm-zeiten" aria-labelledby="wm-zeiten-titel">
       <h2 className="d" id="wm-zeiten-titel">Öffnungszeiten {s.jahr}</h2>
@@ -106,6 +110,7 @@ function Zeitentabelle({ ort, gruppe }: { ort: DddOrt; gruppe: DddOrt | null }) 
           ))}
         </tbody>
       </table>
+      {wocheBis && <p className="muted wm-zeiten__hinweis">Diese Wochenzeiten gelten bis {datumKurz(wocheBis)}; im Januar gelten die Sonderzeiten unten.</p>}
       {sonder.length > 0 && (
         <>
           <h3 className="wm-zeiten__unter">Sonderzeiten</h3>
@@ -113,16 +118,18 @@ function Zeitentabelle({ ort, gruppe }: { ort: DddOrt; gruppe: DddOrt | null }) 
             <caption className="sr-only">Sonderzeiten</caption>
             <tbody>
               {sonder.map((z) => (
-                <tr key={z.datum}><th scope="row">{datumKurz(z.datum)}{z.name ? ` (${z.name})` : ""}</th><td>{z.text}</td></tr>
+                <tr key={z.datum}><th scope="row">{datumKurz(z.datum)}{z.name ? ` (${z.name})` : ""}</th><td className={z.text === "nicht veröffentlicht" ? "wm-zelle--offen-unbekannt" : undefined}>{z.text}</td></tr>
               ))}
             </tbody>
           </table>
         </>
       )}
-      <p className="muted wm-zeiten__hinweis">
-        An Feiertagen ohne eigene Angabe (z. B. Totensonntag) hat der Veranstalter keine Zeit veröffentlicht – dann steht oben „nicht veröffentlicht“.
-        {s.geerbt?.length && gruppe ? <> Gleiche Zeiten wie der <Link href={wmPfad(gruppe)}>{gruppe.name}</Link>.</> : null}
-      </p>
+      {ohneAngabe.length > 0 && (
+        <p className="muted wm-zeiten__hinweis">
+          Für {ohneAngabe.map((f) => f.name).join(", ").replace(/, ([^,]*)$/, " und $1")} hat der Veranstalter keine Zeiten veröffentlicht – im Zweifel vorher nachfragen.
+        </p>
+      )}
+      {s.geerbt?.length && gruppe ? <p className="muted wm-zeiten__hinweis">Gleiche Zeiten wie die <Link href={wmPfad(gruppe)}>{gruppe.name}</Link>.</p> : null}
     </section>
   );
 }

@@ -31,7 +31,7 @@ import {
 } from "@/lib/weihnachtsmaerkte";
 import { heuteKurz, saisonTag, weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { weihnachtsmaerkteListeJsonLd } from "@/lib/weihnachtsmaerkte-json-ld";
-import type { DddOrt } from "@/lib/typen";
+import type { DddOrt, EventPool } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 type SP = Record<string, string | string[] | undefined>;
@@ -69,7 +69,7 @@ function Hero({ alle, jahr }: { alle: DddOrt[]; jahr: string | null }) {
   return (
     <section className="gd-hero gd-hero--abend wm-hero">
       <div className="gd-hero__bild">
-        <BildImg src={WM_BILD} alt="" icon="wm:markt" eager />
+        <BildImg src={WM_BILD} alt={BILD_ALT} icon="wm:markt" eager />
       </div>
       <div className="gd-hero__verlauf" aria-hidden />
       <div className="gd-hero__inhalt container">
@@ -174,9 +174,7 @@ function SonderzeitenTabelle({ alle, jahr }: { alle: DddOrt[]; jahr: number }) {
 }
 
 /** Kleine Weihnachtsmärkte an einzelnen Tagen aus dem Eventkalender (4.5, Stufe 1b); entfällt ohne Treffer. */
-async function KurzMaerkte({ alle }: { alle: DddOrt[] }) {
-  const pool = await eventPoolLaden();
-  const liste = kurzMaerkte(pool.events, alle, pool.heute, kanonischerStadtteil);
+function KurzMaerkte({ liste }: { liste: ReturnType<typeof kurzMaerkte<EventPool["events"][number]>> }) {
   if (!liste.length) return null;
   return (
     <section className="container wm-kurz" aria-labelledby="wm-kurz-titel">
@@ -335,11 +333,9 @@ export default async function Weihnachtsmaerkte(props: { searchParams: Promise<S
   const jahr = Number(heroZahlen(alle).jahr ?? "2026");
   const maerkte = alle.filter(istMarkt);
   // Kleine Märkte (Eventkalender) zwischen Liste und Karte – eigene Suspense-Grenze, die Liste wartet nicht darauf
-  const kurz = (
-    <Suspense fallback={null}>
-      <KurzMaerkte alle={alle} />
-    </Suspense>
-  );
+  // Kleine Märkte schon im ersten HTML (ohne JavaScript sichtbar, Cursor-Prüfung 19.11.2026): der Event-Pool ist gecacht
+  const pool = await eventPoolLaden();
+  const kurz = <KurzMaerkte liste={kurzMaerkte(pool.events, alle, pool.heute, kanonischerStadtteil)} />;
   return (
     <div className="gd-seite wm-seite">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(weihnachtsmaerkteListeJsonLd(alle, SITE_URL)) }} />
