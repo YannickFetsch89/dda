@@ -1,5 +1,6 @@
 // robots.txt: Die öffentliche Website darf gecrawlt werden, außer der API und den Filter-Adressen.
 // (admin.diesdas.events wird separat per nginx gesperrt.)
+// Keine Host-Zeile: nur Yandex kennt sie, Google meldet sie als ignorierte Regel (Search Console 19.11.2026).
 //
 // Filter-Adressen (Search Console 19.11.2026): Jede Filterseite verlinkt rund 70 weitere Kombinationen, Google rief so
 // Zehntausende Varianten ab (am 06.11. während des Ausfalls als 5xx gemeldet). Alle sind noindex oder haben ein Canonical
@@ -15,6 +16,5 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: "*", allow: "/", disallow: ROBOTS_GESPERRT },
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
   };
 }
