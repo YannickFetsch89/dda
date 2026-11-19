@@ -66,6 +66,12 @@ export interface SeitenAngaben {
   noindex?: boolean;
 }
 
+/**
+ * Robots für indexierbare Seiten: große Bildvorschau (Google Discover), Snippets ungekürzt. Steht im Layout; Seiten,
+ * die robots selbst setzen, müssen im indexierbaren Fall diesen Wert setzen – „undefined“ würde ihn überschreiben.
+ */
+export const ROBOTS_INDEX = { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } as const;
+
 export function seitenMetadaten({ pfad, titel, beschreibung, bild, bildAlt, noindex = false }: SeitenAngaben): Metadata {
   // Eigenes Bild (Event-Foto/Symbolbild – dieselbe URL, die der Mensch sieht), sonst das Standardbild
   const alt = bildAlt ?? titel;

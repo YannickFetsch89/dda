@@ -5,6 +5,7 @@
 // Canonical auf die Haupt-URL und noindex – jede Seite erscheint so nur einmal im Index. Ist ihre Haupt-Seite
 // nicht sichtbar (Score dort < 7), ist die Club-Seite kanonisch. Stufe C („Sonstige Clubs“): noindex, kein Canonical.
 export const instant = false;
+import { ROBOTS_INDEX } from "@/lib/seo";
 import { guideStadtteilPfad } from "@/lib/landing";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -57,7 +58,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title: titel,
     description: beschreibung,
     alternates: indexierbar || !eigene ? { canonical: pfad } : undefined,
-    robots: indexierbar ? undefined : { index: false, follow: true },
+    robots: indexierbar ? ROBOTS_INDEX : { index: false, follow: true },
     openGraph: { title: titel, description: beschreibung, url: pfad, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", ...(bild ? { images: [{ url: bild }] } : {}) },
     twitter: { card: bild ? "summary_large_image" : "summary", title: titel, description: beschreibung, ...(bild ? { images: [bild] } : {}) },
   };

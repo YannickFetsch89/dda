@@ -4,6 +4,7 @@
 // (Daten über orteLaden, "use cache"). Nur die filterabhängige Ansicht wartet in <Suspense> auf
 // searchParams – ihr Fallback ist genau diese ungefilterte Ansicht. Standard ist die Kartenansicht;
 // die Karte selbst entsteht im Browser, darunter stehen alle Orte als Linkliste im HTML.
+import { ROBOTS_INDEX } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -40,7 +41,7 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
     title: "Kneipen & Bars in Düsseldorf",
     description: BESCHREIBUNG,
     alternates: { canonical: BASIS },
-    robots: gefiltert ? { index: false, follow: true } : undefined,
+    robots: gefiltert ? { index: false, follow: true } : ROBOTS_INDEX,
     openGraph: { title: "Kneipen & Bars in Düsseldorf", description: BESCHREIBUNG, url: BASIS, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE" },
   };
 }

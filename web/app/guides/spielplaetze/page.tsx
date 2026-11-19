@@ -5,6 +5,7 @@
 // Erste HTML-Antwort mit Inhalt: Hero, Einleitung und die ungefilterte Ansicht stehen außerhalb der Suspense-Grenze
 // bzw. als deren Fallback; nur die filterabhängige Ansicht wartet auf searchParams.
 export const instant = false;
+import { ROBOTS_INDEX } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -39,7 +40,7 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
     title: TITEL,
     description: BESCHREIBUNG,
     alternates: { canonical: BASIS },
-    robots: gefiltert ? { index: false, follow: true } : undefined,
+    robots: gefiltert ? { index: false, follow: true } : ROBOTS_INDEX,
     openGraph: { title: TITEL, description: BESCHREIBUNG, url: BASIS, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", images: [{ url: "/guides/spielplaetze.webp" }] },
   };
 }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { markeJsonLd, ROBOTS_INDEX, STANDARD_BILD } from "@/lib/seo";
 import { DM_Serif_Display, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { DetailsVerhalten, TabBar } from "@/components/client";
@@ -6,7 +7,6 @@ import { CookieBanner } from "@/components/cookie-banner";
 import { KontoSync, MerkHinweis } from "@/components/konto";
 import { kontenAktiv } from "@/lib/konto/konfig";
 import { DatenHinweis, Fuss, KategorieLeiste, Kopf } from "@/components/rahmen";
-import { STANDARD_BILD, markeJsonLd } from "@/lib/seo";
 import { jsonLdText } from "@/lib/json-ld";
 import "./globals.css";
 
@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   description: "Alle Events in Düsseldorf, jeden Tag neu gesammelt: Konzerte, Kultur, Food, Nightlife, Familie und mehr – nach Tag, Kategorie und Stadtteil.",
   openGraph: { siteName: "dies.das.düsseldorf", locale: "de_DE", type: "website", images: [STANDARD_BILD] },
   twitter: { card: "summary_large_image", images: [STANDARD_BILD.url] },
+  // Große Bildvorschau erlauben (Google Discover zeigt sonst nur ein kleines Vorschaubild) und Snippets nicht kürzen.
+  // Seiten mit eigenem robots (z. B. noindex bei Filtern, Konto-Seiten) ersetzen diesen Wert ganz.
+  robots: ROBOTS_INDEX,
   // Google Search Console (HTML-Tag-Methode); Token kommt aus .env.local, wird beim Build eingesetzt
   verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };

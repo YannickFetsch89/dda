@@ -6,6 +6,7 @@
 //
 // Erste HTML-Antwort mit Inhalt (SEO/GEO): Hero und die UNGEFILTERTE Ansicht stehen im statischen Shell.
 // Nur die filterabhängige Ansicht wartet in <Suspense> auf searchParams – ihr Fallback ist die ungefilterte.
+import { ROBOTS_INDEX } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -43,7 +44,7 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
     title: "Clubs in Düsseldorf",
     description: BESCHREIBUNG,
     alternates: { canonical: BASIS },
-    robots: gefiltert ? { index: false, follow: true } : undefined,
+    robots: gefiltert ? { index: false, follow: true } : ROBOTS_INDEX,
     openGraph: { title: "Clubs in Düsseldorf", description: BESCHREIBUNG, url: BASIS, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", images: [{ url: "/guides/clubs.webp" }] },
   };
 }
