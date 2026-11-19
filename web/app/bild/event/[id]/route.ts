@@ -4,6 +4,7 @@ import { cacheLife } from "next/cache";
 import type { NextRequest } from "next/server";
 import { leseClient } from "@/lib/supabase-server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
+import { lokalesBild } from "@/lib/bilder";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -34,6 +35,9 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/bild/event/[id]
   const { id } = await ctx.params;
   if (!UUID.test(id)) return bildAntwort(null, 0);
   const quelle = await bildQuelle(id.toLowerCase());
+  // Eigenes Foto aus web/public: dorthin verweisen statt es über den Proxy zu holen
+  const lokal = lokalesBild(quelle);
+  if (lokal) return new Response(null, { status: 308, headers: { Location: lokal, "Cache-Control": "public, max-age=86400" } });
   const { bild } = quelle ? await bildHolen(quelle, true) : { bild: null };
   return bildAntwort(bild, 86_400);
 }

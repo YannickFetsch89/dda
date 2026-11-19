@@ -37,7 +37,9 @@ jobs:
     if: needs.rhythmus.outputs.laufen == 'true'
     # 22.04: Playwright 1.44 unterstützt neuere Ubuntu-Versionen noch nicht offiziell
     runs-on: ubuntu-22.04
-    timeout-minutes: 45
+    # 45 Minuten reichten seit dem 12.11.2026 nicht mehr: Die Läufe brachen in Schritt 3b ab, Club-Scores (3c) und
+    # IndexNow (3d) liefen nie. Scraper + Datenbank + KI-Schritte brauchen rund 45–50 Minuten (19.11.2026).
+    timeout-minutes: 75
     steps:
       - name: Code auschecken
         uses: actions/checkout@v4

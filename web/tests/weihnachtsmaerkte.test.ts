@@ -446,3 +446,23 @@ describe("Kein „Unser Tipp“-Badge mehr (18.11.2026)", () => {
     expect(BADGES.map((b) => b.wert)).not.toContain("tipp");
   });
 });
+
+import { EVENT_EINSCHLUSS } from "@/lib/weihnachtsmaerkte";
+
+describe("Einschlussliste kleine Märkte (19.11.2026)", () => {
+  it("ist ein Spiegel von data/weihnachtsmaerkte/event_einschluss.csv", () => {
+    const csv = readFileSync(join(__dirname, "..", "..", "data", "weihnachtsmaerkte", "event_einschluss.csv"), "utf8").trim().split(/\r?\n/).slice(1);
+    expect(new Set(csv.map((z) => z.split(",")[0]))).toEqual(EVENT_EINSCHLUSS);
+  });
+  it("nimmt eingeschlossene Events auch ohne passenden Titel auf", () => {
+    const e = (titel: string, quelle_url: string) => ({
+      id: titel, titel, datum: "2026-12-13", datum_bis: null, ort: "Franklinstraße 41", adresse: null, stadtteil: null, quelle_name: "Rausgegangen",
+      quelle_url, abgesagt: false, slug: titel, kategorie: "sonstiges",
+    });
+    const liste = kurzMaerkte([
+      e("HANDMADE MARKT Keramik & More Weihnachts Edition", "https://rausgegangen.de/events/handmade-markt-keramik-more-weihnachts-edition-0/"),
+      e("Keramik-Workshop", "https://x.test/workshop"),
+    ], [], "2026-11-19", kanonischerStadtteil);
+    expect(liste.map((x) => x.titel)).toEqual(["HANDMADE MARKT Keramik & More Weihnachts Edition"]);
+  });
+});

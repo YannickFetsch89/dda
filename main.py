@@ -66,6 +66,7 @@ from scraper.tier3 import (
     street_food_thursday,
     kasematten,
     auf_ins_viertel,
+    kleine_weihnachtsmaerkte,
 )
 
 # Logging konfigurieren
@@ -131,6 +132,7 @@ QUELLEN = [
     ("Street Food Thursday", 3, street_food_thursday.scrape),
     ("Kasematten Düsseldorf", 3, kasematten.scrape),  # 5 Locations an der Rheinuferpromenade, nur datierte Events
     ("Auf ins Viertel", 3, auf_ins_viertel.scrape),  # kulinarische Stadtführungen (bookingkit)
+    ("Kleine Weihnachtsmärkte", 3, kleine_weihnachtsmaerkte.scrape),  # feste Einträge aus data/weihnachtsmaerkte/kleine_maerkte.csv
     # Rausgegangen zuletzt: Events, die eine andere Quelle schon liefert, behalten diese als Quelle –
     # Rausgegangen ergänzt nur noch fehlende Felder (Vorrang-Regel in pipeline/deduplication.py)
     ("Rausgegangen", 1, rausgegangen.scrape),

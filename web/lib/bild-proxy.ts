@@ -19,7 +19,12 @@ import https from "node:https";
 import net from "node:net";
 import path from "node:path";
 
-const MAX_BYTES = 8 * 1024 * 1024; // größere Bilder werden nicht ausgeliefert
+// Größte Quelldatei, die geladen wird. Große Veranstalterbilder (z. B. zakk, 9,4 MB, 19.11.2026) werden danach
+// verkleinert (VERKLEINERN_AB) – vorher lag die Grenze bei 8 MB und solche Bilder fielen aufs Symbolbild zurück.
+const MAX_BYTES = 25 * 1024 * 1024;
+const VERKLEINERN_AB = 1.5 * 1024 * 1024; // größere Bilder neu kodieren: höchstens 1600 px breit, JPEG
+const ZIEL_BREITE = 1600;
+const MAX_GLEICHZEITIG_VERKLEINERN = 2; // gleichzeitige sharp-Läufe im Prozess (Speicher)
 const TIMEOUT_MS = 10_000;
 const MAX_WEITERLEITUNGEN = 4;
 const CACHE_TAGE = 30;
@@ -179,6 +184,44 @@ async function vonQuelleHolen(start: URL): Promise<HolErgebnis> {
   return { bild: null, status: 310 }; // zu viele oder unzulässige Weiterleitungen
 }
 
+// --- Große Bilder verkleinern ------------------------------------------------------------------
+
+let verkleinertGerade = 0;
+const warteschlange: (() => void)[] = [];
+
+async function platzZumVerkleinern(): Promise<() => void> {
+  if (verkleinertGerade >= MAX_GLEICHZEITIG_VERKLEINERN) await new Promise<void>((weiter) => warteschlange.push(weiter));
+  verkleinertGerade++;
+  return () => {
+    verkleinertGerade--;
+    warteschlange.shift()?.();
+  };
+}
+
+/**
+ * Bilder über VERKLEINERN_AB werden auf höchstens ZIEL_BREITE px verkleinert und als JPEG neu kodiert
+ * (dreht nach EXIF, entfernt Metadaten). Klappt das nicht (sharp fehlt, Bild kaputt), wird nur ein Bild
+ * unter der alten 8-MB-Grenze unverändert durchgereicht, sonst keins (→ Symbolbild wie bisher).
+ */
+export async function bildVerkleinern(bild: Bild): Promise<Bild | null> {
+  if (bild.bytes.byteLength <= VERKLEINERN_AB) return bild;
+  const freigeben = await platzZumVerkleinern();
+  try {
+    const { default: sharp } = await import("sharp");
+    const bytes = await sharp(bild.bytes, { limitInputPixels: 60_000_000, failOn: "error" })
+      .rotate()
+      .resize({ width: ZIEL_BREITE, withoutEnlargement: true })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer();
+    return { bytes: new Uint8Array(bytes), typ: "image/jpeg" };
+  } catch (err) {
+    console.warn(`Bild nicht verkleinert: ${err instanceof Error ? err.message : err}`);
+    return bild.bytes.byteLength <= 8 * 1024 * 1024 ? bild : null;
+  } finally {
+    freigeben();
+  }
+}
+
 // --- Platten-Cache (nur Event-/eigene Bilder) -------------------------------------------------
 // Eine Datei je Bild: "<content-type>\n<bytes>" – so sind Typ und Inhalt immer gemeinsam atomar ersetzt.
 
@@ -270,7 +313,8 @@ export async function bildHolen(adresse: string, zwischenspeichern: boolean): Pr
 
   const abruf = (async (): Promise<HolErgebnis> => {
     try {
-      const ergebnis = await vonQuelleHolen(url);
+      const roh = await vonQuelleHolen(url);
+      const ergebnis: HolErgebnis = roh.bild ? { ...roh, bild: await bildVerkleinern(roh.bild) } : roh;
       if (ergebnis.bild && zwischenspeichern) {
         await inCacheSchreiben(schluessel, ergebnis.bild);
         void aufraeumen();

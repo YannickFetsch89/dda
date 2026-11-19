@@ -379,3 +379,23 @@ class BilderTest(unittest.TestCase):
         sql = self.b.sql_bauen(gut, "2026-11-18")
         self.assertIn("bild_attribution = NULL", sql)
         self.assertIn("(eigenes, ohne Nachweis)", sql)
+
+
+class KleineMaerkteTest(unittest.TestCase):
+    """Feste Einträge kleiner Weihnachtsmärkte – scraper/tier3/kleine_weihnachtsmaerkte.py."""
+
+    def test_pflegedatei_liefert_gueltige_events(self):
+        from scraper.tier3 import kleine_weihnachtsmaerkte as k
+        events = [k.zeile_zu_event(z, date(2026, 11, 19)) for z in __import__("csv").DictReader(k.DATEI.open(encoding="utf-8-sig"))]
+        self.assertTrue(events and all(events))
+        for e in events:
+            self.assertTrue(e["titel"] and e["datum"] and e["ort"] and e["quelle_url"].startswith("https://"))
+
+    def test_vergangene_und_kaputte_zeilen_fallen_weg(self):
+        from scraper.tier3 import kleine_weihnachtsmaerkte as k
+        basis = {"titel": "Adventsmarkt", "datum": "2026-11-28", "datum_bis": "2026-11-29", "ort": "Platz", "kategorie": "food"}
+        self.assertIsNotNone(k.zeile_zu_event(basis, date(2026, 11, 29)))
+        self.assertIsNone(k.zeile_zu_event(basis, date(2026, 11, 30)))
+        self.assertIsNone(k.zeile_zu_event({**basis, "datum": "28.11.2026"}, date(2026, 11, 19)))
+        self.assertIsNone(k.zeile_zu_event({**basis, "ort": ""}, date(2026, 11, 19)))
+        self.assertEqual(k.zeile_zu_event({**basis, "kategorie": "quatsch"}, date(2026, 11, 19))["kategorie"], "sonstiges")

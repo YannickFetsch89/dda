@@ -76,6 +76,13 @@ export function BildImg({
   const kandidaten = [src, ersatz].filter((s): s is string => !!s);
   const [fehler, setFehler] = useState(0);
   const aktuell = kandidaten[fehler];
+  const bildRef = useRef<HTMLImageElement>(null);
+  // Schlägt das Bild schon vor der Hydrierung fehl (Server-HTML lädt sofort), kommt onError nie an – dann hing ein
+  // kaputtes Bild statt des Symbolbilds auf der Seite (zakk, 19.11.2026). Nach dem Einhängen deshalb einmal nachsehen.
+  useEffect(() => {
+    const img = bildRef.current;
+    if (img && img.complete && img.naturalWidth === 0) setFehler((n) => n + 1);
+  }, [aktuell]);
   if (!aktuell) {
     return (
       <span className="bild__platzhalter" aria-hidden>
@@ -94,6 +101,7 @@ export function BildImg({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={aktuell}
+        ref={bildRef}
         className={vollstaendig ? "bild__ganz" : undefined}
         style={fokus && !istSymbol ? { objectPosition: fokus } : undefined}
         src={aktuell}

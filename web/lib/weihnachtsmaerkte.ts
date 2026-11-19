@@ -462,6 +462,15 @@ export function wmKartenCache(sp: Record<string, string | undefined>, oeffentlic
 export const EVENT_AUSSCHLUSS = new Set<string>([
   "https://prinz.de/events/leipziger-weihnachtsmarkt/2026-12-12/",
 ]);
+/**
+ * Spiegel von data/weihnachtsmaerkte/event_einschluss.csv: Events, die in die kleinen Märkte gehören, obwohl ihr Titel
+ * nicht nach Weihnachtsmarkt klingt (Auftraggeber 19.11.2026). Ein Test prüft, dass beide gleich sind.
+ */
+export const EVENT_EINSCHLUSS = new Set<string>([
+  "https://www.news894.de/artikel/weihnachtsmaerkte-2026-im-rhein-kreis-neuss-2791320",
+  "https://neussfeiert.de/weihnachtsmarkt",
+  "https://rausgegangen.de/events/handmade-markt-keramik-more-weihnachts-edition-0/",
+]);
 /** Titel-Muster für kleine Märkte (4.5). */
 export const KURZ_MUSTER = /weihnachtsmarkt|adventsmarkt|wintermarkt|christkindl|weihnachtsbasar|adventsbasar|veihnachtsmarkt|nikolausmarkt|lichterzauber/i;
 /**
@@ -496,13 +505,13 @@ export function gleicherOrt(a: string, b: string): boolean {
   return kurz.length >= 3 && lang.startsWith(`${kurz} `);
 }
 
-/** Kleine Weihnachtsmärkte aus der Eventtabelle (4.5): höchstens 12, nach Datum, ohne Rauschen und ohne Guide-Einträge. */
+/** Kleine Weihnachtsmärkte aus der Eventtabelle (4.5): höchstens 20 (Auftraggeber 19.11.2026, vorher 12), nach Datum, ohne Rauschen und ohne Guide-Einträge. */
 export function kurzMaerkte<E extends EventLike>(events: E[], eintraege: DddOrt[], heute: string, katalog: (st: string | null) => string | null): E[] {
   const jahrEnde = `${heute.slice(0, 4)}-12-31`;
   const gesehen: { titel: string; datum: string; ort: string }[] = [];
   const norm = (t: string) => t.toLowerCase().replace(/\s+\d{4}\b/g, "").replace(/\s+in\s+düsseldorf\b/g, "").replace(/[^a-zäöüß0-9]+/g, " ").trim();
   return events
-    .filter((e) => KURZ_MUSTER.test(e.titel))
+    .filter((e) => KURZ_MUSTER.test(e.titel) || EVENT_EINSCHLUSS.has(e.quelle_url ?? ""))
     .filter((e) => (e.datum_bis ?? e.datum) >= heute && e.datum <= jahrEnde)
     .filter((e) => !e.abgesagt && e.quelle_name !== "Meetup.com" && !EVENT_AUSSCHLUSS.has(e.quelle_url ?? ""))
     .filter((e) => {
@@ -524,7 +533,7 @@ export function kurzMaerkte<E extends EventLike>(events: E[], eintraege: DddOrt[
       gesehen.push(k);
       return true;
     })
-    .slice(0, 12);
+    .slice(0, 20);
 }
 
 // ---------- FAQ-Antworten aus den Daten (Plan 6.2: feste Satzmuster, Namen und Zeiten aus den Daten) ----------

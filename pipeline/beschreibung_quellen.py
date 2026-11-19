@@ -671,7 +671,7 @@ def veranstalter_nachziehen(max_stuecke: int = 150, sicherung: bool = False, pro
     """
     Beschreibungen für Veranstalter-Events aus der eigenen Event-Seite – ein Text pro Stück, für alle Termine.
     probe=True: nichts schreiben, nur Bericht (data/beschreibung_quellen/probe_veranstalter.md).
-    max_sekunden: Zeitbudget (im Scraper-Lauf, der Workflow hat insgesamt 45 Minuten) – danach aufhören,
+    max_sekunden: Zeitbudget (im Scraper-Lauf, der Workflow hat insgesamt 75 Minuten) – danach aufhören,
     der Rest kommt im nächsten Lauf (noch nicht gesuchte Termine bleiben offen).
 
     Returns:

@@ -470,7 +470,7 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
   // ({faq_…}, lib/weihnachtsmaerkte.ts faqWerte) – so muss 2027 nichts umgeschrieben werden.
   weihnachtsmaerkte: {
     einleitung:
-      "Hier findet ihr {anzahl} Weihnachtsmärkte in Düsseldorf – vom großen Markt in der Innenstadt mit Eisbahn und " +
+      "Hier findet ihr Weihnachtsmärkte in Düsseldorf – vom großen Markt in der Innenstadt mit Eisbahn und " +
       "Riesenrad bis zu den Märkten in den Stadtteilen. Auf einen Blick seht ihr, wer heute geöffnet hat, was es dort gibt " +
       "und wie ihr hinkommt; die Zeiten stammen von den Veranstaltern, Sonderzeiten an Totensonntag und Weihnachten stehen extra dabei.",
     titel: "Weihnachtsmarkt in Düsseldorf",

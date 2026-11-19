@@ -2,7 +2,10 @@
 // Analog zu daten.ts – cached per "use cache" und cacheLife.
 import { cacheLife } from "next/cache";
 import { leseClient } from "./supabase-server";
+import { lokalesBild } from "./bilder";
 import type { DddOrt, OrtTyp } from "./typen";
+
+export { lokalesBild };
 
 const SPALTEN = [
   "id", "name", "slug", "typ", "untertitel", "beschreibung", "highlight",
@@ -106,16 +109,6 @@ function googleFoto(o: DddOrt): GoogleFoto | null {
   return foto && typeof foto === "object" && typeof (foto as GoogleFoto).name === "string" ? (foto as GoogleFoto) : null;
 }
 
-/**
- * Bild, das auf unserem eigenen Server liegt (web/public/ort-bilder/<hub>/…), z. B. vom Veranstalter geliefert
- * (Auftraggeber 17.11.2026). Nur dieses enge Muster – alles andere läuft weiter über den Bild-Proxy.
- */
-// Nicht unter /guides/<hub>/: dort prüft proxy.ts jeden Pfad als Detailseite (Bilder wären live 404, 18.11.2026)
-const LOKALES_BILD = /^\/ort-bilder\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpg|png)$/;
-
-export function lokalesBild(bildUrl: string | null | undefined): string | null {
-  return typeof bildUrl === "string" && LOKALES_BILD.test(bildUrl) ? bildUrl : null;
-}
 
 /**
  * Bild-Adresse eines Ortes: eigenes Bild (bild_url) hat Vorrang,
