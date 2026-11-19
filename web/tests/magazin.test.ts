@@ -1,6 +1,6 @@
 // Magazin (Plan docs/plan-redaktion-2026-11-19.md, Abschnitt 7.1): Renderer, Proxy, Auswahl, Metadaten, JSON-LD,
 // Feed, Bilder, Sitemap. Keine echten Netzaufrufe: Supabase-Client und fetch sind ersetzt.
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -581,6 +581,10 @@ describe("Archiv, Sitemap und Rubriken", () => {
   });
 
   it("Rubrik-Werte = URL-Segmente = Werte der Datenbank", () => {
-    expect([...RUBRIKEN]).toEqual(["wochenvorschau", "monats-tipps", "saison", "stadtleben"]);
+    expect([...RUBRIKEN]).toEqual(["wochenvorschau", "monats-tipps", "saison", "nachtleben", "genuss", "familie", "stadtleben"]);
+    // Dieselben Werte wie im CHECK der Datenbank (database/magazin_rubriken_autoren_2026-11-19.sql)
+    const sql = readFileSync(path.resolve(__dirname, "../../database/magazin_rubriken_autoren_2026-11-19.sql"), "utf8");
+    const check = sql.match(/CONSTRAINT magazin_rubrik_werte\s+CHECK \(rubrik IN \(([^)]*)\)\)/)?.[1] ?? "";
+    expect(check.split(",").map((s) => s.trim().replace(/'/g, ""))).toEqual([...RUBRIKEN]);
   });
 });

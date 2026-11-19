@@ -2,13 +2,18 @@
 // Daten laden lib/magazin-daten.ts, Bilder lib/magazin-bilder.ts, Text lib/magazin-markdown.ts.
 import { plusTage } from "./datum";
 
-export const RUBRIKEN = ["wochenvorschau", "monats-tipps", "saison", "stadtleben"] as const;
+// Nachtleben, Genuss und Familie seit 19.11.2026 als eigene Rubriken (Entscheidung Auftraggeber, Plan-Nachtrag);
+// Stadtleben nimmt alles auf, was nicht eindeutig zuzuordnen ist. Werte = URL-Segment = CHECK in der Datenbank.
+export const RUBRIKEN = ["wochenvorschau", "monats-tipps", "saison", "nachtleben", "genuss", "familie", "stadtleben"] as const;
 export type Rubrik = (typeof RUBRIKEN)[number];
 
 export const RUBRIK_NAME: Record<Rubrik, string> = {
   wochenvorschau: "Wochenvorschau",
   "monats-tipps": "Monats-Tipps",
   saison: "Saison",
+  nachtleben: "Nachtleben",
+  genuss: "Genuss",
+  familie: "Familie",
   stadtleben: "Stadtleben",
 };
 
@@ -16,7 +21,10 @@ export const RUBRIK_TEXT: Record<Rubrik, string> = {
   wochenvorschau: "Was in der kommenden Woche in Düsseldorf los ist – jeden Sonntag neu.",
   "monats-tipps": "Unsere Auswahl der stärksten Events des Monats.",
   saison: "Weihnachtsmärkte, Karneval, Sommer am Rhein: was die Saison in Düsseldorf bringt.",
-  stadtleben: "Ausgehen, Essen, Familie: Düsseldorf abseits des Kalenders.",
+  nachtleben: "Konzerte, Clubnächte und Partys: wo in Düsseldorf abends die Musik spielt.",
+  genuss: "Restaurants, Cafés, Foodmärkte und Tastings in Düsseldorf.",
+  familie: "Kinderprogramm, Spielplätze und Ausflüge: Düsseldorf mit Kindern.",
+  stadtleben: "Stadtteile, Alltag und Geschichten aus Düsseldorf abseits des Kalenders.",
 };
 
 export function istRubrik(wert: string): wert is Rubrik {

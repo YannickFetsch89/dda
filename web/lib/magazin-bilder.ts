@@ -21,11 +21,17 @@ export const ERLAUBTE_FALLBACK_HEROS: readonly string[] = [
   "weihnachten-3", "weihnachten-4", "weihnachten-5", "weihnachten-6", "weihnachten-7",
 ].map((name) => `/fallback/${name}.webp`);
 
-/** Rubrik-Ersatzbilder (Plan 3.1, Vorschlag; Auftraggeber kann tauschen). Alle 1200×805, alle in der Liste oben. */
+/**
+ * Rubrik-Ersatzbilder (Plan 3.1, Vorschlag; Auftraggeber kann tauschen). Alle in der Liste oben (≥ 1200×675).
+ * Für die neuen Rubriken (19.11.2026) Motive ohne erkennbare Gesichter: Lichtinstallation, Café-Fassade, Picknick.
+ */
 export const RUBRIK_ERSATZ: Record<Rubrik, string> = {
   wochenvorschau: "/fallback/theater-1.webp",
   "monats-tipps": "/fallback/theater-2.webp",
   saison: "/fallback/theater-3.webp",
+  nachtleben: "/fallback/nacht-der-museen-2.webp",
+  genuss: "/fallback/sprachcafe-3.webp",
+  familie: "/fallback/ostern-3.webp",
   stadtleben: "/fallback/sprachcafe-1.webp",
 };
 

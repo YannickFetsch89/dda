@@ -62,6 +62,9 @@ RUBRIK_ERSATZ = {  # wie web/lib/magazin-bilder.ts (RUBRIK_ERSATZ)
     "wochenvorschau": "/fallback/theater-1.webp",
     "monats-tipps": "/fallback/theater-2.webp",
     "saison": "/fallback/theater-3.webp",
+    "nachtleben": "/fallback/nacht-der-museen-2.webp",
+    "genuss": "/fallback/sprachcafe-3.webp",
+    "familie": "/fallback/ostern-3.webp",
     "stadtleben": "/fallback/sprachcafe-1.webp",
 }
 MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
