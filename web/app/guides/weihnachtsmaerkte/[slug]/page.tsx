@@ -76,7 +76,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     beschreibung:
       kurzBeschreibung([zeitraum ? `${ort.name} ${ort.stadtteil ? inStadtteil(ort.stadtteil) : ""}: ${zeitraum}.` : null, b.length ? `${b.join(", ")}.` : null, ort.beschreibung].filter(Boolean).join(" "), 160)
       ?? `${ort.name}: Öffnungszeiten, Sonderzeiten und Anfahrt`,
-    bild: ortBildUrl(ort) ?? undefined,
+    bild: ortBildUrl(ort) ?? WM_BILD,
+    bildAlt: `${ort.name}${ort.stadtteil ? ` ${inStadtteil(ort.stadtteil)}` : ""}`,
     noindex: !istIndexierbar(ort),
   });
 }

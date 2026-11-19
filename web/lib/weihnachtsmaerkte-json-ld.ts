@@ -1,6 +1,7 @@
 // Strukturierte Daten des Weihnachtsmarkt-Guides (Plan 5.2/5.3): Event nur während der Saison, sonst Place.
 // Kein aggregateRating, keine Google-Werte.
 import { brotkrumenJsonLd } from "./kneipen-json-ld";
+import { ortBildUrl } from "./orte";
 import { ohneFett } from "./beschreibung";
 import type { DddOrt } from "./typen";
 import { WM_BASIS, aktuelleSaison, istIndexierbar, wm, wmPfad } from "./weihnachtsmaerkte";
@@ -22,13 +23,18 @@ function ort(o: DddOrt): Record<string, unknown> {
   };
 }
 
+/** Absolute Bildadresse: eigenes Foto bzw. Google-Foto über /ort-foto, sonst das Guide-Bild (SEO-Prüfung 19.11.2026). */
+function bild(o: DddOrt, siteUrl: string): string {
+  return `${siteUrl}${ortBildUrl(o) ?? "/guides/weihnachtsmaerkte.webp"}`;
+}
+
 /** Detail: Event, solange heute ≤ bis der aktuellen Saison; danach nur Place. */
 export function weihnachtsmarktJsonLd(o: DddOrt, siteUrl: string, heute: string): Record<string, unknown> {
   const d = wm(o);
   const s = aktuelleSaison(d.saisons);
   const url = `${siteUrl}${wmPfad(o)}`;
   if (!s || heute > s.bis) {
-    return { "@context": "https://schema.org", ...ort(o), url, ...(o.beschreibung ? { description: ohneFett(o.beschreibung) } : {}) };
+    return { "@context": "https://schema.org", ...ort(o), url, image: bild(o, siteUrl), ...(o.beschreibung ? { description: ohneFett(o.beschreibung) } : {}) };
   }
   return {
     "@context": "https://schema.org",
@@ -41,7 +47,12 @@ export function weihnachtsmarktJsonLd(o: DddOrt, siteUrl: string, heute: string)
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: ort(o),
+    image: [bild(o, siteUrl)],
     ...(d.eintritt ? { isAccessibleForFree: d.eintritt.wert === "frei" } : {}),
+    // Freier Eintritt als Angebot zu 0 € (von Google für Event-Snippets empfohlen); sonst keine erfundenen Preise
+    ...(d.eintritt?.wert === "frei"
+      ? { offers: { "@type": "Offer", price: 0, priceCurrency: "EUR", availability: "https://schema.org/InStock", url, validFrom: s.von } }
+      : {}),
     ...(d.veranstalter ? { organizer: { "@type": "Organization", name: d.veranstalter } } : {}),
   };
 }

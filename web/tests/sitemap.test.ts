@@ -19,6 +19,7 @@ vi.mock("@/lib/daten", () => ({
 vi.mock("@/lib/orte", () => ({
   orteLaden: async () => [{ id: "r", slug: "r", typ: "restaurant", aktualisiert_am: null, extras: {} }],
   clubOrteLaden: async () => [],
+  ortBildUrl: () => null,
 }));
 // Spielplätze: ein indexierbarer und ein dünner Platz (abgeschaltete lädt spielplaetzeLaden gar nicht)
 const geraet = { wert: "ja", quelle: "osm", beleg: "x" };

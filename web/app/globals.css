@@ -2197,6 +2197,19 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .wm-quellen { margin: 26px auto 34px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
 .wm-quellen .icon { font-size: 16px; vertical-align: -3px; }
 .wm-startbox .sektionskopf h2 { display: inline-flex; align-items: center; gap: 8px; }
+/* Startbox: Bildkarten in einer Reihe, ganze Karte klickbar (Auftraggeber 19.11.2026) */
+.wm-startkarte { border-radius: var(--r-card); overflow: hidden; background: var(--ddd-surface); box-shadow: var(--sh-m); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.wm-startkarte:hover { transform: translateY(-3px); box-shadow: var(--sh-l, var(--sh-m)); }
+.wm-startkarte__link, .wm-startkarte__link:hover { display: flex; flex-direction: column; height: 100%; color: inherit; text-decoration: none; }
+.wm-startkarte__link:focus-visible { outline: 2px solid var(--ddd-gold); outline-offset: 2px; }
+.wm-startkarte__bild { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: var(--ddd-subtle); }
+.wm-startkarte__bild img { width: 100%; height: 100%; object-fit: cover; }
+.wm-startkarte__text { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px 14px; }
+.wm-startkarte__name { font-weight: 700; color: var(--ddd-text); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wm-startkarte:hover .wm-startkarte__name { text-decoration: underline; }
+.wm-startkarte__meta { font-size: 13px; color: var(--ddd-text-muted); }
+.wm-startkarte--mehr .wm-startkarte__link { align-items: center; justify-content: center; gap: 4px; padding: 20px; text-align: center; font-weight: 600; color: var(--ddd-text); background: var(--ddd-gold-tint); min-height: 100%; }
+.wm-startkarte__mehr-zahl { font-family: var(--font-display, inherit); font-size: 34px; font-weight: 700; color: var(--ddd-navy); }
 .wm-startbox__liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .wm-startbox__liste li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: var(--sh-m); }
 .wm-startbox__liste a { font-weight: 700; color: var(--ddd-text); }

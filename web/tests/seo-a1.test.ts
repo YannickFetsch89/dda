@@ -119,10 +119,15 @@ describe("Seiten-Metadaten", () => {
   });
 
   it("Bild → große Twitter-Karte; ohne eigenes Bild das Standardbild", () => {
-    expect(seitenMetadaten({ pfad: "/x", bild: "/bild.jpg" }).twitter).toMatchObject({ card: "summary_large_image", images: ["/bild.jpg"] });
+    expect(seitenMetadaten({ pfad: "/x", bild: "/bild.jpg" }).twitter).toMatchObject({ card: "summary_large_image", images: [{ url: "/bild.jpg" }] });
     const ohne = seitenMetadaten({ pfad: "/x" });
     expect((ohne.openGraph as { images: { url: string }[] }).images[0].url).toBe("/og-standard.png");
-    expect(ohne.twitter).toMatchObject({ card: "summary_large_image", images: ["/og-standard.png"] });
+    expect(ohne.twitter).toMatchObject({ card: "summary_large_image", images: [{ url: "/og-standard.png" }] });
+  });
+  it("Vorschaubild mit Alt-Text: eigener oder der Seitentitel (SEO-Prüfung 19.11.2026)", () => {
+    const m = seitenMetadaten({ pfad: "/x", titel: "Markt", bild: "/b.webp", bildAlt: "Markt in Neuss" });
+    expect((m.openGraph as { images: { alt?: string }[] }).images[0].alt).toBe("Markt in Neuss");
+    expect((seitenMetadaten({ pfad: "/x", titel: "Markt", bild: "/b.webp" }).openGraph as { images: { alt?: string }[] }).images[0].alt).toBe("Markt");
   });
 });
 

@@ -60,13 +60,16 @@ export interface SeitenAngaben {
   beschreibung?: string;
   /** Vorschaubild (absolute oder relative URL) */
   bild?: string | null;
+  /** Alt-Text des Vorschaubilds (og:image:alt, twitter:image:alt); Standard: der Seitentitel */
+  bildAlt?: string;
   /** Variante mit Parametern → noindex, follow, ohne Canonical */
   noindex?: boolean;
 }
 
-export function seitenMetadaten({ pfad, titel, beschreibung, bild, noindex = false }: SeitenAngaben): Metadata {
+export function seitenMetadaten({ pfad, titel, beschreibung, bild, bildAlt, noindex = false }: SeitenAngaben): Metadata {
   // Eigenes Bild (Event-Foto/Symbolbild – dieselbe URL, die der Mensch sieht), sonst das Standardbild
-  const bilder = bild ? [{ url: bild }] : [STANDARD_BILD];
+  const alt = bildAlt ?? titel;
+  const bilder = bild ? [{ url: bild, ...(alt ? { alt } : {}) }] : [STANDARD_BILD];
   return {
     ...(titel ? { title: titel } : {}),
     ...(beschreibung ? { description: beschreibung } : {}),
@@ -85,7 +88,7 @@ export function seitenMetadaten({ pfad, titel, beschreibung, bild, noindex = fal
       card: "summary_large_image",
       ...(titel ? { title: titel } : {}),
       ...(beschreibung ? { description: beschreibung } : {}),
-      images: [bild ?? STANDARD_BILD.url],
+      images: bild ? [{ url: bild, ...(alt ? { alt } : {}) }] : [STANDARD_BILD],
     },
   };
 }

@@ -466,3 +466,16 @@ describe("Einschlussliste kleine Märkte (19.11.2026)", () => {
     expect(liste.map((x) => x.titel)).toEqual(["HANDMADE MARKT Keramik & More Weihnachts Edition"]);
   });
 });
+
+describe("SEO: strukturierte Daten mit Bild und Angebot (19.11.2026)", () => {
+  it("Event hat ein absolutes Bild, bei freiem Eintritt ein Angebot zu 0 €", () => {
+    const frei = markt({ eintritt: { wert: "frei", beleg: "x" } }, { bild_url: "/ort-bilder/weihnachtsmaerkte/x.webp" });
+    const j = weihnachtsmarktJsonLd(frei, "https://diesdas.events", "2026-11-20") as Record<string, unknown>;
+    expect(j["@type"]).toBe("Event");
+    expect(j.image).toEqual(["https://diesdas.events/ort-bilder/weihnachtsmaerkte/x.webp"]);
+    expect(j.offers).toMatchObject({ price: 0, priceCurrency: "EUR" });
+    const ohneFoto = weihnachtsmarktJsonLd(markt({}), "https://diesdas.events", "2026-11-20") as Record<string, unknown>;
+    expect(ohneFoto.image).toEqual(["https://diesdas.events/guides/weihnachtsmaerkte.webp"]);
+    expect(ohneFoto.offers).toBeUndefined();
+  });
+});

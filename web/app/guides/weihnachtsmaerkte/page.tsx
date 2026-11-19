@@ -40,20 +40,24 @@ const tagAus = (sp: SP): string | null => {
   return istGueltigerTag(t) ? t : null;
 };
 
+const BILD_ALT = "Weihnachtsmarkt in Düsseldorf am Abend: beleuchtete Buden und Besucher";
+
 export async function generateMetadata(props: { searchParams: Promise<SP> }): Promise<Metadata> {
   const gefiltert = Object.keys(await props.searchParams).length > 0;
   // Jahr nur während der Saison (5.8); saisonTag ist tagesgenau gecacht, die Funktion liest ohnehin searchParams
   const jahr = hubJahr(await weihnachtsmaerkteLaden(), await saisonTag());
   const titel = `Weihnachtsmärkte in Düsseldorf${jahr ? ` ${jahr}` : ""}: Öffnungszeiten, Karte & Sonderzeiten`;
   const beschreibung =
-    "Alle Weihnachtsmärkte in Düsseldorf auf einen Blick: wer heute geöffnet hat, Sonderzeiten an Totensonntag und Weihnachten, Eisbahn, Riesenrad, Anfahrt.";
+    "Alle Weihnachtsmärkte in Düsseldorf, Neuss und Ratingen: wer heute geöffnet hat, Sonderzeiten an Totensonntag und Weihnachten, Eisbahn, Riesenrad, Anfahrt.";
   return {
     title: titel,
     description: beschreibung,
     // Canonical immer auf den Hub, auch bei ?tag= (nicht über seitenMetadaten – der Helfer streicht ihn bei noindex)
     alternates: { canonical: BASIS },
     robots: gefiltert ? { index: false, follow: true } : undefined,
-    openGraph: { title: titel, description: beschreibung, url: BASIS, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", images: [{ url: WM_BILD }] },
+    openGraph: { title: titel, description: beschreibung, url: BASIS, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", images: [{ url: WM_BILD, alt: BILD_ALT }] },
+    // Eigenes Twitter-Bild – sonst greift das Standardbild des Layouts (SEO-Prüfung 19.11.2026)
+    twitter: { card: "summary_large_image", title: titel, description: beschreibung, images: [{ url: WM_BILD, alt: BILD_ALT }] },
   };
 }
 
