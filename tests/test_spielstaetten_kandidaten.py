@@ -87,7 +87,9 @@ class TestHaeuser(unittest.TestCase):
     def test_dubletten(self):
         for name in ("Holo Cafe", "Holocafe Düsseldorf", "Holocafe Immermannstraße 7"):
             self.assertEqual(haus_und_saal(name, set())[0], "Holocafe")
-        self.assertEqual(haus_und_saal("Holocafé Düsseldorf", set())[0], "Holocafé am Wehrhahn")
+        # Umgezogen (Wehrhahn → Immermannstraße), zusammengelegt nach der Cursor-Prüfung 19.11.2026
+        self.assertEqual(haus_und_saal("Holocafé Düsseldorf", set())[0], "Holocafe")
+        self.assertEqual(haus_und_saal("Bambi Filmstudio", set())[0], "Bambi")
         self.assertEqual(haus_und_saal("La Pailette Bar", set())[0], "La Paillette")
 
     def test_saalliste_und_schein_saele(self):

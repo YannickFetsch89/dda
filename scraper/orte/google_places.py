@@ -491,9 +491,11 @@ def bestehende_aktualisieren(dry_run: bool = False) -> dict:
     Bild-URLs mit eingebettetem API-Key werden entfernt.
     """
     db = get_supabase_client()
+    # Spielstätten (Ortsseiten) nie: dort zählt nur die bestätigte Adresse, und Google-Fotos sind auf diesen Seiten
+    # ausgeschlossen (Plan docs/plan-locations-2026-11-18.md, 3.12/3.13) – sonst schriebe dieser Lauf extras.google_foto
     orte = alle_zeilen(
         db, "orte", "id, name, google_place_id, beschreibung, tags, bild_url, extras",
-        lambda q: q.not_.is_("google_place_id", "null"),
+        lambda q: q.not_.is_("google_place_id", "null").neq("typ", "spielstaette"),
     )
     logger.info("%d Orte mit Google-ID gefunden", len(orte))
     aktualisiert = fehler = 0

@@ -210,10 +210,11 @@ KAP1 = ("Zentralbibliothek KAP1", re.compile(r"^zentralbibliothek kap ?1$", re.I
 
 # Dubletten, die vor der Sichtung zusammengeführt werden (Plan 3.7): Muster auf den Namen → gemeinsames Haus
 DUBLETTEN: list[tuple[re.Pattern, str]] = [
-    # „Holocafé Düsseldorf“ (mit é) hat die Adresse Am Wehrhahn 41: getrennt bis zur Prüfung, eigener Name, damit die
-    # Normalisierung (é → e) es nicht mit den Immermannstraße-Schreibweisen zusammenlegt
-    (re.compile(r"^holocaf(é|é) düsseldorf$", re.I), "Holocafé am Wehrhahn"),
-    (re.compile(r"^holo ?cafe( düsseldorf)?$|^holocafe immermannstraße 7$", re.I), "Holocafe"),
+    # „Holocafé Düsseldorf“ (Am Wehrhahn 41, Meetups April 2026) ist dasselbe Café vor dem Umzug an die
+    # Immermannstraße 7 (seit Oktober 2026) – zusammengelegt nach der Cursor-Prüfung 19.11.2026
+    (re.compile(r"^holo ?caf(e|é|é)( düsseldorf)?$|^holocafe immermannstraße 7$", re.I), "Holocafe"),
+    # „Bambi“ und „Bambi Filmstudio“: dasselbe Kino (Klosterstraße 78) – zusammengelegt 19.11.2026
+    (re.compile(r"^bambi( filmstudio)?$", re.I), "Bambi"),
     (re.compile(r"^(cafe bar )?la pail+ette\b", re.I), "La Paillette"),
     # Entscheidung 19.11.2026 (Arten der 89): doppelte Zeilen desselben Orts
     (re.compile(r"^es365( art center)?$", re.I), "ES365 Art Center"),
@@ -222,10 +223,9 @@ DUBLETTEN: list[tuple[re.Pattern, str]] = [
 ]
 # Getrennt bis zur Prüfung (Plan 3.7, 7.2 Punkte 9 und 13): Name normalisiert → Prüfhinweis
 PRUEFHINWEISE: dict[str, str] = {
-    "bambi": "Dublette? Bambi-Kino liegt an der Klosterstraße, hier Ehrenhof 2 (NRW-Forum) – Adresse prüfen",
-    "bambi filmstudio": "Dublette? Adresse Klosterstraße prüfen (zweite Bambi-Zeile)",
-    "holocafe": "zusammengeführt: Holo Cafe, Holocafe Düsseldorf, Holocafe Immermannstraße 7 (Plan 3.7)",
-    "holocafe am wehrhahn": "getrennt bis zur Prüfung: zweiter Standort des Holocafe? (Plan 3.7)",
+    "bambi": "zusammengeführt: Bambi, Bambi Filmstudio (Klosterstraße 78, 19.11.2026)",
+    "holocafe": "zusammengeführt: Holo Cafe, Holocafe Düsseldorf, Holocafe Immermannstraße 7, Holocafé Düsseldorf "
+                "(umgezogen vom Wehrhahn, 19.11.2026)",
     "xafe in kap 1 zentralbibliothek": "gleiche Adresse wie Zentralbibliothek, nicht zusammenlegen",
 }
 # Offene Einzelentscheidungen (Plan Abschnitt 9): keine Seite und kein 308, bis entschieden
@@ -591,9 +591,12 @@ def guide_abgleich(orte: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
     slugs: dict[str, str] = {}
     for o in orte:
         if o["typ"] == "spielstaette":
-            # Schon importierte Ortsseite (Schritt 2): kein Guide; Vorschlag bleibt, Slug ist der gespeicherte
-            guide[_norm(o["name"])] = f"Spielstätte: {o['slug']}"
-            slugs[_norm(o["name"])] = o["slug"]
+            # Schon importierte Ortsseite (Schritt 2): kein Guide; Vorschlag bleibt, Slug ist der gespeicherte.
+            # Erkannt auch über die Schreibweisen (nach einer Umbenennung wie „Flow, Mertensgasse 2, …“ → „Flow“)
+            profil = o.get("spielstaette") or {}
+            for n in [o["name"], *((profil.get("event_orte") or []) if isinstance(profil, dict) else [])]:
+                guide[_norm(n)] = f"Spielstätte: {o['slug']}"
+                slugs[_norm(n)] = o["slug"]
             continue
         sichtbar = o.get("aktiv") and ((o.get("qualitaets_score") or 0) >= 7
                                         or o["typ"] in ("spielplatz", "weihnachtsmarkt", "club"))
@@ -620,12 +623,14 @@ def liste_erzeugen(ziel: Path = ZIEL) -> int:
     von = (heute - timedelta(days=365)).isoformat()
     events = _seitenweise(db, "events", "ort, adresse, stadtteil, datum, datum_bis, abgelehnt, quelle_name",
                           lambda q: q.gte("datum", von))
-    orte = _seitenweise(db, "orte", "name, slug, typ, aktiv, qualitaets_score, extras->club")
+    orte = _seitenweise(db, "orte", "name, slug, typ, aktiv, qualitaets_score, extras->club, extras->spielstaette")
     logger.info("Kandidaten: %d Events seit %s, %d Orte-Zeilen", len(events), von, len(orte))
 
     namen, ausserhalb = namen_zaehlen(events, heute)
     guide, guide_slugs = guide_abgleich(orte)
-    zeilen = zeilen_bauen(namen, guide, guide_slugs, {o["slug"] for o in orte if o.get("slug")})
+    # Slug-Kollision nur gegen fremde Zeilen: die schon importierten Spielstätten sind die eigenen (Cursor 19.11.2026)
+    zeilen = zeilen_bauen(namen, guide, guide_slugs,
+                          {o["slug"] for o in orte if o.get("slug") and o["typ"] != "spielstaette"})
     uebernommen = entscheidungen_uebernehmen(zeilen, entscheidungen_lesen(ziel))
 
     ziel.parent.mkdir(parents=True, exist_ok=True)
