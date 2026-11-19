@@ -133,7 +133,8 @@ describe("GET /api/konto/start", () => {
     expect(d.fuer_dich[0].begruendung).toBe("Musik");
     expect(text).not.toMatch(/sensibel|punkte|bezuege|nutzer_id/);
     expect(d.naechste.map((e: DddEvent) => e.id)).toEqual([gemerkt.id]);
-    expect(d.vorname).toBeUndefined();
+    // NAMEN_ANREDE seit 19.11.2026 an (Schritt 5)
+    expect(d.vorname).toBe("Erika");
     expect(res.headers.get("cache-control")).toBe("private, no-store");
   });
   it("ohne: ausgeschlossen, höchstens 24, ungültige still weg", async () => {

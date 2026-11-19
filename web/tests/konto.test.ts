@@ -320,8 +320,9 @@ describe("letzte Aktivität", () => {
 
 describe("Textversionen", () => {
   it("haben die im Plan genannten Kennungen und passen in einwilligungstexte.version (≤ 40)", () => {
-    expect(TEXTVERSIONEN.personalisierung).toBe("interessen-2026-11");
-    expect(TEXTVERSIONEN.sensible_events).toBe("sensible-events-2026-11");
+    expect(TEXTVERSIONEN.personalisierung).toBe("interessen-2026-11-2");
+    // -2: Widerrufssatz per du (19.11.2026)
+    expect(TEXTVERSIONEN.sensible_events).toBe("sensible-events-2026-11-2");
     expect(TEXTVERSIONEN.analyse).toBe("analyse-hinweis-2026-11");
     for (const v of Object.values(TEXTVERSIONEN)) expect(v.length).toBeLessThanOrEqual(40);
   });

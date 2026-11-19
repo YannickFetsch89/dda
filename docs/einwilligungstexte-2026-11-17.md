@@ -66,3 +66,13 @@ Vorherige Fassung `geburtstagsmail-2026-11` (bleibt als Nachweis in der Datenban
 
 **Hinweis zu den Pflichtangaben (Art. 13 DSGVO, kein Häkchen), im Schritt „Noch kurz zu dir“ und im Konto:**
 > Name und Geburtsdatum sind Pflichtangaben für dein Konto. Mit dem Geburtsdatum prüfen wir, ob du mindestens 16 Jahre alt bist. Deinen Namen brauchen wir für Ticketkäufe über dein Konto. Ändern kannst du beides jederzeit im Konto.
+
+## Nachtrag 19.11.2026: Widerrufssätze per du, Anrede mit Vornamen
+
+Auf Wunsch des Auftraggebers stehen die Widerrufssätze von (a), (b) und (d) jetzt per du. Neue Fassungen, die alten bleiben als Nachweis in der Datenbank (SQL: `database/einwilligungstexte_2026-11-19.sql`, **vor dem Deploy ausführen**, weil `einwilligungen.textversion` auf diese Tabelle verweist):
+
+- `interessen-2026-11-2`: „… Du kannst das jederzeit im Konto widerrufen. Dann werden deine Antworten sofort gelöscht.“ (vorher „Ich kann … meine Antworten …“)
+- `sensible-events-2026-11-2`: „… Du kannst das jederzeit im Konto widerrufen. Dann werden sie aus deinem Konto entfernt.“ (vorher „Ich kann … aus meinem Konto entfernt.“)
+- `geburtstagsmail-2026-11-3`: „… Du kannst das jederzeit im Konto oder über den Abmeldelink in jeder Mail widerrufen.“ (vorher „Ich kann …“)
+
+Anrede mit Vornamen freigegeben (Plan Mein Bereich S3). Der Hinweis zu den Pflichtangaben lautet jetzt: „… Deinen Namen brauchen wir für Ticketkäufe über dein Konto und um dich persönlich anzusprechen. …“ (Art. 13, keine neue Einwilligungsversion). In der Datenschutzerklärung steht beim Namen zusätzlich „und für die persönliche Anrede auf der Website und in der App“.

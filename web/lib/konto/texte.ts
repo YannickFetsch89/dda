@@ -11,37 +11,42 @@ export const TEXT = {
     text: "Ein paar kurze Fragen, damit wir dir passende Events vorschlagen können. Am Ende entscheidest du, ob wir deine Antworten speichern.",
   },
   mindestalter: "Ich bin mindestens 16 Jahre alt.",
+  // Fassung interessen-2026-11-2 (19.11.2026): Widerrufssatz per du (Wunsch des Auftraggebers).
+  // Vorher (interessen-2026-11): „Ich kann das jederzeit im Konto widerrufen. Dann werden meine Antworten sofort gelöscht.“
   personalisierung:
     "Ich willige ein, dass dies.das meine Antworten in meinem Konto speichert und zusammen mit meiner Merkliste nutzt, " +
-    "um mir passende Events vorzuschlagen. Sensible Events (siehe unten) fließen nie in Empfehlungen ein. Ich kann das " +
-    "jederzeit im Konto widerrufen. Dann werden meine Antworten sofort gelöscht.",
+    "um mir passende Events vorzuschlagen. Sensible Events (siehe unten) fließen nie in Empfehlungen ein. Du kannst das " +
+    "jederzeit im Konto widerrufen. Dann werden deine Antworten sofort gelöscht.",
   sensibelErklaerung:
     "Manche Events lassen Rückschlüsse auf sehr persönliche Dinge zu: Gesundheit, Religion oder Weltanschauung, sexuelle " +
     "Orientierung oder geschlechtliche Identität, politische Meinung, Gewerkschaftszugehörigkeit oder ethnische Herkunft. " +
     "Merkst du dir solche Events, speichern wir sie ohne deine ausdrückliche Einwilligung nur auf dem Gerät, auf dem du " +
     "sie gemerkt hast, und nicht in deinem Konto. Auf anderen Geräten siehst du sie dann nicht. Für Empfehlungen und " +
     "Statistiken nutzen wir sie nie, auch nicht mit Einwilligung.",
+  // Fassung sensible-events-2026-11-2 (19.11.2026): Widerrufssatz per du (Wunsch des Auftraggebers).
+  // Vorher (sensible-events-2026-11): „Ich kann das jederzeit im Konto widerrufen. Dann werden sie aus meinem Konto entfernt.“
   sensibel:
     "Ich willige ausdrücklich ein, dass dies.das auch solche Events, die ich mir merke, in meinem Konto speichert, damit " +
-    "sie auf allen meinen Geräten verfügbar sind. Ich kann das jederzeit im Konto widerrufen. Dann werden sie aus meinem " +
+    "sie auf allen meinen Geräten verfügbar sind. Du kannst das jederzeit im Konto widerrufen. Dann werden sie aus deinem " +
     "Konto entfernt.",
   widerspruchErklaerung:
     "Wir zählen anonym, wie oft Events gemerkt werden, um zu sehen, was in Düsseldorf beliebt ist (berechtigtes Interesse, " +
     "Art. 6 Abs. 1 lit. f DSGVO). Wer was gemerkt hat, sieht dabei niemand, und sensible Events zählen nie mit. Du kannst " +
     "dem jederzeit widersprechen:",
   widerspruch: "Meine Merkliste nicht mitzählen. (Auch später im Konto.)",
-  // Fassung geburtstagsmail-2026-11-2 (E16): Das Datum ist Pflichtangabe und bleibt beim Widerruf stehen.
-  // Vorher (geburtstagsmail-2026-11): „Dafür speichert dies.das mein Geburtsdatum. … Dann wird mein Geburtsdatum gelöscht.“
+  // Fassung geburtstagsmail-2026-11-3 (19.11.2026): Widerrufssatz per du (Wunsch des Auftraggebers).
+  // Vorher -2 (E16): „… Ich kann das jederzeit im Konto oder über den Abmeldelink in jeder Mail widerrufen.“
+  // Davor -1: „Dafür speichert dies.das mein Geburtsdatum. … Dann wird mein Geburtsdatum gelöscht.“
   geburtstag:
     "Ich möchte an meinem Geburtstag eine Mail von dies.das bekommen, mit Glückwünschen und Event-Tipps für den Tag. " +
-    "Dafür nutzt dies.das mein Geburtsdatum aus meinem Konto. Ich kann das jederzeit im Konto oder über den " +
+    "Dafür nutzt dies.das mein Geburtsdatum aus meinem Konto. Du kannst das jederzeit im Konto oder über den " +
     "Abmeldelink in jeder Mail widerrufen.",
   // Art.-13-Hinweis zu den Pflichtangaben (E16), Schritt „Über dich“ und Konto-Seite
   stammdaten: {
     titel: "Noch kurz zu dir",
     text:
       "Name und Geburtsdatum sind Pflichtangaben für dein Konto. Mit dem Geburtsdatum prüfen wir, ob du mindestens " +
-      "16 Jahre alt bist. Deinen Namen brauchen wir für Ticketkäufe über dein Konto. Ändern kannst du beides " +
+      "16 Jahre alt bist. Deinen Namen brauchen wir für Ticketkäufe über dein Konto und um dich persönlich anzusprechen. Ändern kannst du beides " +
       "jederzeit im Konto.",
   },
   widerrufSensibel:

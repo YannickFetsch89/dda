@@ -11,7 +11,7 @@ const AUSKUNFT = {
   verantwortlicher: "Rocktician e. K., Inhaber Yannick Fetsch, Erkrather Str. 401, 40231 Düsseldorf, moin@rocktician.com",
   zwecke_und_rechtsgrundlagen: [
     { zweck: "Konto führen, Anmeldung", daten: "Mailadresse, Passwort (nur als Hash bei Supabase), Zeitpunkte, Sitzungen", grundlage: "Art. 6 Abs. 1 lit. b DSGVO" },
-    { zweck: "Pflichtangaben", daten: "Vorname, Nachname, Geburtsdatum (Altersprüfung ab 16, Ticketkäufe über das Konto)", grundlage: "Art. 6 Abs. 1 lit. b DSGVO" },
+    { zweck: "Pflichtangaben", daten: "Vorname, Nachname, Geburtsdatum (Altersprüfung ab 16, Ticketkäufe über das Konto, persönliche Anrede)", grundlage: "Art. 6 Abs. 1 lit. b DSGVO" },
     { zweck: "Merkliste im Konto", daten: "gemerkte Events, Zeitpunkt", grundlage: "Art. 6 Abs. 1 lit. b DSGVO" },
     { zweck: "Besonders schützenswerte Events im Konto", daten: "gemerkte Events dieser Art", grundlage: "Art. 9 Abs. 2 lit. a i. V. m. Art. 6 Abs. 1 lit. a DSGVO (nur mit Einwilligung)" },
     { zweck: "Interessen und persönliche Vorschläge", daten: "Antworten aus dem Fragebogen, Merkliste", grundlage: "Art. 6 Abs. 1 lit. a DSGVO (nur mit Einwilligung)" },

@@ -11,10 +11,11 @@ export function kontenAktiv(): boolean {
 }
 
 /**
- * Anrede mit Vornamen („Hallo Yannick“, Plan Mein Bereich S3/8): erst einschalten, wenn der Anwalt den Zusatz zur
- * Datenschutzerklärung bestätigt hat. Bis dahin sendet GET /api/konto/start kein Feld `vorname`.
+ * Anrede mit Vornamen („Hallo Yannick“, Plan Mein Bereich S3/8). Freigegeben am 19.11.2026 (Mitteilung des
+ * Auftraggebers), zusammen mit dem Zweck „persönliche Anrede“ in Datenschutzerklärung, Hinweis „Über dich“ und
+ * Art.-15-Auskunft. Ausgeschaltet sendet GET /api/konto/start kein Feld `vorname`.
  */
-export const NAMEN_ANREDE = false;
+export const NAMEN_ANREDE = true;
 
 /** Cookie-Namen (Plan 3.2) */
 export const SITZUNG_COOKIE = "ddd_sitzung";
@@ -41,11 +42,13 @@ export const VORLIEBEN_MAX_JE_LISTE = 60;
 export const TEXTVERSIONEN = {
   mindestalter: "mindestalter-2026-11",
   nutzungsbedingungen: "nutzungsbedingungen-2026-11",
-  personalisierung: "interessen-2026-11",
-  sensible_events: "sensible-events-2026-11",
+  // -2: Widerrufssatz per du (19.11.2026)
+  personalisierung: "interessen-2026-11-2",
+  // -2: Widerrufssatz per du (19.11.2026)
+  sensible_events: "sensible-events-2026-11-2",
   analyse: "analyse-hinweis-2026-11",
-  // -2: Datum ist seit E16 Pflichtangabe und bleibt beim Widerruf stehen (17.11.2026)
-  geburtstagsmail: "geburtstagsmail-2026-11-2",
+  // -2: Datum ist seit E16 Pflichtangabe und bleibt beim Widerruf stehen (17.11.2026); -3: Widerrufssatz per du (19.11.2026)
+  geburtstagsmail: "geburtstagsmail-2026-11-3",
 } as const;
 
 export type EinwilligungArt = keyof typeof TEXTVERSIONEN;
