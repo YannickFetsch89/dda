@@ -64,7 +64,8 @@ class GebietNachtragTest(unittest.TestCase):
 
     def test_draussen(self):
         for ort, adresse in [("Stadthalle Mülheim", ""), ("Theater Mülheim", ""), ("Kirche", "Hochdahl"),
-                             ("Kirche", "Büderich"), ("Bar", "Osterath"), ("Mayersche Essen", "Mayersche Essen")]:
+                             ("Kirche", "Büderich"), ("Bar", "Osterath"), ("Mayersche Essen", "Mayersche Essen"),
+                             ("Lufre Event & Gastronomie", "Lufre Event & Gastronomie, Kamp-Lintfort")]:
             with self.subTest(ort=ort, adresse=adresse):
                 self.assertIsNotNone(grund_ausserhalb({"ort": ort, "adresse": adresse}))
 

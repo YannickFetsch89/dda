@@ -60,13 +60,16 @@ def seitenname(z: dict) -> str:
 
 
 def zeilen_pruefen(zeilen: list[dict], vergeben: set[str], weitergeleitet: set[str],
-                   guide_slugs: dict[str, str]) -> tuple[list[dict], list[str]]:
-    """Freigegebene Zeilen, die importiert werden dürfen, und Ablehnungen mit Grund (rein, testbar)."""
+                   guide_slugs: dict[str, str], importiert: frozenset[str] = frozenset()) -> tuple[list[dict], list[str]]:
+    """
+    Freigegebene Zeilen, die importiert werden dürfen, und Ablehnungen mit Grund (rein, testbar).
+    `importiert`: Slugs schon vorhandener Spielstätten – diese Zeilen werden still übersprungen (zweiter Lauf).
+    """
     ok, abgelehnt = [], []
     haus_ok: dict[str, str] = {}   # Haus-Name → Slug (neue Spielstätte) …
     for z in zeilen:
         if z["zeile_typ"] == "haus" and (z.get("entscheidung") or "").strip().lower() == "ja":
-            haus_ok[z["haus"]] = z["slug_vorschlag"]
+            haus_ok[z["haus"]] = z["slug_vorschlag"]  # auch schon importierte Häuser: Eltern für neue Säle
     neue_slugs: set[str] = set()
     for z in zeilen:
         if (z.get("entscheidung") or "").strip().lower() != "ja" or z["zeile_typ"] not in SEITE:
@@ -80,6 +83,8 @@ def zeilen_pruefen(zeilen: list[dict], vergeben: set[str], weitergeleitet: set[s
         if not slug:
             abgelehnt.append(f"{name}: kein Slug")
             continue
+        if slug in importiert:
+            continue  # schon importiert (erster Lauf)
         if slug in vergeben or slug in neue_slugs:
             abgelehnt.append(f"{name}: Slug „{slug}“ schon vergeben – Auftraggeber entscheidet (Plan 3.3 Punkt 7)")
             continue
@@ -172,8 +177,9 @@ def import_erzeugen(ausgabe: Path) -> int:
         raise SystemExit(f"Abbruch: ort_weiterleitungen nicht lesbar – zuerst database/orte_spielstaetten_2026-11-19.sql "
                          f"ausführen ({e})")
     vergeben = {o["slug"] for o in orte if o.get("slug")}
+    importiert = frozenset(o["slug"] for o in orte if o["typ"] == "spielstaette")
     guide_slugs = {_norm(o["name"]): o["slug"] for o in orte if o.get("aktiv") and o["typ"] != "spielstaette"}
-    freigegeben, abgelehnt = zeilen_pruefen(zeilen, vergeben, weitergeleitet, guide_slugs)
+    freigegeben, abgelehnt = zeilen_pruefen(zeilen, vergeben, weitergeleitet, guide_slugs, importiert)
     heute = date.today()
     events = _seitenweise(db, "events", "ort, adresse, stadtteil, datum, datum_bis, abgelehnt, quelle_name",
                           lambda q: q.gte("datum", (heute - timedelta(days=365)).isoformat()))

@@ -44,6 +44,8 @@ STAEDTE_EINDEUTIG = [
     # Mülheim als ganzes Wort („Stadthalle Mülheim“ ohne Komma rutschte durch; „Mülheimer Straße“ bleibt, weil 
     # nach dem „m“ ein Wortende verlangt). Unterbach und Hamm sind Düsseldorfer Stadtteile und stehen NICHT hier.
     "Hochdahl", "Büderich", "Osterath", "Mülheim",
+    # Nachtrag 19.11.2026 (Kandidatenliste Ortsseiten): „Lufre Event & Gastronomie, Kamp-Lintfort“ (PRINZ.de)
+    "Kamp-Lintfort",
 ]
 # Mehrdeutig (normales Wort oder Teil von Düsseldorfer Namen): nur als eigener Abschnitt
 STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Frankfurt"]

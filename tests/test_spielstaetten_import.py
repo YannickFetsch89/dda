@@ -30,6 +30,14 @@ class TestImport(unittest.TestCase):
         self.assertTrue(any("ort_weiterleitungen" in a for a in abgelehnt))
         self.assertTrue(any("parent_id" in a for a in abgelehnt))
 
+    def test_zweiter_lauf_ueberspringt_importierte(self):
+        # Schon importierte Spielstätten (Slug vorhanden) werden still übersprungen, nicht als Kollision abgelehnt
+        zeilen = [_z("Bambi", slug="bambi"), _z("Neu", slug="neu"), _z("Saal", "saal", "Bambi", art="", slug="bambi-saal")]
+        ok, abgelehnt = zeilen_pruefen(zeilen, {"bambi"}, set(), {}, frozenset({"bambi"}))
+        self.assertEqual([z["haus"] for z in ok], ["Neu", "Saal"])
+        self.assertEqual(abgelehnt, [])
+        self.assertEqual(ok[1]["_eltern_slug"], "bambi")
+
     def test_saal_eines_guide_hauses_und_art_erben(self):
         ok, abgelehnt = zeilen_pruefen([_z("Halle", "saal", "zakk", art="", slug="zakk-flingern-halle")],
                                        set(), set(), {"zakk": "zakk-flingern"})

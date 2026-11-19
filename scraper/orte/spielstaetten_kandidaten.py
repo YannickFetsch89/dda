@@ -215,6 +215,10 @@ DUBLETTEN: list[tuple[re.Pattern, str]] = [
     (re.compile(r"^holocaf(é|é) düsseldorf$", re.I), "Holocafé am Wehrhahn"),
     (re.compile(r"^holo ?cafe( düsseldorf)?$|^holocafe immermannstraße 7$", re.I), "Holocafe"),
     (re.compile(r"^(cafe bar )?la pail+ette\b", re.I), "La Paillette"),
+    # Entscheidung 19.11.2026 (Arten der 89): doppelte Zeilen desselben Orts
+    (re.compile(r"^es365( art center)?$", re.I), "ES365 Art Center"),
+    (re.compile(r"^tribe( hotel)? düsseldorf$", re.I), "TRIBE Hotel Düsseldorf"),
+    (re.compile(r"^wp8( künstlerverein)?$", re.I), "WP8 Künstlerverein"),
 ]
 # Getrennt bis zur Prüfung (Plan 3.7, 7.2 Punkte 9 und 13): Name normalisiert → Prüfhinweis
 PRUEFHINWEISE: dict[str, str] = {
@@ -586,6 +590,11 @@ def guide_abgleich(orte: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
     guide: dict[str, str] = {}
     slugs: dict[str, str] = {}
     for o in orte:
+        if o["typ"] == "spielstaette":
+            # Schon importierte Ortsseite (Schritt 2): kein Guide; Vorschlag bleibt, Slug ist der gespeicherte
+            guide[_norm(o["name"])] = f"Spielstätte: {o['slug']}"
+            slugs[_norm(o["name"])] = o["slug"]
+            continue
         sichtbar = o.get("aktiv") and ((o.get("qualitaets_score") or 0) >= 7
                                         or o["typ"] in ("spielplatz", "weihnachtsmarkt", "club"))
         k = _norm(o["name"])
