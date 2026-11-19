@@ -86,7 +86,8 @@ export function preisText(e: DddEvent) {
 
 type Variante = "standard" | "reihe" | "grid" | "rang";
 
-export function EventKarte({ e, heute, variante = "standard", rang, gross = false }: { e: DddEvent; heute: string; variante?: Variante; rang?: number; gross?: boolean }) {
+/** grund: kleine Zeile unter der Karte, z. B. die Begründung eines persönlichen Vorschlags (Mein Bereich 3.3) */
+export function EventKarte({ e, heute, variante = "standard", rang, gross = false, grund }: { e: DddEvent; heute: string; variante?: Variante; rang?: number; gross?: boolean; grund?: string }) {
   const klassen = ["karte", variante !== "standard" && `karte--${variante}`, gross && "karte--gross"].filter(Boolean).join(" ");
   return (
     <article className={klassen} role="listitem">
@@ -104,15 +105,17 @@ export function EventKarte({ e, heute, variante = "standard", rang, gross = fals
           <span>{e.ort}</span>
           <span className="preis">{preisText(e)}</span>
         </span>
+        {grund && <span className="karte__grund">{grund}</span>}
       </div>
     </article>
   );
 }
 
-export function KompaktKarte({ e, heute }: { e: DddEvent; heute: string }) {
+/** mitId: data-event-id am <article>, damit die Startseiten-Insel gezeigte Picks ausschließen kann (Mein Bereich 4.1) */
+export function KompaktKarte({ e, heute, mitId = false }: { e: DddEvent; heute: string; mitId?: boolean }) {
   const k = kategorie(e.kategorie);
   return (
-    <article className="kompakt" role="listitem">
+    <article className="kompakt" role="listitem" data-event-id={mitId ? e.id : undefined}>
       <Bild e={e} />
       <span className="kompakt__icon" style={katStil(e.kategorie)} aria-hidden>
         <span className="icon" aria-hidden data-icon={k.icon} />

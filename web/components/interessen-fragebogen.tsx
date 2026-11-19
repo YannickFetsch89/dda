@@ -23,14 +23,14 @@ export interface Antworten {
 }
 export const KEINE: Antworten = { kategorien: [], unterkategorien: [], stadtteile: [], merkmale: [], orte: [] };
 
-const MERKMALE = [
+export const MERKMALE = [
   { slug: "kostenlos", name: "Gern kostenlos", icon: "savings" },
   { slug: "mit-kindern", name: "Mit Kindern unterwegs", icon: "family_restroom" },
   { slug: "abends", name: "Eher abends", icon: "dark_mode" },
   { slug: "tagsueber", name: "Eher tagsüber", icon: "light_mode" },
   { slug: "wochenende", name: "Am liebsten am Wochenende", icon: "weekend" },
 ];
-const ORTE = [
+export const ORTE = [
   { slug: "restaurants-cafes", name: "Restaurants & Cafés", icon: "restaurant" },
   { slug: "kneipen-bars", name: "Kneipen & Bars", icon: "sports_bar" },
   { slug: "clubs", name: "Clubs", icon: "nightlife" },

@@ -9,6 +9,7 @@ import { KontoSync, MerkHinweis } from "@/components/konto";
 import { kontenAktiv } from "@/lib/konto/konfig";
 import { DatenHinweis, Fuss, KategorieLeiste, Kopf } from "@/components/rahmen";
 import { jsonLdText } from "@/lib/json-ld";
+import { KONTO_SCRIPT } from "@/lib/konto/kopf-skript";
 import "./globals.css";
 
 const dmSerif = DM_Serif_Display({ variable: "--font-dm-serif", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="de" className={`${dmSerif.variable} ${inter.variable} ${icons.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {kontenAktiv() && <script dangerouslySetInnerHTML={{ __html: KONTO_SCRIPT }} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(markeJsonLd(process.env.SITE_URL ?? "https://diesdas.events")) }} />
       </head>
       {/* data-konten: Schalter KONTEN_AKTIV beim Build, für Client-Bausteine (Hinweis nach dem ersten Merken) */}

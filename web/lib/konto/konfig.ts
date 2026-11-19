@@ -10,6 +10,12 @@ export function kontenAktiv(): boolean {
   return wert === "1" || wert === "true";
 }
 
+/**
+ * Anrede mit Vornamen („Hallo Yannick“, Plan Mein Bereich S3/8): erst einschalten, wenn der Anwalt den Zusatz zur
+ * Datenschutzerklärung bestätigt hat. Bis dahin sendet GET /api/konto/start kein Feld `vorname`.
+ */
+export const NAMEN_ANREDE = false;
+
 /** Cookie-Namen (Plan 3.2) */
 export const SITZUNG_COOKIE = "ddd_sitzung";
 export const HINWEIS_COOKIE = "ddd_konto";

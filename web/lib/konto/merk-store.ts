@@ -72,6 +72,33 @@ function hinweisSetzen(wert: "0" | null) {
   document.cookie = wert === null
     ? `ddd_konto=; Path=/; Max-Age=0; SameSite=Lax${secure}`
     : `ddd_konto=${wert}; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax${secure}`;
+  kontoAttributAbgleichen();
+}
+
+// ── html[data-konto] (Plan Mein Bereich 3.0) ─────────────────────────────────
+/** Ereignis, wenn sich der Kontozustand am <html> ändert */
+export const KONTO_EVENT = "ddd-konto-geaendert";
+export type KontoZustand = "1" | "0" | null;
+
+/** Zustand aus dem Hinweis-Cookie: „1“ angemeldet mit Alter, „0“ angemeldet ohne Alter/gesperrt, null abgemeldet. */
+export function kontoZustand(): KontoZustand {
+  return kontomodus() ? "1" : angemeldetOhneAlter() ? "0" : null;
+}
+
+/**
+ * Hält `html[data-konto]` gleich mit dem Cookie (das Head-Skript gilt nur für den ersten Paint). Aufgerufen nach jedem
+ * Konto-Abruf, in hinweisSetzen, in KontoSync (Start, Fokus, Pfadwechsel). Löst KONTO_EVENT nur bei Änderung aus.
+ * Nur mit Schalter KONTEN_AKTIV (body[data-konten]), sonst bleibt das Attribut weg.
+ */
+export function kontoAttributAbgleichen(): void {
+  if (typeof document === "undefined") return;
+  const html = document.documentElement;
+  const soll = document.body?.dataset.konten === "1" ? kontoZustand() : null;
+  const ist = html.dataset.konto ?? null;
+  if (soll === ist) return;
+  if (soll === null) delete html.dataset.konto;
+  else html.dataset.konto = soll;
+  window.dispatchEvent(new Event(KONTO_EVENT));
 }
 
 // ── Snapshot für useSyncExternalStore ────────────────────────────────────────
@@ -171,6 +198,8 @@ async function mitSperre(arbeit: () => Promise<void>): Promise<void> {
 async function abruf(pfad: string, init: RequestInit = {}): Promise<{ status: number | null; daten: Record<string, unknown> }> {
   try {
     const r = await fetch(pfad, { ...init, signal: AbortSignal.timeout(15_000), credentials: "same-origin" });
+    // Ein Set-Cookie der Antwort (z. B. 401 mit Lösch-Cookie) ist jetzt angewandt → Attribut nachziehen (Plan 3.0)
+    kontoAttributAbgleichen();
     let daten: Record<string, unknown> = {};
     try {
       daten = await r.json();

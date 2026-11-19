@@ -1,14 +1,15 @@
 "use client";
 // Merkliste: abgemeldet IDs aus localStorage, Events über /api/events; angemeldet Konto-Liste über
-// /api/konto/merkliste?mit=events (ohne 100er-Grenze). Kommende nach Datum, „Vorbei (n)“ eingeklappt (E9).
+// /api/konto/merkliste?mit=events (ohne 100er-Grenze). Kommende nach Datum, „Vorbei (n)“ eingeklappt (E9);
+// angemeldet (data-konto="1") stattdessen ein Link „Erlebt (n)“ auf /konto/erlebt (Plan Mein Bereich 3.4).
 // Untertitel und Konto-Hinweis sind Client-Teile, damit der Server nichts über die Sitzung weiß (Plan 7.1).
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useMerkliste } from "./client";
 import { EventKarte, Leer, SkeletonKarten } from "./karten";
-import { useKontomodus } from "./konto";
+import { useKontoZustand, useKontomodus } from "./konto";
 import {
-  abgleichen, angemeldetOhneAlter, meldungSchliessen, nachfrageUebernehmen, nachfrageVerwerfen, STATUS_LEER,
+  abgleichen, angemeldetOhneAlter, kontoAttributAbgleichen, meldungSchliessen, nachfrageUebernehmen, nachfrageVerwerfen, STATUS_LEER,
   statusAbonnieren, statusSnapshot,
 } from "@/lib/konto/merk-store";
 import { merklisteAufteilen } from "@/lib/konto/merk-logik";
@@ -27,6 +28,8 @@ async function eventsLaden(ids: string[], konto: boolean): Promise<{ heute: stri
   if (!ids.length) return { heute: "", events: [] };
   if (konto) {
     const r = await fetch("/api/konto/merkliste?mit=events", { cache: "no-store" });
+    // Läuft weder über konto() noch über abruf(): bei 403 setzt der Server ddd_konto=0 (Plan Mein Bereich 3.0)
+    kontoAttributAbgleichen();
     if (!r.ok) throw new Error(String(r.status));
     const d = (await r.json()) as { heute?: string; events?: DddEvent[] };
     const gefunden = new Set((d.events ?? []).map((e) => e.id));
@@ -45,6 +48,7 @@ async function eventsLaden(ids: string[], konto: boolean): Promise<{ heute: stri
 export function MerklisteInhalt({ kontenAn }: { kontenAn: boolean }) {
   const ids = useMerkliste();
   const konto = useKontomodus();
+  const kontoZustand = useKontoZustand();
   const status = useMerkStatus();
   const schluessel = ids.join(",");
   const [zustand, setZustand] = useState<Zustand>({ status: "laden" });
@@ -135,7 +139,13 @@ export function MerklisteInhalt({ kontenAn }: { kontenAn: boolean }) {
       ) : (
         <Leer titel={vorbei.length ? "Deine gemerkten Events sind vorbei." : "Gerade nichts Kommendes gemerkt."} />
       )}
-      {vorbei.length > 0 && (
+      {/* Angemeldet (data-konto="1") eigene Seite „Erlebt“; abgemeldet und bei Cookie 0 „Vorbei“ wie bisher (S6) */}
+      {vorbei.length > 0 && kontoZustand === "1" && (
+        <p className="merk-erlebt">
+          <Link href="/konto/erlebt" className="link">Erlebt ({vorbei.length}) →</Link>
+        </p>
+      )}
+      {vorbei.length > 0 && kontoZustand !== "1" && (
         <details className="merk-vorbei" open={vorbeiOffen} onToggle={(e) => setVorbeiOffen(e.currentTarget.open)}>
           <summary>Vorbei ({vorbei.length})</summary>
           <div className="raster" role="list">

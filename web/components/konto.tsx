@@ -3,9 +3,12 @@
 // Anfrage-Helfer und kleine Formular-Teile. Die Seiten unter /konto sind statische Hüllen; alles Persönliche
 // kommt hier über /api/konto/* (Plan 3.1).
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ERSTES_MERKEN_EVENT } from "./client";
-import { abarbeiten, abgleichen, kontomodus, uebernahmePruefen } from "@/lib/konto/merk-store";
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { ERSTES_MERKEN_EVENT, useKontoZustand } from "./client";
+import { usePathname } from "next/navigation";
+import {
+  KONTO_EVENT, abarbeiten, abgleichen, kontoAttributAbgleichen, kontoZustand, kontomodus, uebernahmePruefen,
+} from "@/lib/konto/merk-store";
 
 export type Antwort = { status: number | null; daten: Record<string, unknown> };
 
@@ -19,6 +22,8 @@ export async function konto(pfad: string, methode = "GET", body?: unknown): Prom
       headers: body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+    // Set-Cookie (Anmelden, Bestätigen, Alters-Häkchen, 403 …) ist angewandt → html[data-konto] nachziehen (Plan Mein Bereich 3.0)
+    kontoAttributAbgleichen();
     let daten: Record<string, unknown> = {};
     try {
       daten = await r.json();
@@ -37,9 +42,14 @@ export const fehlerText = (a: Antwort) =>
 /** Im Layout: Übernahme beim Seitenaufruf, Warteschlange und Abgleich beim Fokus (Plan 5.4, 5.5). */
 export function KontoSync() {
   useEffect(() => {
+    // Erst den Kontozustand am <html> nachziehen, dann die Merkliste (Plan Mein Bereich 3.0)
+    kontoAttributAbgleichen();
     if (kontomodus()) void uebernahmePruefen();
     const fokus = () => {
-      if (document.visibilityState !== "visible" || !kontomodus()) return;
+      if (document.visibilityState !== "visible") return;
+      // Vor der kontomodus()-Sperre: sonst sähe ein abgemeldeter Tab das Anmelden im anderen Tab nie
+      kontoAttributAbgleichen();
+      if (!kontomodus()) return;
       void abarbeiten();
       void abgleichen();
     };
@@ -50,8 +60,26 @@ export function KontoSync() {
       document.removeEventListener("visibilitychange", fokus);
     };
   }, []);
+  return (
+    <Suspense fallback={null}>
+      <KontoPfadAbgleich />
+    </Suspense>
+  );
+}
+
+/** Abgleich bei jedem Pfadwechsel; eigene Suspense-Grenze, weil usePathname sonst das Vorrendern blockiert. */
+function KontoPfadAbgleich() {
+  const pfad = usePathname();
+  useEffect(() => {
+    kontoAttributAbgleichen();
+  }, [pfad]);
   return null;
 }
+
+// useKontoZustand liegt in client.tsx (TabBar braucht ihn; client.tsx darf diese Datei nicht importieren, Ring)
+export { useKontoZustand };
+// Für Aufrufer, die den Cookie-Zustand direkt brauchen (z. B. vor dem ersten Abgleich)
+export { kontoZustand };
 
 /** Einmaliger Hinweis nach dem ersten Herz-Klick, abgemeldet (Plan 7.2). Kommt nie beim Seitenaufruf. */
 export function MerkHinweis() {
@@ -84,9 +112,11 @@ export function MerkHinweis() {
 const kontoAbo = (cb: () => void) => {
   window.addEventListener("ddd-merkliste-geaendert", cb);
   window.addEventListener("focus", cb);
+  window.addEventListener(KONTO_EVENT, cb);
   return () => {
     window.removeEventListener("ddd-merkliste-geaendert", cb);
     window.removeEventListener("focus", cb);
+    window.removeEventListener(KONTO_EVENT, cb);
   };
 };
 /** Angemeldet mit Alters-Häkchen? (nur Anzeige, aus dem Hinweis-Cookie) – auf dem Server immer false */

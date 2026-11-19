@@ -1,17 +1,20 @@
 "use client";
-// Nutzerkonten – /konto/willkommen (Alter, Fragebogen, Abschluss) und /konto (Übersicht, Schalter, Passwort,
-// Export, Löschen, Abmelden). Alle Daten kommen aus /api/konto/* (Plan 5.3, 5.7).
+// Nutzerkonten – /konto/willkommen (Alter, Fragebogen, Abschluss), /konto/einstellungen (Mailadresse, Über dich,
+// Passwort, Abmelden, Löschen), /konto/datenschutz (Einwilligungen b–d, Auskunft) und /konto/interessen (Chips, Schalter a).
+// Alle Daten kommen aus /api/konto/* (Plan 5.3, 5.7; Mein Bereich 3.6–3.8). Die Übersicht /konto liegt in mein-bereich.tsx.
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
-import { InteressenFragebogen, KEINE, type AbschlussWerte, type Antworten, type FragebogenDaten } from "./interessen-fragebogen";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  InteressenFragebogen, KEINE, MERKMALE, ORTE, type AbschlussWerte, type Antworten, type FragebogenDaten,
+} from "./interessen-fragebogen";
 import { EinwilligungFeld, Meldung, PasswortFeld, Rueckfrage, fehlerText, konto } from "./konto";
 import { abmelden, lokalAbmelden, nurGeraetHochladen, uebernahmePruefen, zurueckAufsGeraet } from "@/lib/konto/merk-store";
 import { GESTUFT, TEXT } from "@/lib/konto/texte";
 
 const UNTER16 = "dies.das-Konten gibt es ab 16 Jahren. Dein Konto wird daher gelöscht.";
 
-interface Ich {
+export interface Ich {
   email: string | null;
   angelegt: string;
   onboarding_fertig_am: string | null;
@@ -29,7 +32,7 @@ interface Ich {
 
 type Laden = { art: "laden" } | { art: "abgemeldet" } | { art: "fehler"; text: string } | { art: "da"; ich: Ich };
 
-function useIch(): [Laden, () => Promise<void>] {
+export function useIch(): [Laden, () => Promise<void>] {
   const router = useRouter();
   const [z, setZ] = useState<Laden>({ art: "laden" });
   const laden = useCallback(async () => {
@@ -64,6 +67,29 @@ function Gesperrt({ mitLoeschen = true }: { mitLoeschen?: boolean }) {
       <AbmeldenKnoepfe />
       {mitLoeschen && <KontoLoeschen gesperrt />}
     </div>
+  );
+}
+
+/**
+ * Gemeinsame Hülle der Unterseiten von Mein dies.das (Plan Mein Bereich 3.0, 3.1): lädt GET /api/konto/ich.
+ * Abgemeldet → Anmelde-Hinweis, Reset-Sitzung → /konto/passwort-neu (in useIch), gesperrt → nur Abmelden und Löschen.
+ */
+export function KontoHuelle({ children }: { children: (ich: Ich, neuLaden: () => Promise<void>) => ReactNode }) {
+  const [z, laden] = useIch();
+  if (z.art === "laden") return <div className="skeleton" style={{ height: 320 }} />;
+  if (z.art === "abgemeldet") return <Abgemeldet />;
+  if (z.art === "fehler") return <Meldung art="fehler">{z.text}</Meldung>;
+  if (z.ich.gesperrt) return <Gesperrt />;
+  return <>{children(z.ich, laden)}</>;
+}
+
+/** Profil unfertig (Alter oder Fragebogen fehlt): derselbe Hinweis wie bisher auf /konto */
+export const profilFertig = (ich: Ich) => ich.mindestalter_bestaetigt && !!ich.onboarding_fertig_am;
+export function ProfilHinweis() {
+  return (
+    <Meldung>
+      Dein Profil ist noch nicht fertig. <Link href="/konto/willkommen">Jetzt abschließen</Link>
+    </Meldung>
   );
 }
 
@@ -141,7 +167,8 @@ function Willkommen({ daten }: { daten: FragebogenDaten }) {
         interessen_ok: ich.personalisierung ? true : werte.interessen_ok,
       });
       setSendet(false);
-      if (a.status === 200) router.push("/konto");
+      // Zurück zur lesbaren Übersicht (Plan Mein Bereich 3.6)
+      if (a.status === 200) router.push("/konto/interessen");
       else setFehler(fehlerText(a));
       return;
     }
@@ -184,76 +211,127 @@ function Willkommen({ daten }: { daten: FragebogenDaten }) {
   );
 }
 
-// ── /konto ───────────────────────────────────────────────────────────────────
-export function KontoSeite() {
-  const [z, laden] = useIch();
-  if (z.art === "laden") return <div className="skeleton" style={{ height: 320 }} />;
-  if (z.art === "abgemeldet") return <Abgemeldet />;
-  if (z.art === "fehler") return <Meldung art="fehler">{z.text}</Meldung>;
-  const ich = z.ich;
-  if (ich.gesperrt) return <Gesperrt />;
-
+// ── /konto/einstellungen („Konto und Sicherheit“, Plan Mein Bereich 3.7) ────
+// Die bisherigen Abschnitte von /konto, unverändert: Mailadresse, Über dich, Passwort, Abmelden, Löschen.
+export function EinstellungenSeite() {
   return (
-    <div className="konto-bereich">
-      <section className="konto-abschnitt">
-        <h2 className="d">Dein Konto</h2>
-        <p>Deine Mailadresse: <b>{ich.email}</b></p>
-        <MailAendern />
-      </section>
-
-      {!ich.mindestalter_bestaetigt || !ich.onboarding_fertig_am ? (
-        <Meldung>
-          Dein Profil ist noch nicht fertig. <Link href="/konto/willkommen">Jetzt abschließen</Link>
-        </Meldung>
-      ) : (
-        <>
+    <KontoHuelle>
+      {(ich, laden) => (
+        <div className="konto-bereich">
           <section className="konto-abschnitt">
-            <h2 className="d">Deine Interessen</h2>
-            <p>{interessenKurz(ich)}</p>
-            <Link href="/konto/willkommen?modus=interessen" className="btn btn--outline btn--klein">Interessen ändern</Link>
+            <h2 className="d">Dein Konto</h2>
+            <p>Deine Mailadresse: <b>{ich.email}</b></p>
+            <MailAendern />
           </section>
-          <UeberDich ich={ich} neuLaden={laden} />
-          <Einwilligungen ich={ich} neuLaden={laden} />
-        </>
+
+          {profilFertig(ich) ? <UeberDich ich={ich} neuLaden={laden} /> : <ProfilHinweis />}
+
+          <PasswortAendern />
+
+          <section className="konto-abschnitt">
+            <h2 className="d">Abmelden</h2>
+            <AbmeldenKnoepfe />
+          </section>
+
+          <KontoLoeschen />
+        </div>
       )}
-
-      <PasswortAendern />
-
-      <section className="konto-abschnitt">
-        <h2 className="d">Deine Daten</h2>
-        <a href="/api/konto/export" className="btn btn--outline btn--klein" download>Deine Daten herunterladen</a>
-        {/* Gleiche Datei: Kontodaten plus die Angaben nach Art. 15 Abs. 1 und 2 DSGVO (17.11.2026) */}
-        <a href="/api/konto/export" className="link" download>Eine vollständige Auskunft nach Art. 15 DSGVO herunterladen.</a>
-      </section>
-
-      <section className="konto-abschnitt">
-        <h2 className="d">Abmelden</h2>
-        <AbmeldenKnoepfe />
-      </section>
-
-      <KontoLoeschen />
-    </div>
+    </KontoHuelle>
   );
 }
 
-function interessenAnzahl(ich: Ich): number {
+// ── /konto/datenschutz (Plan Mein Bereich 3.8) ──────────────────────────────
+export function DatenschutzSeite() {
+  return (
+    <KontoHuelle>
+      {(ich, laden) => (
+        <div className="konto-bereich">
+          {profilFertig(ich) ? <EinwilligungenWeitere ich={ich} neuLaden={laden} /> : <ProfilHinweis />}
+
+          <section className="konto-abschnitt">
+            <h2 className="d">Deine Daten</h2>
+            <a href="/api/konto/export" className="btn btn--outline btn--klein" download>Deine Daten herunterladen</a>
+            {/* Gleiche Datei: Kontodaten plus die Angaben nach Art. 15 Abs. 1 und 2 DSGVO (17.11.2026) */}
+            <a href="/api/konto/export" className="link" download>Eine vollständige Auskunft nach Art. 15 DSGVO herunterladen.</a>
+          </section>
+
+          <section className="konto-abschnitt">
+            <h2 className="d">Mehr zum Datenschutz</h2>
+            <p>
+              Wie wir mit deinen Daten umgehen, steht in der <Link href="/datenschutz#konto">Datenschutzerklärung</Link>. Die
+              Regeln für dein Konto findest du in den <Link href="/nutzungsbedingungen">Nutzungsbedingungen</Link>.
+            </p>
+          </section>
+        </div>
+      )}
+    </KontoHuelle>
+  );
+}
+
+// ── /konto/interessen (Plan Mein Bereich 3.6) ───────────────────────────────
+export function InteressenSeite({ daten }: { daten: FragebogenDaten }) {
+  return (
+    <KontoHuelle>
+      {(ich, laden) =>
+        profilFertig(ich) ? (
+          <div className="konto-bereich">
+            <section className="konto-abschnitt">
+              <h2 className="d">Deine Interessen</h2>
+              <InteressenChips ich={ich} daten={daten} />
+              <Link href="/konto/willkommen?modus=interessen" className="btn btn--outline btn--klein">Interessen ändern</Link>
+            </section>
+            <EinwilligungInteressen ich={ich} neuLaden={laden} />
+          </div>
+        ) : (
+          <ProfilHinweis />
+        )
+      }
+    </KontoHuelle>
+  );
+}
+
+/** Summe der Einträge in den fünf Listen (wie die Kachel auf /konto) */
+export function interessenAnzahl(ich: Ich): number {
   const p = ich.praeferenzen;
   return (p.kategorien?.length ?? 0) + (p.unterkategorien?.length ?? 0) + (p.stadtteile?.length ?? 0) + (p.merkmale?.length ?? 0) + (p.orte?.length ?? 0);
 }
 
-function interessenKurz(ich: Ich): string {
-  if (!ich.personalisierung) return "Keine Interessen gespeichert.";
-  const n = interessenAnzahl(ich);
-  return n ? `${n} Angaben gespeichert.` : "Gespeichert: keine besonderen Vorlieben.";
+/** Lesbare Übersicht als Chips je Liste. Unbekannte Slugs (z. B. eine entfallene Unterkategorie) fallen still weg. */
+function InteressenChips({ ich, daten }: { ich: Ich; daten: FragebogenDaten }) {
+  if (!ich.personalisierung) return <p>Du hast keine Interessen gespeichert.</p>;
+  if (!interessenAnzahl(ich)) return <p>Gespeichert: keine besonderen Vorlieben.</p>;
+  const p = ich.praeferenzen;
+  const namen = (slugs: string[] | undefined, liste: { slug: string; name: string }[]) =>
+    (slugs ?? []).map((s) => liste.find((x) => x.slug === s)?.name).filter((n): n is string => !!n);
+  const unter = daten.kategorien.flatMap((k) => k.unter.map((u) => ({ slug: `${k.slug}/${u.slug}`, name: u.name })));
+  const stadtteile = [...daten.bezirke.flatMap((b) => b.stadtteile), ...daten.nachbarn];
+  // „Von allem etwas“ speichert alle Kategorien – dann ein Chip statt aller einzeln
+  const alleKat = daten.kategorien.length > 0 && daten.kategorien.every((k) => p.kategorien?.includes(k.slug));
+  const gruppen: [string, string[]][] = [
+    ["Kategorien", alleKat ? ["Von allem etwas"] : namen(p.kategorien, daten.kategorien)],
+    ["Genauer", namen(p.unterkategorien, unter)],
+    ["Stadtteile", namen(p.stadtteile, stadtteile)],
+    ["Am liebsten", namen(p.merkmale, MERKMALE)],
+    ["Orte", namen(p.orte, ORTE)],
+  ];
+  return (
+    <dl className="konto-chips">
+      {gruppen.filter(([, n]) => n.length).map(([titel, n]) => (
+        <div key={titel}>
+          <dt>{titel}</dt>
+          <dd>
+            {n.map((name) => <span key={name} className="konto-chip">{name}</span>)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
-function Einwilligungen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<void> }) {
+/** PUT /api/konto/einstellungen für eine Einwilligung, gemeinsam für Interessen- und Datenschutzseite */
+function useEinwilligungSetzen(neuLaden: () => Promise<void>) {
   const [fehler, setFehler] = useState<string | null>(null);
   const [sendet, setSendet] = useState(false);
-  // Rückfrage vor dem Widerruf (a), wenn Interessen gespeichert sind: Sie werden sofort gelöscht (17.11.2026)
-  const [frageLoeschen, setFrageLoeschen] = useState(false);
-  const hatInteressen = ich.personalisierung && interessenAnzahl(ich) > 0;
-
   async function setzen(body: Record<string, unknown>) {
     setSendet(true);
     setFehler(null);
@@ -265,10 +343,19 @@ function Einwilligungen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<v
     if (a.daten.gesperrt) lokalAbmelden(true);
     await neuLaden();
   }
+  return { fehler, sendet, setzen };
+}
+
+/** Einwilligung (a) mit Rückfrage beim Abschalten (17.11.2026), auf /konto/interessen */
+function EinwilligungInteressen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<void> }) {
+  const { fehler, sendet, setzen } = useEinwilligungSetzen(neuLaden);
+  // Rückfrage vor dem Widerruf (a), wenn Interessen gespeichert sind: Sie werden sofort gelöscht (17.11.2026)
+  const [frageLoeschen, setFrageLoeschen] = useState(false);
+  const hatInteressen = ich.personalisierung && interessenAnzahl(ich) > 0;
 
   return (
     <section className="konto-abschnitt">
-      <h2 className="d">Deine Einwilligungen</h2>
+      <h2 className="d">Deine Einwilligung</h2>
       <EinwilligungFeld
         labelTitel="Interessen speichern und Empfehlungen."
         label={GESTUFT.personalisierung}
@@ -299,6 +386,20 @@ function Einwilligungen({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<v
           rückgängig machen. Du kannst sie später neu angeben.
         </p>
       </Rueckfrage>
+      {fehler && <Meldung art="fehler">{fehler}</Meldung>}
+    </section>
+  );
+}
+
+/** Einwilligungen (b), (c), (d) auf /konto/datenschutz, Texte wie bisher */
+function EinwilligungenWeitere({ ich, neuLaden }: { ich: Ich; neuLaden: () => Promise<void> }) {
+  const { fehler, sendet, setzen } = useEinwilligungSetzen(neuLaden);
+  return (
+    <section className="konto-abschnitt">
+      <h2 className="d">Deine Einwilligungen</h2>
+      <p>
+        Deine Interessen und die Einwilligung dazu findest du unter <Link href="/konto/interessen">Interessen</Link>.
+      </p>
       <EinwilligungFeld
         labelTitel="Sensible Events im Konto speichern."
         intro={GESTUFT.sensibelErklaerung}

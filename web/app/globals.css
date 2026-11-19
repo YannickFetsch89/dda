@@ -2259,6 +2259,83 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 }
 .icon[data-icon="wm:markt"] { --wm-icon: url("/guides/icons/wm-markt.svg"); }
 
+/* ---------- Mein dies.das (Plan Mein Bereich 3) ---------- */
+/* TabBar: beide Leisten im HTML, genau eine sichtbar über html[data-konto] – auch vor der Hydration (3.9) */
+html[data-konto="1"] .tabbar--gast,
+html:not([data-konto="1"]) .tabbar--konto { display: none; }
+
+/* Seitenleiste am Desktop und Zurück-Pfeil mobil, beide nur angemeldet (3.2) */
+.konto-nav, .konto-zurueck { display: none; }
+.konto-seite--breit { max-width: none; }
+.konto-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.konto-nav a {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: var(--r-md);
+  color: var(--ddd-text-body); font-size: 15px; font-weight: 600; text-decoration: none;
+}
+.konto-nav a:hover { background: var(--ddd-subtle); color: var(--ddd-text); }
+.konto-nav a[aria-current="page"] { background: var(--ddd-subtle); color: var(--ddd-text); font-weight: 700; }
+.konto-nav .icon { font-size: 22px; color: var(--ddd-text-muted); }
+.konto-nav a[aria-current="page"] .icon { color: var(--ddd-gold); font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
+@media (min-width: 1024px) {
+  html[data-konto="1"] .konto-raster { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; align-items: start; }
+  html[data-konto="1"] .konto-nav { display: block; position: sticky; top: 24px; padding-top: 24px; }
+}
+@media (min-width: 1200px) { html[data-konto="1"] .konto-nav { padding-top: 40px; } }
+@media (max-width: 1023px) {
+  html[data-konto="1"] .konto-zurueck {
+    display: inline-flex; align-items: center; justify-content: center; align-self: center; width: 44px; height: 44px;
+    margin: 0 -6px 0 -10px; border-radius: 50%; color: var(--ddd-text); text-decoration: none;
+  }
+  html[data-konto="1"] .konto-zurueck .icon { font-size: 26px; }
+}
+
+/* Übersicht /konto (3.1) */
+.konto-mail { margin: -12px 0 0; color: var(--ddd-text-muted); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.konto-gruppe {
+  margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ddd-text-muted);
+}
+.konto-kacheln { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 640px) { .konto-kacheln { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.konto-kachel {
+  display: flex; flex-direction: column; gap: 6px; height: 100%; min-height: 116px; padding: 14px 16px; border: 1px solid var(--ddd-border);
+  border-radius: var(--r-card); background: var(--ddd-surface); color: var(--ddd-text); text-decoration: none;
+}
+.konto-kachel:hover { border-color: var(--ddd-text-muted); }
+.konto-kachel > .icon { font-size: 24px; color: var(--ddd-gold); }
+.konto-kachel__name { font-size: 15px; font-weight: 700; }
+.konto-kachel__wert { margin-top: auto; font-family: var(--font-display); font-size: 32px; line-height: 1; }
+.konto-kachel__wert--text { font-family: inherit; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--ddd-link); }
+.konto-kachel__wert.skeleton { display: block; width: 44px; height: 32px; border-radius: 6px; }
+.konto-liste {
+  list-style: none; margin: 0; padding: 0; border: 1px solid var(--ddd-border); border-radius: var(--r-card);
+  background: var(--ddd-surface); overflow: hidden;
+}
+.konto-liste li + li { border-top: 1px solid var(--ddd-border); }
+.konto-liste a { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 12px 16px; color: var(--ddd-text); text-decoration: none; }
+.konto-liste a:hover { background: var(--ddd-subtle); }
+.konto-liste a > span:nth-child(2) { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.konto-liste b { font-size: 16px; }
+.konto-liste small { color: var(--ddd-text-muted); font-size: 13px; line-height: 1.4; }
+.konto-liste .icon { font-size: 22px; color: var(--ddd-text-muted); flex-shrink: 0; }
+
+/* Interessen als Chips (3.6) */
+.konto-chips { margin: 0; display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.konto-chips dt { margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--ddd-text-muted); }
+.konto-chips dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.konto-chip {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 4px 12px; border-radius: var(--r-pill);
+  background: var(--ddd-subtle); color: var(--ddd-text); font-size: 14px; font-weight: 600;
+}
+
+/* Für dich und Erlebt (3.3, 3.5) */
+.fuer-dich { display: flex; flex-direction: column; gap: 36px; }
+.fuer-dich__abschnitt > h2 { margin: 0 0 14px; font-size: 26px; }
+.karte__grund {
+  display: block; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--ddd-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.merk-erlebt { margin: 24px 0 0; font-size: 15px; font-weight: 700; }
+
 /* ---------- Magazin (Plan docs/plan-redaktion-2026-11-19.md, 5.10) ---------- */
 .mz-uebersicht h1, .mz-beitrag h1, .mz-redaktion h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 12px 0 8px; }
 .mz-teaser { font-size: 17px; line-height: 1.5; color: var(--ddd-text-body); max-width: 68ch; margin: 0 0 16px; }
@@ -2336,3 +2413,41 @@ a.mz-ort:hover { border-color: var(--ddd-gold); }
 .mz-pruefung--gruen { background: var(--ddd-free-bg); color: var(--ddd-free-fg); }
 .mz-pruefung--rot { background: var(--ddd-error-bg); color: var(--ddd-error-fg); }
 .mz-pruefung ul { margin: 6px 0 0; padding-left: 20px; }
+
+/* ---------- Startseite angemeldet und Vorschau B18 (Plan Mein Bereich 4.1, 4.3) ---------- */
+/* Vorschau nur ohne Attribut (abgemeldet); bei 0 und 1 display:none, damit Button und Link nicht fokussierbar bleiben */
+html[data-konto] .start-vorschau { display: none; }
+/* Platzhalter in der Höhe des ersten Moduls nur bei 1 (die Insel lädt nur dann); bei 0 und abgemeldet nichts */
+.start-platzhalter { display: none; }
+html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; margin-top: var(--sektion); }
+
+.start-vorschau__buehne { position: relative; min-height: 320px; }
+.start-vorschau__karten {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap);
+  filter: blur(7px); opacity: 0.6; pointer-events: none; user-select: none;
+}
+.start-vorschau__kasten {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 32px));
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 22px 22px 20px;
+  border: 1px solid var(--ddd-border); border-radius: var(--r-card); background: var(--ddd-surface); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.start-vorschau__kasten > .icon { font-size: 28px; color: var(--ddd-gold); }
+.start-vorschau__kasten h3 { margin: 0; font-size: 24px; }
+.start-vorschau__kasten p { margin: 0; color: var(--ddd-text-body); font-size: 15px; line-height: 1.5; }
+.start-vorschau__links { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 6px; }
+@media (max-width: 767px) {
+  .start-vorschau__karten { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .start-vorschau__karten > :nth-child(n + 3) { display: none; }
+  /* Handy: Kasten direkt unter der Überschrift, Karten verschwommen dahinter */
+  .start-vorschau__kasten { top: 0; transform: translateX(-50%); }
+}
+
+.start-interessen {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 14px; padding: 14px 18px; border-radius: var(--r-card);
+  background: var(--ddd-subtle); border-left: 4px solid var(--ddd-gold);
+}
+.start-interessen > .icon { font-size: 24px; color: var(--ddd-gold); }
+.start-interessen p { flex: 1; min-width: 200px; margin: 0; color: var(--ddd-text); font-weight: 600; }
+.start-modul__gruss { display: block; margin-top: 4px; font-size: 14px; font-weight: 600; color: var(--ddd-text-muted); }
+.start-naechste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 767px) { .start-naechste { grid-template-columns: 1fr; } }

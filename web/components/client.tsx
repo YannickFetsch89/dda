@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
-import { angemeldetOhneAlter, kontomodus, merkAbonnieren, merkenUmschalten, merkSnapshot, SCHLUESSEL } from "@/lib/konto/merk-store";
+import {
+  KONTO_EVENT, angemeldetOhneAlter, kontomodus, merkAbonnieren, merkenUmschalten, merkSnapshot, SCHLUESSEL, type KontoZustand,
+} from "@/lib/konto/merk-store";
 
 // ---------- Merkliste (Gerät in localStorage, mit Konto zusätzlich auf dem Server: lib/konto/merk-store.ts) ----------
 
@@ -278,6 +280,15 @@ const TABS = [
   { href: "/merkliste", icon: "favorite", label: "Merkliste" },
 ];
 
+// Angemeldet (data-konto="1", Plan Mein Bereich 3.9 / S5): „Heute“ und „Wochenende“ bleiben über Chips und Menü erreichbar
+const TABS_KONTO = [
+  { href: "/", icon: "home", label: "Start" },
+  { href: "/entdecken", icon: "explore", label: "Entdecken" },
+  { href: "/konto/fuer-dich", icon: "auto_awesome", label: "Für dich" },
+  { href: "/merkliste", icon: "favorite", label: "Merkliste" },
+  { href: "/konto", icon: "person", label: "Profil" },
+];
+
 function istAktiv(pfad: string | null, href: string) {
   if (pfad === null) return false;
   if (href === "/") return pfad === "/";
@@ -285,29 +296,82 @@ function istAktiv(pfad: string | null, href: string) {
   return pfad.startsWith(href);
 }
 
+// Profil-Tab: Übersicht und Unterseiten von Mein dies.das, nicht „Für dich“ und nicht die öffentlichen Konto-Seiten
+// (Anmelden, Bestätigen, Passwort, Abgemeldet)
+const PROFIL_PFADE = new Set(["/konto", "/konto/einstellungen", "/konto/datenschutz", "/konto/interessen", "/konto/erlebt", "/konto/willkommen"]);
+export function istAktivKonto(pfad: string | null, href: string) {
+  if (pfad === null) return false;
+  if (href === "/konto") return PROFIL_PFADE.has(pfad);
+  if (href === "/entdecken") return pfad.startsWith("/entdecken");
+  // Start, Für dich, Merkliste: nur genau dieser Pfad
+  return pfad === href;
+}
+
+const zustandAbo = (cb: () => void) => {
+  window.addEventListener(KONTO_EVENT, cb);
+  return () => window.removeEventListener(KONTO_EVENT, cb);
+};
+const htmlZustand = (): KontoZustand => {
+  const w = document.documentElement.dataset.konto;
+  return w === "1" || w === "0" ? w : null;
+};
+/**
+ * Kontozustand für die Oberfläche (Plan Mein Bereich 3.0): „1“, „0“ oder null. Liest html[data-konto], das
+ * kontoAttributAbgleichen (lib/konto/merk-store.ts) pflegt. Auf dem Server und vor der Hydration immer abgemeldet.
+ */
+export function useKontoZustand(): KontoZustand {
+  return useSyncExternalStore(zustandAbo, htmlZustand, () => null);
+}
+
+const nieAbo = () => () => {};
+/**
+ * false auf dem Server und während der Hydration, danach true. Für `hidden` an TabBar und Seitenleiste: Das Attribut
+ * darf nicht im Server-HTML stehen (dort ist der Zustand immer „abgemeldet“), sonst könnte es vor der Hydration die
+ * angemeldete Leiste verdecken, die CSS über html[data-konto] schon zeigt (Cursor-Befund 2, Plan 3.9).
+ */
+export function useHydriert(): boolean {
+  return useSyncExternalStore(nieAbo, () => true, () => false);
+}
+
 function TabBarMitPfad() {
-  return <TabBarListe pfad={usePathname()} />;
+  return <TabBarListen pfad={usePathname()} />;
 }
 
 // Ohne Suspense würde usePathname das Prerendering blockieren; Fallback zeigt die Leiste ohne Aktiv-Zustand
 export function TabBar() {
   return (
-    <Suspense fallback={<TabBarListe pfad={null} />}>
+    <Suspense fallback={<TabBarListen pfad={null} />}>
       <TabBarMitPfad />
     </Suspense>
   );
 }
 
-function TabBarListe({ pfad }: { pfad: string | null }) {
+/**
+ * Beide Leisten stehen im HTML (Plan Mein Bereich 3.9). Sichtbar ist genau eine: CSS über html[data-konto] mit
+ * display:none, schon vor der Hydration. Erst danach setzt die Komponente zusätzlich `hidden` an der inaktiven Leiste.
+ */
+function TabBarListen({ pfad }: { pfad: string | null }) {
+  const konto = useKontoZustand() === "1";
+  const hydriert = useHydriert();
   return (
-    <nav className="tabbar" aria-label="Hauptnavigation">
-      {TABS.map((t) => (
-        <Link key={t.href} href={t.href} aria-current={istAktiv(pfad, t.href) ? "page" : undefined}>
-          <span className="icon" aria-hidden data-icon={t.icon} />
-          {t.label}
-        </Link>
-      ))}
-    </nav>
+    <>
+      <nav className="tabbar tabbar--gast" aria-label="Hauptnavigation" hidden={hydriert && konto}>
+        {TABS.map((t) => (
+          <Link key={t.href} href={t.href} aria-current={istAktiv(pfad, t.href) ? "page" : undefined}>
+            <span className="icon" aria-hidden data-icon={t.icon} />
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+      <nav className="tabbar tabbar--konto" aria-label="Hauptnavigation" hidden={hydriert && !konto}>
+        {TABS_KONTO.map((t) => (
+          <Link key={t.href} href={t.href} aria-current={istAktivKonto(pfad, t.href) ? "page" : undefined}>
+            <span className="icon" aria-hidden data-icon={t.icon} />
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+    </>
   );
 }
 

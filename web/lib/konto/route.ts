@@ -177,10 +177,11 @@ export function kontoRoute(opt: KontoOptionen, handler: Handler) {
         if (!profil) return kontoAntwort(401, { fehler: "Nicht angemeldet.", code: "abgemeldet" }, ctx.setCookies);
         ctx.profil = profil;
         if (!opt.ohneMindestalter && !profil.mindestalter_bestaetigt_am) {
+          // Hinweis-Cookie nur für den Browser (Sitzung aus dem Cookie), nie bei Bearer (App, Plan Mein Bereich 6)
           return kontoAntwort(
             403,
             { fehler: "Bitte bestätige zuerst dein Alter.", code: "mindestalter_fehlt" },
-            [...ctx.setCookies, hinweisCookie("0", lokal)],
+            ctx.sitzung.quelle === "cookie" ? [...ctx.setCookies, hinweisCookie("0", lokal)] : ctx.setCookies,
           );
         }
         await aktivitaetMerken(ctx.db, ctx.sitzung.nutzerId);
@@ -188,7 +189,9 @@ export function kontoRoute(opt: KontoOptionen, handler: Handler) {
 
       const antwort = await handler(ctx, routenKontext);
       for (const c of ctx.setCookies) antwort.headers.append("Set-Cookie", c);
-      if (ctx.profil && !ctx.ohneHinweis) antwort.headers.append("Set-Cookie", hinweisCookie(hinweisFuer(ctx.profil), lokal));
+      if (ctx.profil && !ctx.ohneHinweis && ctx.sitzung?.quelle === "cookie") {
+        antwort.headers.append("Set-Cookie", hinweisCookie(hinweisFuer(ctx.profil), lokal));
+      }
       antwort.headers.set("Cache-Control", "private, no-store");
       return antwort;
     } catch (err) {

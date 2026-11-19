@@ -9,6 +9,8 @@ import { KalenderToggle } from "@/components/datum-waehler";
 import { Datumsleiste } from "@/components/datumsleiste";
 import { WochenendTag } from "@/components/wochenend-tag";
 import { WmStartBox } from "@/components/wm-startbox";
+import { StartPersoenlich, VorschauLinks, VorschauLinksMit } from "@/components/start-persoenlich";
+import { kontenAktiv } from "@/lib/konto/konfig";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden, vergangeneWochenendEvents } from "@/lib/daten";
 import { beliebtAuswahl, jeEventEinmal, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
@@ -165,7 +167,8 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             </Leer>
           </div>
         ) : (
-          <section className={startrasterKlasse(tipp)} aria-label="Tipp und Picks">
+          // data-start-gezeigt / data-event-id: gezeigte Events, die die Insel als `ohne` schickt (Mein Bereich 4.1)
+          <section className={startrasterKlasse(tipp)} aria-label="Tipp und Picks" data-start-gezeigt="">
             {tipp && <TippDesTages e={tipp} heute={heute} />}
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <div className="sektionskopf">
@@ -175,17 +178,28 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
               <div className="nur-mobil">
                 <Reihe breite={280} label="Picks des Tages">
                   {picks.map((e) => (
-                    <KompaktKarte key={e.id} e={e} heute={heute} />
+                    <KompaktKarte key={e.id} e={e} heute={heute} mitId />
                   ))}
                 </Reihe>
               </div>
               <div className="picks-raster nur-desktop" role="list">
                 {picks.map((e) => (
-                  <KompaktKarte key={e.id} e={e} heute={heute} />
+                  <KompaktKarte key={e.id} e={e} heute={heute} mitId />
                 ))}
               </div>
             </div>
           </section>
+        )}
+
+        {/* Mein Bereich (Plan 4.1, 4.3, S1): Vorschau B18 für Abgemeldete im statischen HTML, Insel für Angemeldete.
+            Welche sichtbar ist, entscheidet CSS über html[data-konto]; der Server liest keine Sitzung. */}
+        {kontenAktiv() && (
+          <>
+            <StartVorschau events={beliebt.slice(0, 4)} heute={heute} />
+            <Suspense fallback={<div className="start-platzhalter" aria-hidden />}>
+              <StartPersoenlich />
+            </Suspense>
+          </>
         )}
 
         {/* Saison-Box Weihnachtsmärkte (Plan Weihnachtsmärkte 5.6): Schalter und Datumsfenster prüft die Komponente */}
@@ -372,10 +386,39 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   );
 }
 
+/**
+ * Vorschau B18 (Plan Mein Bereich 4.3): die ersten bis zu 4 Karten aus „Diese Woche beliebt“, verschwommen und nicht
+ * bedienbar (aria-hidden + inert nur auf den Karten, nie auf dem Elter des Buttons), darüber der Kasten mit Registrieren.
+ */
+function StartVorschau({ events, heute }: { events: DddEvent[]; heute: string }) {
+  return (
+    <section className="sektion start-vorschau" aria-labelledby="start-vorschau-titel">
+      <div className="sektionskopf">
+        <h2 className="d" id="start-vorschau-titel">Für dich empfohlen</h2>
+      </div>
+      <div className="start-vorschau__buehne">
+        <div className="start-vorschau__karten" aria-hidden inert data-nosnippet="">
+          {events.map((e) => <EventKarte key={e.id} e={e} heute={heute} variante="grid" />)}
+        </div>
+        <div className="start-vorschau__kasten">
+          <span className="icon" aria-hidden data-icon="lock" />
+          <h3 className="d">Events, die zu dir passen</h3>
+          <p>Mit einem kostenlosen Konto zeigen wir dir hier Vorschläge nach deinen Interessen und deiner Merkliste.</p>
+          <div className="start-vorschau__links">
+            <Suspense fallback={<VorschauLinksMit weiter="/" />}>
+              <VorschauLinks />
+            </Suspense>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TippDesTages({ e, heute }: { e: DddEvent; heute: string }) {
   const k = kategorie(e.kategorie);
   return (
-    <article className="sticker" style={katStil(e.kategorie)}>
+    <article className="sticker" style={katStil(e.kategorie)} data-event-id={e.id}>
       <Bild e={e} eager>
         <span className="badge badge--tipp">
           <Icon name="star" />
