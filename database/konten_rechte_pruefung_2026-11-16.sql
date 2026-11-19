@@ -25,7 +25,7 @@
 --   0 Übersicht (Zahl der geprüften Objekte)
 --
 -- Gewollt öffentlich lesbar (Whitelist aus Plan 4.0, nur SELECT): events, event_seo_entscheidungen, reihen, orte,
--- ab Schritt 3 zusätzlich einwilligungstexte.
+-- ab Schritt 3 zusätzlich einwilligungstexte; ab 19.11.2026 magazin_beitraege und magazin_autoren (Plan Redaktion 3.1).
 
 WITH
 tabellen AS (
@@ -45,7 +45,9 @@ whitelist (schema_name, tabelle) AS (
            ('public', 'event_seo_entscheidungen'),
            ('public', 'reihen'),
            ('public', 'orte'),
-           ('public', 'einwilligungstexte')   -- ab Schritt 3: Wortlaute der Einwilligungen sind öffentlich (Plan 4.4)
+           ('public', 'einwilligungstexte'),  -- ab Schritt 3: Wortlaute der Einwilligungen sind öffentlich (Plan 4.4)
+           ('public', 'magazin_beitraege'),   -- Magazin (Plan Redaktion 3.1): nur veröffentlichte, nur öffentliche Spalten
+           ('public', 'magazin_autoren')      -- Magazin: aktive Pseudonyme, nur öffentliche Spalten
 ),
 rollen (rolle) AS (
     VALUES ('anon'::name), ('authenticated'::name)

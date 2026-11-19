@@ -397,6 +397,8 @@ alter table magazin_beitraege add constraint magazin_hero_pfad check (
 - `freigegeben_am` = now() beim Wechsel; `vorschau_hash` = null.
 - `hero_ki` = true, wenn `hero_bild` mit `/fallback/` beginnt.
 - Geänderter `slug` bei veröffentlichtem Beitrag → alter Slug nach `alte_slugs`.
+- **Auslegung bei der Umsetzung (Schritt 1, 19.11.):** Ein veröffentlichter Beitrag darf über `service_role`, `anon` und `authenticated` nur noch in `pruefung` und `gemeldet_am` geändert werden (täglicher Prüflauf, IndexNow). Text, Bild, Status usw. ändert nur der Auftraggeber (Fehler `magazin_veroeffentlicht_gesperrt`). Grund: T5, sonst könnte die Pipeline einen freigegebenen Text nachträglich überschreiben.
+- **Ebenfalls Schritt 1:** Slugs und alte Slugs sind über alle Beiträge eindeutig (Fehler `magazin_slug_belegt`), damit die 308 im Proxy nie mehrdeutig ist.
 
 **Indizes:** `(status, veroeffentlicht_am desc)`, `(rubrik, veroeffentlicht_am desc)`, GIN auf `alte_slugs` und `event_ids`.
 
