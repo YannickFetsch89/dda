@@ -11,7 +11,7 @@ import { WochenendTag } from "@/components/wochenend-tag";
 import { WmStartBox } from "@/components/wm-startbox";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden, vergangeneWochenendEvents } from "@/lib/daten";
-import { beliebtAuswahl, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
+import { beliebtAuswahl, jeEventEinmal, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
 import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, zeitraumImSatz, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
@@ -106,7 +106,8 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
 
   // Infoboxen
   const abend = imZeitraum.filter((e) => uhrzeitenVon(e).some((z) => z >= "17:00")).sort(nachZeit).slice(0, 8);
-  const frisch = (neu.length ? neu : [...pool.events].sort(nachNeu)).slice(0, 6);
+  // Jedes Event nur einmal – mehrere Termine derselben Reihe/desselben Titels am Ort zählen als ein Eintrag
+  const frisch = jeEventEinmal(neu.length ? neu : [...pool.events].sort(nachNeu)).slice(0, 6);
   const stadtteile = stadtteileZaehlen(imZeitraum.length >= 10 ? imZeitraum : woche).slice(0, 10);
 
   // Kostenlos + Themen (Woche ab gewähltem Tag)

@@ -697,6 +697,8 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .rund-weiss:hover { color: var(--ddd-navy); }
 .rund-weiss .icon { font-size: 22px; }
 .detail-sheet { position: relative; z-index: 3; margin-top: -28px; background: var(--ddd-bg); border-radius: var(--r-xl) var(--r-xl) 0 0; padding-top: 24px; }
+/* Symbolbild-Hinweis im Hero über der Kante des Inhaltsbereichs (der überlappt das Bild um 28 px und verdeckte ihn) */
+.detail-hero .bild__symbol { bottom: calc(28px + 10px); right: var(--rand); font-size: 11px; padding: 3px 8px; }
 .detail-raster { display: grid; gap: 24px; }
 .detail__titel { font-size: 38px; line-height: 1; margin-top: 12px; overflow-wrap: anywhere; }
 .infozeilen { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }

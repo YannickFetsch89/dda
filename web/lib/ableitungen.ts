@@ -286,6 +286,28 @@ export function vielfaeltig(
   return gewaehlt;
 }
 
+/** Schlüssel „dasselbe Event“: gleiche Reihe, sonst gleicher Titel am gleichen Ort (ohne Groß-/Kleinschreibung, Satzzeichen). */
+function gleichesEvent(e: DddEvent): string {
+  if (e.reihe?.slug) return `reihe:${e.reihe.slug}`;
+  const norm = (t: string | null | undefined) => (t ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  return `${norm(e.titel)}|${norm(e.ort)}`;
+}
+
+/**
+ * Jedes Event nur einmal (Auftraggeber 19.11.2026, „Gerade neu“): mehrere Termine derselben Reihe bzw. desselben
+ * Titels am selben Ort (z. B. „Rennbahn-Weihnacht“ an drei Samstagen) zählen als ein Eintrag. Behalten wird der erste
+ * in der übergebenen Reihenfolge.
+ */
+export function jeEventEinmal(events: DddEvent[]): DddEvent[] {
+  const gesehen = new Set<string>();
+  return events.filter((e) => {
+    const k = gleichesEvent(e);
+    if (gesehen.has(k)) return false;
+    gesehen.add(k);
+    return true;
+  });
+}
+
 export function neuSeit(events: DddEvent[], jetztIso: string, stunden = 24): DddEvent[] {
   const grenze = new Date(new Date(jetztIso).getTime() - stunden * 3_600_000).toISOString();
   return events.filter((e) => (e.erstellt_am ?? "") >= grenze);
