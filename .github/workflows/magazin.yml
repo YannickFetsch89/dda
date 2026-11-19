@@ -1,0 +1,86 @@
+name: Magazin (Entwürfe, IndexNow, Prüflauf)
+
+# Plan docs/plan-redaktion-2026-11-19.md, Schritt 3 (T6). Alle Aufgaben laufen nur mit der GitHub-Variable
+# MAGAZIN_AKTIV = 1 (Settings → Secrets and variables → Actions → Variables) – bis zum Livegang (Schritt 7) ist sie aus,
+# so entstehen weder Kosten noch Action-Minuten. Die IndexNow-Meldung folgt zusätzlich dem Website-Schalter: Sie läuft
+# nur, wenn /magazin/feed.xml mit 200 antwortet.
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, MAGAZIN_JOB_SCHLUESSEL (derselbe Wert wie für deploy.yml).
+on:
+  schedule:
+    # GitHub rechnet in UTC. Fr 17:00 UTC = 18:00 Uhr (Winterzeit): Entwurf der Wochenvorschau (E6)
+    - cron: "0 17 * * 5"
+    # Am 28. um 17:00 UTC: Entwurf der Monats-Tipps für den Folgemonat (3–4 Tage vor Monatsbeginn)
+    - cron: "0 17 28 * *"
+    # Stündlich: IndexNow für neu veröffentlichte Beiträge
+    - cron: "20 * * * *"
+    # Täglich 04:40 UTC: Prüflauf der veröffentlichten Beiträge
+    - cron: "40 4 * * *"
+  workflow_dispatch:
+    inputs:
+      aufgabe:
+        description: "Aufgabe"
+        required: true
+        type: choice
+        options: [entwurf-wochenvorschau, entwurf-monats-tipps, melden, pruefen]
+      von:
+        description: "Erster Tag der Ausgabe (JJJJ-MM-TT, leer = nächste Ausgabe)"
+        required: false
+      dry_run:
+        description: "Nur prüfen, nichts schreiben, kein Modellaufruf"
+        type: boolean
+        default: true
+
+# Nie zwei Magazin-Läufe gleichzeitig (Kostendeckel, Plan 4.4)
+concurrency:
+  group: magazin
+  cancel-in-progress: false
+
+jobs:
+  magazin:
+    if: vars.MAGAZIN_AKTIV == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Aufgabe bestimmen
+        id: aufgabe
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            A="${{ inputs.aufgabe }}"
+          else
+            case "${{ github.event.schedule }}" in
+              "0 17 * * 5") A=entwurf-wochenvorschau ;;
+              "0 17 28 * *") A=entwurf-monats-tipps ;;
+              "20 * * * *") A=melden ;;
+              *) A=pruefen ;;
+            esac
+          fi
+          case "$A" in
+            entwurf-*) ARGS="entwurf --rubrik ${A#entwurf-}" ;;
+            *) ARGS="$A" ;;
+          esac
+          if [ -n "${{ inputs.von }}" ] && [ "${A#entwurf-}" != "$A" ]; then ARGS="$ARGS --von ${{ inputs.von }}"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "Aufgabe: $ARGS"
+
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python-Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Magazin-Aufgabe ausführen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MAGAZIN_JOB_SCHLUESSEL: ${{ secrets.MAGAZIN_JOB_SCHLUESSEL }}
+          MAGAZIN_AKTIV: ${{ vars.MAGAZIN_AKTIV }}
+          TZ: Europe/Berlin
+        run: python -m pipeline.magazin ${{ steps.aufgabe.outputs.args }}
