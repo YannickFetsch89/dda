@@ -11,7 +11,8 @@ Stand 19.11.2026 · **siebte Fassung nach sechs Cursor-Prüfungen vom 19.11. · 
   - Prüfung 6: 2 geringe Befunde. Gesamturteil der sechsten Prüfung: freigabefähig.
 - **Entscheidungen:** E1, E2, E4, E4a, E5, E7, E12 und die Modellwahl am 19.11. vom Auftraggeber beantwortet (2.2). Autorenkonzept mit redaktionellen Pseudonymen vom Auftraggeber vorgegeben (2.3).
 - **Umsetzung:** noch nichts umgesetzt; startet erst auf ausdrückliche Anweisung des Auftraggebers.
-- **Vor Schritt 4 / vor dem Livegang offen:** E15 (Namen der Pseudonyme) und Anwalt A1–A3.
+- **Umsetzungsstand (19.11.2026):** Schritte 1–4 live (772b756, cc95cf2, b0b2567, 9b4887b), Schalter aus. E15 und E16 entschieden (2.2): fünf Pseudonyme, sieben Rubriken. Cursor-Gesamtprüfung der Schritte 1–4: bereit für Schritt 5; Befunde eingearbeitet.
+- **Vor dem Livegang offen:** Profilbilder (erzeugt der Auftraggeber aus den Prompts, danach SQL für `bild`), Schritt 5 (Impressum § 18 Abs. 2 MStV, Text „Unsere Redaktion“, `llms.txt`), Anwalt A1–A3.
 
 **Ziel:** dies.das.düsseldorf bekommt ein Online-Magazin für Düsseldorf. Die Beiträge sollen Google in **Discover**, in der
 **normalen Suche** und in **KI-Suchen** ausspielen können (Google AI Overviews/AI Mode, ChatGPT, Perplexity …).
@@ -866,7 +867,7 @@ Weitere Seiten:
 | 1 | SQL `database/magazin_2026-11-xx.sql`: Tabellen, Rechte, View, Policies, Trigger, Indizes; Rechte-Prüfung | Auftraggeber führt aus |
 | 2 | Website: Routen 5.1, Proxy-`matcher` + Prüfung, Renderer, Metadaten + `seitenAlternates`, JSON-LD, Feed, Sitemap, Vorschau, Zuschnitt-Route, Autoren- und Redaktionsseite, `waehleEvent()` + `highlightsImZeitraum()` + `magazinPoolLaden()` + Auswahl-Route `/api/magazin/auswahl` (T11, Secret `MAGAZIN_JOB_SCHLUESSEL` in `deploy.yml` und nach `web/.env.local`), `heroFuer()`; `MAGAZIN_VERLINKT = false`; Tests 7.1 | Cursor-Prüfung des Codes, Deploy nach OK; Seiten live, noindex, unverlinkt |
 | 3 | `pipeline/magazin.py` (Auswahl über die Route aus T11, Ressort-Agenten, Prüfungen, Kostendeckel, Meldung, Prüflauf), Schreibprofile (T7), GitHub Action mit `MAGAZIN_AKTIV`; Tests 7.2 | Kosten vor erstem Lauf nennen |
-| 4 | Profile der Pseudonyme (E15) + illustrierte Profilbilder | Auftraggeber gibt Namen, Texte, Bilder frei; Bildkosten vorher nennen |
+| 4 | Profile der Pseudonyme (E15) + illustrierte Profilbilder; eigene Rubriken Nachtleben, Genuss, Familie (E16) | Erledigt 19.11. (9b4887b, SQL ausgeführt) bis auf die Profilbilder: Der Auftraggeber erzeugt sie aus den Prompts, danach SQL für `bild` |
 | 5 | Impressum (§ 18 Abs. 2 MStV), „Unsere Redaktion“, Pseudonym-Kasten, `llms.txt` | Texte vom Auftraggeber freigegeben, Anwalt A1–A3 |
 | 6 | Erste Entwürfe, genau drei: „Welcher Weihnachtsmarkt passt zu euch?“, „Top-Events im Dezember 2026“, Wochenvorschau 30.11.–06.12. (Gliederungen 1–3 aus Abschnitt 6; Gliederung 4 folgt im Januar) | Auftraggeber prüft und veröffentlicht |
 | 7 | Livegang: `MAGAZIN_VERLINKT = true`, `MAGAZIN_AKTIV=1`, Einbaustellen 5.9, Search Console | Deploy nach OK |
@@ -921,7 +922,7 @@ Weitere Seiten:
 ---
 
 ## 12. Offene Punkte
-- **E15:** Namen, Schwerpunkte und Kurzbeschreibungen der Pseudonyme (bis Di 24.11.).
+- **Profilbilder** der fünf Pseudonyme (E15 entschieden 19.11., Kurzbeschreibungen in der Datenbank; `bild` bis dahin NULL).
 - **E3, E6, E8, E9, E10, E13, E14:** gelten mit der Empfehlung, solange nichts anderes gesagt.
 - **Anwalt:**
   - **A1:** Pseudonyme mit offengelegter Verantwortung; KI-Kennzeichnung von Texten und Bildern (Art. 50 KI-VO), auch für die KI-Symbolbilder auf der übrigen Website; KI-Profilbilder.

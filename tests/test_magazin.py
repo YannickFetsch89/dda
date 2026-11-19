@@ -270,6 +270,27 @@ class PruefungenTest(unittest.TestCase):
         self.assertTrue(any(p.startswith("(h)") for p in self.punkte(hub)))
         self.assertTrue(any(p.startswith("(i)") for p in self.punkte(self.entwurf(), hero="/fallback/sprachcafe-2.webp")))
 
+    def test_faq_wird_mitgeprueft(self):
+        """FAQ steht sichtbar und im JSON-LD – dieselben Regeln wie der Fließtext (Cursor-Gesamtprüfung)."""
+        faelle = (
+            ({"frage": "Wann geht es los?", "antwort": "Um 19:30 am Rhein."}, "(b)"),
+            ({"frage": "Was kostet es?", "antwort": "Karten ab 12 €."}, "(b)"),
+            ({"frage": "Gibt es noch Karten?", "antwort": "Leider ausverkauft."}, "(b)"),
+            ({"frage": "Wann genau?", "antwort": "Am 2. Dezember."}, "(b)"),
+            ({"frage": "Mehr?", "antwort": "Siehe [hier](//fremd.de)."}, "(c)"),
+            ({"frage": "Lohnt es sich?", "antwort": "Ich war selbst dort."}, "(e)"),
+            ({"frage": "Wie gut?", "antwort": "Bei Google 4,8 Sterne."}, "(f)"),
+        )
+        for faq, kennung in faelle:
+            self.assertTrue(any(p.startswith(kennung) for p in self.punkte(self.entwurf(faq=[faq]))), faq)
+        harmlos = {"frage": "Wo finde ich alle Termine?", "antwort": "Im [Kalender](/entdecken) und am [Wochenende](/wochenende)."}
+        self.assertEqual(self.punkte(self.entwurf(faq=[harmlos])), [])
+
+    def test_i_fremdfoto_und_fremde_ordner(self):
+        for hero in ("/ort-bilder/weihnachtsmaerkte/koe-on-ice.webp", "/ort-bilder/events/further-nikolausmarkt.webp", "https://x.de/a.webp"):
+            self.assertTrue(any(p.startswith("(i)") for p in self.punkte(self.entwurf(), hero=hero)), hero)
+        self.assertEqual(self.punkte(self.entwurf(), hero="/ort-bilder/weihnachtsmaerkte/maerchen-markt.webp"), [])
+
     def test_d_laengen(self):
         kurz = self.entwurf(teaser="zu kurz", kurzfassung=["eins"],
                             abschnitte=[{"ueberschrift": "Montag", "text_md": "Wenig Text.", "event_ids": [E1]}])

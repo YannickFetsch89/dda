@@ -97,6 +97,9 @@ ALTER TABLE public.magazin_beitraege ADD CONSTRAINT magazin_alte_slugs_form
            AND NOT (slug = ANY (alte_slugs)));
 
 -- Rubrik = URL-Segment (Plan 3.1, Cursor-Prüfung 2 Befund 9)
+-- ACHTUNG: Seit Schritt 4 gilt die Rubrikliste aus database/magazin_rubriken_autoren_2026-11-19.sql (sieben Rubriken).
+-- Wer diese Datei erneut ausführt, setzt den CHECK hier auf vier Rubriken zurück – danach die Schritt-4-Datei ebenfalls
+-- erneut ausführen (Cursor-Gesamtprüfung 19.11.2026).
 ALTER TABLE public.magazin_beitraege DROP CONSTRAINT IF EXISTS magazin_rubrik_werte;
 ALTER TABLE public.magazin_beitraege ADD CONSTRAINT magazin_rubrik_werte
     CHECK (rubrik IN ('wochenvorschau', 'monats-tipps', 'saison', 'stadtleben'));

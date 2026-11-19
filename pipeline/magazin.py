@@ -67,6 +67,9 @@ RUBRIK_ERSATZ = {  # wie web/lib/magazin-bilder.ts (RUBRIK_ERSATZ)
     "familie": "/fallback/ostern-3.webp",
     "stadtleben": "/fallback/sprachcafe-1.webp",
 }
+# Wie CHECK magazin_hero_pfad (database/magazin_2026-11-19.sql) und web/lib/magazin-bilder.ts
+HERO_PFAD = re.compile(r"^/(magazin-bilder/[a-z0-9-]+|fallback|ort-bilder/weihnachtsmaerkte)/[a-z0-9-]+\.(webp|jpg|png)$")
+FREMDFOTO = "/ort-bilder/weihnachtsmaerkte/koe-on-ice.webp"
 MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
           "November", "Dezember"]
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
@@ -278,14 +281,18 @@ def pruefen(e: Entwurf, rubrik: str, von: date, bis: date, kandidaten: list[dict
     fremd = sorted({i for a in e.abschnitte for i in a.get("event_ids", []) if i not in ids})
     if fremd:
         punkte.append(f"(a) Event-IDs außerhalb der Auswahl: {', '.join(fremd)}")
+    # FAQ (Frage und Antwort) zählt wie Fließtext: Sie steht sichtbar auf der Seite und im FAQPage-JSON-LD
+    # (Cursor-Gesamtprüfung 19.11.2026)
+    faq_text = "\n".join(f"{f.get('frage', '')}\n{f.get('antwort', '')}" for f in (e.faq or []))
+    fliess_mit_faq = "\n".join(x for x in (fliesstext, faq_text) if x)
     # (b) Uhrzeiten, Preise, „ausverkauft“ nirgends; Daten nur in Titel/Teaser/Überschriften/Kurzfassung und im Zeitraum
-    alles = "\n".join([e.titel, e.teaser, *e.kurzfassung, *(a.get("ueberschrift", "") for a in e.abschnitte), fliesstext])
+    alles = "\n".join([e.titel, e.teaser, *e.kurzfassung, *(a.get("ueberschrift", "") for a in e.abschnitte), fliess_mit_faq])
     for name, muster in (("Uhrzeit", UHRZEIT), ("Preis", PREIS), ("„ausverkauft“", AUSVERKAUFT)):
         treffer = muster.search(alles)
         if treffer:
             punkte.append(f"(b) {name} im Text: „{treffer.group(0)}“")
-    if daten_im_text(fliesstext, von.year):
-        punkte.append("(b) Datumsangabe im Fließtext (Daten stehen in den Karten)")
+    if daten_im_text(fliess_mit_faq, von.year):
+        punkte.append("(b) Datumsangabe im Fließtext oder in der FAQ (Daten stehen in den Karten)")
     kopf = "\n".join([e.titel, e.teaser, *e.kurzfassung, *(a.get("ueberschrift", "") for a in e.abschnitte)])
     for d in daten_im_text(kopf, von.year):
         # Jahreswechsel (z. B. 28.12.–03.01.): „2. Januar“ ohne Jahr gehört zum Folgejahr
@@ -293,7 +300,7 @@ def pruefen(e: Entwurf, rubrik: str, von: date, bis: date, kandidaten: list[dict
         if not (von <= d <= bis or von <= naechstes <= bis):
             punkte.append(f"(b) Datum {d.isoformat()} außerhalb des Zeitraums {von}–{bis}")
     # (c) Links
-    for m in LINK.finditer(fliesstext):
+    for m in LINK.finditer(fliess_mit_faq):
         if not link_ok(m.group(2), pfade):
             punkte.append(f"(c) Link nicht erlaubt oder unbekannt: {m.group(2)}")
     # (d) Längen
@@ -310,8 +317,11 @@ def pruefen(e: Entwurf, rubrik: str, von: date, bis: date, kandidaten: list[dict
     # (e) Clickbait und Ich-Formen des Pseudonyms
     if CLICKBAIT.search(alles):
         punkte.append(f"(e) Clickbait: „{CLICKBAIT.search(alles).group(0)}“")
-    if ICH_FORM.search(alles):
-        punkte.append(f"(e) Ich-Form: „{ICH_FORM.search(alles).group(0)}“")
+    # Ich-Form nur in der Stimme des Pseudonyms – FAQ-Fragen stehen in der Stimme der Leser („Wo finde ich …?“)
+    stimme = "\n".join([e.titel, e.teaser, *e.kurzfassung, *(a.get("ueberschrift", "") for a in e.abschnitte), fliesstext,
+                        *(f.get("antwort", "") for f in (e.faq or []))])
+    if ICH_FORM.search(stimme):
+        punkte.append(f"(e) Ich-Form: „{ICH_FORM.search(stimme).group(0)}“")
     # (f) keine Google-Inhalte
     if GOOGLE.search(alles):
         punkte.append(f"(f) Google-Inhalt: „{GOOGLE.search(alles).group(0)}“")
@@ -321,6 +331,9 @@ def pruefen(e: Entwurf, rubrik: str, von: date, bis: date, kandidaten: list[dict
     # (i) Aufmacherbild
     erlaubte = erlaubte_heros if erlaubte_heros is not None else set(RUBRIK_ERSATZ.values())
     if hero.startswith("/fallback/") and hero not in erlaubte:
+        punkte.append(f"(i) Aufmacherbild nicht erlaubt: {hero}")
+    elif not HERO_PFAD.match(hero) or hero == FREMDFOTO:
+        # Wie der CHECK magazin_hero_pfad: nur erlaubte Ordner, Fremdfoto koe-on-ice nie (Plan 3.1, 7.2)
         punkte.append(f"(i) Aufmacherbild nicht erlaubt: {hero}")
     return {"ergebnis": "rot" if punkte else "gruen", "punkte": punkte, "zeitpunkt": datetime.now(timezone.utc).isoformat()}
 
