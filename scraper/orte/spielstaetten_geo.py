@@ -76,7 +76,9 @@ def freigegebene_haeuser() -> list[dict]:
     with KANDIDATEN.open(encoding="utf-8-sig", newline="") as f:
         return [z for z in csv.DictReader(f, delimiter=";")
                 if (z.get("entscheidung") or "").strip().lower() == "ja" and z["zeile_typ"] in GEOKODIEREN
-                and z.get("slug_vorschlag")]
+                and z.get("slug_vorschlag")
+                # nur importierte Zeilen: ohne zulässige Art lehnt der Import ab (Plan 3.1)
+                and (z.get("art_korrigiert") or "").strip() not in ("", "Sonstiges")]
 
 
 def _lesen() -> list[dict]:
