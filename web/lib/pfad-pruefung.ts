@@ -11,6 +11,7 @@ import { kategorieAusDb } from "./kategorien";
 import {
   guideStadtteilPfad, kanonischerStadtteil, kategorieGueltig, kategoriePfad, stadtteilAusSlug, stadtteilPfad, unterkategorieGueltig,
 } from "./landing";
+import { istRubrik, RESERVIERT, SLUG_MUSTER } from "./magazin";
 import { eventPfad } from "./pfade";
 import type { DddOrt, KategorieSlug } from "./typen";
 
@@ -30,7 +31,14 @@ export type Route =
   | { typ: "kategorie"; slug: string }
   | { typ: "unterkategorie"; kategorie: string; unter: string }
   | { typ: "stadtteil"; slug: string }
-  | { typ: "guide-stadtteil"; hub: OrtHub; slug: string };
+  | { typ: "guide-stadtteil"; hub: OrtHub; slug: string }
+  // Magazin (Plan Redaktion 5.1, T4)
+  | { typ: "feed-alt" }
+  | { typ: "magazin-fest" }
+  | { typ: "magazin-rubrik"; rubrik: string }
+  | { typ: "magazin-autor"; slug: string }
+  | { typ: "magazin-vorschau"; id: string }
+  | { typ: "magazin-beitrag"; slug: string };
 
 export type OrtHub = "restaurants-cafes" | "kneipen-bars" | "clubs" | "spielplaetze" | "weihnachtsmaerkte";
 const HUBS: OrtHub[] = ["restaurants-cafes", "kneipen-bars", "clubs", "spielplaetze", "weihnachtsmaerkte"];
@@ -58,7 +66,24 @@ export function routeVon(pfad: string): Route | null {
   if (a === "kategorie" && b && !c) return { typ: "kategorie", slug: b };
   if (a === "kategorie" && b && c && !d) return { typ: "unterkategorie", kategorie: b, unter: c };
   if (a === "stadtteil" && b && !c) return { typ: "stadtteil", slug: b };
+  if (a === "feed.xml" && !b) return { typ: "feed-alt" };
+  if (a === "magazin") return magazinRoute(b, c, d);
   return null;
+}
+
+/** Magazin-Pfade (Plan Redaktion 5.1): feste Seiten, Rubrik, Autor, Vorschau, Beitrag; mehr Pfadteile → ungültig. */
+function magazinRoute(b?: string, c?: string, d?: string): Route {
+  if (d) return { typ: "ungueltig" };
+  if (!b) return { typ: "magazin-fest" };
+  if (!c) {
+    if (b === "feed.xml" || b === "redaktion") return { typ: "magazin-fest" };
+    if ((RESERVIERT as readonly string[]).includes(b)) return { typ: "ungueltig" };
+    return { typ: "magazin-beitrag", slug: b };
+  }
+  if (b === "rubrik") return { typ: "magazin-rubrik", rubrik: c };
+  if (b === "autor") return { typ: "magazin-autor", slug: c };
+  if (b === "vorschau") return { typ: "magazin-vorschau", id: c };
+  return { typ: "ungueltig" };
 }
 
 /** Echter Kalendertag – dieselbe Regel wie die Tagesseite (lib/datum.ts, istGueltigerTag). */
@@ -71,20 +96,50 @@ const FEHLT_MS = 2 * 60 * 1000; // neue Events erscheinen schnell
 const MAX_EINTRAEGE = 5000;
 const speicher = new Map<string, { wert: unknown; bis: number }>();
 
-async function gemerkt<T>(schluessel: string, laden: () => Promise<T | undefined>): Promise<T | undefined> {
+async function gemerkt<T>(
+  schluessel: string, laden: () => Promise<T | undefined>, zeiten: { treffer: number; fehlt: number } = { treffer: TREFFER_MS, fehlt: FEHLT_MS },
+): Promise<T | undefined> {
   const e = speicher.get(schluessel);
   if (e && e.bis > Date.now()) return e.wert as T;
   const wert = await laden();
   if (wert === undefined) return undefined; // Fehler nicht merken
   if (speicher.size >= MAX_EINTRAEGE) speicher.delete(speicher.keys().next().value as string);
-  speicher.set(schluessel, { wert, bis: Date.now() + (wert === null ? FEHLT_MS : TREFFER_MS) });
+  speicher.set(schluessel, { wert, bis: Date.now() + (wert === null ? zeiten.fehlt : zeiten.treffer) });
   return wert;
 }
+
+/** Nur für Tests: Zwischenspeicher leeren. */
+export function speicherLeeren(): void {
+  speicher.clear();
+}
+
+/** Magazin (Plan Redaktion T10): Treffer 5 min, Fehltreffer 60 s. */
+const MAGAZIN_ZEITEN = { treffer: 5 * 60 * 1000, fehlt: 60 * 1000 };
 
 /** REST-Abfrage an Supabase. undefined = Fehler (→ weiter), [] = erfolgreich, aber nichts gefunden. */
 async function abfrage<T>(tabelle: string, parameter: string): Promise<T[] | undefined> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_KEY;
+  if (!url || !key) return undefined;
+  try {
+    const r = await fetch(`${url}/rest/v1/${tabelle}?${parameter}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!r.ok) return undefined;
+    return (await r.json()) as T[];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Wie abfrage(), aber mit dem Service-Schlüssel (Plan Redaktion 3.1, Cursor-Prüfung 2 Befund 2): Nur so sieht der
+ * Proxy status, alte_slugs und vorschau_hash. Nur serverseitig; der Proxy gibt nie Inhalt weiter, nur weiter/404/308.
+ */
+async function dienstAbfrage<T>(tabelle: string, parameter: string): Promise<T[] | undefined> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) return undefined;
   try {
     const r = await fetch(`${url}/rest/v1/${tabelle}?${parameter}`, {
@@ -118,7 +173,7 @@ async function reiheVorhanden(slug: string): Promise<boolean | undefined> {
   return r === undefined ? undefined : r === true;
 }
 
-type OrtKopf = {
+export type OrtKopf = {
   typ: string; aktiv: boolean; qualitaets_score: number | null;
   club: unknown; club_score: unknown; club_freigegeben: unknown; auch_club: unknown; kein_club?: unknown;
   /** Nur Spielplätze: Stadtteil und erster Freischalt-Tag (Weiterleitung abgeschalteter Plätze, Plan 5.5) */
@@ -220,8 +275,78 @@ export function ortEntscheidung(hub: OrtHub, slug: string, o: OrtKopf | null): P
   return FEHLT;
 }
 
-/** Entscheidung für einen Pfad. Netzwerkfehler → weiter. */
-export async function pfadPruefen(pfad: string): Promise<Pruefung> {
+// ---------- Magazin (Plan Redaktion 5.1) ----------
+
+export type MagazinKopf = { slug: string; status: string; veroeffentlicht_am: string | null };
+
+/** Sichtbar = veröffentlicht und Zeitpunkt erreicht – zur Prüfzeit gerechnet, nicht beim Merken (Cursor-Prüfung 4 Befund 4). */
+export function magazinSichtbar(k: MagazinKopf, jetzt: number = Date.now()): boolean {
+  if (k.status !== "veroeffentlicht" || !k.veroeffentlicht_am) return false;
+  const t = Date.parse(k.veroeffentlicht_am);
+  return Number.isFinite(t) && t <= jetzt;
+}
+
+/**
+ * Entscheidung für /magazin/<slug> (rein, testbar): sichtbarer Beitrag → weiter; alter Slug eines sichtbaren Beitrags →
+ * 308 auf den aktuellen; sonst 404 (auch Entwurf, zurückgezogen, Zukunft).
+ */
+export function magazinBeitragEntscheidung(eigen: MagazinKopf | null, alt: MagazinKopf | null, jetzt: number = Date.now()): Pruefung {
+  if (eigen) return magazinSichtbar(eigen, jetzt) ? WEITER : FEHLT;
+  if (alt && magazinSichtbar(alt, jetzt)) return { art: "umleiten", ziel: `/magazin/${alt.slug}` };
+  return FEHLT;
+}
+
+async function magazinKopfLaden(slug: string): Promise<{ eigen: MagazinKopf | null; alt: MagazinKopf | null } | null | undefined> {
+  return gemerkt(`magazin:${slug}`, async () => {
+    const auswahl = "select=slug,status,veroeffentlicht_am";
+    const eigen = await dienstAbfrage<MagazinKopf>("magazin_beitraege", `${auswahl}&slug=eq.${encodeURIComponent(slug)}&limit=1`);
+    if (eigen === undefined) return undefined;
+    if (eigen[0]) return { eigen: eigen[0], alt: null };
+    const alt = await dienstAbfrage<MagazinKopf>("magazin_beitraege", `${auswahl}&alte_slugs=cs.${encodeURIComponent(`{${slug}}`)}&limit=1`);
+    if (alt === undefined) return undefined;
+    return alt[0] ? { eigen: null, alt: alt[0] } : null;
+  }, MAGAZIN_ZEITEN);
+}
+
+async function autorAktiv(slug: string): Promise<boolean | undefined> {
+  const r = await gemerkt(`magazin-autor:${slug}`, async () => {
+    const z = await dienstAbfrage<{ slug: string }>("magazin_autoren", `select=slug&slug=eq.${encodeURIComponent(slug)}&aktiv=is.true&limit=1`);
+    return z === undefined ? undefined : z.length ? true : null;
+  }, MAGAZIN_ZEITEN);
+  return r === undefined ? undefined : r === true;
+}
+
+const UUID_FORM = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** SHA-256 als Hex (Web Crypto: läuft im Proxy wie in Node). */
+export async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Vergleich zweier gleich langer Hex-Werte ohne frühen Abbruch (zeitkonstant). */
+export function gleichZeitkonstant(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let unterschied = 0;
+  for (let i = 0; i < a.length; i++) unterschied |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return unterschied === 0;
+}
+
+/**
+ * Vorschau (Plan 5.3): UUID, Schlüssel gesetzt, SHA-256(Schlüssel) = vorschau_hash, Status entwurf/in_pruefung.
+ * Nicht gemerkt. Jeder Fehler → 404: Ein Entwurf darf nie durchrutschen.
+ */
+export async function vorschauPruefen(id: string, schluessel: string | null): Promise<Pruefung> {
+  if (!UUID_FORM.test(id) || !schluessel || schluessel.length > 200) return FEHLT;
+  const z = await dienstAbfrage<{ vorschau_hash: string | null }>(
+    "magazin_beitraege", `select=vorschau_hash&id=eq.${id.toLowerCase()}&status=in.(entwurf,in_pruefung)&limit=1`);
+  const hash = z?.[0]?.vorschau_hash;
+  if (!hash || !/^[0-9a-f]{64}$/.test(hash)) return FEHLT;
+  return gleichZeitkonstant(await sha256Hex(schluessel), hash) ? WEITER : FEHLT;
+}
+
+/** Entscheidung für einen Pfad. Netzwerkfehler → weiter (außer Magazin-Vorschau). `suche` nur für die Vorschau. */
+export async function pfadPruefen(pfad: string, suche?: URLSearchParams): Promise<Pruefung> {
   const route = routeVon(pfad);
   if (!route) return WEITER;
   switch (route.typ) {
@@ -261,6 +386,25 @@ export async function pfadPruefen(pfad: string): Promise<Pruefung> {
     case "ort": {
       const o = await ortLaden(route.slug);
       return o === undefined ? WEITER : ortEntscheidung(route.hub, route.slug, o);
+    }
+    case "feed-alt":
+      return { art: "umleiten", ziel: "/magazin/feed.xml" };
+    case "magazin-fest":
+      return WEITER;
+    case "magazin-rubrik":
+      return istRubrik(route.rubrik) ? WEITER : FEHLT;
+    case "magazin-autor": {
+      if (!SLUG_MUSTER.test(route.slug)) return FEHLT;
+      const da = await autorAktiv(route.slug);
+      return da === undefined || da ? WEITER : FEHLT;
+    }
+    case "magazin-vorschau":
+      return vorschauPruefen(route.id, suche?.get("s") ?? null);
+    case "magazin-beitrag": {
+      if (!SLUG_MUSTER.test(route.slug)) return FEHLT;
+      const k = await magazinKopfLaden(route.slug);
+      if (k === undefined) return WEITER;
+      return k === null ? FEHLT : magazinBeitragEntscheidung(k.eigen, k.alt);
     }
   }
 }

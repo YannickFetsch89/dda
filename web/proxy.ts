@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
     });
   }
 
-  const pruefung = await pfadPruefen(pfad);
+  const pruefung = await pfadPruefen(pfad, request.nextUrl.searchParams);
   if (pruefung.art === "umleiten") {
     const ziel = new URL(pruefung.ziel, request.url);
     ziel.search = request.nextUrl.search;
@@ -55,10 +55,22 @@ export async function proxy(request: NextRequest) {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     });
   }
+  // Magazin-Vorschau (Plan Redaktion 5.3): Schlüssel steht in der URL – nicht zwischenspeichern, nicht weitergeben
+  if (pfad.startsWith("/magazin/vorschau/")) {
+    const antwort = NextResponse.next();
+    antwort.headers.set("Cache-Control", "private, no-store");
+    antwort.headers.set("Referrer-Policy", "no-referrer");
+    antwort.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return antwort;
+  }
   return NextResponse.next();
 }
 
 export const config = {
-  // Eventseiten (auch /event/<uuid>), Tage, Reihen, Guide-Orte, Landingpages und /entdecken (301 für Einzelfilter)
-  matcher: ["/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug", "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken"],
+  // Eventseiten (auch /event/<uuid>), Tage, Reihen, Guide-Orte, Landingpages, /entdecken (301 für Einzelfilter),
+  // Magazin (Plan Redaktion T4: /magazin/:path* trifft auch /magazin selbst) und /feed.xml (308 auf den Magazin-Feed)
+  matcher: [
+    "/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug",
+    "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken", "/magazin/:path*", "/feed.xml",
+  ],
 };

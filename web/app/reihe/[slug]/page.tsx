@@ -1,6 +1,7 @@
 // Reihe (wiederkehrendes Event): dauerhafte URL /reihe/<slug> mit dem nächsten und allen kommenden Terminen.
 // Die Seite bleibt auch ohne kommende Termine erreichbar (HTTP 200) und verweist dann auf aktuelle Events.
 import type { Metadata } from "next";
+import { seitenAlternates } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventKarte, Icon, KatBadge, Leer, ListenZeile } from "@/components/karten";
@@ -23,7 +24,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description: naechster
       ? `Alle Termine von „${d.reihe.titel}“ (${d.reihe.ort}). Nächster Termin: ${tagLang(naechster.datum)}${naechster.uhrzeit ? `, ${naechster.uhrzeit} Uhr` : ""}.`
       : `Termine von „${d.reihe.titel}“ (${d.reihe.ort}) in Düsseldorf.`,
-    alternates: { canonical: `/reihe/${d.reihe.slug}` },
+    alternates: seitenAlternates(`/reihe/${d.reihe.slug}`),
   };
 }
 

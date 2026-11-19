@@ -18,3 +18,11 @@ export const SPIELPLAETZE_VERLINKT = false;
  * Von Hand: public/llms.txt (Zeile „Weihnachtsmärkte“ unter „## Guides“).
  */
 export const WEIHNACHTSMAERKTE_VERLINKT = true;
+
+/**
+ * Magazin (Plan docs/plan-redaktion-2026-11-19.md, T9) verlinkt UND indexiert? Aus: Die Seiten unter /magazin sind
+ * erreichbar, aber noindex,follow, stehen nicht in der Sitemap, der Feed antwortet 404 und kein <head> verlinkt ihn.
+ * An (Livegang, Schritt 7): Menü, Footer, Startseite, Sitemap, Feed, Feed-Link im <head>, publishingPrinciples.
+ * Von Hand dann: public/llms.txt (Abschnitt „## Magazin“). Die IndexNow-Meldung der Pipeline folgt dem Feed (T6).
+ */
+export const MAGAZIN_VERLINKT = false;

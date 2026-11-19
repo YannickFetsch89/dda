@@ -1,6 +1,7 @@
 // Guide-Detail Restaurant/Café (Design-Handoff v2, Ansichten 16 und 17)
 export const instant = false;
 import { guideStadtteilPfad, stadtteilPfad } from "@/lib/landing";
+import { seitenAlternates } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -29,7 +30,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description:
       ort.beschreibung ??
       `${ort.name}: ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}${ort.google_rating ? `, ${sterne(ort.google_rating)} Sterne` : ""}. Empfohlen von dies.das.düsseldorf.`,
-    alternates: { canonical: `${BASIS}/${encodeURIComponent(ort.slug)}` },
+    alternates: seitenAlternates(`${BASIS}/${encodeURIComponent(ort.slug)}`),
     openGraph: bild ? { images: [{ url: bild }] } : undefined,
   };
 }

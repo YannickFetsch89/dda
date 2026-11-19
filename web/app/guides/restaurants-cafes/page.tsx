@@ -1,5 +1,6 @@
 // Guide-Hub Restaurants & Cafés (Design-Handoff v2, Ansichten 12, 14, 15)
 import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
+import { seitenAlternates } from "@/lib/seo";
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
   title: "Restaurants & Cafés in Düsseldorf",
   description:
     "Die besten Restaurants und Cafés in Düsseldorf, Neuss und Ratingen – kuratiert nach Bewertung, filterbar nach Stadtteil, Küche, Preis und Ausstattung.",
-  alternates: { canonical: BASIS },
+  alternates: seitenAlternates(BASIS),
 };
 
 type SP = Record<string, string | string[] | undefined>;

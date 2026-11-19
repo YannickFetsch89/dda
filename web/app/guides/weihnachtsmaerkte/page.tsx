@@ -5,7 +5,7 @@
 // außerhalb der Suspense-Grenze bzw. als deren Fallback. „Heute geöffnet“ rechnet nur der Browser (Plan E5). Nur der
 // gewählte Tag (?tag=YYYY-MM-DD) wartet auf searchParams und wird auf dem Server gerechnet (noindex, Canonical auf den Hub).
 export const instant = false;
-import { ROBOTS_INDEX } from "@/lib/seo";
+import { ROBOTS_INDEX, seitenAlternates } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -54,7 +54,7 @@ export async function generateMetadata(props: { searchParams: Promise<SP> }): Pr
     title: titel,
     description: beschreibung,
     // Canonical immer auf den Hub, auch bei ?tag= (nicht über seitenMetadaten – der Helfer streicht ihn bei noindex)
-    alternates: { canonical: BASIS },
+    alternates: seitenAlternates(BASIS),
     robots: gefiltert ? { index: false, follow: true } : ROBOTS_INDEX,
     openGraph: { title: titel, description: beschreibung, url: BASIS, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", images: [{ url: WM_BILD, alt: BILD_ALT }] },
     // Eigenes Twitter-Bild – sonst greift das Standardbild des Layouts (SEO-Prüfung 19.11.2026)

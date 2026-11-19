@@ -1,5 +1,6 @@
 // „Event melden“ – Veranstalter und Besucher reichen Events ein; Admins geben sie im Dashboard frei.
 import type { Metadata } from "next";
+import { seitenAlternates } from "@/lib/seo";
 import Link from "next/link";
 import { EventMeldenForm, type KategorieOption } from "@/components/event-melden-form";
 import { KATEGORIEN } from "@/lib/kategorien";
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   title: "Event melden",
   description:
     "Du veranstaltest etwas in Düsseldorf oder hast einen Tipp? Melde dein Event bei dies.das.düsseldorf – kostenlos und in wenigen Minuten.",
-  alternates: { canonical: "/event-melden" },
+  alternates: seitenAlternates("/event-melden"),
 };
 
 // Formularwerte = Datenbank-Werte (Website nennt "family" → "familie")

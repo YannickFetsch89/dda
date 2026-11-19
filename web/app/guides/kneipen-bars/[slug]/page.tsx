@@ -3,6 +3,7 @@
 // nur Öffnungszeiten (Wochentag), Events und Ähnliche Kneipen werden nachgeladen.
 export const instant = false;
 import { guideStadtteilPfad, stadtteilPfad } from "@/lib/landing";
+import { seitenAlternates } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -41,7 +42,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: titel,
     description: beschreibung,
-    alternates: { canonical: pfad },
+    alternates: seitenAlternates(pfad),
     openGraph: { title: titel, description: beschreibung, url: pfad, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", ...(bild ? { images: [{ url: bild }] } : {}) },
     twitter: { card: bild ? "summary_large_image" : "summary", title: titel, description: beschreibung, ...(bild ? { images: [bild] } : {}) },
   };

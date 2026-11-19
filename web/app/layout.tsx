@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { markeJsonLd, ROBOTS_INDEX, STANDARD_BILD } from "@/lib/seo";
+import { markeJsonLd, ROBOTS_INDEX, seitenAlternates, STANDARD_BILD } from "@/lib/seo";
+import { MAGAZIN_VERLINKT } from "@/lib/schalter";
 import { DM_Serif_Display, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { DetailsVerhalten, TabBar } from "@/components/client";
@@ -32,6 +33,8 @@ export const metadata: Metadata = {
   // Große Bildvorschau erlauben (Google Discover zeigt sonst nur ein kleines Vorschaubild) und Snippets nicht kürzen.
   // Seiten mit eigenem robots (z. B. noindex bei Filtern, Konto-Seiten) ersetzen diesen Wert ganz.
   robots: ROBOTS_INDEX,
+  // Feed-Link des Magazins für Seiten ohne eigenes alternates (Plan Redaktion 5.6); erst mit dem Livegang
+  ...(MAGAZIN_VERLINKT ? { alternates: seitenAlternates() } : {}),
   // Google Search Console (HTML-Tag-Methode); Token kommt aus .env.local, wird beim Build eingesetzt
   verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };

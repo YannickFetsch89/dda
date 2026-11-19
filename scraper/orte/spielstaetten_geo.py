@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 PRUEFDATEI = Path("data/spielstaetten/geo_pruefung.csv")
 SPALTEN = ["slug", "name", "zeile_typ", "suchbegriff", "event_adresse", "google_name", "google_adresse", "place_id",
-           "adresse_bestaetigt", "bestaetigung", "osm_lat", "osm_lon", "osm_treffer"]
+           "adresse_bestaetigt", "bestaetigung", "hinweis", "osm_lat", "osm_lon", "osm_treffer"]
 GEOKODIEREN = ("haus", "standort", "filiale")   # Säle erben vom Haus (Plan 3.6)
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_UA = "DiesDasDuesseldorf-Ortsseiten/1.0 (+https://diesdas.events)"  # Nominatim verlangt einen erkennbaren UA

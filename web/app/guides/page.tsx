@@ -2,6 +2,7 @@
 // Fertige Hubs sind verlinkt (mit echter Anzahl), die übrigen erscheinen als "Bald verfügbar".
 // Kachelbilder: KI-generiert, liegen als WebP unter public/guides/<slug>.webp
 import type { Metadata } from "next";
+import { seitenAlternates } from "@/lib/seo";
 import Link from "next/link";
 
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
   title: "Düsseldorf entdecken – Guides",
   description:
     "Kuratierte Tipps für Restaurants, Cafés, Kneipen, Clubs, Spielplätze und Ausflüge in Düsseldorf – von dies.das.düsseldorf.",
-  alternates: { canonical: "/guides" },
+  alternates: seitenAlternates("/guides"),
 };
 
 interface Hub {

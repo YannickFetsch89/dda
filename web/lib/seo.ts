@@ -4,8 +4,25 @@
 // Regel: Eine indexierbare Seite kanonisiert auf sich selbst. Varianten mit Filter-/Such-Parametern bekommen
 // „noindex, follow“ und KEIN Canonical auf eine andere URL – beides zusammen wären widersprüchliche Signale.
 import type { Metadata } from "next";
+import { MAGAZIN_VERLINKT } from "./schalter";
 
 export const SITE_NAME = "dies.das.düsseldorf";
+
+/** Feed des Magazins (Plan Redaktion 5.6). */
+const FEED = { url: "/magazin/feed.xml", title: "dies.das.düsseldorf – Magazin" };
+const REDAKTION = "Redaktion dies.das.düsseldorf";
+
+/**
+ * alternates für eine Seite (Plan Redaktion 5.6, Cursor-Prüfung 1 Befund 5): Canonical und – sobald das Magazin
+ * verlinkt ist – der Feed-Link. Ein eigenes alternates ersetzt das des Layouts komplett; deshalb setzt jede Seite mit
+ * Canonical den Feed-Link über diese Hilfe mit. Ohne canonical (Layout) nur der Feed-Link.
+ */
+export function seitenAlternates(canonical?: string): NonNullable<Metadata["alternates"]> {
+  return {
+    ...(canonical ? { canonical } : {}),
+    ...(MAGAZIN_VERLINKT ? { types: { "application/rss+xml": [FEED] } } : {}),
+  };
+}
 /** Erster Satz von /ueber – derselbe Satz steht in Organization.description (SEO-/GEO-Plan, Maßnahme 8). */
 export const MARKE_SATZ =
   "dies.das.düsseldorf ist ein tagesaktueller Eventkalender und Freizeitguide für Düsseldorf, mit Guides auch für Neuss und Ratingen.";
@@ -22,6 +39,8 @@ export function markeJsonLd(siteUrl: string): Record<string, unknown> {
         url: `${siteUrl}/`,
         logo: `${siteUrl}/icon.svg`,
         description: MARKE_SATZ,
+        // Redaktionsgrundsätze des Magazins (Plan Redaktion 5.4), erst mit dem Livegang
+        ...(MAGAZIN_VERLINKT ? { publishingPrinciples: `${siteUrl}/magazin/redaktion` } : {}),
         // sameAs (Social-Media-Profile) erst wieder, wenn Instagram aktiv bespielt wird (12.11.2026)
       },
       {
@@ -64,6 +83,11 @@ export interface SeitenAngaben {
   bildAlt?: string;
   /** Variante mit Parametern → noindex, follow, ohne Canonical */
   noindex?: boolean;
+  /**
+   * Magazin-Beitrag (Plan Redaktion 5.5): og:type article mit Zeiten und Rubrik; Autor ist immer die Redaktion
+   * (article:author und <meta name="author">), nie das Pseudonym.
+   */
+  artikel?: { veroeffentlicht: string; aktualisiert?: string | null; rubrik: string };
 }
 
 /**
@@ -82,19 +106,29 @@ export const ROBOTS_GESPERRT = [
   "/guides/*?", // Filter der Guides (?genre=, ?stadtteil=, ?tag=, …)
 ];
 
-export function seitenMetadaten({ pfad, titel, beschreibung, bild, bildAlt, noindex = false }: SeitenAngaben): Metadata {
+export function seitenMetadaten({ pfad, titel, beschreibung, bild, bildAlt, noindex = false, artikel }: SeitenAngaben): Metadata {
   // Eigenes Bild (Event-Foto/Symbolbild – dieselbe URL, die der Mensch sieht), sonst das Standardbild
   const alt = bildAlt ?? titel;
   const bilder = bild ? [{ url: bild, ...(alt ? { alt } : {}) }] : [STANDARD_BILD];
   return {
     ...(titel ? { title: titel } : {}),
     ...(beschreibung ? { description: beschreibung } : {}),
-    ...(noindex ? { robots: { index: false, follow: true } } : { alternates: { canonical: pfad } }),
+    // Indexierbar: Canonical (+ Feed-Link); noindex: kein alternates (sonst fremdes Canonical, seo-a1.test.ts)
+    ...(noindex ? { robots: { index: false, follow: true } } : { alternates: seitenAlternates(pfad) }),
+    ...(artikel ? { authors: [{ name: REDAKTION, url: "/magazin/redaktion" }] } : {}),
     // Layout-Felder (siteName, locale, type) wiederholen: ein eigenes openGraph-Objekt ersetzt das des Layouts
     openGraph: {
       siteName: SITE_NAME,
       locale: "de_DE",
-      type: "website",
+      ...(artikel
+        ? {
+            type: "article" as const,
+            publishedTime: artikel.veroeffentlicht,
+            ...(artikel.aktualisiert ? { modifiedTime: artikel.aktualisiert } : {}),
+            section: artikel.rubrik,
+            authors: [REDAKTION],
+          }
+        : { type: "website" as const }),
       url: pfad,
       ...(titel ? { title: titel } : {}),
       ...(beschreibung ? { description: beschreibung } : {}),

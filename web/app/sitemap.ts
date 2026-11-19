@@ -20,6 +20,9 @@ import { KATEGORIEN } from "@/lib/kategorien";
 import { BEZIRKE } from "@/lib/stadtteile";
 import { hubOrte, orteImStadtteil, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { GUIDE_HUBS, LANDING_TAGE, MIN_EINTRAEGE, guideStadtteilPfad, stadtteilPfad, unterkategoriePfad, type GuideHub } from "@/lib/landing";
+import { autorPfad, beitragPfad, istArchiviert, RUBRIKEN, rubrikPfad, type MagazinAutor, type MagazinBeitrag } from "@/lib/magazin";
+import { heroFuer } from "@/lib/magazin-bilder";
+import { MAGAZIN_VERLINKT } from "@/lib/schalter";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -29,6 +32,36 @@ export function juengstes(events: { erstellt_am: string | null }[]): Date | unde
   for (const e of events) if (e.erstellt_am && e.erstellt_am > max) max = e.erstellt_am;
   const d = max ? new Date(max) : undefined;
   return d && !Number.isNaN(d.getTime()) ? d : undefined;
+}
+
+/**
+ * Magazin-Einträge (Plan Redaktion 5.7): nur mit Schalter; Beiträge ohne archivierte (E12), lastModified = Inhaltsdatum,
+ * Bild über heroFuer (dasselbe wie og:image und Feed, Cursor-Prüfung 4 Befund 4). Rubriken und Autoren nur mit Beiträgen.
+ */
+export function magazinEintraege(
+  siteUrl: string, verlinkt: boolean, beitraege: MagazinBeitrag[], autoren: MagazinAutor[], heute: string,
+): MetadataRoute.Sitemap {
+  if (!verlinkt) return [];
+  const sichtbar = beitraege.filter((b) => b.veroeffentlicht_am && !istArchiviert(b, heute));
+  const datum = (b: MagazinBeitrag) => new Date(b.aktualisiert_am ?? b.veroeffentlicht_am!);
+  const juengster = (liste: MagazinBeitrag[]) => (liste.length ? { lastModified: new Date(Math.max(...liste.map((b) => datum(b).getTime()))) } : {});
+  return [
+    { url: `${siteUrl}/magazin`, ...juengster(sichtbar), changeFrequency: "daily", priority: 0.7 },
+    { url: `${siteUrl}/magazin/redaktion`, changeFrequency: "monthly", priority: 0.4 },
+    ...RUBRIKEN.filter((r) => sichtbar.some((b) => b.rubrik === r)).map((r) => ({
+      url: `${siteUrl}${rubrikPfad(r)}`, ...juengster(sichtbar.filter((b) => b.rubrik === r)), changeFrequency: "weekly" as const, priority: 0.6,
+    })),
+    ...autoren.filter((a) => sichtbar.some((b) => b.autor_slug === a.slug)).map((a) => ({
+      url: `${siteUrl}${autorPfad(a)}`, changeFrequency: "monthly" as const, priority: 0.4,
+    })),
+    ...sichtbar.map((b) => ({
+      url: `${siteUrl}${beitragPfad(b)}`,
+      lastModified: datum(b),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+      images: [`${siteUrl}${heroFuer(b).pfad}`],
+    })),
+  ];
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -176,5 +209,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   );
 
-  return [...feste, ...tage, ...kategorien, ...unterkategorien, ...kostenlos, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile];
+  // Magazin-Daten nur mit Schalter laden (bis zum Livegang bleibt die Sitemap unverändert)
+  let magazin: MetadataRoute.Sitemap = [];
+  if (MAGAZIN_VERLINKT) {
+    const { autorenLaden, beitraegeLaden, magazinHeute } = await import("@/lib/magazin-daten");
+    magazin = magazinEintraege(SITE_URL, true, ...(await Promise.all([beitraegeLaden(), autorenLaden(), magazinHeute()])));
+  }
+
+  return [...feste, ...tage, ...kategorien, ...unterkategorien, ...kostenlos, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile, ...magazin];
 }

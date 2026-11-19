@@ -105,11 +105,21 @@ export function supabaseClient() {
   return leseClient();
 }
 
-async function ausSupabaseLaden(heute: string): Promise<DddEvent[]> {
+/**
+ * Zeitraum der Pool-Abfrage: ab `von` (laufende Events mit datum_bis ≥ von eingeschlossen) bis `ende`, Standard
+ * `von` + TAGE_VORAUS. eventPoolLaden() ruft ohne Ende (Startseite unverändert), magazinPoolLaden() mit
+ * max(bis, von + 60 Tage) (Plan Redaktion 4.2, Cursor-Prüfung 5 Befund 2).
+ */
+export function poolGrenzen(von: string, ende?: string): { von: string; bis: string } {
+  const standard = plusTage(von, TAGE_VORAUS);
+  return { von, bis: ende && ende > standard ? ende : standard };
+}
+
+async function ausSupabaseLaden(heute: string, ende?: string): Promise<DddEvent[]> {
   const client = supabaseClient();
   if (!client) throw new Error("SUPABASE_URL / SUPABASE_KEY fehlen in .env.local");
 
-  const bis = plusTage(heute, TAGE_VORAUS);
+  const { bis } = poolGrenzen(heute, ende);
   const events: DddEvent[] = [];
   let variante = 0;
   for (let seite = 0; seite < 20; seite++) {
@@ -229,6 +239,17 @@ export async function eventPoolLaden(): Promise<EventPool> {
     const alle = beispielEvents(heute, jetzt);
     return { heute, jetzt: jetzt.toISOString(), events: buendeln(alle), alle, quelle: "beispiel", fehler };
   }
+}
+
+/**
+ * Event-Pool für einen Magazin-Zeitraum (Plan Redaktion 4.2, Cursor-Prüfungen 5 und 6): dieselbe Abfrage, Schleife,
+ * Spaltenvarianten, normalisieren und buendeln wie eventPoolLaden(), aber ab `von` statt heute und bis
+ * max(bis, von + 60 Tage). So sieht der Pool aus wie der der Startseite am `von`. Kein "use cache" (seltene Läufe,
+ * Route no-store). Fehler → WIRFT: Beispieldaten dürfen nie in einen Entwurf gelangen.
+ */
+export async function magazinPoolLaden(von: string, bis: string): Promise<EventPool> {
+  const alle = await ausSupabaseLaden(von, bis);
+  return { heute: von, jetzt: new Date().toISOString(), events: buendeln(alle), alle, quelle: "supabase", fehler: null };
 }
 
 /** Einzelnes Event per Slug laden (Fallback: UUID für Altlinks). */

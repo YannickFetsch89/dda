@@ -357,28 +357,48 @@ export function wochenendProgramm(pool: EventPool, vergangene: DddEvent[] = []) 
 export function highlights(pool: EventPool) {
   const aktiv = pool.events.filter((e) => !e.abgesagt);
   const k = stufenKontext(aktiv, pool.heute);
-  const vergleich = nachEmpfehlung(k);
   const ohneStamm = (liste: DddEvent[]) => liste.filter((e) => (breite(e, k) ?? 0) >= 1);
   const woche = ohneStamm(filtern(aktiv, { von: pool.heute, bis: plusTage(pool.heute, 6), mitLanglaeufern: true }));
   const monat = ohneStamm(filtern(aktiv, { von: pool.heute, bis: plusTage(pool.heute, 29), mitLanglaeufern: true }));
-  const waehle = (liste: DddEvent[], flagge: (e: DddEvent) => boolean, ohne?: string): DddEvent | null => {
-    const frei = liste.filter((e) => e.id !== ohne);
-    const regeln: ((e: DddEvent) => boolean)[] = [
-      (e) => flagge(e) && !!e.bild_url,
-      (e) => breite(e, k) === 3 && !!e.bild_url,
-      (e) => breite(e, k) === 2 && !!e.bild_url,
-      (e) => flagge(e),
-      () => true,
-    ];
-    for (const regel of regeln) {
-      const treffer = frei.filter(regel);
-      if (treffer.length) return treffer.sort(vergleich)[0];
-    }
-    return null;
-  };
-  const highlight = waehle(woche, (e) => highlightGilt(e, pool.heute));
-  const top = waehle(monat, (e) => topGilt(e, pool.heute), highlight?.id);
+  const highlight = waehleEvent(woche, highlightGilt, k);
+  const top = waehleEvent(monat, topGilt, k, highlight?.id);
   return { highlight, top };
+}
+
+/**
+ * Regelkette für Highlight und Top (aus highlights() herausgezogen, Plan Redaktion 4.2): geltende Flagge mit Bild,
+ * Stufe 3 mit Bild, Stufe 2 mit Bild, Flagge ohne Bild, sonst das beste. Die Flagge läuft mit dem Tag des Kontexts
+ * (flagge(e, k.heute)); Vergleich nachEmpfehlung(k). `ohne`: auszuschließende ID (nur highlights() nutzt sie).
+ */
+export function waehleEvent(
+  liste: DddEvent[], flagge: (e: DddEvent, heute: string) => boolean, k: StufenKontext, ohne?: string,
+): DddEvent | null {
+  const vergleich = nachEmpfehlung(k);
+  const frei = liste.filter((e) => e.id !== ohne);
+  const regeln: ((e: DddEvent) => boolean)[] = [
+    (e) => flagge(e, k.heute) && !!e.bild_url,
+    (e) => breite(e, k) === 3 && !!e.bild_url,
+    (e) => breite(e, k) === 2 && !!e.bild_url,
+    (e) => flagge(e, k.heute),
+    () => true,
+  ];
+  for (const regel of regeln) {
+    const treffer = frei.filter(regel);
+    if (treffer.length) return treffer.sort(vergleich)[0];
+  }
+  return null;
+}
+
+/**
+ * Highlight der Woche bzw. Top-Event des Monats für einen festen Zeitraum (Magazin, Plan Redaktion 4.2, Cursor-Prüfung 5):
+ * Pool aus magazinPoolLaden(von, bis), heute = von, Kandidaten auf von–bis geschnitten, Stamm draußen, EIN Event –
+ * ohne Highlight-Ausschluss (sonst wäre das Top-Event des Monats nur der Zweitbeste).
+ */
+export function highlightsImZeitraum(pool: EventPool, z: { von: string; bis: string }, art: "highlight" | "top"): DddEvent | null {
+  const aktiv = pool.events.filter((e) => !e.abgesagt);
+  const k = stufenKontext(aktiv, z.von);
+  const kandidaten = filtern(aktiv, { von: z.von, bis: z.bis, mitLanglaeufern: true }).filter((e) => (breite(e, k) ?? 0) >= 1);
+  return waehleEvent(kandidaten, art === "highlight" ? highlightGilt : topGilt, k);
 }
 
 // ---------- Empfehlungen: Stufen (Plan docs/plan-empfehlungen-2026-11-13.md) ----------
