@@ -243,15 +243,16 @@ Ist bis So 29.11. nicht alles geprüft, startet das Magazin später. Ein halbfer
    - Keine Ich-Erlebnisse im Text, die so nicht stattgefunden haben. Erfahrung des Auftraggebers erscheint als „aus der Redaktion“/„unser Tipp“, nicht als erfundene Erinnerung des Pseudonyms.
 3. **Zuordnung:** Jeder Beitrag hat genau einen Autor (`autor_slug`, Fremdschlüssel). Laufende Rubriken bekommen den Autor über die Rubrik-Zuordnung, Saison- und Stadtleben-Beiträge über den Schwerpunkt.
 4. **Autorenseite** `/magazin/autor/[slug]`:
-   - Profilbild mit Unterzeile „KI-generiertes Profilbild“, Name, Kurzbeschreibung, Schwerpunkt;
-   - Kasten „Redaktionelles Pseudonym“: „[Name] ist ein redaktionelles Pseudonym von dies.das.düsseldorf. Beiträge unter diesem Namen entstehen mit Unterstützung von KI-Werkzeugen aus unseren Daten und werden vor der Veröffentlichung von Yannick Fetsch geprüft und freigegeben. Er ist redaktionell verantwortlich.“ (Wortlaut in Schritt 5 freigeben);
-   - Liste der Beiträge, Link auf „Unsere Redaktion“ und Impressum.
+   - Profilbild mit Unterzeile „KI-generierte Illustration“, Name, darunter dezent „[Schwerpunkt] · Redaktionelles Pseudonym“, Kurzbeschreibung („Unter dem Namen [Name] … unsere Redaktion …“, keine eigenständige reale Person suggerieren);
+   - darunter klein: „Alle Beiträge werden vor Veröffentlichung redaktionell geprüft. Verantwortlich: Yannick Fetsch. Siehe Impressum.“ (Link aufs Impressum);
+   - Liste der Beiträge, Brotkrumen auf „Unsere Redaktion“.
+   - *Überarbeitet 20.11.2026 nach rechtlicher Prüfung:* der frühere Kasten „Redaktionelles Pseudonym“ entfällt (zu belehrend); Transparenz bleibt über Unterzeile, Hinweis und Redaktionsseite.
 5. **„Unsere Redaktion“** `/magazin/redaktion`. Inhalte:
-   - Redaktionskonzept: Wer wir sind, welche Daten wir nutzen.
-   - Übersicht der Pseudonyme mit Ressorts.
-   - Wie KI eingesetzt wird und wie geprüft wird (Workflow 4.2).
-   - Verantwortlicher mit echtem Namen, Korrekturen und Hinweise (Kontakt), Quellenregeln.
-   - Kennzeichnung von KI-Bildern.
+   - Einleitung (Magazin und Düsseldorf).
+   - „Unsere Autoren“: die Pseudonyme mit Themenbereich, verlinkt auf die Autorenseiten.
+   - „So arbeitet unsere Redaktion“ (Wortlaut vom Auftraggeber, 20.11.2026): Themen, Grundlage eigene Daten + Recherche + teilweise KI-gestützte Werkzeuge, Prüfung und Freigabe vor Veröffentlichung, Pseudonyme je Themenbereich, Verantwortung Yannick Fetsch mit Link aufs Impressum.
+   - Kurz: Quellen, Bilder (Kennzeichnung KI-Symbolbilder), Korrekturen.
+   - Grundlage der dezenten Darstellung: Ausnahme für redaktionell kontrollierte KI-Texte (Art. 50 Abs. 4 KI-VO); die Kontrolle ist technisch abgesichert (nur der Auftraggeber kann veröffentlichen, Trigger `magazin_status_pruefen`, `freigegeben_von` Pflicht).
    - Diese Seite ist `publishingPrinciples` der Organisation (5.4). „So arbeiten wir“ aus der ersten Fassung geht hierin auf; `/ueber` verlinkt sie.
 6. **Strukturierte Daten ohne Vortäuschung realer Personen** (Vorgabe 2.3 Punkt 5) → 5.4:
    - `author` = **`Organization`** „Redaktion dies.das.düsseldorf“ (`@id …/magazin/redaktion#redaktion`, `url` `/magazin/redaktion`).
@@ -283,7 +284,7 @@ SQL in `database/magazin_2026-11-xx.sql`, führt der Auftraggeber aus. Danach di
 | `schwerpunkt` | text | Ressort |
 | `rubriken` | text[] | Standard-Autor je Rubrik |
 | `bild` | text, CHECK `^/magazin-autoren/[a-z0-9-]+\.webp$` | Profilbild |
-| `bild_ki` | boolean not null default true | Hinweis „KI-generiertes Profilbild“ |
+| `bild_ki` | boolean not null default true | Hinweis „KI-generierte Illustration“ |
 | `aktiv` | boolean default true | – |
 
 **`magazin_beitraege`**
@@ -710,7 +711,7 @@ Weitere Seiten:
   - (2) KI-Symbolbilder aus `web/public/fallback/`, **nur die 84 Motive mit ≥ 675 px Höhe**, immer mit Zeile „Symbolbild (KI-generiert)“ (`hero_ki`, Trigger);
   - (3) lizenzierte Fotos nach Rückfrage.
   - Verboten: Google-Fotos und Veranstalterbilder als Hero (bis A2).
-- **Profilbilder** der Pseudonyme: illustriert, 1:1, mit Unterzeile „KI-generiertes Profilbild“.
+- **Profilbilder** der Pseudonyme: illustriert, 1:1, mit Unterzeile „KI-generierte Illustration“.
 - **Zuschnitte 16:9 / 4:3 / 1:1** für JSON-LD über die Route `web/app/magazin-bild/[...pfad]/route.ts` mit `sharp` (Befund 8):
   - jedes Segment gegen `^[a-z0-9-]+$` (letztes: `^[a-z0-9-]+\.(webp|jpg|png)$`) prüfen; Prozent-Kodierung vorher dekodieren, damit `%2e%2e` auffällt;
   - Seitenverhältnis nur aus fester Liste (`16x9`, `4x3`, `1x1`);
@@ -914,7 +915,7 @@ Weitere Seiten:
 4. Sitemap enthält die Beiträge. IndexNow-Meldung im Log mit HTTP 200/202.
 5. Unbekannter Slug, unbekannte Rubrik, Vorschau ohne Schlüssel → 404 aus dem Proxy; alter Slug und `/feed.xml` → 308.
 6. Entwürfe und interne Spalten mit Anon-Schlüssel nicht lesbar. Die Pipeline kann nicht veröffentlichen.
-7. Jeder Beitrag hat Bildnachweis, Alt-Text, bei KI-Bild „Symbolbild (KI-generiert)“, Quellen, Hinweis nach E4/E4a mit passender Datenart, Autorenzeile mit „(redaktionelles Pseudonym)“. Jede Autorenseite hat den Pseudonym-Kasten und „KI-generiertes Profilbild“.
+7. Jeder Beitrag hat Bildnachweis, Alt-Text, bei KI-Bild „Symbolbild (KI-generiert)“, Quellen, Hinweis nach E4/E4a mit passender Datenart, Autorenzeile mit „(redaktionelles Pseudonym)“. Jede Autorenseite hat die Unterzeile „[Schwerpunkt] · Redaktionelles Pseudonym“, den Prüf-/Verantwortungshinweis mit Impressum-Link und „KI-generierte Illustration“ (Überarbeitung 20.11.2026).
 8. Impressum nennt § 18 Abs. 2 MStV, den Verantwortlichen und den Hinweis auf Pseudonyme.
 9. Alle Tests grün. Cursor-Prüfung des Codes ohne kritischen Befund.
 10. Kostenprotokoll des ersten Laufs liegt vor, Abweichung höchstens ±50 % zu 4.4, sonst Schätzung anpassen.

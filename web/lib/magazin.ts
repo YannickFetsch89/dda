@@ -108,15 +108,6 @@ export function entstehungsHinweis(b: Pick<MagazinBeitrag, "event_ids" | "ort_sl
   return `Mit KI-Unterstützung aus unseren ${art} erstellt, von der Redaktion geprüft und freigegeben. Redaktionell verantwortlich: ${VERANTWORTLICH}.`;
 }
 
-/** Text des Kastens „Redaktionelles Pseudonym“ auf der Autorenseite (Plan 2.3 Punkt 4, Wortlaut in Schritt 5 freigeben). */
-export function pseudonymText(name: string): string {
-  return (
-    `${name} ist ein redaktionelles Pseudonym von dies.das.düsseldorf. Beiträge unter diesem Namen entstehen mit ` +
-    `Unterstützung von KI-Werkzeugen aus unseren Daten und werden vor der Veröffentlichung von ${VERANTWORTLICH} geprüft ` +
-    `und freigegeben. Er ist redaktionell verantwortlich.`
-  );
-}
-
 /** Lesezeit in Minuten (200 Wörter je Minute, mindestens 1). */
 export function lesezeit(text: string): number {
   const woerter = text.replace(/\{\{[^}]*\}\}/g, " ").split(/\s+/).filter(Boolean).length;

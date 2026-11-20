@@ -1,12 +1,14 @@
-// Autorenseite eines redaktionellen Pseudonyms (Plan 2.3 Punkt 4). Offen gekennzeichnet: Pseudonym, KI-Werkzeuge,
-// KI-generiertes Profilbild, verantwortliche Person. Unbekannte oder inaktive Autoren: 404 aus proxy.ts.
+// Autorenseite eines redaktionellen Pseudonyms (Plan 2.3 Punkt 4, überarbeitet 20.11.2026 nach rechtlicher Prüfung):
+// dezente Unterzeile „Schwerpunkt · Redaktionelles Pseudonym“ statt Hinweiskasten, kleiner Prüf- und
+// Verantwortungshinweis mit Link aufs Impressum, Kennzeichnung „KI-generierte Illustration“ am Profilbild.
+// Unbekannte oder inaktive Autoren: 404 aus proxy.ts.
 export const instant = false;
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BeitragKarte } from "@/components/magazin";
 import { jsonLdText } from "@/lib/json-ld";
-import { autorPfad, pseudonymText, RUBRIK_NAME } from "@/lib/magazin";
+import { autorPfad, VERANTWORTLICH } from "@/lib/magazin";
 import { autorenLaden, beitraegeLaden } from "@/lib/magazin-daten";
 import { autorJsonLd } from "@/lib/magazin-json-ld";
 import { MAGAZIN_VERLINKT } from "@/lib/schalter";
@@ -26,7 +28,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return seitenMetadaten({
     pfad: autorPfad(autor),
     titel: `${autor.name} – redaktionelles Pseudonym`,
-    beschreibung: `${autor.name} schreibt im Magazin von dies.das.düsseldorf über ${autor.schwerpunkt}. Redaktionelles Pseudonym, Beiträge von der Redaktion geprüft.`,
+    beschreibung: `Unter dem Namen ${autor.name} schreibt die Redaktion von dies.das.düsseldorf über ${autor.schwerpunkt}. Redaktionelles Pseudonym, alle Beiträge redaktionell geprüft.`,
     noindex: !MAGAZIN_VERLINKT,
   });
 }
@@ -54,25 +56,19 @@ async function AutorInhalt({ params }: Props) {
           <figure className="mz-autorkopf__bild">
             {/* eslint-disable-next-line @next/next/no-img-element -- statisches Profilbild aus public/ */}
             <img src={autor.bild} alt={`Illustration zu ${autor.name}`} width={160} height={160} />
-            {autor.bild_ki && <figcaption>KI-generiertes Profilbild</figcaption>}
+            {autor.bild_ki && <figcaption>KI-generierte Illustration</figcaption>}
           </figure>
         )}
-        <div>
+        <div className="mz-autorkopf__text">
           <h1 className="d">{autor.name}</h1>
+          <p className="mz-autorkopf__fach">{autor.schwerpunkt} · Redaktionelles Pseudonym</p>
           <p className="mz-teaser">{autor.kurzbeschreibung}</p>
-          <p className="mz-autorkopf__fach">
-            Schwerpunkt: {autor.schwerpunkt}
-            {autor.rubriken.length ? ` · Rubriken: ${autor.rubriken.map((r) => RUBRIK_NAME[r]).join(", ")}` : ""}
+          <p className="mz-autorkopf__hinweis">
+            Alle Beiträge werden vor Veröffentlichung redaktionell geprüft. Verantwortlich: {VERANTWORTLICH}. Siehe{" "}
+            <Link href="/impressum">Impressum</Link>.
           </p>
         </div>
       </header>
-      <aside className="mz-pseudonym" aria-label="Redaktionelles Pseudonym">
-        <strong>Redaktionelles Pseudonym</strong>
-        <p>{pseudonymText(autor.name)}</p>
-        <p>
-          <Link href="/magazin/redaktion">Unsere Redaktion</Link> · <Link href="/impressum">Impressum</Link>
-        </p>
-      </aside>
       <section className="sektion" aria-labelledby="mz-autor-beitraege">
         <h2 id="mz-autor-beitraege" className="d">Beiträge</h2>
         {beitraege.length ? (

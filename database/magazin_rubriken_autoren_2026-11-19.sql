@@ -35,19 +35,19 @@ ALTER TABLE public.magazin_autoren ADD CONSTRAINT magazin_autoren_rubriken
 -- rubriken = Standard-Autor je Rubrik (die Pipeline wählt darüber; je Rubrik genau ein Autor)
 INSERT INTO public.magazin_autoren (slug, name, kurzbeschreibung, schwerpunkt, rubriken, bild, bild_ki, aktiv) VALUES
   ('lisa-hartwig', 'Lisa Hartwig',
-   'Lisa Hartwig sortiert, was in Düsseldorf ansteht: jeden Sonntag die kommende Woche im Überblick, zum Monatsende die stärksten Termine des nächsten Monats. Kurz, verlässlich und mit Blick fürs Wesentliche.',
+   'Unter dem Namen Lisa Hartwig sortiert unsere Redaktion, was in Düsseldorf ansteht: jeden Sonntag die kommende Woche im Überblick, zum Monatsende die stärksten Termine des nächsten Monats. Kurz, verlässlich und mit Blick fürs Wesentliche.',
    'Events & Wochenplanung', ARRAY['wochenvorschau', 'monats-tipps'], NULL, TRUE, TRUE),
   ('dan-suttner', 'Dan Suttner',
-   'Dan Suttner schreibt über Konzerte, Clubnächte und alles, was nach Sonnenuntergang in Düsseldorf passiert – von der kleinen Bühne bis zur großen Halle. Im Mittelpunkt: welcher Abend zu wem passt.',
+   'Unter dem Namen Dan Suttner veröffentlicht unsere Redaktion Beiträge über Konzerte, Clubnächte und alles, was nach Sonnenuntergang in Düsseldorf passiert – von der kleinen Bühne bis zur großen Halle. Im Mittelpunkt: Welcher Abend passt zu wem?',
    'Nachtleben & Musik', ARRAY['nachtleben'], NULL, TRUE, TRUE),
   ('nathalie-kirchner', 'Nathalie Kirchner',
-   'Nathalie Kirchner erzählt vom Leben in Düsseldorf: Stadtteile, Saisonthemen wie Weihnachtsmärkte oder Karneval und alles, was in kein anderes Ressort passt. Neugierig, ruhig im Ton, nah an dem, was die Stadt gerade bewegt.',
+   'Unter dem Namen Nathalie Kirchner erzählt unsere Redaktion vom Leben in Düsseldorf: Stadtteile, Saisonthemen wie Weihnachtsmärkte oder Karneval und alles, was in kein anderes Ressort passt. Neugierig, ruhig im Ton, nah an dem, was die Stadt gerade bewegt.',
    'Stadtleben', ARRAY['saison', 'stadtleben'], NULL, TRUE, TRUE),
   ('laurenz-weigelt', 'Laurenz Weigelt',
-   'Laurenz Weigelt kümmert sich ums Essen und Trinken: Restaurants, Cafés, Foodmärkte, Tastings und Brauhauskultur in Düsseldorf. Im Mittelpunkt steht, was einen Ort ausmacht – ohne Sterne und ohne Werbesprache.',
+   'Unter dem Namen Laurenz Weigelt schreibt unsere Redaktion übers Essen und Trinken: Restaurants, Cafés, Foodmärkte, Tastings und Brauhauskultur in Düsseldorf. Im Mittelpunkt steht, was einen Ort ausmacht – ohne Sterne und ohne Werbesprache.',
    'Genuss', ARRAY['genuss'], NULL, TRUE, TRUE),
   ('amelie-glasner', 'Amelie Glasner',
-   'Amelie Glasner sammelt, was Familien in Düsseldorf unternehmen können: Kinderprogramm, Spielplätze, Ausflüge und Ideen für Regentage. Praktisch gedacht – mit Blick auf Alter, Wetter und Wege.',
+   'Unter dem Namen Amelie Glasner sammelt unsere Redaktion, was Familien in Düsseldorf unternehmen können: Kinderprogramm, Spielplätze, Ausflüge und Ideen für Regentage. Praktisch gedacht – mit Blick auf Alter, Wetter und Wege.',
    'Familie', ARRAY['familie'], NULL, TRUE, TRUE)
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name, kurzbeschreibung = EXCLUDED.kurzbeschreibung, schwerpunkt = EXCLUDED.schwerpunkt,
