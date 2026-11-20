@@ -327,6 +327,109 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
     return events
 
 
+# ── Filiale (Plan docs/plan-locations-2026-11-18.md, 3.15, Schritt 2a) ─────────────────────────────────────────
+# Die Detailseite nennt am Ende den Ort: „Stadtbücherei Rath, Westfalenstraße 24“, „Kinderbücherei Hassels, …“ oder
+# einen Raum der Zentralbibliothek („Im Musikstudio der Zentralbibliothek, Konrad-Adenauer-Platz 1“).
+ZENTRALBIBLIOTHEK = "Zentralbibliothek KAP1"
+ADRESSE_ZENTRAL = "Konrad-Adenauer-Platz 1, 40210 Düsseldorf"
+PAUSE_DETAIL_S = 2.0   # Projektregel: mindestens 2 Sekunden zwischen Anfragen
+_FILIALE = re.compile(r"\b(Stadt|Kinder)?[Bb]ücherei\s+([A-ZÄÖÜ][\wäöüß\-]+)(?:\s*,\s*([A-ZÄÖÜ][^,«]{2,40}?\s\d+\s?[a-zA-Z]?)\b)?")
+_ZENTRAL = re.compile(r"Zentralbibli\w*|\bKAP\s?1\b|Konrad-Adenauer-Platz 1", re.I)
+_FFT = re.compile(r"\bIm FFT\b|\bFFT Düsseldorf\b")
+# Feste Adressen der Filialen: die Detailseiten haben Tippfehler („Friedriechstraße“, „Luegalle“) oder nennen nur
+# den Namen. Unbekannte Filialen behalten die Adresse von der Seite.
+FILIAL_ADRESSEN = {
+    "Stadtbücherei Benrath": "Urdenbacher Allee 6, Düsseldorf",
+    "Stadtbücherei Bilk": "Friedrichstraße 127, Düsseldorf",
+    "Stadtbücherei Derendorf": "Blücherstraße 10, Düsseldorf",
+    "Stadtbücherei Eller": "Gertrudisplatz 16, Düsseldorf",
+    "Stadtbücherei Flingern": "Hoffeldstraße 69, Düsseldorf",
+    "Stadtbücherei Garath": "Fritz-Erler-Straße 21, Düsseldorf",
+    "Stadtbücherei Gerresheim": "Heyestraße 4, Düsseldorf",
+    "Stadtbücherei Kaiserswerth": "Kaiserswerther Markt 22, Düsseldorf",
+    "Stadtbücherei Oberkassel": "Luegallee 65, Düsseldorf",
+    "Stadtbücherei Rath": "Westfalenstraße 24, Düsseldorf",
+    "Stadtbücherei Unterbach": "Breidenplatz 8, Düsseldorf",
+    "Stadtbücherei Unterrath": "Eckenerstraße 1, Düsseldorf",
+    "Stadtbücherei Wersten": "Liebfrauenstraße 1, Düsseldorf",
+}
+
+
+def _mit_adresse(name: str, adresse: str = "") -> tuple[str, str]:
+    """Filiale mit fester Adresse, sonst die Adresse von der Detailseite (oder leer)."""
+    return name, FILIAL_ADRESSEN.get(name) or adresse
+
+
+def filiale_aus_text(text: str) -> Optional[tuple[str, str]]:
+    """
+    Ort und Adresse aus dem Text einer Detailseite (rein, testbar). Ausgewertet wird das Ende der Seite (vor
+    „« zurück“), weil dort der Veranstaltungsort steht; Erwähnungen anderer Filialen im Text zählen nicht.
+    None, wenn kein Ort erkennbar ist.
+    """
+    ende = (text or "").split("« zurück")[0][-400:]
+    if _FFT.search(ende):
+        return "FFT Düsseldorf", ADRESSE_ZENTRAL   # Veranstaltung der Bücherei im FFT (KAP1, Foyer)
+    treffer = list(_FILIALE.finditer(ende))
+    if treffer:
+        m = treffer[-1]
+        art = "Kinderbücherei" if m.group(1) == "Kinder" else "Stadtbücherei"
+        strasse = (m.group(3) or "").strip()
+        return _mit_adresse(f"{art} {m.group(2)}", f"{strasse}, Düsseldorf" if strasse else "")
+    if _ZENTRAL.search(ende):
+        return ZENTRALBIBLIOTHEK, ADRESSE_ZENTRAL
+    return None
+
+
+def filiale_aus_titel(titel: str, filialen: set[str]) -> Optional[str]:
+    """Rückfall ohne Detailseite: „… in Bilk“ im Titel, nur für bekannte Filialen."""
+    m = re.search(r"\bin\s+([A-ZÄÖÜ][\wäöüß\-]+)\s*$", titel or "")
+    return f"Stadtbücherei {m.group(1)}" if m and m.group(1) in filialen else None
+
+
+def _filialen_aus_liste(html: str) -> set[str]:
+    """Filialnamen aus den Kategorien der Liste („Veranstaltungen in der Bücherei Rath“)."""
+    return set(re.findall(r"Veranstaltungen in der (?:Kinder)?[Bb]ücherei ([A-ZÄÖÜ][\wäöüß\-]+)", html or ""))
+
+
+def _bekannte_orte() -> dict[str, tuple[str, str]]:
+    """Schon zugeordnete Detailseiten aus der Datenbank (quelle_url → Ort, Adresse) – spart erneute Abrufe."""
+    try:
+        from database.client import get_supabase_client
+        zeilen = (get_supabase_client().table("events").select("quelle_url, ort, adresse")
+                  .eq("quelle_name", QUELLE_NAME).neq("ort", ORT_STANDARD)
+                  .gte("datum", (date.today() - timedelta(days=30)).isoformat()).limit(5000).execute().data or [])
+        return {z["quelle_url"]: (z["ort"], z.get("adresse") or "") for z in zeilen if z.get("quelle_url")}
+    except Exception as fehler:
+        logger.warning("Bekannte Bücherei-Orte nicht ladbar (alle Detailseiten werden abgerufen): %s", fehler)
+        return {}
+
+
+def filialen_zuordnen(events: list[dict], filialen: set[str], bekannt: dict[str, tuple[str, str]]) -> None:
+    """Setzt ort/adresse je Event: bekannt → Detailseite → Titel → Standard (Netz)."""
+    import time
+    abgerufen = 0
+    for e in events:
+        url = e.get("quelle_url") or ""
+        treffer = bekannt.get(url)
+        if not treffer and "/newsdetail/" in url:
+            if abgerufen:
+                time.sleep(PAUSE_DETAIL_S)
+            abgerufen += 1
+            html = seite_abrufen(url, logger)
+            if html:
+                soup = BeautifulSoup(html, "html.parser")
+                treffer = filiale_aus_text((soup.find("main") or soup).get_text(" ", strip=True))
+        if not treffer:
+            name = filiale_aus_titel(e.get("titel") or "", filialen)
+            treffer = _mit_adresse(name) if name else None
+        if treffer:
+            e["ort"] = treffer[0]
+            if treffer[1]:
+                e["adresse"] = treffer[1]
+    logger.info("Bücherei-Filialen: %d Detailseiten abgerufen, %d Events zugeordnet", abgerufen,
+                sum(1 for e in events if e["ort"] != ORT_STANDARD))
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Veranstaltungen der Stadtbüchereien Düsseldorf.
@@ -334,6 +437,7 @@ def scrape() -> list[dict]:
     Strategie:
     1. JSON-LD structured data
     2. HTML-Parsing als Fallback
+    3. Filiale je Event aus der Detailseite (Plan Locations 3.15), schon bekannte aus der Datenbank
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
@@ -358,6 +462,7 @@ def scrape() -> list[dict]:
             logger.info("HTML-Fallback: %d Events gefunden", len(events))
 
         events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
+        filialen_zuordnen(events, _filialen_aus_liste(html), _bekannte_orte())
         logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
         return events
 
@@ -366,11 +471,104 @@ def scrape() -> list[dict]:
         return []
 
 
+def _sql(wert: Optional[str]) -> str:
+    return "NULL" if wert is None else "'" + wert.replace("'", "''") + "'"
+
+
+def nachtrag_sql(pfad: str) -> int:
+    """
+    Einmaliger Nachtrag (nur lesend, schreibt eine SQL-Datei): kommende, schon gespeicherte Bücherei-Events mit dem
+    Netz-Namen bekommen ihre Filiale – sonst legte der erste Lauf des neuen Scrapers jedes Event ein zweites Mal an
+    (anderer Ort = kein Dubletten-Treffer). Reihen-Schlüssel werden mitgezogen, wenn alle kommenden Termine einer Reihe
+    in dieselbe Filiale gehen und der neue Schlüssel frei ist (wie pipeline/ortsnamen.py); sonst bleibt die Reihe.
+    """
+    import time
+    from collections import defaultdict
+    from database.client import get_supabase_client
+    from pipeline.reihen_zuordnen import reihen_schluessel
+
+    db = get_supabase_client()
+
+    def alle(tabelle: str, spalten: str, filter_fn=None) -> list[dict]:
+        zeilen, start = [], 0
+        while True:
+            q = db.table(tabelle).select(spalten)
+            if filter_fn:
+                q = filter_fn(q)
+            teil = q.range(start, start + 999).execute().data or []
+            zeilen += teil
+            if len(teil) < 1000:
+                return zeilen
+            start += 1000
+
+    events = alle("events", "id, titel, datum, uhrzeit, quelle_url, reihe_id",
+                  lambda q: q.eq("quelle_name", QUELLE_NAME).eq("ort", ORT_STANDARD).gte("datum", date.today().isoformat()))
+    reihen = {r["id"]: r for r in alle("reihen", "id, schluessel")}
+    vorhandene_schluessel = {r["schluessel"] for r in reihen.values()}
+    filialen = _filialen_aus_liste(seite_abrufen(LISTE_URL, logger) or "")
+    zuweisung: dict[str, tuple[str, str]] = {}
+    for i, e in enumerate(events):
+        if i:
+            time.sleep(PAUSE_DETAIL_S)
+        html = seite_abrufen(e["quelle_url"], logger) if "/newsdetail/" in (e.get("quelle_url") or "") else None
+        treffer = None
+        if html:
+            soup = BeautifulSoup(html, "html.parser")
+            treffer = filiale_aus_text((soup.find("main") or soup).get_text(" ", strip=True))
+        if not treffer:
+            name = filiale_aus_titel(e["titel"], filialen)
+            treffer = _mit_adresse(name) if name else None
+        if treffer:
+            zuweisung[e["id"]] = treffer
+
+    neue_schluessel: dict[str, set[str]] = defaultdict(set)
+    for e in events:
+        if e.get("reihe_id") and e["id"] in zuweisung:
+            k = reihen_schluessel(e["titel"], zuweisung[e["id"]][0])
+            if k:
+                neue_schluessel[e["reihe_id"]].add(k)
+    reihen_update = {rid: next(iter(ks)) for rid, ks in neue_schluessel.items()
+                     if len(ks) == 1 and next(iter(ks)) not in vorhandene_schluessel}
+    reihen_bleiben = len(neue_schluessel) - len(reihen_update)
+
+    je_ort: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for eid, (ort, adresse) in zuweisung.items():
+        je_ort[(ort, adresse)].append(eid)
+    zeilen = [
+        "-- Stadtbüchereien: Filiale für kommende, schon gespeicherte Events (Plan docs/plan-locations-2026-11-18.md,",
+        f"-- 3.15, Schritt 2a). Erzeugt am {date.today().isoformat()} von `python -m scraper.tier2.stadtbuechereien --sql`.",
+        "-- VOR dem Deploy des neuen Bücherei-Scrapers ausführen, sonst entstehen Doppel-Einträge.",
+        f"-- {len(zuweisung)} von {len(events)} Events bekommen eine Filiale; {len(reihen_update)} Reihen-Schlüssel werden",
+        f"-- angepasst, {reihen_bleiben} Reihen bleiben (Termine in mehreren Filialen oder Schlüssel schon vergeben).",
+        "", "BEGIN;", ""]
+    for (ort, adresse), ids in sorted(je_ort.items()):
+        liste = ", ".join(_sql(x) for x in sorted(ids))
+        setzen = f"ort = {_sql(ort)}" + (f", adresse = {_sql(adresse)}" if adresse else "")
+        zeilen.append(f"UPDATE public.events SET {setzen} WHERE id IN ({liste}) AND ort = {_sql(ORT_STANDARD)};")
+    if reihen_update:
+        zeilen += ["", "-- Reihen-Schlüssel (titel|ort) an die Filiale anpassen – Slugs bleiben"]
+        zeilen += [f"UPDATE public.reihen SET schluessel = {_sql(k)} WHERE id = {_sql(rid)};"
+                   for rid, k in sorted(reihen_update.items())]
+    zeilen += ["", "COMMIT;", "", "-- Kontrolle: kommende Bücherei-Events je Ort",
+               "SELECT ort, count(*) FROM public.events WHERE quelle_name = 'Stadtbüchereien Düsseldorf' "
+               "AND datum >= current_date GROUP BY ort ORDER BY 2 DESC;"]
+    with open(pfad, "w", encoding="utf-8") as f:
+        f.write("\n".join(zeilen) + "\n")
+    logger.info("Bücherei-Nachtrag: %d/%d Events, %d Reihen → %s", len(zuweisung), len(events), len(reihen_update), pfad)
+    return len(zuweisung)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
+    import sys
+    if "--sql" in sys.argv:
+        from dotenv import load_dotenv
+        load_dotenv(".env")
+        nachtrag_sql(f"database/stadtbuechereien_filialen_{date.today().isoformat()}.sql")
+        sys.exit(0)
     import json as _json
     ergebnisse = scrape()
     print(f"\n=== {len(ergebnisse)} Events gefunden ===\n")
