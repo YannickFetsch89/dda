@@ -35,12 +35,12 @@ TRENNER = " | "
 
 # Abkürzungen, nach denen kein Satz endet („z. B.“, „St. Lambertus“, „ca. 1.900“, „am 3. Oktober“)
 _ABKUERZUNGEN = re.compile(
-    r"(?:\b[a-zäöü]\.|\b[a-z]\.\s?[a-zA-Z]\.|"
+    r"(?:\b[a-zäöü]\.|\b[a-z]\.\s?[a-zA-Z]\.|\b[A-ZÄÖÜ]\.|"   # „z. B.“, „u. a.“, Initiale „Horst H. Baumann“
     r"\b(?:ca|St|Nr|Dr|Prof|bzw|ggf|inkl|Jh|Str|vgl|etc|evtl|usw|sog|bspw|Mio|Mrd)\.)$")
 # Ordnungszahl („am 3. Oktober“, „im 19. Jahrhundert“) – nur dann kein Satzende; „Saal 89. Als …“ endet dort
 _ORDINAL = re.compile(r"\b\d{1,2}\.$")
 _NACH_ORDINAL = re.compile(r"^[\"„»*(]*(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|"
-                           r"Dezember|Jahrhundert|Jh|Stock|Etage|Obergeschoss|OG)\b")
+                           r"Dezember|Jahrhundert\w*|Jh|Stock|Etage|Obergeschoss|OG|Bundesliga|Liga|Platz|Preis)\b")
 _SATZENDE = re.compile(r"(?<=[.!?…])[\"“”»*)]*\s+(?=[\"„»*(]*[A-ZÄÖÜ0-9])")
 _FETT = re.compile(r"\*\*([^*\n]+?)\*\*")
 _URL = re.compile(r"^https?://\S+$")

@@ -220,6 +220,8 @@ DUBLETTEN: list[tuple[re.Pattern, str]] = [
     (re.compile(r"^es365( art center)?$", re.I), "ES365 Art Center"),
     (re.compile(r"^tribe( hotel)? düsseldorf$", re.I), "TRIBE Hotel Düsseldorf"),
     (re.compile(r"^wp8( künstlerverein)?$", re.I), "WP8 Künstlerverein"),
+    # Fund 20.11.2026 (Ortstexte): dasselbe Haus, Merowingerstraße 88
+    (re.compile(r"^ballett(proben)?haus\b", re.I), "Balletthaus"),
 ]
 # Getrennt bis zur Prüfung (Plan 3.7, 7.2 Punkte 9 und 13): Name normalisiert → Prüfhinweis
 PRUEFHINWEISE: dict[str, str] = {

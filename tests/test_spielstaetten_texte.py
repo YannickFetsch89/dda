@@ -15,6 +15,8 @@ class SaetzeTest(unittest.TestCase):
         # Zahl am Satzende ist kein Datum: „Kleine Saal 89. Als …“ sind zwei Sätze
         self.assertEqual(len(saetze("Der Große Saal hat 318 Plätze, der Kleine Saal 89. Als Produktionshaus arbeitet es.")), 2)
         self.assertEqual(len(saetze("Gebaut im 19. Jahrhundert. Eröffnet am 3. Oktober 1926.")), 2)
+        self.assertEqual(len(saetze("Sie zeigt Kunst des 20. und 21. Jahrhunderts an zwei Standorten. Gegründet 1961.")), 2)
+        self.assertEqual(len(saetze("Am Schaft hängt der Lichtzeitpegel von Horst H. Baumann. Er zeigt die Uhrzeit.")), 2)
 
 
 class PruefenTest(unittest.TestCase):
