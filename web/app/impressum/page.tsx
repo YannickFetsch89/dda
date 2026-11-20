@@ -59,6 +59,19 @@ export default function ImpressumSeite() {
         Rocktician® ist eine eingetragene Marke (Nr. 30 2018 206 154) beim Deutschen Patent- und Markenamt.
       </p>
 
+      <h2>Datenquellen</h2>
+      <p>
+        Karten-, Adress- und Ortsdaten stammen teilweise aus OpenStreetMap,{" "}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+          © OpenStreetMap-Mitwirkende
+        </a>
+        , verfügbar unter der{" "}
+        <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener noreferrer">
+          Open Database License (ODbL)
+        </a>
+        .
+      </p>
+
       <h2>Verantwortlich für den Inhalt gemäß § 55 Abs. 2 RStV</h2>
       <p>
         Yannick Fetsch
