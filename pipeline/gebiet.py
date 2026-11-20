@@ -58,6 +58,8 @@ AUSWAERTIGE_ORTE = {
     "grugahalle", "theater essen süd", "zeche carl", "kokerei zollverein", "theaterhagen", "wuppertaler miniaturland",
     # Nachtrag 19.11.2026 (Kandidatenliste Ortsseiten): Buchhandlung in Essen, „Essen“ ohne eigenen Abschnitt
     "mayersche essen",
+    # Nachtrag 20.11.2026 (Geo-Prüfung Ortsseiten): Erlebnisbauernhof in Hürth bei Köln
+    "gertrudenhof",
 }
 
 _PLZ = re.compile(r"(?<!\d)(\d{5})(?!\d)")
