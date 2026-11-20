@@ -10,7 +10,6 @@ import { ZEITRAUM_OPTIONEN, plusTage } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { stadtteilPfad } from "@/lib/landing";
 import { MAGAZIN_VERLINKT, SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
-import { FEED_PFAD } from "@/lib/magazin";
 import { kontenAktiv } from "@/lib/konto/konfig";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
@@ -183,7 +182,7 @@ export async function Fuss() {
             <b>Magazin</b>
             <Link href="/magazin">Alle Beiträge</Link>
             <Link href="/magazin/redaktion">Unsere Redaktion</Link>
-            <a href={FEED_PFAD} type="application/rss+xml">RSS-Feed</a>
+            <Link href="/rss">RSS-Feed</Link>
           </div>
         )}
         <div className="fuss__spalte">

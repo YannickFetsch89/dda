@@ -2423,6 +2423,11 @@ a.mz-ort:hover { border-color: var(--ddd-gold); }
 .mz-autorenliste__link img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; background: var(--ddd-subtle); }
 .mz-autorenliste__link strong { display: block; font-size: 16px; }
 .mz-autorenliste__fach { display: block; font-size: 14px; color: var(--ddd-text-muted); }
+/* /rss: Feld mit der Feed-Adresse und Kopier-Button (20.11.2026) */
+.feed-adresse { margin: 8px 0 24px; padding: 16px; border-radius: var(--r-card-s); background: var(--ddd-surface); border: 1px solid var(--ddd-border); }
+.feed-adresse__label { display: block; font-size: 13px; font-weight: 700; color: var(--ddd-text-muted); margin-bottom: 8px; }
+.feed-adresse__zeile { display: flex; gap: 10px; flex-wrap: wrap; }
+.feed-adresse__feld { flex: 1 1 260px; min-width: 0; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--ddd-border); background: var(--ddd-bg); color: var(--ddd-text); }
 .mz-pruefung { border-radius: var(--r-card-s); padding: 12px 16px; margin: 12px 0; font-size: 14px; }
 .mz-pruefung--gruen { background: var(--ddd-free-bg); color: var(--ddd-free-fg); }
 .mz-pruefung--rot { background: var(--ddd-error-bg); color: var(--ddd-error-fg); }
