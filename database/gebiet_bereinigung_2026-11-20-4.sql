@@ -1,4 +1,4 @@
--- gebiet_bereinigung_2026-11-20-3.sql – DiesDasDüsseldorf
+-- gebiet_bereinigung_2026-11-20-4.sql – DiesDasDüsseldorf
 -- Events außerhalb von Düsseldorf, Neuss und Ratingen löschen (Plan Locations E3, 18.11.2026).
 -- ERZEUGT von pipeline/gebiet.py (python -m pipeline.gebiet --sql). Abhängige Zeilen (Merkliste,
 -- Sensibel-Kennzeichnung, SEO-Entscheidungen) löschen sich mit (ON DELETE CASCADE), Meldungen behalten
