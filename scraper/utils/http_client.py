@@ -21,6 +21,16 @@ STANDARD_HEADERS = {
 }
 
 
+def _backoff(retry_after: Optional[str], versuch: int) -> float:
+    """Wartezeit nach HTTP 429: Retry-After (Sekunden, höchstens 120), sonst 10, 20, 40 Sekunden."""
+    try:
+        if retry_after is not None:
+            return min(max(float(retry_after), 1.0), 120.0)
+    except ValueError:
+        pass   # Datumsangabe statt Sekunden → Standard-Backoff
+    return 10.0 * (2 ** versuch)
+
+
 def seite_abrufen(url: str, logger=None, wartezeit: float = 2.0) -> Optional[str]:
     """
     Ruft eine URL ab und gibt den HTML-Inhalt zurück.
@@ -40,6 +50,15 @@ def seite_abrufen(url: str, logger=None, wartezeit: float = 2.0) -> Optional[str
         with httpx.Client(headers=STANDARD_HEADERS, timeout=30, follow_redirects=True) as client:
             try:
                 response = client.get(url)
+                # HTTP 429: exponentielles Backoff (Projektregel), Retry-After beachten, höchstens 3 weitere Versuche
+                for versuch in range(3):
+                    if response.status_code != 429:
+                        break
+                    pause = _backoff(response.headers.get("Retry-After"), versuch)
+                    if logger:
+                        logger.warning("HTTP 429 bei %s – warte %.0f s (Versuch %d von 3)", url, pause, versuch + 1)
+                    time.sleep(pause)
+                    response = client.get(url)
                 response.raise_for_status()
                 return response.text
             except httpx.TimeoutException:

@@ -1,7 +1,7 @@
 // Ortsseiten /orte (Plan docs/plan-locations-2026-11-18.md, Pflicht-Tests Abschnitt 4: Proxy, Verknüpfungen, Seiten)
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { config as proxyConfig } from "@/proxy";
 import { guideZiel, routeVon, spielstaetteEntscheidung, type OrtKopf } from "@/lib/pfad-pruefung";
 import { artInfo, filterLesen, indexierbar, orteFiltern, stadtAusPlz } from "@/lib/spielstaetten";
@@ -150,5 +150,57 @@ describe("Seiten", () => {
     expect(sichtbarerPfad({ ...basis, typ: "kneipe", qualitaets_score: 8, slug: "bar" })).toBe("/guides/kneipen-bars/bar");
     expect(sichtbarerPfad({ ...basis, typ: "cafe", qualitaets_score: 3, slug: "c" })).toBeNull();
     expect(sichtbarerPfad({ ...basis, typ: "ausflug", slug: "a" })).toBeNull();
+  });
+});
+
+describe("Cursor-Komplettprüfung 20.11.", () => {
+  it("Übersicht: Säle eines Guide-Hauses stehen unter dem Haus (Link auf die Guide-Seite), unsichtbares Haus → Saal selbst", async () => {
+    const { uebersichtEintraege } = await import("@/lib/spielstaetten-daten");
+    const halle = ort({ id: "halle", name: "zakk – Halle", parentId: "zakk" });
+    const club = ort({ id: "zakk", name: "zakk", slug: "zakk-flingern", typ: "club" }) as DddOrt;
+    const tonhalle = ort({ id: "tonhalle", name: "Tonhalle" });
+    const rotunde = ort({ id: "rotunde", name: "Tonhalle – Rotunde", parentId: "tonhalle" });
+    const verwaist = ort({ id: "saal-x", name: "Saal X", parentId: "unsichtbar" });
+    // Club sichtbar → Eintrag „zakk“ mit Guide-Link, Halle darunter
+    const sichtbar = { ...club, extras: { club: { passt: true }, club_score: { gesamt: 8 }, club_freigegeben: "2026-11-11" } };
+    const e = uebersichtEintraege([halle, tonhalle, rotunde, verwaist], [sichtbar]);
+    expect(e.haeuser.map((o) => o.id)).toEqual(["saal-x", "tonhalle", "zakk"]);
+    expect(e.pfad.get("zakk")).toBe("/guides/clubs/zakk-flingern");
+    expect(e.kinder.get("zakk")?.map((o) => o.id)).toEqual(["halle"]);
+    expect(e.kinder.get("tonhalle")?.map((o) => o.id)).toEqual(["rotunde"]);
+    // Guide-Haus nicht sichtbar oder nicht ladbar → die Halle steht selbst in der Liste
+    expect(uebersichtEintraege([halle], []).haeuser.map((o) => o.id)).toEqual(["halle"]);
+  });
+
+  it("Saal-Filter: Saalseite nur eigene Events, „Haus allgemein“ nur Haus-ID", async () => {
+    const { saalEvents } = await import("@/lib/spielstaetten");
+    const ev = (id: string, ortId: string) => ({ id, ort_id: ortId }) as unknown as import("@/lib/typen").DddEvent;
+    const programm = [ev("1", "haus"), ev("2", "saal-a"), ev("3", "saal-b")];
+    expect(saalEvents({ id: "saal-a", parentId: "haus" }, programm, null).map((e) => e.id)).toEqual(["2"]);
+    expect(saalEvents({ id: "haus", parentId: null }, programm, "haus").map((e) => e.id)).toEqual(["1"]);
+    expect(saalEvents({ id: "haus", parentId: null }, programm, "saal-b").map((e) => e.id)).toEqual(["3"]);
+    expect(saalEvents({ id: "haus", parentId: null }, programm, null)).toHaveLength(3);
+  });
+
+  it("Proxy: scheitert die Zielabfrage einer Weiterleitung (Timeout), gilt „weiter“ – kein 308 auf /orte", async () => {
+    const { pfadPruefen, speicherLeeren } = await import("@/lib/pfad-pruefung");
+    speicherLeeren();
+    const alt = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_KEY };
+    process.env.SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_KEY = "test";
+    vi.stubGlobal("fetch", async (url: string) => {
+      if (url.includes("/orte?") && url.includes("slug=eq.")) return new Response("[]", { status: 200 }); // keine eigene Zeile
+      if (url.includes("/ort_weiterleitungen?")) return new Response('[{"ziel_ort_id":"z1"}]', { status: 200 });
+      throw new DOMException("Zeitüberschreitung", "TimeoutError"); // Zielabfrage
+    });
+    try {
+      expect(await pfadPruefen("/orte/alter-name")).toEqual({ art: "weiter" });
+    } finally {
+      vi.unstubAllGlobals();
+      for (const [k, v] of [["SUPABASE_URL", alt.url], ["SUPABASE_KEY", alt.key]] as const) {
+        if (v === undefined) delete process.env[k]; else process.env[k] = v;
+      }
+      speicherLeeren();
+    }
   });
 });

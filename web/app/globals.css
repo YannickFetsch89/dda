@@ -2488,3 +2488,4 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
   .os-spalten { grid-template-columns: 1fr; }
   .os-filter__feld { min-width: 100%; }
 }
+.os-saal-link { margin-top: 10px; }

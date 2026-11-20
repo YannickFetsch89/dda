@@ -91,22 +91,32 @@ export async function spielstaetteLaden(slug: string): Promise<{ ort: Spielstaet
   }
 }
 
-/** Beliebige aktive Zeile per ID (Haus eines Saals – auch eine Guide-Zeile wie zakk). */
-export async function ortZeileLaden(id: string): Promise<DddOrt | null> {
+/**
+ * Beliebige aktive Zeile per ID (Haus eines Saals – auch eine Guide-Zeile wie zakk). `fehler`: Abfrage gescheitert
+ * (nicht „gibt es nicht“) – Aufrufer cachen dann nur kurz.
+ */
+export async function ortZeileAbfragen(id: string): Promise<{ ort: DddOrt | null; fehler: boolean }> {
   "use cache";
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);
-    return null;
+    return { ort: null, fehler: true };
   }
   try {
     const { data, error } = await client.from("orte").select(SPALTEN).eq("aktiv", true).eq("id", id).maybeSingle();
-    cacheLife(error ? KURZ : NORMAL);
-    return !error && data ? mitEltern(data as unknown as Zeile) : null;
-  } catch {
+    if (error) throw new Error(error.message);
+    cacheLife(NORMAL);
+    return { ort: data ? mitEltern(data as unknown as Zeile) : null, fehler: false };
+  } catch (err) {
+    console.error(`Ort ${id} nicht ladbar: ${err instanceof Error ? err.message : err}`);
     cacheLife(KURZ);
-    return null;
+    return { ort: null, fehler: true };
   }
+}
+
+/** Wie ortZeileAbfragen, nur die Zeile (null = nicht da oder nicht ladbar). */
+export async function ortZeileLaden(id: string): Promise<DddOrt | null> {
+  return (await ortZeileAbfragen(id)).ort;
 }
 
 export interface Programm {
@@ -179,8 +189,9 @@ export async function eventOrtLink(eventId: string): Promise<{ name: string; pfa
       cacheLife(error ? KURZ : NORMAL);
       return null;
     }
-    const ort = await ortZeileLaden(ortId);
-    cacheLife(NORMAL);
+    const { ort, fehler } = await ortZeileAbfragen(ortId);
+    // Nur ein erfolgreiches „nicht da“ lange cachen; nach einem Abfragefehler bald neu fragen
+    cacheLife(fehler ? KURZ : NORMAL);
     if (!ort) return null;
     const pfad = sichtbarerPfad(ort);
     return pfad ? { name: ort.name, pfad } : null;
@@ -247,4 +258,60 @@ export function indexierbareOrte(alle: Spielstaette[], anzahl: Map<string, numbe
     const adresse = p.adresseBestaetigt || (!!o.parentId && (hausAdresse.get(o.parentId) ?? false));
     return indexierbar({ adresseBestaetigt: adresse, textFreigegeben: p.textFreigegeben, kommende: zaehle(o) });
   });
+}
+
+/** Guide-Häuser von Sälen (das Haus ist keine Spielstätte, z. B. der Club zakk) – für die Übersicht /orte. */
+export async function guideHaeuserLaden(ids: string[]): Promise<{ orte: DddOrt[]; fehler: boolean }> {
+  "use cache";
+  const client = leseClient();
+  if (!client || !ids.length) {
+    cacheLife(KURZ);
+    return { orte: [], fehler: !client };
+  }
+  try {
+    const { data, error } = await client.from("orte").select(SPALTEN).eq("aktiv", true).in("id", ids);
+    if (error) throw new Error(error.message);
+    cacheLife(NORMAL);
+    return { orte: ((data ?? []) as unknown as Zeile[]).map(mitEltern), fehler: false };
+  } catch (err) {
+    console.error(`Guide-Häuser der Säle nicht ladbar: ${err instanceof Error ? err.message : err}`);
+    cacheLife(KURZ);
+    return { orte: [], fehler: true };
+  }
+}
+
+/** Art eines Guide-Hauses für Symbol und Filter der Übersicht. */
+function guideArt(o: DddOrt): string {
+  return ["restaurant", "imbiss", "cafe"].includes(o.typ) ? "Café/Restaurant" : "Club/Bar/Kneipe";
+}
+
+/**
+ * Einträge der Übersicht /orte (rein, testbar): Häuser mit ihren Sälen. Hängt ein Saal an einem Guide-Haus
+ * (zakk-Säle am Club), steht das Haus als Eintrag mit Link auf seine kanonische Guide-Seite in der Liste, die Säle
+ * darunter. Ist das Haus nicht sichtbar oder nicht ladbar, steht der Saal selbst als Eintrag da – jede Ortsseite
+ * ist über die Übersicht erreichbar.
+ */
+export function uebersichtEintraege(alle: Spielstaette[], guide: DddOrt[]): {
+  haeuser: Spielstaette[]; kinder: Map<string, Spielstaette[]>; pfad: Map<string, string>;
+} {
+  const ids = new Set(alle.map((o) => o.id));
+  const pfad = new Map<string, string>();
+  const guideHaeuser: Spielstaette[] = [];
+  for (const h of guide) {
+    const p = sichtbarerPfad(h);
+    if (!p || ids.has(h.id)) continue;
+    pfad.set(h.id, p);
+    guideHaeuser.push({ ...h, parentId: null, extras: { ...h.extras, spielstaette: { art: guideArt(h) } } });
+  }
+  const hatHaus = (o: Spielstaette) => !!o.parentId && (ids.has(o.parentId) || pfad.has(o.parentId));
+  const kinder = new Map<string, Spielstaette[]>();
+  for (const o of alle) if (hatHaus(o)) kinder.set(o.parentId!, [...(kinder.get(o.parentId!) ?? []), o]);
+  const haeuser = [...alle.filter((o) => !hatHaus(o)), ...guideHaeuser].sort((a, b) => a.name.localeCompare(b.name, "de"));
+  return { haeuser, kinder, pfad };
+}
+
+/** IDs der Häuser von Sälen, die selbst keine Spielstätte sind (sortiert, stabiler Cache-Schlüssel). */
+export function fremdeHausIds(alle: Spielstaette[]): string[] {
+  const ids = new Set(alle.map((o) => o.id));
+  return [...new Set(alle.filter((o) => o.parentId && !ids.has(o.parentId)).map((o) => o.parentId!))].sort();
 }

@@ -19,7 +19,7 @@ import { jsonLdText } from "@/lib/json-ld";
 import { lokalesBild, ortBildFokus, sichereUrl, slugDekodieren } from "@/lib/orte";
 import { ROBOTS_INDEX, seitenAlternates } from "@/lib/seo";
 import {
-  ORTE_BASIS, artInfo, artVon, entfernung, indexierbar, ortSeitePfad, profil, stadtVon,
+  ORTE_BASIS, artInfo, artVon, entfernung, indexierbar, ortSeitePfad, profil, saalEvents, stadtVon,
 } from "@/lib/spielstaetten";
 import {
   kinderVon, ortZeileLaden, programmLaden, spielstaetteLaden, spielstaettenLaden, type Spielstaette,
@@ -43,6 +43,8 @@ interface Stand {
   kinder: Spielstaette[];
   alle: Spielstaette[];
   ids: string[];
+  /** Spielstätten-Liste nicht ladbar: Kinder und Säle fehlen → Programm „gerade nicht verfügbar“, noindex */
+  listeFehler: boolean;
 }
 
 async function laden(props: Props): Promise<{ stand: Stand | null; fehler: boolean }> {
@@ -55,14 +57,11 @@ async function laden(props: Props): Promise<{ stand: Stand | null; fehler: boole
   // Eine Abfrage je Haus (Plan 3.9): Säle laden das Programm ihres Hauses und filtern daraus
   const hausId = haus?.id ?? ort.id;
   const ids = [hausId, ...kinderVon(hausId, liste.orte).map((k) => k.id)].sort();
-  return { stand: { ort, haus, kinder, alle: liste.orte, ids }, fehler: false };
+  return { stand: { ort, haus, kinder, alle: liste.orte, ids, listeFehler: liste.fehler }, fehler: false };
 }
 
 function eigeneEvents(stand: Stand, events: DddEvent[], saal: string | null): DddEvent[] {
-  if (stand.ort.parentId) return events.filter((e) => e.ort_id === stand.ort.id);
-  if (saal === "haus") return events.filter((e) => e.ort_id === stand.ort.id);
-  if (saal) return events.filter((e) => e.ort_id === saal);
-  return events;
+  return saalEvents(stand.ort, events, saal);
 }
 
 function adresseBestaetigt(stand: Stand): boolean {
@@ -85,7 +84,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const art = artInfo(artVon(ort, haus)).wert;
   const beschreibung = (p.textFreigegeben && kurzBeschreibung(ort.beschreibung, 160)) ||
     `${ort.name} (${art}) in ${ort.stadtteil ?? stadt}: ${kommende ? `${kommende} kommende Termine` : "Programm"}, Adresse und Infos bei dies.das.düsseldorf.`;
-  const indexiert = !programm.fehler && indexierbar({
+  const indexiert = !programm.fehler && !stand.listeFehler && indexierbar({
     adresseBestaetigt: adresseBestaetigt(stand), textFreigegeben: p.textFreigegeben, kommende,
   });
   const pfad = ortSeitePfad(ort.slug);
@@ -131,7 +130,8 @@ async function Programm({ stand, searchParams }: { stand: Stand; searchParams: P
   const saalRoh = typeof sp.saal === "string" ? sp.saal : null;
   const saal = saalRoh && (saalRoh === "haus" || stand.kinder.some((k) => k.id === saalRoh)) ? saalRoh : null;
   const programm = await programmLaden(stand.ids);
-  if (programm.fehler) {
+  // Ohne Spielstätten-Liste fehlen die Säle (und ihre IDs): lieber der Hinweis als eine falsche, leere Liste
+  if (programm.fehler || stand.listeFehler) {
     return (
       <section className="gd-abschnitt">
         <h2 className="d">Programm</h2>
@@ -294,7 +294,7 @@ export default async function OrtSeite(props: Props) {
           <h1 className="d">{ort.name}</h1>
           {haus && (
             <p className="os-haus">
-              {p.zeileTyp === "standort" ? "Standort von" : "Saal im Haus"} <Link href={hausPfad(haus)}>{haus.name}</Link>
+              {p.zeileTyp === "standort" ? "Standort von" : p.zeileTyp === "filiale" ? "Filiale von" : "Saal im Haus"} <Link href={hausPfad(haus)}>{haus.name}</Link>
             </p>
           )}
           {/* Über den Ort: nur mit freigegebenem Text (Plan 3.14); Säle wiederholen keinen Haustext (Plan 3.6) */}

@@ -14,7 +14,10 @@ import {
   ARTEN, ORTE_BASIS, artInfo, buchstabe, filterAktiv, filterLesen, orteFiltern, ortSeitePfad, profil, stadtVon,
   type OrteFilter,
 } from "@/lib/spielstaetten";
-import { spielstaettenLaden, type Spielstaette } from "@/lib/spielstaetten-daten";
+import {
+  fremdeHausIds, guideHaeuserLaden, spielstaettenLaden, uebersichtEintraege, type Spielstaette,
+} from "@/lib/spielstaetten-daten";
+import type { DddOrt } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 type SP = Record<string, string | string[] | undefined>;
@@ -43,10 +46,8 @@ function abfrage(f: OrteFilter): string {
   return p.toString();
 }
 
-function Ansicht({ alle, f, fehler }: { alle: Spielstaette[]; f: OrteFilter; fehler: boolean }) {
-  const haeuser = alle.filter((o) => !o.parentId);
-  const kinder = new Map<string, Spielstaette[]>();
-  for (const o of alle) if (o.parentId) kinder.set(o.parentId, [...(kinder.get(o.parentId) ?? []), o]);
+function Ansicht({ alle, guide, f, fehler }: { alle: Spielstaette[]; guide: DddOrt[]; f: OrteFilter; fehler: boolean }) {
+  const { haeuser, kinder, pfad } = uebersichtEintraege(alle, guide);
   const treffer = orteFiltern(haeuser, f);
   const stadtteile = [...new Set(haeuser.filter((o) => stadtVon(o) === "Düsseldorf" && o.stadtteil).map((o) => o.stadtteil!))].sort((a, b) => a.localeCompare(b, "de"));
   const arten = ARTEN.filter((a) => haeuser.some((o) => profil(o).art === a.wert));
@@ -107,7 +108,7 @@ function Ansicht({ alle, f, fehler }: { alle: Spielstaette[]; f: OrteFilter; feh
               const info = artInfo(profil(o).art);
               return (
                 <li key={o.id}>
-                  <Link href={ortSeitePfad(o.slug)} className="os-ort">
+                  <Link href={pfad.get(o.id) ?? ortSeitePfad(o.slug)} className="os-ort">
                     <Icon name={info.icon} />
                     <span className="os-ort__name">{o.name}</span>
                     <span className="muted os-ort__zusatz">{[info.wert, o.stadtteil ?? stadtVon(o)].filter(Boolean).join(" · ")}</span>
@@ -128,12 +129,15 @@ function Ansicht({ alle, f, fehler }: { alle: Spielstaette[]; f: OrteFilter; feh
   );
 }
 
-async function GefilterteAnsicht({ searchParams, alle, fehler }: { searchParams: Promise<SP>; alle: Spielstaette[]; fehler: boolean }) {
-  return <Ansicht alle={alle} f={filterLesen(await searchParams)} fehler={fehler} />;
+async function GefilterteAnsicht({ searchParams, alle, guide, fehler }: { searchParams: Promise<SP>; alle: Spielstaette[]; guide: DddOrt[]; fehler: boolean }) {
+  return <Ansicht alle={alle} guide={guide} f={filterLesen(await searchParams)} fehler={fehler} />;
 }
 
 export default async function OrteSeite(props: { searchParams: Promise<SP> }) {
-  const { orte, fehler } = await spielstaettenLaden();
+  const { orte, fehler: listeFehler } = await spielstaettenLaden();
+  // Häuser von Sälen, die selbst keine Spielstätte sind (zakk-Säle am Club zakk)
+  const { orte: guide, fehler: guideFehler } = await guideHaeuserLaden(fremdeHausIds(orte));
+  const fehler = listeFehler || guideFehler;
   const jsonLd = brotkrumenJsonLd(SITE_URL, [{ name: "Start", pfad: "/" }, { name: "Orte", pfad: ORTE_BASIS }]);
   return (
     <div className="container gd-seite os-seite">
@@ -146,8 +150,8 @@ export default async function OrteSeite(props: { searchParams: Promise<SP> }) {
         Wo in Düsseldorf, Neuss und Ratingen etwas los ist: Theater, Säle, Museen, Kinos und Kulturorte mit ihrem
         Programm aus unserem Eventkalender. Restaurants, Kneipen, Clubs und Spielplätze findest du in den <Link href="/guides">Guides</Link>.
       </p>
-      <Suspense fallback={<Ansicht alle={orte} f={LEER} fehler={fehler} />}>
-        <GefilterteAnsicht searchParams={props.searchParams} alle={orte} fehler={fehler} />
+      <Suspense fallback={<Ansicht alle={orte} guide={guide} f={LEER} fehler={fehler} />}>
+        <GefilterteAnsicht searchParams={props.searchParams} alle={orte} guide={guide} fehler={fehler} />
       </Suspense>
     </div>
   );

@@ -1,6 +1,6 @@
 // Ortsseiten /orte (Plan docs/plan-locations-2026-11-18.md, Abschnitt 3.8–3.13): reine Hilfen ohne Datenzugriff.
 // Eine Spielstätte ist eine `orte`-Zeile mit typ = 'spielstaette'; ihr Profil liegt in extras.spielstaette.
-import type { DddOrt } from "./typen";
+import type { DddEvent, DddOrt } from "./typen";
 
 export const ORTE_BASIS = "/orte";
 
@@ -135,4 +135,15 @@ export function orteFiltern<T extends DddOrt>(orte: T[], f: OrteFilter): T[] {
 export function buchstabe(name: string): string {
   const b = norm(name.trim()).charAt(0).toUpperCase();
   return /[A-Z]/.test(b) ? b : "#";
+}
+
+/**
+ * Events einer Ortsseite aus dem Programm des Hauses (Plan 3.6, 3.9): Saalseite → nur eigene ort_id; Hausseite →
+ * alle, oder nach Saal-Filter (`saal` = Saal-ID, „haus“ = Events ohne erkennbaren Saal, d. h. mit der Haus-ID).
+ * Events eines Saals erscheinen nie auf einem anderen Haus: das Programm enthält nur Haus- und Kinder-IDs.
+ */
+export function saalEvents(ort: { id: string; parentId: string | null }, events: DddEvent[], saal: string | null): DddEvent[] {
+  if (ort.parentId || saal === "haus") return events.filter((e) => e.ort_id === ort.id);
+  if (saal) return events.filter((e) => e.ort_id === saal);
+  return events;
 }
