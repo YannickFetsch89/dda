@@ -67,6 +67,7 @@ import {
 } from "@/lib/pfad-pruefung";
 import { seitenAlternates, seitenMetadaten } from "@/lib/seo";
 import { AutorZeile, MagazinOrtKarte, MagazinText } from "@/components/magazin";
+import { erwaehntIn, lesetippFuer, startAuswahl, wochenvorschauFuer } from "@/components/magazin-verweise";
 import { config as proxyConfig } from "@/proxy";
 import { magazinEintraege } from "@/app/sitemap";
 import type { DddEvent, EventPool } from "@/lib/typen";
@@ -600,5 +601,40 @@ describe("Archiv, Sitemap und Rubriken", () => {
     const sql = readFileSync(path.resolve(__dirname, "../../database/magazin_rubriken_autoren_2026-11-19.sql"), "utf8");
     const check = sql.match(/CONSTRAINT magazin_rubrik_werte\s+CHECK \(rubrik IN \(([^)]*)\)\)/)?.[1] ?? "";
     expect(check.split(",").map((s) => s.trim().replace(/'/g, ""))).toEqual([...RUBRIKEN]);
+  });
+});
+
+
+// ---------- Verweise aufs Magazin (Schritt 7, Plan 5.9) ----------
+describe("Verweise aufs Magazin", () => {
+  const woche = beitrag({ id: "a", slug: "woche", veroeffentlicht_am: "2026-11-29T07:00:00Z", event_ids: ["e1"] });
+  const alt = beitrag({ id: "b", slug: "alt", gueltig_von: "2026-11-23", gueltig_bis: "2026-11-29", veroeffentlicht_am: "2026-11-22T07:00:00Z", event_ids: ["e1", "e2"] });
+  const wm = beitrag({ id: "c", slug: "wm", rubrik: "saison", gueltig_von: "2026-11-19", gueltig_bis: "2027-01-10", veroeffentlicht_am: "2026-11-20T09:00:00Z",
+    inhalt_md: "{{guide:weihnachtsmaerkte}}", ort_slugs: ["a", "b"] });
+  const launch = beitrag({ id: "d", slug: "launch", rubrik: "stadtleben", gueltig_von: null, gueltig_bis: null, veroeffentlicht_am: "2026-11-19T09:00:00Z",
+    inhalt_md: "{{guide:weihnachtsmaerkte}}" });
+  const liste = [woche, alt, wm, launch];
+
+  it("Startseite: neueste aktuelle Beiträge, abgelaufene Ausgaben fallen raus", () => {
+    expect(startAuswahl(liste, "2026-12-01").map((b) => b.slug)).toEqual(["woche", "wm", "launch"]);
+    expect(startAuswahl(liste, "2026-11-25", 2).map((b) => b.slug)).toEqual(["woche", "alt"]);
+  });
+
+  it("Lesetipp: Beitrag mit den meisten Orten gewinnt, nur wenn er den Guide einbettet und die Saison läuft", () => {
+    expect(lesetippFuer(liste, "weihnachtsmaerkte", "2026-12-01")?.slug).toBe("wm");
+    expect(lesetippFuer(liste, "weihnachtsmaerkte", "2027-01-11")?.slug).toBe("launch");
+    expect(lesetippFuer(liste, "clubs", "2026-12-01")).toBeNull();
+  });
+
+  it("Wochenvorschau fürs Wochenende: Zeitraum muss Fr–So berühren", () => {
+    expect(wochenvorschauFuer(liste, "2026-12-04", "2026-12-06")?.slug).toBe("woche");
+    expect(wochenvorschauFuer(liste, "2026-11-27", "2026-11-29")?.slug).toBe("alt");
+    expect(wochenvorschauFuer(liste, "2026-12-11", "2026-12-13")).toBeNull();
+  });
+
+  it("Erwähnt im Magazin: höchstens zwei, neueste zuerst", () => {
+    expect(erwaehntIn(liste, "e1").map((b) => b.slug)).toEqual(["woche", "alt"]);
+    expect(erwaehntIn(liste, "e2").map((b) => b.slug)).toEqual(["alt"]);
+    expect(erwaehntIn(liste, "x")).toEqual([]);
   });
 });

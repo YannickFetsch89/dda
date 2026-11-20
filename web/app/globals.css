@@ -610,7 +610,9 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .fuss__unten { display: flex; justify-content: center; gap: 24px; margin-top: 32px; padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, 0.14); }
 .fuss__unten a { font-size: 13px; color: var(--ddd-on-navy-muted); }
 .fuss__unten a:hover { color: var(--ddd-on-navy); }
-@media (min-width: 768px) { .fuss { padding-bottom: 48px; } .fuss__raster { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; gap: 32px; } .fuss__marke { grid-column: auto; } }
+/* Sechs Spalten seit der Magazin-Spalte (Plan Redaktion 5.9): Tablet Marke als eigene Zeile, ab 1100 px alles nebeneinander */
+@media (min-width: 768px) { .fuss { padding-bottom: 48px; } .fuss__raster { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 28px; } }
+@media (min-width: 1100px) { .fuss__raster { grid-template-columns: 1.4fr repeat(5, minmax(0, 1fr)); gap: 32px; } .fuss__marke { grid-column: auto; } }
 @media (min-width: 1200px) { .fuss { padding: 48px 0; } }
 
 /* ---------- Status / Skeleton ---------- */
@@ -2389,6 +2391,9 @@ a.mz-ort:hover { border-color: var(--ddd-gold); }
 .mz-kasten { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; margin: 12px 0 16px; border-radius: var(--r-card-s); background: var(--ddd-navy); color: var(--ddd-on-navy); }
 .mz-text a.mz-kasten { text-decoration: none; color: var(--ddd-on-navy); }
 .mz-kasten .icon { font-size: 24px; color: var(--ddd-gold); }
+/* Verweis aufs Magazin außerhalb der Beiträge (Guide-Hub, /wochenende) */
+.mz-verweis { max-width: 720px; text-decoration: none; }
+.mz-verweis:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .mz-kasten span { display: flex; flex-direction: column; gap: 2px; }
 .mz-kasten span span { font-size: 14px; color: var(--ddd-on-navy-muted); }
 .mz-hinweis { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-md); background: var(--ddd-gold-tint); font-size: 14px; margin: 12px 0; }

@@ -29,6 +29,13 @@ Wichtig: Die Eventdaten ändern sich täglich. Bitte für konkrete Termine immer
 - [Kneipen & Bars](https://diesdas.events/guides/kneipen-bars) – mit Brauhäusern und Altbierkneipen
 - [Clubs](https://diesdas.events/guides/clubs) – mit Musikrichtung und Programm
 
+## Magazin
+
+- [Magazin](https://diesdas.events/magazin): Beiträge der Redaktion zu Düsseldorf – Wochenvorschau, Monats-Tipps, Saisonthemen wie Weihnachtsmärkte, Nachtleben, Genuss, Familie und Stadtleben. Termine, Uhrzeiten und Preise stehen in den eingebetteten Event-Karten und kommen live aus dem Kalender.
+- Rubriken: https://diesdas.events/magazin/rubrik/NAME (wochenvorschau, monats-tipps, saison, nachtleben, genuss, familie, stadtleben)
+- [Unsere Redaktion](https://diesdas.events/magazin/redaktion): wie Beiträge entstehen und geprüft werden, Autorennamen als redaktionelle Pseudonyme, Verantwortung nach § 18 Abs. 2 MStV
+- [RSS-Feed](https://diesdas.events/magazin/feed.xml)
+
 ## Mehr
 
 - [Über uns](https://diesdas.events/ueber): wer dahintersteht und wie die Daten entstehen
