@@ -40,6 +40,17 @@ ORT_MAP = {
     "kasernenstr": "FFT Kammerspiele, Düsseldorf",
 }
 
+# Seit 2021 spielt das FFT im KAP1 am Hauptbahnhof (Stadtmitte); JUTA und Kammerspiele sind Altnamen ohne Adresse
+ADRESSE_KAP1 = "Konrad-Adenauer-Platz 1, 40210 Düsseldorf"
+
+
+def adresse_fuer(ort: Optional[str]) -> Optional[str]:
+    """Adresse der Spielstätte: KAP1 für das FFT und seine Bühnen, keine für die alten Häuser JUTA/Kammerspiele."""
+    if re.search(r"juta|kammerspiele", ort or "", re.I):
+        return None
+    return ADRESSE_KAP1
+
+
 MONAT_MAP: dict[str, int] = {
     "januar": 1, "februar": 2, "märz": 3, "april": 4,
     "mai": 5, "juni": 6, "juli": 7, "august": 8,
@@ -229,7 +240,7 @@ def _events_aus_json_ld(soup: BeautifulSoup, heute: date) -> list[dict]:
                 "datum": datum,
                 "uhrzeit": uhrzeit,
                 "ort": ort,
-                "adresse": None,
+                "adresse": adresse_fuer(ort),
                 "kategorie": KATEGORIE_STANDARD,
                 "beschreibung": beschreibung,
                 "preis": preis,
@@ -343,7 +354,7 @@ def _events_aus_next_data(soup: BeautifulSoup, heute: date) -> list[dict]:
             "datum": datum,
             "uhrzeit": uhrzeit,
             "ort": ort,
-            "adresse": None,
+            "adresse": adresse_fuer(ort),
             "kategorie": KATEGORIE_STANDARD,
             "beschreibung": beschreibung,
             "preis": None,
@@ -460,7 +471,7 @@ def _events_aus_html(soup: BeautifulSoup, heute: date) -> list[dict]:
             "datum": datum,
             "uhrzeit": uhrzeit,
             "ort": ort,
-            "adresse": None,
+            "adresse": adresse_fuer(ort),
             "kategorie": KATEGORIE_STANDARD,
             "beschreibung": None,
             "preis": None,

@@ -10,7 +10,12 @@ Ein Event fällt heraus, wenn
 2. Ort oder Adresse eine andere Stadt nennen (eindeutige Namen als ganzes Wort, z. B. „Theater Duisburg“, „…, Leipzig“;
    mehrdeutige wie „Essen“ oder „Köln“ nur als eigener Abschnitt, z. B. „…, Köln“ – so bleiben „Kölner Straße“,
    „Gemeinsam Essen“ und das Schiff der „Köln-Düsseldorfer“ drin),
-3. der Ort auf der Liste bekannter auswärtiger Orte steht (z. B. Neanderthal Museum in Mettmann).
+3. der Ort auf der Liste bekannter auswärtiger Orte steht (z. B. Neanderthal Museum in Mettmann),
+4. der Ort mit Köln/Frankfurt als letztem Wort endet („Lanxess Arena Köln“; Nachtrag 20.11.2026),
+5. der Titel eine andere Stadt eindeutig als Veranstaltungsort nennt (Nachtrag 20.11.2026) – nur wenn die Adresse keine
+   PLZ im Gebiet hat und der Titel nicht selbst Düsseldorf/Neuss/Ratingen nennt („Fortuna Düsseldorf – 1. FC Köln“
+   bleibt): „Duisburg im Winterzauber“, „Hackathon … Köln“, „… in Wuppertal“, „Leipziger Weihnachtsmarkt“,
+   „House of Banksy Hanau | Ticket“. Essen und Frankfurt zählen im Titel nicht (Wort bzw. Vereinsname).
 Online-Events bleiben, wenn sie keine andere Stadt nennen.
 
 Bestand bereinigen (nur lesend, schreibt eine SQL-Datei, die der Auftraggeber ausführt):
@@ -41,11 +46,13 @@ STAEDTE_EINDEUTIG = [
     "Venlo", "Roermond", "Amsterdam", "Lünen", "Castrop-Rauxel", "Marl", "Dinslaken", "Emmerich", "Xanten", "Goch",
     "Geldern", "Nettetal", "Heinsberg", "Erkelenz", "Rees", "Hückeswagen", "Wermelskirchen", "Leichlingen", "Burscheid",
     # Nachtrag 19.11.2026 (Plan Locations 3.16): Ortsteile der Nachbarstädte (Erkrath, Meerbusch) als Vorsorge und
-    # Mülheim als ganzes Wort („Stadthalle Mülheim“ ohne Komma rutschte durch; „Mülheimer Straße“ bleibt, weil 
+    # Mülheim als ganzes Wort („Stadthalle Mülheim“ ohne Komma rutschte durch; „Mülheimer Straße“ bleibt, weil \b
     # nach dem „m“ ein Wortende verlangt). Unterbach und Hamm sind Düsseldorfer Stadtteile und stehen NICHT hier.
     "Hochdahl", "Büderich", "Osterath", "Mülheim",
     # Nachtrag 19.11.2026 (Kandidatenliste Ortsseiten): „Lufre Event & Gastronomie, Kamp-Lintfort“ (PRINZ.de)
     "Kamp-Lintfort",
+    # Nachtrag 20.11.2026 (Befund Rausgegangen/PRINZ.de): Hanau („House of Banksy Hanau“), Hürth (Gertrudenhof)
+    "Hanau", "Hürth",
 ]
 # Mehrdeutig (normales Wort oder Teil von Düsseldorfer Namen): nur als eigener Abschnitt
 STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Frankfurt"]
@@ -63,6 +70,18 @@ AUSWAERTIGE_ORTE = {
 }
 
 _PLZ = re.compile(r"(?<!\d)(\d{5})(?!\d)")
+# Ort endet mit Köln/Frankfurt als eigenem letzten Wort („Lanxess Arena Köln“); „Köln-Düsseldorfer“ trifft nicht
+_ORT_ENDE = re.compile(r"\s(Köln|Koeln|Cologne|Frankfurt)\s*$", re.I)
+# Titel: Stadtnamen, die als Veranstaltungsort gelten (ohne Essen/Frankfurt, siehe oben)
+_TITEL_STAEDTE = "|".join(re.escape(s) for s in STAEDTE_EINDEUTIG + ["Köln", "Koeln", "Cologne"])
+_TITEL_REGELN = [
+    re.compile(r"^(" + "|".join(re.escape(s) for s in STAEDTE_EINDEUTIG) + r")\s+(?:im|in|am)\b", re.I),  # „Duisburg im …“
+    re.compile(r"\bin\s+(" + _TITEL_STAEDTE + r")\b", re.I),                                             # „… in Köln“
+    re.compile(r"(?:^|[\s|–—(-])(" + _TITEL_STAEDTE + r")\s*(?:\)\s*)?(?:[|–—-]\s*[^|–—-]{0,40})?$", re.I),  # Ende / „Hanau | Ticket“
+    re.compile(r"\b(" + "|".join(re.escape(s) for s in STAEDTE_EINDEUTIG) + r")er\s+"
+               r"(?:Weihnachtsmarkt|Christkindlmarkt|Adventsmarkt|Weihnachtszauber)", re.I),               # „Leipziger Weihnachtsmarkt“
+]
+_GEBIET_IM_TITEL = re.compile(r"D(?:ü|ue|u)sseldorf|Neuss|Ratingen", re.I)
 _EINDEUTIG = re.compile(r"\b(" + "|".join(re.escape(s) for s in STAEDTE_EINDEUTIG) + r")\b", re.I)
 # Abschnitt: am Anfang oder nach Komma/Klammer/Strich/PLZ, danach Ende, Komma, Klammer oder Strich mit Leerzeichen
 _ABSCHNITT = re.compile(
@@ -91,6 +110,16 @@ def grund_ausserhalb(event: dict) -> Optional[str]:
         m = _ABSCHNITT.search(text)
         if m:
             return f"Stadt {m.group(1)}"
+    m = _ORT_ENDE.search(ort)
+    if m:
+        return f"Stadt {m.group(1)}"
+    titel = (event.get("titel") or "").strip()
+    plz_im_gebiet = any(any(a <= int(p) <= b for a, b in PLZ_BEREICHE) for p in _PLZ.findall(adresse))
+    if titel and not plz_im_gebiet and not _GEBIET_IM_TITEL.search(titel):
+        for regel in _TITEL_REGELN:
+            m = regel.search(titel)
+            if m:
+                return f"Titel nennt {m.group(1)}"
     n = _norm(ort)
     # Ganzes Wort bzw. Wortfolge irgendwo im Namen („LUTZ, theaterhagen“, „Grugahalle Essen“)
     if any(re.search(r"(^|\s)" + re.escape(o) + r"(\s|$)", n) for o in AUSWAERTIGE_ORTE):

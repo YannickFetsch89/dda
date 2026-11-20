@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- Gekürzter Nachbau der Rausgegangen-Startseite (Aufbau der Kacheln wie am 18.11.2026, Inhalte für Tests verkürzt).
+     Datumsangaben „Heute“/„Morgen“, damit die Tests an jedem Tag gleich laufen. Kein Live-Abruf. -->
+<html lang="de">
+<body>
+<a class="event-tile tile-subgrid-max-lg p-xs p-1.5" data-testid="event-tile-link" href="/events/veihnachtsmarkt-dusseldorf-der-vegane-weihnachtsmarkt-in-der-0/">
+  <div data-testid="event-tile-image"><picture><source srcset="https://imageflow.rausgegangen.de/url/veihnachtsmarkt.png?width=300 300w, https://imageflow.rausgegangen.de/url/veihnachtsmarkt.png?width=450 450w"><img alt="Veihnachtsmarkt" src="https://imageflow.rausgegangen.de/url/veihnachtsmarkt.png?width=600"></picture></div>
+  <div class="tile-subgrid-text-max-lg">
+    <p class="mb-0 text-sm" data-testid="event-tile-datetime"><span class="font-bold">Morgen, 19. Nov |</span><span>12:00 Uhr</span></p>
+    <span class="h5" data-testid="event-tile-name">Veihnachtsmarkt Düsseldorf: der vegane Weihnachtsmarkt in der Jugendkirche</span>
+  </div>
+  <div class="tile-info-max-lg">
+    <p class="mb-0 text-sm text-bw-medium truncate">Jugendkirche Düsseldorf</p>
+    <p class="mb-0 text-sm text-primary truncate">kostenlos</p>
+    <span class="da-badge" data-testid="badge-category"><span class="da-badge-text">Märkte &amp; Food</span></span>
+  </div>
+</a>
+<a class="event-tile" data-testid="event-tile-link" href="/events/afterwork-im-flow-3/">
+  <div class="tile-subgrid-text-max-lg">
+    <p class="mb-0 text-sm" data-testid="event-tile-datetime"><span class="font-bold">Heute, 18. Nov |</span><span>19:00 Uhr</span></p>
+    <span class="h5" data-testid="event-tile-name">Afterwork im Flow</span>
+  </div>
+  <div class="tile-info-max-lg">
+    <p class="mb-0 text-sm text-bw-medium truncate">Flow, Mertensgasse 2, 40213 Düsseldorf</p>
+    <span class="da-badge" data-testid="badge-category"><span class="da-badge-text">Party</span></span>
+  </div>
+</a>
+<a class="event-tile" data-testid="event-tile-link" href="/events/weihnachtsmarkt-schadowstrasse-0/">
+  <div class="tile-subgrid-text-max-lg">
+    <p class="mb-0 text-sm" data-testid="event-tile-datetime"><span class="font-bold">Heute, 18. Nov |</span><span>11:00 Uhr</span></p>
+    <span class="h5" data-testid="event-tile-name">Weihnachtsmarkt an der Schadowstraße</span>
+  </div>
+  <div class="tile-info-max-lg">
+    <p class="mb-0 text-sm text-bw-medium truncate">Düsseldorf, Schadowstraße</p>
+  </div>
+</a>
+<a class="event-tile" data-testid="event-tile-link" href="/events/keramik-markt-2/">
+  <div class="tile-subgrid-text-max-lg">
+    <p class="mb-0 text-sm" data-testid="event-tile-datetime"><span class="font-bold">Morgen, 19. Nov |</span><span>10:00 Uhr</span></p>
+    <span class="h5" data-testid="event-tile-name">Keramik-Markt</span>
+  </div>
+  <div class="tile-info-max-lg">
+    <p class="mb-0 text-sm text-bw-medium truncate">Franklinstraße 41, Düsseldorf-Stadtbezirk 1, Deutschland</p>
+  </div>
+</a>
+<a class="event-tile" data-testid="event-tile-link" href="/events/sibel-schick-0/">
+  <div class="tile-subgrid-text-max-lg">
+    <p class="mb-0 text-sm" data-testid="event-tile-datetime"><span class="font-bold">Morgen, 19. Nov |</span><span>20:00 Uhr</span></p>
+    <span class="h5" data-testid="event-tile-name">Sibel Schick im Gespräch</span>
+  </div>
+  <div class="tile-info-max-lg">
+    <p class="mb-0 text-sm text-bw-medium truncate">zakk - Zentrum für Aktion, Kultur und Kommunikation</p>
+    <p class="mb-0 text-sm text-primary truncate">12,00 €</p>
+  </div>
+</a>
+<!-- Dieselbe Kachel noch einmal (Rausgegangen zeigt Tipps doppelt) – darf nur einmal zählen -->
+<a class="event-tile" data-testid="event-tile-link" href="/events/sibel-schick-0/">
+  <div class="tile-subgrid-text-max-lg">
+    <p class="mb-0 text-sm" data-testid="event-tile-datetime"><span class="font-bold">Morgen, 19. Nov |</span><span>20:00 Uhr</span></p>
+    <span class="h5" data-testid="event-tile-name">Sibel Schick im Gespräch</span>
+  </div>
+  <div class="tile-info-max-lg">
+    <p class="mb-0 text-sm text-bw-medium truncate">zakk - Zentrum für Aktion, Kultur und Kommunikation</p>
+  </div>
+</a>
+</body>
+</html>
