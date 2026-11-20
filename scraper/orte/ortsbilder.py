@@ -113,20 +113,32 @@ def robots_erlaubt(url: str, cache: dict[str, RobotFileParser | None]) -> bool:
     if basis not in cache:
         rp = RobotFileParser()
         try:
-            r = httpx.get(f"{basis}/robots.txt", headers=STANDARD_HEADERS, timeout=20, follow_redirects=True)
+            r = httpx.get(f"{basis}/robots.txt", headers=kopfzeilen(url), timeout=20, follow_redirects=True)
             rp.parse(r.text.splitlines() if r.status_code == 200 else [])
         except Exception as e:
             logger.warning("robots.txt von %s nicht lesbar (%s) – gilt als erlaubt", basis, e)
             rp.parse([])
         cache[basis] = rp
     rp = cache[basis]
-    return rp.can_fetch(STANDARD_HEADERS["User-Agent"], url) if rp else True
+    return rp.can_fetch(kopfzeilen(url)["User-Agent"], url) if rp else True
+
+
+# Wikimedia verlangt für automatische Abrufe einen erkennbaren User-Agent mit Projekt und Kontakt (User-Agent-Policy);
+# mit Browser-Kennung drosselt es stark (HTTP 429). Gleiche Kennung wie für Nominatim (spielstaetten_geo.py).
+PROJEKT_UA = "DiesDasDuesseldorf-Ortsseiten/1.0 (+https://diesdas.events)"
+
+
+def kopfzeilen(url: str) -> dict:
+    host = urlparse(url).netloc
+    if host.endswith("wikimedia.org") or host.endswith("wikipedia.org"):
+        return {**STANDARD_HEADERS, "User-Agent": PROJEKT_UA}
+    return STANDARD_HEADERS
 
 
 def abrufen(url: str) -> bytes | None:
     """Bild laden, bei 429 mit Backoff (höchstens 3 weitere Versuche)."""
     try:
-        with httpx.Client(headers=STANDARD_HEADERS, timeout=30, follow_redirects=True) as c:
+        with httpx.Client(headers=kopfzeilen(url), timeout=30, follow_redirects=True) as c:
             r = c.get(url)
             for versuch in range(3):
                 if r.status_code != 429:

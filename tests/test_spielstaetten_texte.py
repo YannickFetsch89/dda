@@ -12,6 +12,9 @@ class SaetzeTest(unittest.TestCase):
     def test_abkuerzungen_und_datum_trennen_nicht(self):
         self.assertEqual(len(saetze(TEXT)), 4)
         self.assertEqual(saetze("Der Saal hat ca. 1.900 Plätze. St. Lambertus liegt nah.")[1], "St. Lambertus liegt nah.")
+        # Zahl am Satzende ist kein Datum: „Kleine Saal 89. Als …“ sind zwei Sätze
+        self.assertEqual(len(saetze("Der Große Saal hat 318 Plätze, der Kleine Saal 89. Als Produktionshaus arbeitet es.")), 2)
+        self.assertEqual(len(saetze("Gebaut im 19. Jahrhundert. Eröffnet am 3. Oktober 1926.")), 2)
 
 
 class PruefenTest(unittest.TestCase):

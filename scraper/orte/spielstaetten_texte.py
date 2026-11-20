@@ -35,8 +35,12 @@ TRENNER = " | "
 
 # Abkürzungen, nach denen kein Satz endet („z. B.“, „St. Lambertus“, „ca. 1.900“, „am 3. Oktober“)
 _ABKUERZUNGEN = re.compile(
-    r"(?:\b[a-zäöü]\.|\b[a-z]\.\s?[a-zA-Z]\.|\b\d{1,2}\.|"
+    r"(?:\b[a-zäöü]\.|\b[a-z]\.\s?[a-zA-Z]\.|"
     r"\b(?:ca|St|Nr|Dr|Prof|bzw|ggf|inkl|Jh|Str|vgl|etc|evtl|usw|sog|bspw|Mio|Mrd)\.)$")
+# Ordnungszahl („am 3. Oktober“, „im 19. Jahrhundert“) – nur dann kein Satzende; „Saal 89. Als …“ endet dort
+_ORDINAL = re.compile(r"\b\d{1,2}\.$")
+_NACH_ORDINAL = re.compile(r"^[\"„»*(]*(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|"
+                           r"Dezember|Jahrhundert|Jh|Stock|Etage|Obergeschoss|OG)\b")
 _SATZENDE = re.compile(r"(?<=[.!?…])[\"“”»*)]*\s+(?=[\"„»*(]*[A-ZÄÖÜ0-9])")
 _FETT = re.compile(r"\*\*([^*\n]+?)\*\*")
 _URL = re.compile(r"^https?://\S+$")
@@ -55,9 +59,11 @@ def saetze(text: str) -> list[str]:
     for absatz in re.split(r"\n\s*\n", (text or "").strip()):
         teile = _SATZENDE.split(" ".join(absatz.split()))
         puffer = ""
-        for t in teile:
+        for i, t in enumerate(teile):
             puffer = f"{puffer} {t}".strip() if puffer else t
-            if not _ABKUERZUNGEN.search(puffer):
+            naechster = teile[i + 1] if i + 1 < len(teile) else ""
+            ordinal = _ORDINAL.search(puffer) and _NACH_ORDINAL.match(naechster)
+            if not _ABKUERZUNGEN.search(puffer) and not ordinal:
                 ergebnis.append(puffer)
                 puffer = ""
         if puffer:
