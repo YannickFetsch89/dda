@@ -14,6 +14,7 @@ DOM-Struktur (erwartet):
 Erstellt: 2026-04-02
 """
 import logging
+import re
 import time
 from datetime import date, timedelta
 from typing import Optional
@@ -66,12 +67,38 @@ KATEGORIE_MAPPING = {
     "singles": "dating",
 }
 
-# URL-Pfade für Kategorieseiten (werden zusätzlich zur Hauptseite abgerufen)
+# PRINZ-Kategorie als CSS-Klasse am Teaser (<article class="… event_category-konzerte-livemusik …">) → unsere
+# Kategorie. Verlässlicher als der Text; „sonstiges“ und unbekannte Klassen fallen auf den Text zurück.
+KATEGORIE_KLASSEN = {
+    "konzerte-livemusik": "musik",
+    "party-nachtleben": "nightlife",
+    "buehne-theater-show": "kultur",
+    "film-kino-medien": "kultur",
+    "kunst-ausstellung-museum": "kultur",
+    "literatur-lesung-diskurs": "kultur",
+    "kinder-familie": "family",
+}
+
+# Seiten (20.11.2026): Die alten Kategorieseiten /duesseldorf/events/konzerte-livemusik/ (410), …/party/ und …/buehne/
+# (Weiterleitung auf eine bundesweite Seite bzw. ein einzelnes Kölner Event) gibt es nicht mehr. Die Hauptseite zeigt
+# nur den heutigen Tag; „7 Tage“ zeigt alle Düsseldorf-Events einer Woche auf einer Seite (rund 450, alle Kategorien).
+# Die neuen Kategorieseiten (…/events/kategorie/<slug>/) zeigen nur 12 Einträge je Seite und bringen nichts dazu.
 KATEGORIE_URLS = [
-    "/duesseldorf/events/konzerte-livemusik/",
-    "/duesseldorf/events/party/",
-    "/duesseldorf/events/buehne/",
+    "/duesseldorf/events/7-tage/",
 ]
+
+# PRINZ Düsseldorf listet das ganze Umland (Dortmund, Krefeld, Wuppertal …, sogar München). Die Stadt steht am Teaser;
+# übernommen werden nur Events im Gebiet (Entscheidung E3, docs/plan-locations-2026-11-18.md).
+GEBIET_STAEDTE = ("düsseldorf", "duesseldorf", "neuss", "ratingen")
+_URL_DATUM = re.compile(r"/(20\d{2}-\d{2}-\d{2})/?$")
+
+
+def _im_gebiet(stadt: Optional[str]) -> bool:
+    """True, wenn die Stadt des Teasers im Gebiet liegt oder fehlt (dann entscheidet der Gebietsfilter)."""
+    if not stadt:
+        return True
+    s = stadt.strip().lower()
+    return any(s == g or s.startswith(g + "-") or s.startswith(g + " ") for g in GEBIET_STAEDTE)
 
 
 def _kategorie_aus_text(text: str) -> str:
@@ -126,12 +153,18 @@ def _event_aus_artikel(artikel, heute: date) -> Optional[dict]:
             link_el["href"] if link_el else LISTE_URL
         )
 
-        # Datum aus allen Texten extrahieren
+        # Datum: zuerst aus der Event-URL (…/events/<slug>/2026-11-21/) – die Texte ergaben vereinzelt Jahre wie 2619
         alle_texte = [el.get_text(strip=True) for el in artikel.find_all(True) if el.get_text(strip=True)]
 
         datum = None
         uhrzeit = None
-        for text in alle_texte:
+        m_url = _URL_DATUM.search(quelle_url or "")
+        if m_url:
+            try:
+                datum = date.fromisoformat(m_url.group(1)).isoformat()
+            except ValueError:
+                datum = None
+        for text in ([] if datum else alle_texte):
             datum_kandidat = datum_parsen(text)
             if datum_kandidat:
                 datum = datum_kandidat
@@ -157,6 +190,8 @@ def _event_aus_artikel(artikel, heute: date) -> Optional[dict]:
         if meta:
             stadt_el = meta.find("span", class_="text-primary")
             stadt = stadt_el.get_text(strip=True) if stadt_el else None
+            if not _im_gebiet(stadt):
+                return None
             zeit_el = meta.find("span", class_="fw-bold")
             if zeit_el and not uhrzeit:
                 uhrzeit = uhrzeit_parsen(zeit_el.get_text(strip=True))
@@ -199,7 +234,12 @@ def _event_aus_artikel(artikel, heute: date) -> Optional[dict]:
             class_=lambda c: c and "kategorie" in c.lower() if c else False
         )
         kategorie_text = kategorie_el.get_text(strip=True) if kategorie_el else ""
-        kategorie = _kategorie_aus_text(kategorie_text)
+        klassen = artikel.get("class") or []
+        kategorie = next(
+            (KATEGORIE_KLASSEN[k[len("event_category-"):]] for k in klassen
+             if k.startswith("event_category-") and k[len("event_category-"):] in KATEGORIE_KLASSEN),
+            None,
+        ) or _kategorie_aus_text(kategorie_text)
 
         # Bild
         bild_el = artikel.find("img")
