@@ -35,6 +35,9 @@ data/weihnachtsmaerkte/*
 !data/spielstaetten/
 data/spielstaetten/*
 !data/spielstaetten/kandidaten.csv
+# Schritt 3: eigene Bilder und freigegebene Texte der Ortsseiten (Plan 3.13, 3.14)
+!data/spielstaetten/bilder.csv
+!data/spielstaetten/texte.csv
 
 # Playwright
 playwright/.auth/

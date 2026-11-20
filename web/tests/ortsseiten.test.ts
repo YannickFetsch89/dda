@@ -6,6 +6,7 @@ import { config as proxyConfig } from "@/proxy";
 import { guideZiel, routeVon, spielstaetteEntscheidung, type OrtKopf } from "@/lib/pfad-pruefung";
 import { artInfo, filterLesen, indexierbar, orteFiltern, stadtAusPlz } from "@/lib/spielstaetten";
 import { indexierbareOrte, sichtbarerPfad, type Spielstaette } from "@/lib/spielstaetten-daten";
+import { spielstaetteJsonLd } from "@/lib/spielstaetten-json-ld";
 import type { DddOrt } from "@/lib/typen";
 
 const kopf = (x: Partial<OrtKopf>): OrtKopf => ({
@@ -44,6 +45,27 @@ describe("Proxy /orte", () => {
     // Ausflug/Wochenend-Trip: kein Ziel (kein 308 auf /guides/restaurants-cafes)
     expect(spielstaetteEntscheidung("a", kopf({ typ: "ausflug" }), undefined, null)).toEqual({ art: "fehlt" });
     expect(spielstaetteEntscheidung("w", kopf({ typ: "wochenendtipp" }), undefined, null)).toEqual({ art: "fehlt" });
+  });
+
+  it("Ort mit Bar- und Club-Seite: Hauptseite, wenn sichtbar, sonst Club-Seite (Plan 4, Pflicht-Tests)", () => {
+    const club = { passt: true, unterart: "club", genres: [{ wert: "Techno", anteil: "haupt" }] };
+    const bar = (score: number) => kopf({ typ: "kneipe", qualitaets_score: score, auch_club: true, club, club_score: { gesamt: 7 }, club_freigegeben: "2026-11-11" });
+    expect(spielstaetteEntscheidung("giselle", bar(8), undefined, null)).toEqual({ art: "umleiten", ziel: "/guides/kneipen-bars/giselle" });
+    expect(spielstaetteEntscheidung("giselle", bar(4), undefined, null)).toEqual({ art: "umleiten", ziel: "/guides/clubs/giselle" });
+    // Weiterleitung auf einen auch_club: vor dem Score-Wechsel Club-Seite, danach Hauptseite
+    expect(spielstaetteEntscheidung("alt", null, { ziel_ort_id: "id" }, { ...bar(4), slug: "giselle" })).toEqual({ art: "umleiten", ziel: "/guides/clubs/giselle" });
+    expect(spielstaetteEntscheidung("alt", null, { ziel_ort_id: "id" }, { ...bar(8), slug: "giselle" })).toEqual({ art: "umleiten", ziel: "/guides/kneipen-bars/giselle" });
+  });
+
+  it("zakk: Guide-Haus 308, Kurzname und Saal ohne Zeile 404", () => {
+    // Die Zeile „zakk-flingern-tanzraum“ gibt es nicht → der Proxy findet weder Zeile noch Weiterleitung
+    expect(spielstaetteEntscheidung("zakk", null, undefined, null)).toEqual({ art: "fehlt" });
+    expect(spielstaetteEntscheidung("zakk-flingern-tanzraum", null, undefined, null)).toEqual({ art: "fehlt" });
+    // Weiterleitung auf eine umbenannte Spielstätte: eine Stufe, neuer Slug
+    expect(spielstaetteEntscheidung("alt", null, { ziel_ort_id: "id" }, { ...kopf({}), slug: "neu" })).toEqual({ art: "umleiten", ziel: "/orte/neu" });
+    // Inaktives Ziel (anon sieht es nicht) → /orte
+    expect(spielstaetteEntscheidung("alt", null, { ziel_ort_id: "id" }, { ...kopf({ aktiv: false, typ: "kneipe", qualitaets_score: 9 }), slug: "x" }))
+      .toEqual({ art: "umleiten", ziel: "/orte" });
   });
 
   it("zusammengelegter Markt: ein einziger 308 auf den verbliebenen", () => {
@@ -111,6 +133,15 @@ describe("Seiten", () => {
       expect(text).not.toMatch(/eventPoolLaden\(/);
       expect(text).not.toMatch(/ortBildUrl\(/);
     }
+  });
+
+  it("JSON-LD: Saal eines Guide-Hauses verweist auf die kanonische Guide-URL, Stadt aus der PLZ, ohne Adresse keins", () => {
+    const saal = ort({ id: "zakk-flingern-halle", name: "zakk – Halle", adresse: "Fichtenstraße 40, 40233 Düsseldorf", stadtteil: "Flingern" });
+    const ld = spielstaetteJsonLd(saal, null, "https://diesdas.events", "/orte/zakk-flingern-halle",
+      { name: "zakk", pfad: "/guides/clubs/zakk-flingern" }, [], true)!;
+    expect(ld.containedInPlace).toEqual({ "@type": "Place", name: "zakk", url: "https://diesdas.events/guides/clubs/zakk-flingern" });
+    expect((ld.address as { addressLocality: string }).addressLocality).toBe("Düsseldorf"); // nie der Stadtteil
+    expect(spielstaetteJsonLd(saal, null, "https://diesdas.events", "/orte/x", null, [], false)).toBeNull();
   });
 
   it("Eventseite: kanonischer Ortslink nach den Hub-Regeln", () => {
