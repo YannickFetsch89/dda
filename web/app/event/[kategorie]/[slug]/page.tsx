@@ -26,6 +26,7 @@ import { unterkategorieIndexierbar } from "@/lib/landing-listen";
 import { hubOrte, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { clubProfil } from "@/lib/clubs";
 import { clubsLaden } from "@/lib/clubs-daten";
+import { eventOrtLink } from "@/lib/spielstaetten-daten";
 import { ortPfad } from "@/components/ort-karten";
 import { Krumen } from "@/components/landing";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
@@ -110,7 +111,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
     ? hubs.flatMap((h, i) => (hubListen[i] && stadtteileImHub(h, hubListen[i]).some((x) => x.stadtteil === st) ? [{ name: `${GUIDE_HUBS[h].name} ${inStadtteil(st)}`, pfad: guideStadtteilPfad(h, st) }] : []))
     : [];
   // Guide-Ort: nur echte Clubs (typ club), exakt über die gepflegten Schreibweisen – auch_club-Orte haben eine andere Haupt-URL
-  const club = clubs.find((o) => o.typ === "club" && (clubProfil(o)?.eventOrte ?? []).includes(e.ort)) ?? null;
+  const clubTreffer = clubs.find((o) => o.typ === "club" && (clubProfil(o)?.eventOrte ?? []).includes(e.ort)) ?? null;
+  // Genau ein Ortslink (Plan Locations 3.2): kanonische Seite des zugeordneten Ortes (events.ort_id); dann entfallen
+  // der Suchlink und ein Club-Link, der auf ein anderes Ziel zeigen würde
+  const ortLink = await eventOrtLink(e.id);
+  const club = ortLink ? null : clubTreffer;
   // Weihnachtsmarkt-Guide (Plan Weihnachtsmärkte 3.3/5.6, Stufe 1b): Event meint einen Guide-Eintrag → Markt-Kasten,
   // sonst bei Weihnachtsmarkt im Titel ein Link auf den Hub. Nur mit Schalter.
   const wmEintraege = WEIHNACHTSMAERKTE_VERLINKT ? await weihnachtsmaerkteLaden() : [];
@@ -292,7 +297,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
               <TeilenLeiste titel={titel} pfad={pfad} />
             </section>
             {e.quelle_name && <p className="quelle">Quelle: {e.quelle_name}</p>}
-            {ortSuche && (
+            {ortLink ? (
+              <Link className="link" href={ortLink.pfad}>
+                Mehr über {ortLink.name} und weitere Events dort <Icon name="arrow_forward" />
+              </Link>
+            ) : ortSuche && (
               <Link className="link" href={ortSuche}>
                 Weitere Events an diesem Ort <Icon name="arrow_forward" />
               </Link>

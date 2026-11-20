@@ -1,0 +1,123 @@
+// Ortsseiten /orte (Plan docs/plan-locations-2026-11-18.md, Pflicht-Tests Abschnitt 4: Proxy, Verknüpfungen, Seiten)
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { config as proxyConfig } from "@/proxy";
+import { guideZiel, routeVon, spielstaetteEntscheidung, type OrtKopf } from "@/lib/pfad-pruefung";
+import { artInfo, filterLesen, indexierbar, orteFiltern, stadtAusPlz } from "@/lib/spielstaetten";
+import { indexierbareOrte, sichtbarerPfad, type Spielstaette } from "@/lib/spielstaetten-daten";
+import type { DddOrt } from "@/lib/typen";
+
+const kopf = (x: Partial<OrtKopf>): OrtKopf => ({
+  typ: "spielstaette", aktiv: true, qualitaets_score: null, club: null, club_score: null, club_freigegeben: null, auch_club: null, ...x,
+});
+const ort = (x: Partial<Spielstaette> & { id: string }): Spielstaette => ({
+  name: x.id, slug: x.id, typ: "spielstaette", untertitel: null, beschreibung: null, highlight: null, adresse: null, stadtteil: null,
+  latitude: null, longitude: null, bild_url: null, bild_attribution: null, tags: [], preis_niveau: null, oeffnungszeiten: null,
+  webseite: null, telefon: null, instagram: null, google_place_id: null, google_rating: null, google_bewertungen_anzahl: null,
+  qualitaets_score: null, extras: {}, sortierung: 0, erstellt_am: null, aktualisiert_am: null, parentId: null, ...x,
+});
+
+describe("Proxy /orte", () => {
+  it("Matcher und Routen", () => {
+    expect(proxyConfig.matcher).toContain("/orte/:path+");
+    expect(routeVon("/orte/tonhalle")).toEqual({ typ: "spielstaette", slug: "tonhalle" });
+    expect(routeVon("/orte")).toBeNull(); // Übersicht: immer 200
+    expect(routeVon("/orte/a/b")).toEqual({ typ: "ungueltig" });
+  });
+
+  it("aktive Spielstätte 200, unbekannt 404", () => {
+    expect(spielstaetteEntscheidung("tonhalle", kopf({}), undefined, null)).toEqual({ art: "weiter" });
+    expect(spielstaetteEntscheidung("gibts-nicht", null, undefined, null)).toEqual({ art: "fehlt" });
+  });
+
+  it("Guide-Slug: 308 auf die kanonische Guide-URL, unsichtbar 404", () => {
+    expect(spielstaetteEntscheidung("zakk-flingern", kopf({ typ: "club", club: { passt: true } }), undefined, null).art).not.toBe("weiter");
+    // Kneipe mit Score ≥ 7 → Kneipen-Hub
+    expect(spielstaetteEntscheidung("pitcher", kopf({ typ: "kneipe", qualitaets_score: 8 }), undefined, null))
+      .toEqual({ art: "umleiten", ziel: "/guides/kneipen-bars/pitcher" });
+    // Unsichtbare Guide-Zeile (Score < 7, kein Club) → 404
+    expect(spielstaetteEntscheidung("starbucks", kopf({ typ: "cafe", qualitaets_score: 4 }), undefined, null)).toEqual({ art: "fehlt" });
+    // Spielplatz und Weihnachtsmarkt über den eigenen Pfad
+    expect(guideZiel(kopf({ typ: "spielplatz" }), "x")).toBe("/guides/spielplaetze/x");
+    expect(guideZiel(kopf({ typ: "weihnachtsmarkt" }), "m")).toBe("/guides/weihnachtsmaerkte/m");
+    // Ausflug/Wochenend-Trip: kein Ziel (kein 308 auf /guides/restaurants-cafes)
+    expect(spielstaetteEntscheidung("a", kopf({ typ: "ausflug" }), undefined, null)).toEqual({ art: "fehlt" });
+    expect(spielstaetteEntscheidung("w", kopf({ typ: "wochenendtipp" }), undefined, null)).toEqual({ art: "fehlt" });
+  });
+
+  it("zusammengelegter Markt: ein einziger 308 auf den verbliebenen", () => {
+    expect(spielstaetteEntscheidung("schadow-markt-stadtmitte", null, undefined, null))
+      .toEqual({ art: "umleiten", ziel: "/guides/weihnachtsmaerkte/maerchen-markt-stadtmitte" });
+  });
+
+  it("Weiterleitung über ziel_ort_id: Ziel zur Laufzeit, unsichtbar → /orte, nie 404", () => {
+    const ziel = { ...kopf({}), slug: "bambi" };
+    expect(spielstaetteEntscheidung("bambi-filmstudio", null, { ziel_ort_id: "id" }, ziel)).toEqual({ art: "umleiten", ziel: "/orte/bambi" });
+    expect(spielstaetteEntscheidung("tiefgarage-psd-bank-dome", null, { ziel_ort_id: "id" }, null)).toEqual({ art: "umleiten", ziel: "/orte" });
+    expect(spielstaetteEntscheidung("gertrudenhof", null, { ziel_ort_id: null }, null)).toEqual({ art: "umleiten", ziel: "/orte" });
+    // Guide-Ziel unsichtbar geworden → /orte statt 308 auf eine 404
+    const weg = { ...kopf({ typ: "cafe", qualitaets_score: 3 }), slug: "altes-cafe" };
+    expect(spielstaetteEntscheidung("x", null, { ziel_ort_id: "id" }, weg)).toEqual({ art: "umleiten", ziel: "/orte" });
+  });
+
+  it("kein rewrite im Proxy", () => {
+    expect(readFileSync(join(__dirname, "..", "proxy.ts"), "utf8")).not.toMatch(/NextResponse\.rewrite/);
+  });
+});
+
+describe("Indexierungsregel (gemeinsam mit pipeline/indexnow.py)", () => {
+  it("dieselben Fälle wie tests/fixtures/ort_indexierbar.json", () => {
+    const faelle = JSON.parse(readFileSync(join(__dirname, "..", "..", "tests", "fixtures", "ort_indexierbar.json"), "utf8")) as
+      { adresseBestaetigt: boolean; textFreigegeben: boolean; kommende: number; erwartet: boolean }[];
+    for (const f of faelle) expect(indexierbar(f)).toBe(f.erwartet);
+  });
+
+  it("Säle erben die bestätigte Adresse, Haus zählt die Events der Kinder", () => {
+    const haus = ort({ id: "haus", extras: { spielstaette: { adresse_bestaetigt: { datum: "x" } } } });
+    const saal = ort({ id: "saal", parentId: "haus" });
+    const zakkSaal = ort({ id: "zakk-halle", parentId: "zakk" });
+    const leer = ort({ id: "leer", extras: { spielstaette: { adresse_bestaetigt: { datum: "x" } } } });
+    const anzahl = new Map([["saal", 2], ["zakk-halle", 1]]);
+    const ok = indexierbareOrte([haus, saal, zakkSaal, leer], anzahl, new Map([["haus", true], ["zakk", true]])).map((o) => o.id);
+    expect(ok).toEqual(["haus", "saal", "zakk-halle"]); // „leer“ ohne kommende Events: noindex
+  });
+});
+
+describe("Seiten", () => {
+  it("Stadt nur aus der PLZ", () => {
+    expect(stadtAusPlz("Markt 1, 41460 Neuss")).toBe("Neuss");
+    expect(stadtAusPlz("Steinstr. 1, Düsseldorf")).toBeNull();
+  });
+
+  it("Filter /orte: Stadt Neuss ohne Stadtteil, Art über den Slug", () => {
+    const neuss = ort({ id: "n", adresse: "Markt 1, 41460 Neuss", extras: { spielstaette: { art: "Kino" } } });
+    const dus = ort({ id: "d", adresse: "Bilker Allee 1, 40217 Düsseldorf", stadtteil: "Unterbilk", extras: { spielstaette: { art: "Museum/Ausstellung" } } });
+    expect(orteFiltern([neuss, dus], filterLesen({ stadt: "Neuss" })).map((o) => o.id)).toEqual(["n"]);
+    expect(orteFiltern([neuss, dus], filterLesen({ art: "museum" })).map((o) => o.id)).toEqual(["d"]);
+    expect(orteFiltern([neuss, dus], filterLesen({ stadtteil: "Unterbilk" })).map((o) => o.id)).toEqual(["d"]);
+  });
+
+  it("neue Arten haben ein Symbol", () => {
+    for (const a of ["Laden", "Freizeit/Erlebnis", "Ausflugsziel/Sehenswürdigkeit", "Öffentliches Gebäude", "Gastronomie/Eventlocation"]) {
+      expect(artInfo(a).wert).toBe(a);
+    }
+  });
+
+  it("Ortsseite nutzt weder eventPoolLaden noch ortBildUrl (keine Beispieldaten, keine Google-Fotos)", () => {
+    for (const datei of [join("app", "orte", "[slug]", "page.tsx"), join("app", "orte", "page.tsx"), join("lib", "spielstaetten-daten.ts")]) {
+      // Nur Code prüfen, nicht die Kommentare („NICHT eventPoolLaden()“)
+      const text = readFileSync(join(__dirname, "..", datei), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+      expect(text).not.toMatch(/eventPoolLaden\(/);
+      expect(text).not.toMatch(/ortBildUrl\(/);
+    }
+  });
+
+  it("Eventseite: kanonischer Ortslink nach den Hub-Regeln", () => {
+    const basis = ort({ id: "x", slug: "x" }) as DddOrt;
+    expect(sichtbarerPfad({ ...basis, typ: "spielstaette", slug: "tonhalle" })).toBe("/orte/tonhalle");
+    expect(sichtbarerPfad({ ...basis, typ: "kneipe", qualitaets_score: 8, slug: "bar" })).toBe("/guides/kneipen-bars/bar");
+    expect(sichtbarerPfad({ ...basis, typ: "cafe", qualitaets_score: 3, slug: "c" })).toBeNull();
+    expect(sichtbarerPfad({ ...basis, typ: "ausflug", slug: "a" })).toBeNull();
+  });
+});

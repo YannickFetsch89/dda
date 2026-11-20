@@ -16,6 +16,7 @@ import { BildImg, GoogleKarte, Reihe } from "@/components/client";
 import { ClubKarte } from "@/components/club-karte";
 import { EventKarte, Icon } from "@/components/karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
+import { OrtProgramm } from "@/components/ort-programm";
 import { ortPfad } from "@/components/ort-karten";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import {
@@ -62,24 +63,6 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     openGraph: { title: titel, description: beschreibung, url: pfad, type: "website", siteName: "dies.das.düsseldorf", locale: "de_DE", ...(bild ? { images: [{ url: bild }] } : {}) },
     twitter: { card: bild ? "summary_large_image" : "summary", title: titel, description: beschreibung, ...(bild ? { images: [bild] } : {}) },
   };
-}
-
-async function NaechsteEvents({ ort }: { ort: DddOrt }) {
-  const pool = await eventPoolLaden();
-  const events = naechsteEvents(ort, pool, 10);
-  if (!events.length) return null;
-  return (
-    <section className="gd-abschnitt">
-      <div className="gd-abschnitt__kopf">
-        <h2 className="d">Nächste Events hier</h2>
-        <Link href={`/entdecken?q=${encodeURIComponent(ort.name)}`} className="link">Alle Events</Link>
-      </div>
-      <p className="muted cl-unterzeile">Aus unserem Eventkalender, gefiltert nach „{ort.name}“</p>
-      <Reihe breite={258} label={`Events im ${ort.name}`}>
-        {events.map((e) => <EventKarte key={e.id} e={e} heute={pool.heute} variante="reihe" />)}
-      </Reihe>
-    </section>
-  );
 }
 
 async function AehnlicheClubs({ ort }: { ort: DddOrt }) {
@@ -330,8 +313,9 @@ export default async function ClubDetail(props: Props) {
         </aside>
       </div>
 
+      {/* Programm über events.ort_id (Plan Locations 3.9) statt naechsteEvents/Pool – Karten unten nutzen weiter naechsteEvents */}
       <Suspense fallback={null}>
-        <NaechsteEvents ort={ort} />
+        <OrtProgramm ort={ort} />
       </Suspense>
       <Suspense fallback={null}>
         <AehnlicheClubs ort={ort} />

@@ -2451,3 +2451,40 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
 .start-modul__gruss { display: block; margin-top: 4px; font-size: 14px; font-weight: 600; color: var(--ddd-text-muted); }
 .start-naechste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 767px) { .start-naechste { grid-template-columns: 1fr; } }
+
+/* ── Ortsseiten /orte (Plan docs/plan-locations-2026-11-18.md, 3.8) ── */
+.os-seite h1.d { margin: 6px 0 10px; }
+.os-einleitung { max-width: 720px; color: var(--ddd-text-body); margin: 0 0 18px; }
+.os-kachel {
+  display: flex; align-items: center; gap: 14px; min-height: 140px; padding: 24px; margin: 8px 0 18px;
+  border-radius: 16px; background: var(--ddd-navy); color: var(--ddd-on-navy);
+}
+.os-kachel .icon { font-size: 56px; color: var(--ddd-gold); }
+.os-kachel span { font-size: 22px; font-weight: 700; line-height: 1.25; }
+.os-haus { margin: 0 0 12px; color: var(--ddd-text-muted); }
+.os-saele { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.os-unterkopf { font-size: 15px; margin: 14px 0 8px; color: var(--ddd-text-muted); font-weight: 700; }
+.os-liste { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+.os-liste--knapp { margin-top: 6px; font-size: 14px; }
+.os-spalten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.os-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 14px; margin: 0 0 12px;
+  background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-radius: 12px; }
+.os-filter__feld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ddd-text-muted); min-width: 160px; flex: 1; }
+.os-filter__feld input, .os-filter__feld select { font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid var(--ddd-border);
+  border-radius: 8px; background: var(--ddd-bg); color: var(--ddd-text); }
+.os-zahl { margin: 0 0 8px; }
+.os-az { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
+.os-az a { min-width: 32px; text-align: center; padding: 4px 6px; border-radius: 6px; background: var(--ddd-surface);
+  border: 1px solid var(--ddd-border); color: var(--ddd-text); text-decoration: none; font-weight: 700; }
+.os-gruppe { margin: 0 0 18px; scroll-margin-top: 80px; }
+.os-gruppe__buchstabe { font-size: 20px; margin: 0 0 6px; color: var(--ddd-gold); }
+.os-orte { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.os-orte--saele { margin: 2px 0 6px 34px; font-size: 14px; }
+.os-ort { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; color: var(--ddd-text); text-decoration: none; }
+.os-ort .icon { font-size: 20px; color: var(--ddd-text-muted); }
+.os-ort__name { font-weight: 700; }
+.os-ort:hover .os-ort__name { text-decoration: underline; }
+@media (max-width: 767px) {
+  .os-spalten { grid-template-columns: 1fr; }
+  .os-filter__feld { min-width: 100%; }
+}

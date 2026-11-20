@@ -72,5 +72,8 @@ export const config = {
   matcher: [
     "/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug",
     "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken", "/magazin/:path*", "/feed.xml",
+    // Ortsseiten (Plan Locations 3.10): aktive Spielstätte 200, Guide-Slug 308 auf die kanonische Guide-URL,
+    // alter Slug 308 über ort_weiterleitungen, sonst echte 404. /orte selbst ist die Übersicht (immer 200).
+    "/orte/:path+",
   ],
 };

@@ -298,7 +298,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
           {ortTreffer.length > 6 && (
             <p className="muted" style={{ marginTop: 10 }}>
               und {ortTreffer.length - 6} weitere – verfeinere die Suche oder stöbere in den{" "}
-              <Link href="/guides" className="link">Guides</Link>.
+              <Link href="/guides" className="link">Guides</Link> und <Link href="/orte" className="link">Veranstaltungsorten</Link>.
             </p>
           )}
           {treffer.length > 0 && <h2 className="d such-events-titel">Events</h2>}

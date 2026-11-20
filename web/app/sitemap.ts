@@ -15,6 +15,8 @@ import { spielplatzPfad } from "@/lib/spielplaetze-json-ld";
 import { istIndexierbar as wmIndexierbar, wmPfad } from "@/lib/weihnachtsmaerkte";
 import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 import { orteLaden, ortBildUrl } from "@/lib/orte";
+import { indexierbareOrte, kommendeJeOrt, ortZeileLaden, spielstaettenLaden } from "@/lib/spielstaetten-daten";
+import { profil as spielstaettenProfil } from "@/lib/spielstaetten";
 import { ortPfad } from "@/components/ort-karten";
 import { KATEGORIEN } from "@/lib/kategorien";
 import { BEZIRKE } from "@/lib/stadtteile";
@@ -216,5 +218,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     magazin = magazinEintraege(SITE_URL, true, ...(await Promise.all([beitraegeLaden(), autorenLaden(), magazinHeute()])));
   }
 
-  return [...feste, ...tage, ...kategorien, ...unterkategorien, ...kostenlos, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile, ...magazin];
+  // Ortsseiten (Plan Locations 3.11): /orte plus indexierbare Spielstätten über die eigene Ladefunktion – nicht
+  // orteLaden() (Score-Filter). noindex-Seiten fehlen. Fehler beim Laden oder Zählen → keine Ortsseiten (nichts Falsches).
+  const ortsseiten: MetadataRoute.Sitemap = [];
+  const [stand, zaehlung] = await Promise.all([spielstaettenLaden(), kommendeJeOrt()]);
+  if (!stand.fehler && !zaehlung.fehler && stand.orte.length) {
+    const hausIds = [...new Set(stand.orte.map((o) => o.parentId).filter((x): x is string => !!x))];
+    const haeuser = await Promise.all(hausIds.map((id) => ortZeileLaden(id)));
+    const hausAdresse = new Map(hausIds.map((id, i) => {
+      const h = haeuser[i];
+      return [id, !!h && (h.typ === "spielstaette" ? spielstaettenProfil(h).adresseBestaetigt : !!h.adresse)];
+    }));
+    ortsseiten.push({ url: `${SITE_URL}/orte`, changeFrequency: "weekly", priority: 0.6 });
+    for (const o of indexierbareOrte(stand.orte, zaehlung.anzahl, hausAdresse)) {
+      ortsseiten.push({ url: `${SITE_URL}/orte/${encodeURIComponent(o.slug)}`, ...(o.aktualisiert_am ? { lastModified: new Date(o.aktualisiert_am) } : {}), changeFrequency: "weekly", priority: 0.5 });
+    }
+  }
+
+  return [...feste, ...tage, ...kategorien, ...unterkategorien, ...kostenlos, ...stadtteile, ...events, ...reihen, ...guides, ...guideStadtteile, ...ortsseiten, ...magazin];
 }

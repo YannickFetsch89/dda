@@ -32,6 +32,8 @@ export type Route =
   | { typ: "unterkategorie"; kategorie: string; unter: string }
   | { typ: "stadtteil"; slug: string }
   | { typ: "guide-stadtteil"; hub: OrtHub; slug: string }
+  // Ortsseiten (Plan Locations 3.10)
+  | { typ: "spielstaette"; slug: string }
   // Magazin (Plan Redaktion 5.1, T4)
   | { typ: "feed-alt" }
   | { typ: "magazin-fest" }
@@ -66,6 +68,8 @@ export function routeVon(pfad: string): Route | null {
   if (a === "kategorie" && b && !c) return { typ: "kategorie", slug: b };
   if (a === "kategorie" && b && c && !d) return { typ: "unterkategorie", kategorie: b, unter: c };
   if (a === "stadtteil" && b && !c) return { typ: "stadtteil", slug: b };
+  if (a === "orte" && b && !c) return { typ: "spielstaette", slug: b };
+  if (a === "orte" && b && c) return { typ: "ungueltig" };
   if (a === "feed.xml" && !b) return { typ: "feed-alt" };
   if (a === "magazin") return magazinRoute(b, c, d);
   return null;
@@ -275,6 +279,85 @@ export function ortEntscheidung(hub: OrtHub, slug: string, o: OrtKopf | null): P
   return FEHLT;
 }
 
+// ---------- Ortsseiten /orte (Plan Locations 3.3 Punkt 4, 3.10) ----------
+
+/**
+ * Kanonische Guide-URL einer sichtbaren Guide-Zeile – oder null (unsichtbar, kein Hub, Ausflug/Wochenend-Trip).
+ * Dieselben Regeln wie ortEntscheidung: Restaurant/Café/Imbiss/Kneipe über den eigenen Hub (Score ≥ 7), sonst als
+ * Club, wenn im Club-Hub sichtbar (auch_club); Spielplatz/Weihnachtsmarkt, wenn aktiv. Nie eine zweite Ansicht.
+ */
+export function guideZiel(o: OrtKopf, slug: string): string | null {
+  const s = encodeURIComponent(slug);
+  if (!o.aktiv) return null;
+  if (o.typ === "spielplatz") return `/guides/spielplaetze/${s}`;
+  if (o.typ === "weihnachtsmarkt") return `/guides/weihnachtsmaerkte/${s}`;
+  if (o.typ === "ausflug" || o.typ === "wochenendtipp" || o.typ === "spielstaette") return null;
+  const hub = sichtbarerHub(o);
+  if (hub) return `/guides/${hub}/${s}`;
+  return clubSichtbar(o) ? `/guides/clubs/${s}` : null;
+}
+
+/** Zeile hinter einer Weiterleitung (über ziel_ort_id): Slug und die Felder für guideZiel. */
+type ZielKopf = OrtKopf & { slug: string };
+
+/**
+ * Entscheidung für /orte/<slug> (rein, testbar). `eigen`: Zeile mit diesem Slug (anon: nur aktive),
+ * `weiter`: Eintrag in ort_weiterleitungen (undefined = keiner), `ziel`: Zielzeile der Weiterleitung (null = nicht
+ * sichtbar/gelöscht/leer). Eine Stufe, keine Ketten; unsichtbares Ziel → /orte (nie ein 308 auf eine 404).
+ */
+export function spielstaetteEntscheidung(
+  slug: string, eigen: OrtKopf | null, weiter: { ziel_ort_id: string | null } | undefined, ziel: ZielKopf | null,
+): Pruefung {
+  if (eigen) {
+    if (eigen.typ === "spielstaette") return eigen.aktiv ? WEITER : FEHLT;
+    const g = guideZiel(eigen, slug);
+    return g ? { art: "umleiten", ziel: g } : FEHLT;
+  }
+  const wm = WM_ZUSAMMENGELEGT[slug];
+  if (wm) return { art: "umleiten", ziel: `/guides/weihnachtsmaerkte/${wm}` };
+  if (!weiter) return FEHLT;
+  if (!ziel) return { art: "umleiten", ziel: "/orte" };
+  if (ziel.typ === "spielstaette") return { art: "umleiten", ziel: `/orte/${encodeURIComponent(ziel.slug)}` };
+  return { art: "umleiten", ziel: guideZiel(ziel, ziel.slug) ?? "/orte" };
+}
+
+const ORT_KOPF_SPALTEN =
+  "typ,aktiv,qualitaets_score,stadtteil,club:extras->club,club_score:extras->club_score," +
+  "club_freigegeben:extras->club_freigegeben,auch_club:extras->auch_club,kein_club:extras->kein_club";
+
+async function weiterleitungLaden(slug: string): Promise<{ ziel_ort_id: string | null } | null | undefined> {
+  return gemerkt(`ort-weiter:${slug}`, async () => {
+    const z = await abfrage<{ ziel_ort_id: string | null }>(
+      "ort_weiterleitungen", `select=ziel_ort_id&alter_slug=eq.${encodeURIComponent(slug)}&limit=1`);
+    return z === undefined ? undefined : (z[0] ?? null);
+  });
+}
+
+async function zielLaden(id: string): Promise<ZielKopf | null | undefined> {
+  return gemerkt(`ort-id:${id}`, async () => {
+    const z = await abfrage<ZielKopf>("orte", `select=slug,${ORT_KOPF_SPALTEN}&id=eq.${encodeURIComponent(id)}&limit=1`);
+    return z === undefined ? undefined : (z[0] ?? null);
+  });
+}
+
+/** /orte/<slug>: Fehler bei einer der Abfragen → „weiter“ (nie ein falscher 308 auf /orte). */
+async function spielstaettePruefen(slug: string): Promise<Pruefung> {
+  const eigen = await ortLaden(slug);
+  if (eigen === undefined) return WEITER;
+  if (eigen) return spielstaetteEntscheidung(slug, eigen, undefined, null);
+  if (WM_ZUSAMMENGELEGT[slug]) return spielstaetteEntscheidung(slug, null, undefined, null);
+  const weiter = await weiterleitungLaden(slug);
+  if (weiter === undefined) return WEITER;
+  if (weiter === null) return FEHLT;
+  let ziel: ZielKopf | null = null;
+  if (weiter.ziel_ort_id) {
+    const z = await zielLaden(weiter.ziel_ort_id);
+    if (z === undefined) return WEITER;
+    ziel = z;
+  }
+  return spielstaetteEntscheidung(slug, null, weiter, ziel);
+}
+
 // ---------- Magazin (Plan Redaktion 5.1) ----------
 
 export type MagazinKopf = { slug: string; status: string; veroeffentlicht_am: string | null };
@@ -387,6 +470,8 @@ export async function pfadPruefen(pfad: string, suche?: URLSearchParams): Promis
       const o = await ortLaden(route.slug);
       return o === undefined ? WEITER : ortEntscheidung(route.hub, route.slug, o);
     }
+    case "spielstaette":
+      return spielstaettePruefen(route.slug);
     case "feed-alt":
       return { art: "umleiten", ziel: "/magazin/feed.xml" };
     case "magazin-fest":

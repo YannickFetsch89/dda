@@ -46,10 +46,12 @@ export interface DddEvent {
   reihe: { slug: string; titel: string } | null;
   /** Nur bei gebündelten Listeneinträgen (lib/termine.ts): alle Uhrzeiten des Tages, sonst null */
   uhrzeiten: string[] | null;
+  /** Zugeordneter Ort (orte.id, Plan Locations 3.4) – nur, wo geladen (Ortsseiten, Eventseite) */
+  ort_id?: string | null;
 }
 
 /** Typ eines Ortes in der `orte`-Tabelle. */
-export type OrtTyp = "restaurant" | "imbiss" | "cafe" | "kneipe" | "club" | "spielplatz" | "ausflug" | "wochenendtipp" | "weihnachtsmarkt";
+export type OrtTyp = "restaurant" | "imbiss" | "cafe" | "kneipe" | "club" | "spielplatz" | "ausflug" | "wochenendtipp" | "weihnachtsmarkt" | "spielstaette";
 
 /** Preisniveau eines Ortes. */
 export type PreisNiveau = "€" | "€€" | "€€€";

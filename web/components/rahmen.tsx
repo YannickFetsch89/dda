@@ -173,6 +173,7 @@ export async function Fuss() {
           <Link href="/guides/kneipen-bars">Kneipen & Bars</Link>
           <Link href="/guides/clubs">Clubs</Link>
           {SPIELPLAETZE_VERLINKT && <Link href="/guides/spielplaetze">Spielplätze</Link>}
+          <Link href="/orte">Veranstaltungsorte</Link>
           <Link href="/guides">Alle Guides</Link>
         </div>
         <div className="fuss__spalte">

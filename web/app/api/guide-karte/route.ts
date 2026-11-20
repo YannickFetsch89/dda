@@ -13,7 +13,11 @@ import { clubsLaden } from "@/lib/clubs-daten";
 import { filterLesen, filtern, sortieren } from "@/lib/guide-filter";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { filterLesen as kneipenFilterLesen, filtern as kneipenFiltern } from "@/lib/kneipen";
-import { orteLaden } from "@/lib/orte";
+import { lokalesBild, orteLaden } from "@/lib/orte";
+import {
+  artInfo, entfernung, filterLesen as orteFilterLesen, orteFiltern, ortSeitePfad, profil, stadtVon,
+} from "@/lib/spielstaetten";
+import { spielstaettenLaden } from "@/lib/spielstaetten-daten";
 import {
   filterLesen as spielplatzFilterLesen, filtern as spielplaetzeFiltern, ortStadtteilSlug, sortieren as spielplaetzeSortieren,
 } from "@/lib/spielplaetze";
@@ -75,6 +79,38 @@ export async function GET(request: Request) {
       // Pin-Farbe nach Art: Restaurant/Imbiss, Café, Brauhaus (Brauhäuser kommen als Kneipen mit Unterart)
       const art = new Map(orte.map((o) => [o.id, o.typ === "kneipe" ? "brauhaus" : o.typ] as const));
       return antwort(kartenOrte(orte).map((k) => ({ ...k, art: art.get(k.id) as KartenOrt["art"] })));
+    }
+    if (sp.hub === "orte") {
+      // Ortsseiten (Plan Locations 3.8): alle Häuser mit Koordinaten, gefiltert wie /orte; nahe=<slug> → dieser Ort
+      // und die 12 nächsten. Nur lokale Bilder, nie ein Google-Foto (Plan 3.13).
+      const { orte: alle } = await spielstaettenLaden();
+      const haeuser = alle.filter((o) => !o.parentId && o.latitude != null && o.longitude != null);
+      let auswahl = orteFiltern(haeuser, orteFilterLesen(sp));
+      const mitte = sp.nahe ? alle.find((o) => o.slug === sp.nahe) : undefined;
+      if (sp.nahe) {
+        // Mittelpunkt: eigene Koordinaten; ein Saal ohne eigene nimmt die der Seite (= die des Hauses, lat/lng),
+        // nur im Raum Düsseldorf/Neuss/Ratingen – sonst keine Punkte.
+        const zahl = (v: string | undefined) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
+        const pLat = zahl(sp.lat);
+        const pLng = zahl(sp.lng);
+        const imRaum = pLat != null && pLng != null && pLat > 50.9 && pLat < 51.5 && pLng > 6.4 && pLng < 7.2;
+        const m = mitte?.latitude != null && mitte.longitude != null
+          ? { lat: mitte.latitude, lng: mitte.longitude }
+          : mitte && imRaum ? { lat: pLat!, lng: pLng! } : null;
+        auswahl = m
+          ? [...haeuser].sort((a, b) => entfernung(m, { lat: a.latitude!, lng: a.longitude! }) - entfernung(m, { lat: b.latitude!, lng: b.longitude! })).slice(0, 13)
+          : [];
+        // Der Saal selbst als eigener Punkt, wenn er nicht schon (als Haus) dabei ist
+        if (m && mitte && !auswahl.some((o) => o.id === mitte.id)) auswahl = [{ ...mitte, latitude: m.lat, longitude: m.lng }, ...auswahl.slice(0, 12)];
+      }
+      return antwort(auswahl.map((o): KartenOrt => {
+        const info = artInfo(profil(o).art);
+        return {
+          id: o.id, name: o.name, typLabel: info.wert, icon: info.icon, stadtteil: o.stadtteil ?? stadtVon(o),
+          preis: null, rating: null, anzahl: null, bild: lokalesBild(o.bild_url), href: ortSeitePfad(o.slug),
+          lat: o.latitude!, lng: o.longitude!,
+        };
+      }));
     }
     return Response.json({ fehler: "Unbekannter Hub" }, { status: 400 });
   } catch (err) {

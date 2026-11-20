@@ -12,6 +12,7 @@ import { ClubProfilLink } from "@/components/club-karte";
 import { EventKarte, Icon } from "@/components/karten";
 import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
+import { OrtProgramm } from "@/components/ort-programm";
 import { eventPoolLaden } from "@/lib/daten";
 import { kueche, preisDetail, preisKurz, sortieren, sterne, zahl } from "@/lib/guide-filter";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
@@ -191,6 +192,10 @@ export default async function OrtDetail(props: Props) {
         </aside>
       </div>
 
+      {/* Programm über events.ort_id (Plan Locations 3.2/3.9) */}
+      <Suspense fallback={null}>
+        <OrtProgramm ort={ort} />
+      </Suspense>
       <Suspense fallback={null}>
         <EventsInDerNaehe ort={ort} />
       </Suspense>

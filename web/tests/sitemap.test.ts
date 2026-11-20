@@ -30,6 +30,17 @@ vi.mock("@/lib/spielplaetze-daten", () => ({
   ],
 }));
 vi.mock("@/components/ort-karten", () => ({ ortPfad: () => "/guides/x" }));
+// Ortsseiten (Plan Locations 3.11): ein indexierbares Haus mit Event, eines ohne
+// (Die Regel selbst prüft tests/ortsseiten.test.ts; hier nur die Einbindung in die Sitemap.)
+vi.mock("@/lib/spielstaetten-daten", () => {
+  const haus = (id: string) => ({ id, slug: id, typ: "spielstaette", parentId: null, aktualisiert_am: null, extras: {} });
+  return {
+    indexierbareOrte: (alle: { id: string }[], anzahl: Map<string, number>) => alle.filter((o) => (anzahl.get(o.id) ?? 0) > 0),
+    spielstaettenLaden: async () => ({ orte: [haus("tonhalle"), haus("leer")], fehler: false }),
+    kommendeJeOrt: async () => ({ anzahl: new Map([["tonhalle", 3]]), fehler: false }),
+    ortZeileLaden: async () => null,
+  };
+});
 // Weihnachtsmärkte: ein indexierbarer (Zeitraum + Wochenzeiten + Beschreibung) und einer ohne Zeiten
 const wmSaison = { "2026": { von: "2026-11-19", bis: "2026-12-30", zeiten: [{ tage: ["mo"], von: "11:00", bis: "20:00" }] } };
 vi.mock("@/lib/weihnachtsmaerkte-daten", () => ({
@@ -71,5 +82,15 @@ describe("Sitemap", () => {
     expect(urls).toContain("https://diesdas.events/reihe/comedy-zakk");
     expect(urls).not.toContain("https://diesdas.events/reihe/lesung-alt");
     expect(urls.filter((u) => u.endsWith("/reihe/comedy-zakk"))).toHaveLength(1);
+  });
+});
+
+describe("Sitemap: Ortsseiten (Plan Locations 3.11)", () => {
+  it("/orte und nur indexierbare Ortsseiten", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain("https://diesdas.events/orte");
+    expect(urls).toContain("https://diesdas.events/orte/tonhalle");
+    expect(urls).not.toContain("https://diesdas.events/orte/leer");
   });
 });

@@ -18,6 +18,7 @@ import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { seitenMetadaten } from "@/lib/seo";
 import { bezirkVon, stadtteilName } from "@/lib/stadtteile";
 import { aufzaehlung, topKategorien } from "@/lib/tagestext";
+import { spielstaettenLaden } from "@/lib/spielstaetten-daten";
 import type { EventPool } from "@/lib/typen";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
@@ -74,6 +75,9 @@ export default async function StadtteilSeite({ params }: Props) {
     const treffer = stadtteileImHub(h, orteJeHub[i]).find((x) => x.stadtteil === st);
     return treffer ? [{ name: `${GUIDE_HUBS[h].name} ${imOrt}`, pfad: guideStadtteilPfad(h, st), anzahl: treffer.anzahl }] : [];
   });
+  // Ortsseiten im Stadtteil (Plan Locations 3.8): Link auf /orte?stadtteil=…, nur wenn es dort Orte gibt
+  const ortsseiten = (await spielstaettenLaden()).orte.filter((o) => !o.parentId && o.stadtteil === st).length;
+  if (ortsseiten > 0) guideLinks.push({ name: `Veranstaltungsorte ${imOrt}`, pfad: `/orte?stadtteil=${encodeURIComponent(st)}`, anzahl: ortsseiten });
 
   const krumen = [{ name: "Start", pfad: "/" }, { name: "Stadtteile", pfad: "/stadtteile" }, { name, pfad }];
   const jsonLd = eventListeJsonLd(SITE_URL, `Events ${imOrt}`, krumen, events);

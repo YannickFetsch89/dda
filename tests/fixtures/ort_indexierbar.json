@@ -1,0 +1,8 @@
+[
+  {"adresseBestaetigt": true,  "textFreigegeben": false, "kommende": 3, "erwartet": true},
+  {"adresseBestaetigt": true,  "textFreigegeben": false, "kommende": 0, "erwartet": false},
+  {"adresseBestaetigt": false, "textFreigegeben": false, "kommende": 5, "erwartet": false},
+  {"adresseBestaetigt": false, "textFreigegeben": true,  "kommende": 0, "erwartet": true},
+  {"adresseBestaetigt": true,  "textFreigegeben": true,  "kommende": 0, "erwartet": true},
+  {"adresseBestaetigt": false, "textFreigegeben": false, "kommende": 0, "erwartet": false}
+]
