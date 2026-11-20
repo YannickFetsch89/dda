@@ -2,8 +2,17 @@
 rausgegangen.py – DiesDasDüsseldorf
 Scraper für Rausgegangen.de: Events in Düsseldorf
 Verwendet Playwright wegen Cloudflare-Schutz.
+
+Abgerufen wird nur die Startseite (rausgegangen.de/duesseldorf/). Die robots.txt sperrt alle anderen Seiten
+für unbekannte Crawler („User-agent: * / Disallow: /“); Detail-, Datums- oder Kategorie-Seiten rufen wir
+deshalb nicht ab (Entscheidung C4, docs/plan-clubs-2026-11-11.md). Spätere Termine fehlen dadurch teils.
+
+Adressen: Steht in der Kachel „Ort, Straße Nr, PLZ Stadt“, wird das in ort und adresse getrennt
+(_ort_adresse_trennen). Alle übrigen Adressen ergänzt die Pipeline aus eigenen Daten
+(pipeline/adressen_ergaenzen.py).
 """
 import logging
+import re
 import time
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -103,6 +112,79 @@ def _uhrzeit_parsen(datum_text: str) -> Optional[str]:
         return None
 
 
+# Kachel-Ortsangaben, die eine Adresse enthalten (Beispiele aus der Startseite vom 18.11.2026):
+#   „Flow, Mertensgasse 2, 40213 Düsseldorf“                 → Flow | Mertensgasse 2, 40213 Düsseldorf
+#   „Cafe Bar La Paillette, Schirmerstraße 2, 40211 Düsseldorf-Stadtbezirk 1“
+#   „Burgplatz 5-6, Düsseldorf“                              → Burgplatz 5-6 | Burgplatz 5-6, Düsseldorf
+#   „Franklinstraße 41, Düsseldorf-Stadtbezirk 1, Deutschland“
+#   „Düsseldorf, Schadowstraße“                              → Schadowstraße | Schadowstraße, Düsseldorf
+#   „Radisson Blu Media Harbour Hotel, Düsseldorf“           → Radisson Blu Media Harbour Hotel | (keine)
+# Unverändert bleiben Namen mit Komma ohne Adresse („zakk - Zentrum für Aktion, Kultur und Kommunikation“,
+# „Nilsson, Initiativen Haus“, „Heinrich-Heine-Universität Düsseldorf, Hörsaal 3A“).
+_STAEDTE = r"D(?:ü|ue|u)sseldorf|Neuss|Ratingen"
+_STADT_TEIL = re.compile(rf"^(?:{_STAEDTE})(?:[-\s]+Stadtbezirk\s+\d+)?$", re.IGNORECASE)
+_PLZ_STADT_TEIL = re.compile(r"^(\d{5})\s+(\S.*?)(?:[-\s]+Stadtbezirk\s+\d+)?$", re.IGNORECASE)
+_LAND_TEIL = re.compile(r"^(?:Deutschland|Germany)$", re.IGNORECASE)
+# Straße mit Hausnummer: „Mertensgasse 2“, „Burgplatz 5-6“, „Kölner Str. 12a“
+_STRASSE_NR_TEIL = re.compile(r"^[A-ZÄÖÜa-zäöüß][\wÄÖÜäöüß.' -]*?\s\d{1,4}\s?[a-zA-Z]?(?:\s?[-–/]\s?\d{1,4}[a-zA-Z]?)?$")
+# Straße ohne Hausnummer (nur nach „Düsseldorf, …“): „Schadowstraße“, „Corneliusplatz“, „Königsallee“
+_STRASSE_TEIL = re.compile(
+    r"^[A-ZÄÖÜ][\wÄÖÜäöüß.' -]*(?:straße|strasse|str\.|platz|allee|gasse|markt|weg|ufer|ring|damm|wall|promenade)$",
+    re.IGNORECASE,
+)
+
+
+def _stadt_vereinheitlichen(stadt: str) -> str:
+    """„Dusseldorf“/„Duesseldorf“ → „Düsseldorf“ (Neuss, Ratingen bleiben)."""
+    return "Düsseldorf" if re.fullmatch(r"D(?:ü|ue|u)sseldorf", stadt, re.IGNORECASE) else stadt
+
+
+def _ort_adresse_trennen(text: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    """
+    Trennt die Ortsangabe einer Kachel in (ort, adresse). Ohne erkennbare Adresse bleibt der Text als Ort
+    stehen und die Adresse ist None. Eine Adresse entsteht nur mit Hausnummer oder PLZ – oder bei
+    „Düsseldorf, <Straße/Platz>“ (Straßenname reicht für die Stadtteil-Zuordnung).
+    """
+    if not text:
+        return text, None
+    text = re.sub(r"\s+", " ", text).strip()
+    teile = [t.strip() for t in text.split(",") if t.strip()]
+    if len(teile) < 2:
+        return text, None
+
+    # Land am Ende weglassen
+    while len(teile) > 1 and _LAND_TEIL.match(teile[-1]):
+        teile.pop()
+
+    # „Düsseldorf, Schadowstraße“ / „Düsseldorf, Hauptbahnhof“: Stadt vorne
+    if len(teile) == 2 and _STADT_TEIL.match(teile[0]):
+        rest = teile[1]
+        if _STRASSE_TEIL.match(rest) or _STRASSE_NR_TEIL.match(rest):
+            return rest, f"{rest}, {_stadt_vereinheitlichen(teile[0])}"
+        # „Düsseldorf, Hauptbahnhof“, „Düsseldorf, Volksgarten“: bleibt (pipeline/ortsnamen.py kennt die Schreibweise)
+        return text, None
+
+    # Stadt hinten: „PLZ Stadt“ oder nur „Stadt“
+    stadt = None
+    m = _PLZ_STADT_TEIL.match(teile[-1])
+    if m:
+        stadt = f"{m.group(1)} {_stadt_vereinheitlichen(m.group(2).strip())}"
+        teile.pop()
+    elif _STADT_TEIL.match(teile[-1]):
+        stadt = _stadt_vereinheitlichen(re.split(r"[-\s]+Stadtbezirk", teile[-1], flags=re.IGNORECASE)[0].strip())
+        teile.pop()
+    if stadt is None or not teile:
+        return text, None
+
+    strasse = teile[-1] if _STRASSE_NR_TEIL.match(teile[-1]) else None
+    if strasse:
+        name = ", ".join(teile[:-1]) or strasse
+        return name, f"{strasse}, {stadt}"
+    name = ", ".join(teile)
+    # „Name, 40213 Düsseldorf“: PLZ ohne Straße ist noch eine brauchbare Adresse
+    return name, (stadt if m else None)
+
+
 def _kategorie_erkennen(kategorie_text: str) -> str:
     if not kategorie_text:
         return "sonstiges"
@@ -168,7 +250,7 @@ def _event_aus_karte(karte, heute: date) -> Optional[dict]:
         uhrzeit = _uhrzeit_parsen(datum_text) if datum_text else None
 
         ort_el = karte.select_one("p.text-bw-medium")
-        ort = ort_el.get_text(strip=True) if ort_el else None
+        ort, adresse = _ort_adresse_trennen(ort_el.get_text(strip=True) if ort_el else None)
         if not ort:
             return None
 
@@ -195,7 +277,7 @@ def _event_aus_karte(karte, heute: date) -> Optional[dict]:
             "datum": datum,
             "uhrzeit": uhrzeit,
             "ort": ort,
-            "adresse": None,
+            "adresse": adresse,
             "kategorie": kategorie,
             "beschreibung": None,
             "preis": preis,
@@ -212,12 +294,16 @@ def _event_aus_karte(karte, heute: date) -> Optional[dict]:
         return None
 
 
-def scrape(ziel_datum: Optional[date] = None) -> list[dict]:
+def scrape(ziel_datum: Optional[date] = None, html: Optional[str] = None) -> list[dict]:
+    """
+    Events der Rausgegangen-Startseite. html: bereits geladene Seite (Probelauf/Tests) – dann kein Abruf.
+    """
     events = []
     heute = date.today()
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    html = _seite_laden()
+    if html is None:
+        html = _seite_laden()
     if html is None:
         return []
 
@@ -242,15 +328,73 @@ def scrape(ziel_datum: Optional[date] = None) -> list[dict]:
     return events
 
 
+def probelauf(html_datei: Optional[str] = None, html_speichern: Optional[str] = None) -> None:
+    """
+    Probelauf ohne Schreiben: Startseite (oder gespeichertes HTML) lesen, Adressen aus eigenen Daten ergänzen
+    (liest die Datenbank), Stadtteile zuordnen und zählen. Pro Lauf höchstens ein Rausgegangen-Abruf.
+    """
+    import re as _re
+    from collections import Counter
+
+    from pipeline.adressen_ergaenzen import adressen_schritt
+    from pipeline.stadtteil_mapper import stadtteil_batch_zuordnen
+
+    html = None
+    if html_datei:
+        with open(html_datei, encoding="utf-8") as f:
+            html = f.read()
+    else:
+        html = _seite_laden()
+        if html and html_speichern:
+            with open(html_speichern, "w", encoding="utf-8") as f:
+                f.write(html)
+    events = scrape(html=html) if html else []
+    aus_kachel = sum(1 for e in events if e.get("adresse"))
+    # Wie im Lauf (main.py): erst Ortszuordnung (1d, setzt ort_id), dann Adressen (1e2), dann Stadtteile (1f)
+    try:
+        from database.client import get_supabase_client
+        from pipeline.ort_zuordnung import index_laden, zuordnen_alle
+        zuordnen_alle(events, index_laden(get_supabase_client()))
+    except Exception as e:
+        print(f"  Ortszuordnung nicht möglich (weiter ohne ort_id): {e}")
+    adressen_schritt(events)
+    stadtteil_batch_zuordnen(events)
+
+    plz = _re.compile(r"\b4[01]\d{3}\b")
+    print(f"\n=== Probelauf Rausgegangen: {len(events)} Events ===")
+    print(f"  mit Adresse:        {sum(1 for e in events if e.get('adresse'))} (davon aus der Kachel: {aus_kachel})")
+    print(f"  mit PLZ:            {sum(1 for e in events if plz.search(e.get('adresse') or ''))}")
+    print(f"  mit Stadtteil:      {sum(1 for e in events if e.get('stadtteil'))}")
+    print(f"  Adresse oder Stadtteil: {sum(1 for e in events if e.get('adresse') or e.get('stadtteil'))}")
+    ohne = Counter(e["ort"] for e in events if not e.get("adresse"))
+    print("  häufigste Orte ohne Adresse:", ", ".join(f"{o} ({n})" for o, n in ohne.most_common(12)))
+    weihnacht = [e for e in events if _re.search(r"weihnacht|advent|veihnacht", e["titel"], _re.IGNORECASE)]
+    print(f"\n  Weihnachts-/Adventsevents: {len(weihnacht)}")
+    for e in sorted(weihnacht, key=lambda e: e["datum"]):
+        print(f"    {e['datum']} | {e['titel'][:55]:55} | {e['ort'][:28]:28} | {e.get('adresse') or '-'} | {e.get('stadtteil') or '-'}")
+
+
 if __name__ == "__main__":
+    import argparse
+    import json
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    import json
+    parser = argparse.ArgumentParser(description="Rausgegangen-Scraper")
+    parser.add_argument("--probe", action="store_true", help="Probelauf mit Adressen und Zählung, schreibt nichts")
+    parser.add_argument("--html", help="gespeicherte Startseite lesen statt abrufen")
+    parser.add_argument("--html-speichern", help="abgerufene Startseite zusätzlich speichern")
+    args = parser.parse_args()
 
-    ergebnisse = scrape()
-    print(f"\n=== {len(ergebnisse)} Events gefunden ===\n")
-    for e in ergebnisse[:5]:
-        print(json.dumps(e, ensure_ascii=False, indent=2))
-        print()
+    if args.probe:
+        from dotenv import load_dotenv
+        load_dotenv()
+        probelauf(args.html, args.html_speichern)
+    else:
+        ergebnisse = scrape()
+        print(f"\n=== {len(ergebnisse)} Events gefunden ===\n")
+        for e in ergebnisse[:5]:
+            print(json.dumps(e, ensure_ascii=False, indent=2))
+            print()

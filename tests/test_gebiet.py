@@ -79,6 +79,41 @@ class GebietNachtragTest(unittest.TestCase):
                 self.assertIsNone(grund_ausserhalb({"ort": ort, "adresse": adresse}))
 
 
+class GebietTitelTest(unittest.TestCase):
+    """Nachtrag 20.11.2026: Stadt im Titel und „… Köln“ am Ende des Orts (Befund Rausgegangen/PRINZ.de/AllEvents)."""
+
+    def t(self, titel, ort, adresse=None):
+        return grund_ausserhalb({"titel": titel, "ort": ort, "adresse": adresse})
+
+    def test_draussen(self):
+        for titel, ort, adresse in [
+            ("Westlife European tour at 25", "Lanxess Arena Köln", None),
+            ("Leipziger Weihnachtsmarkt 2026", "Leipziger Marktplatz", "Leipziger Marktplatz"),
+            ("House of Banksy Hanau | Zeitfensterticket", "Stadthof Hanau", "Stadthof Hanau"),
+            ("Duisburg im Winterzauber – Deine Weihnachtsschatzsuche", "Königstraße", None),
+            ("AI Coding Hackathon November 2026 Köln", "STARTPLATZ", None),
+            ("Lesung in Wuppertal", "Buchhandlung", None),
+        ]:
+            with self.subTest(titel=titel):
+                self.assertIsNotNone(self.t(titel, ort, adresse))
+
+    def test_drin(self):
+        for titel, ort, adresse in [
+            ("Fortuna Düsseldorf – 1. FC Köln", "Merkur Spiel-Arena", None),
+            ("Fortuna Düsseldorf – Eintracht Frankfurt", "Merkur Spiel-Arena", None),
+            ("DEG – Kölner Haie", "PSD Bank Dome", "Theodorstraße 281, 40472 Düsseldorf"),
+            ("Düsseldorf im Winterzauber – Deine Weihnachtsschatzsuche", "Altstadt Düsseldorf", None),
+            ("Gemeinsam Essen", "Café", None),
+            ("Kölsch-Tasting", "Brauerei", None),
+            ("Berliner Abend mit Currywurst", "Bar", "Berliner Allee 52, 40212 Düsseldorf"),
+            ("Konzert: Berlin Calling", "zakk", "Fichtenstraße 40, 40233 Düsseldorf"),
+            ("Tour 2026 – Köln", "Mitsubishi Electric Halle", "Siegburger Straße 15, 40591 Düsseldorf"),
+            ("Rundfahrt", "KD Köln-Düsseldorfer", None),
+        ]:
+            with self.subTest(titel=titel):
+                self.assertIsNone(self.t(titel, ort, adresse))
+
+
 class MeetupAdresseTest(unittest.TestCase):
     def test_platzhalter_plz(self):
         self.assertEqual(adresse_bauen("Franklinstraße 5, 40479", "meetup9", "Düsseldorf"), "Franklinstraße 5, 40479 Düsseldorf")

@@ -206,6 +206,12 @@ async def _schritte_ausfuehren(report: LaufReport):
     alle_events = deduplizieren(alle_events)
     report.kennzahl(events_nach_dedup=len(alle_events))
 
+    # Schritt 1e2: Adressen für Rausgegangen-Events aus eigenen Daten (ort_id aus 1d, Orte-Tabelle, andere
+    # Quellen) – Rausgegangen-Detailseiten sind per robots.txt gesperrt; vor der Stadtteil-Zuordnung, die PLZ nutzt
+    logger.info("--- Schritt 1e2: Adressen ergänzen ---")
+    from pipeline.adressen_ergaenzen import adressen_schritt
+    alle_events = adressen_schritt(alle_events)
+
     # Schritt 1f: Stadtteil-Zuordnung
     logger.info("--- Schritt 1f: Stadtteil-Zuordnung ---")
     from pipeline.stadtteil_mapper import stadtteil_batch_zuordnen
