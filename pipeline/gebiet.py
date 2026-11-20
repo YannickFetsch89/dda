@@ -11,7 +11,10 @@ Ein Event fällt heraus, wenn
    mehrdeutige wie „Essen“ oder „Köln“ nur als eigener Abschnitt, z. B. „…, Köln“ – so bleiben „Kölner Straße“,
    „Gemeinsam Essen“ und das Schiff der „Köln-Düsseldorfer“ drin),
 3. der Ort auf der Liste bekannter auswärtiger Orte steht (z. B. Neanderthal Museum in Mettmann),
-4. der Ort mit Köln/Frankfurt als letztem Wort endet („Lanxess Arena Köln“; Nachtrag 20.11.2026),
+4. Ort oder Adresse mit Köln/Frankfurt als letztem Wort endet („Lanxess Arena Köln“, „Widdersdorfer Str. 198 Köln“),
+   der Ort Köln/Cologne als eigenes Wort nennt („✅ Köln Meetup | Daily Events!“, „Cologne Men's Circle“ – nicht
+   „Köln-Düsseldorfer“, „Kölner Straße“) oder eine Online-Gruppe einer anderen Stadt ist („Kölner Tattoo Community
+   (Online)“) – Nachtrag 20.11.2026,
 5. der Titel eine andere Stadt eindeutig als Veranstaltungsort nennt (Nachtrag 20.11.2026) – nur wenn die Adresse keine
    PLZ im Gebiet hat und der Titel nicht selbst Düsseldorf/Neuss/Ratingen nennt („Fortuna Düsseldorf – 1. FC Köln“
    bleibt): „Duisburg im Winterzauber“, „Hackathon … Köln“, „… in Wuppertal“, „Leipziger Weihnachtsmarkt“,
@@ -72,6 +75,15 @@ AUSWAERTIGE_ORTE = {
 _PLZ = re.compile(r"(?<!\d)(\d{5})(?!\d)")
 # Ort endet mit Köln/Frankfurt als eigenem letzten Wort („Lanxess Arena Köln“); „Köln-Düsseldorfer“ trifft nicht
 _ORT_ENDE = re.compile(r"\s(Köln|Koeln|Cologne|Frankfurt)\s*$", re.I)
+# Köln als eigenes Wort im Ortsnamen (nicht „Köln-Düsseldorfer“, nicht „Kölner“)
+_KOELN_WORT = re.compile(r"(?<![\w-])(Köln|Koeln|Cologne)(?![\w-])", re.I)
+# Online-Gruppe einer anderen Stadt: Stadtname als Adjektiv („Kölner …“, „Essener …“) bei Online-Orten
+_ONLINE = re.compile(r"\bonline\b", re.I)
+_STADT_ADJEKTIV = re.compile(
+    r"\b(" + "|".join(re.escape(s) for s in STAEDTE_EINDEUTIG + ["Köln", "Koeln", "Essen", "Frankfurt"]) + r")er\b"
+    r"|\b(Kölsche[rn]?)\b",
+    re.I,
+)
 # Titel: Stadtnamen, die als Veranstaltungsort gelten (ohne Essen/Frankfurt, siehe oben)
 _TITEL_STAEDTE = "|".join(re.escape(s) for s in STAEDTE_EINDEUTIG + ["Köln", "Koeln", "Cologne"])
 _TITEL_REGELN = [
@@ -110,9 +122,17 @@ def grund_ausserhalb(event: dict) -> Optional[str]:
         m = _ABSCHNITT.search(text)
         if m:
             return f"Stadt {m.group(1)}"
-    m = _ORT_ENDE.search(ort)
+    for text in (ort, adresse):
+        m = _ORT_ENDE.search(text)
+        if m:
+            return f"Stadt {m.group(1)}"
+    m = _KOELN_WORT.search(ort)
     if m:
         return f"Stadt {m.group(1)}"
+    if _ONLINE.search(ort):
+        m = _STADT_ADJEKTIV.search(ort)
+        if m:
+            return f"Online-Gruppe {m.group(0)}"
     titel = (event.get("titel") or "").strip()
     plz_im_gebiet = any(any(a <= int(p) <= b for a, b in PLZ_BEREICHE) for p in _PLZ.findall(adresse))
     if titel and not plz_im_gebiet and not _GEBIET_IM_TITEL.search(titel):

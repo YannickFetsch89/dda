@@ -114,6 +114,33 @@ class GebietTitelTest(unittest.TestCase):
                 self.assertIsNone(self.t(titel, ort, adresse))
 
 
+class GebietOnlineKoelnTest(unittest.TestCase):
+    """Nachtrag 20.11.2026: Köln-Meetups (auch online), Kölner Adresse ohne Komma."""
+
+    def test_draussen(self):
+        for ort, adresse in [
+            ("✅ Köln Meetup | Daily Events! (Online)", None),
+            ("Cologne Men's Circle (Online)", None),
+            ("Kölner Tattoo Community (Online)", None),
+            ("Glühgarten ehrenfeld", "Widdersdorfer Str. 198 Köln"),
+            ("Essener Spieleabend (Online)", None),
+        ]:
+            with self.subTest(ort=ort):
+                self.assertIsNotNone(grund_ausserhalb({"titel": "x", "ort": ort, "adresse": adresse}))
+
+    def test_drin(self):
+        for ort, adresse in [
+            ("KD Köln-Düsseldorfer", None),
+            ("KöX", "Kölner Str. 164, 40227 Düsseldorf"),
+            ("Simple Miles", "Kölner Tor 24, 40625 Düsseldorf"),
+            ("Meetup Düsseldorf (Online)", None),
+            ("Düsseldorfer Englisch-Stammtisch (Online)", None),
+            ("Kölner Straße Bar", "Kölner Str. 200, 40227 Düsseldorf"),
+        ]:
+            with self.subTest(ort=ort):
+                self.assertIsNone(grund_ausserhalb({"titel": "x", "ort": ort, "adresse": adresse}))
+
+
 class MeetupAdresseTest(unittest.TestCase):
     def test_platzhalter_plz(self):
         self.assertEqual(adresse_bauen("Franklinstraße 5, 40479", "meetup9", "Düsseldorf"), "Franklinstraße 5, 40479 Düsseldorf")
