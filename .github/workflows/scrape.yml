@@ -73,6 +73,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Optional: Website des Veranstaltungsorts für Event-Beschreibungen (ohne Secret nur Websuche)
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          # Ortsseiten (Plan Locations 3.11): 1 = neue/geänderte /orte-URLs nach dem Lauf an IndexNow melden
+          ORTSSEITEN_MELDEN: ${{ vars.ORTSSEITEN_MELDEN }}
           TZ: Europe/Berlin
         run: |
           mkdir -p logs
