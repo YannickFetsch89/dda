@@ -2402,7 +2402,7 @@ a.mz-ort:hover { border-color: var(--ddd-gold); }
 .mz-entstehung { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--ddd-border); font-size: 13px; color: var(--ddd-text-muted); max-width: 68ch; }
 .mz-entstehung a { color: var(--ddd-link); }
 .mz-autorkopf { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin: 12px 0 16px; }
-.mz-autorkopf__bild { margin: 0; text-align: center; }
+.mz-autorkopf__bild { margin: 0; text-align: center; width: 140px; flex: none; }
 .mz-autorkopf__bild img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; background: var(--ddd-subtle); }
 .mz-autorkopf__bild figcaption { font-size: 12px; color: var(--ddd-text-muted); margin-top: 4px; }
 .mz-autorkopf__text { flex: 1 1 280px; min-width: 0; }

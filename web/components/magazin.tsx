@@ -20,6 +20,8 @@ function InlineText({ teile }: { teile: Inline[] }) {
       {teile.map((t, i) => {
         if (t.art === "text") return <span key={i}>{t.text}</span>;
         if (t.art === "fett") return <strong key={i}><InlineText teile={t.kinder} /></strong>;
+        // mailto nur auf Adressen von diesdas.events (linkZiel) – normales <a>, kein next/link
+        if (t.href.startsWith("mailto:")) return <a key={i} href={t.href}><InlineText teile={t.kinder} /></a>;
         return t.extern ? (
           <a key={i} href={t.href} rel="noopener" target="_blank">
             <InlineText teile={t.kinder} />
@@ -150,7 +152,10 @@ export function BeitragKarte({ b, gross = false }: { b: MagazinBeitrag; gross?: 
   );
 }
 
-/** Autorenzeile (Plan 2.3 Punkt 6): „von [Pseudonym] (redaktionelles Pseudonym) · Redaktion dies.das.düsseldorf“. */
+/**
+ * Autorenzeile im Beitrag: „von [Autorenname]“ mit Link aufs Autorenprofil. Seit 20.11.2026 (Auftraggeber) ohne den
+ * Zusatz „(redaktionelles Pseudonym)“ und ohne Link auf die Redaktionsseite – beides steht im Autorenprofil.
+ */
 export function AutorZeile({ autor }: { autor: MagazinAutor | null }) {
   return (
     <span className="mz-autor">
@@ -161,10 +166,11 @@ export function AutorZeile({ autor }: { autor: MagazinAutor | null }) {
       <span>
         {autor ? (
           <>
-            von <Link href={autorPfad(autor)}>{autor.name}</Link> (redaktionelles Pseudonym) ·{" "}
+            von <Link href={autorPfad(autor)}>{autor.name}</Link>
           </>
-        ) : null}
-        <Link href="/magazin/redaktion">Redaktion dies.das.düsseldorf</Link>
+        ) : (
+          "von der Redaktion dies.das.düsseldorf"
+        )}
       </span>
     </span>
   );

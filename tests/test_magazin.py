@@ -291,6 +291,12 @@ class PruefungenTest(unittest.TestCase):
             self.assertTrue(any(p.startswith("(i)") for p in self.punkte(self.entwurf(), hero=hero)), hero)
         self.assertEqual(self.punkte(self.entwurf(), hero="/ort-bilder/weihnachtsmaerkte/maerchen-markt.webp"), [])
 
+    def test_c_mailto_nur_eigene_domain(self):
+        # wie linkZiel in web/lib/magazin-markdown.ts (20.11.2026)
+        self.assertTrue(m.link_ok("mailto:hallo@diesdas.events", set()))
+        for ziel in ("mailto:x@example.com", "mailto:hallo@diesdas.events?subject=x", "mailto:a@diesdas.events.example.com"):
+            self.assertFalse(m.link_ok(ziel, set()), ziel)
+
     def test_d_laengen(self):
         kurz = self.entwurf(teaser="zu kurz", kurzfassung=["eins"],
                             abschnitte=[{"ueberschrift": "Montag", "text_md": "Wenig Text.", "event_ids": [E1]}])

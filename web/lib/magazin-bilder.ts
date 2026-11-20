@@ -48,11 +48,21 @@ export function heroErlaubt(pfad: string | null | undefined): pfad is string {
 export interface Hero {
   pfad: string;
   alt: string;
+  /** Bildnachweis – leer bei eigenen Fotos (Regel des Auftraggebers vom 20.11.2026: Nachweis nur bei fremden Bildern) */
   nachweis: string;
   /** „Symbolbild (KI-generiert)“ anzeigen */
   ki: boolean;
   /** Rubrik-Ersatzbild statt des gespeicherten Bilds */
   ersatz: boolean;
+}
+
+/**
+ * Eigenes Foto? hero_nachweis ist beim Veröffentlichen Pflicht (Trigger); für eigene Fotos steht dort
+ * „dies.das.düsseldorf“ (auch „Foto: dies.das.düsseldorf“). Angezeigt wird ein Nachweis nur bei fremden Bildern.
+ */
+export function eigenesFoto(nachweis: string | null | undefined): boolean {
+  const n = (nachweis ?? "").trim().toLowerCase();
+  return n === "" || /^(foto:\s*)?dies\.das\.düsseldorf$/.test(n);
 }
 
 /**
@@ -65,7 +75,7 @@ export function heroFuer(b: Pick<MagazinBeitrag, "rubrik" | "titel" | "hero_bild
     return {
       pfad: b.hero_bild,
       alt: b.hero_alt?.trim() || b.titel,
-      nachweis: b.hero_nachweis?.trim() || (fallback ? "Symbolbild" : "dies.das.düsseldorf"),
+      nachweis: fallback ? b.hero_nachweis?.trim() || "Symbolbild" : eigenesFoto(b.hero_nachweis) ? "" : b.hero_nachweis!.trim(),
       ki: fallback || b.hero_ki,
       ersatz: false,
     };

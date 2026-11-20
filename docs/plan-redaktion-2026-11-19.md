@@ -12,7 +12,8 @@ Stand 19.11.2026 · **siebte Fassung nach sechs Cursor-Prüfungen vom 19.11. · 
 - **Entscheidungen:** E1, E2, E4, E4a, E5, E7, E12 und die Modellwahl am 19.11. vom Auftraggeber beantwortet (2.2). Autorenkonzept mit redaktionellen Pseudonymen vom Auftraggeber vorgegeben (2.3).
 - **Umsetzung:** noch nichts umgesetzt; startet erst auf ausdrückliche Anweisung des Auftraggebers.
 - **Umsetzungsstand (19.11.2026):** Schritte 1–4 live (772b756, cc95cf2, b0b2567, 9b4887b), Schalter aus. E15 und E16 entschieden (2.2): fünf Pseudonyme, sieben Rubriken. Cursor-Gesamtprüfung der Schritte 1–4: bereit für Schritt 5; Befunde eingearbeitet.
-- **Vor dem Livegang offen:** Profilbilder (erzeugt der Auftraggeber aus den Prompts, danach SQL für `bild`), Schritt 5 (Impressum § 18 Abs. 2 MStV, Text „Unsere Redaktion“, `llms.txt`), Anwalt A1–A3.
+- **Stand 20.11.2026:** Profilbilder live (c71da52), Secret + `MAGAZIN_AKTIV=1`, Dry-Run ok. **Schritt 5:** Impressum auf § 18 Abs. 2 MStV, Pseudonym-Hinweis mit Link „Unsere Redaktion“ hinter `MAGAZIN_VERLINKT`; „Unsere Redaktion“ im Wortlaut des Auftraggebers; `llms.txt` (Abschnitt „## Magazin“) kommt mit dem Livegang in Schritt 7, weil die Datei nicht schaltbar ist. **Schritt 6 geändert (Auftraggeber, 20.11.):** zwei Startbeiträge statt drei – „Neu bei dies.das.düsseldorf: unser Magazin für die Stadt“ (Stadtleben, auf den 19.11. datiert) und „Die schönsten Weihnachtsmärkte in Düsseldorf“ (Saison, ersetzt Gliederung 1). Geschrieben in der Claude-Code-Session (`docs/magazin-startbeitraege/`), geprüft mit `pipeline.magazin.pruefen` (beide grün), SQL `database/magazin_startbeitraege_2026-11-20.sql` + `…_freigabe_…sql`. Wochenvorschau und Monats-Tipps laufen über die Pipeline.
+- **Vor dem Livegang offen:** Schritt 7 (Schalter, Einbaustellen 5.9, `llms.txt`, Prüfungen 7.3), Anwalt A3.
 
 **Ziel:** dies.das.düsseldorf bekommt ein Online-Magazin für Düsseldorf. Die Beiträge sollen Google in **Discover**, in der
 **normalen Suche** und in **KI-Suchen** ausspielen können (Google AI Overviews/AI Mode, ChatGPT, Perplexity …).
@@ -260,7 +261,7 @@ Ist bis So 29.11. nicht alles geprüft, startet das Magazin später. Ein halbfer
    - Dazu `accountablePerson` = `Person` „Yannick Fetsch“ (die echte Person, `url` `/impressum`).
    - Autorenseiten bekommen `ProfilePage` **nicht**, sondern `WebPage` + `BreadcrumbList`. `ProfilePage` setzt eine Person oder Organisation als Hauptentität voraus.
    - **Warum:** Ein Pseudonym als `Person` würde eine eigenständige reale Person behaupten. `Organization` als Autor ist von Google ausdrücklich erlaubt.
-   - **Sichtbare Autorenzeile im Beitrag:** „von [Pseudonym] (redaktionelles Pseudonym) · Redaktion dies.das.düsseldorf“. Das Wort „Pseudonym“ steht damit schon am Beitrag, nicht erst auf der Autorenseite.
+   - **Sichtbare Autorenzeile im Beitrag:** „von [Autorenname]“ mit Link aufs Autorenprofil. *Geändert 20.11.2026 (Auftraggeber):* ohne Zusatz „(redaktionelles Pseudonym)“ (rechtlich nicht nötig) und ohne Link auf die Redaktionsseite; beides steht im Autorenprofil („Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV: Yannick Fetsch. Weitere Informationen siehe Redaktion und Impressum.“).
    - Prüfung 2 hat bestätigt, dass dieses Modell schema.org-gültig ist und keine reale Person vortäuscht.
 7. `og:article:author` und `<meta name="author">` = „Redaktion dies.das.düsseldorf“, gleiche Logik.
 8. **Erwartung (R12):** Pseudonyme bringen weniger E-E-A-T-Signal als eine echte, nachprüfbare Person. Die offene Kennzeichnung verhindert Irreführung, ersetzt aber keine echte Autorschaft. Mehr Vertrauen schaffen: ein Beitrag oder eine Notiz des Verantwortlichen unter echtem Namen auf „Unsere Redaktion“ und echte Fotos.
@@ -304,7 +305,7 @@ SQL in `database/magazin_2026-11-xx.sql`, führt der Auftraggeber aus. Danach di
 | `faq` | jsonb null | `[{frage, antwort}]` |
 | `hero_bild` | text, Constraint `magazin_hero_pfad` (Muster und Fremdfoto-Verbot im SQL-Block unten, nicht in dieser Tabelle) | Hero (Befund 3) |
 | `hero_alt` | text | Alt-Text |
-| `hero_nachweis` | text | z. B. „Foto: dies.das.düsseldorf“ |
+| `hero_nachweis` | text | Pflicht beim Veröffentlichen. Eigene Fotos: „dies.das.düsseldorf“ – wird **nicht angezeigt** (Regel 20.11.2026: Nachweis nur bei fremden Bildern) |
 | `hero_ki` | boolean not null default false | Hinweis „Symbolbild (KI-generiert)“; Trigger setzt true für `/fallback/…` |
 | `status` | text CHECK in (`entwurf`, `in_pruefung`, `veroeffentlicht`, `zurueckgezogen`) | T5 |
 | `veroeffentlicht_am` | timestamptz null | sichtbar ab; `datePublished` |
@@ -594,11 +595,11 @@ Modell **Claude Opus 5.5** (`claude-opus-5-5`, $4 / $20 je 1 Mio. Tokens), entsc
 1. Brotkrumen: Start › Magazin › Rubrik (sichtbar und `BreadcrumbList`).
 2. Rubrik-Label, **H1**, Teaser.
 3. Zeile mit Autorenhinweis:
-   - kleines Profilbild + „von [Pseudonym] (redaktionelles Pseudonym) · Redaktion dies.das.düsseldorf“ (Link auf die Autorenseite);
+   - kleines Profilbild + „von [Autorenname]“ (Link auf die Autorenseite; seit 20.11.2026 ohne Pseudonym-Zusatz und ohne Redaktions-Link);
    - „Veröffentlicht am …“, „Aktualisiert am …“ (nur mit `aktualisiert_am`), Lesezeit.
 4. **Hero:**
    - 16:9, ≥ 1200×675, `<img>` mit `width`/`height`, `fetchpriority="high"`, Alt-Text.
-   - Darunter Bildnachweis. Bei `hero_ki` die Zeile „Symbolbild (KI-generiert)“.
+   - Darunter Bildnachweis nur bei fremden Bildern; eigene Fotos ohne Zeile. Bei `hero_ki` immer „Symbolbild (KI-generiert)“.
 5. Box **„Auf einen Blick“** (`kurzfassung`).
 6. **Inhaltsverzeichnis** ab drei `##`-Überschriften.
 7. **Fließtext** mit Einbettungen:
@@ -804,7 +805,7 @@ Weitere Seiten:
 
 **JSON-LD:**
 - `author` ist `Organization`; kein `Person`-Objekt außer `accountablePerson`; **der Pseudonym-Name kommt im JSON-LD nicht vor**; `dateModified` mit Zeitzone; drei Bildgrößen; kein `Event`-Markup.
-- Autorenzeile im HTML enthält „(redaktionelles Pseudonym)“. Hinweis am Ende wählt „Eventdaten“/„Ortsdaten“/„Event- und Ortsdaten“ richtig (E4a).
+- Autorenzeile ohne „Pseudonym“ und ohne Link auf `/magazin/redaktion` (seit 20.11.2026); `mailto:` nur auf Adressen von diesdas.events. Hinweis am Ende wählt „Eventdaten“/„Ortsdaten“/„Event- und Ortsdaten“ richtig (E4a).
 - `ERLAUBTE_FALLBACK_HEROS` stimmt mit den Dateien in `web/public/fallback/` mit ≥ 675 px Höhe überein (84).
 
 **Feed (Befund 13):**
@@ -915,7 +916,7 @@ Weitere Seiten:
 4. Sitemap enthält die Beiträge. IndexNow-Meldung im Log mit HTTP 200/202.
 5. Unbekannter Slug, unbekannte Rubrik, Vorschau ohne Schlüssel → 404 aus dem Proxy; alter Slug und `/feed.xml` → 308.
 6. Entwürfe und interne Spalten mit Anon-Schlüssel nicht lesbar. Die Pipeline kann nicht veröffentlichen.
-7. Jeder Beitrag hat Bildnachweis, Alt-Text, bei KI-Bild „Symbolbild (KI-generiert)“, Quellen, Hinweis nach E4/E4a mit passender Datenart, Autorenzeile mit „(redaktionelles Pseudonym)“. Jede Autorenseite hat die Unterzeile „[Schwerpunkt] · Redaktionelles Pseudonym“, den Prüf-/Verantwortungshinweis mit Impressum-Link und „KI-generierte Illustration“ (Überarbeitung 20.11.2026).
+7. Jeder Beitrag hat Bildnachweis (nur bei fremden Bildern), Alt-Text, bei KI-Bild „Symbolbild (KI-generiert)“, Quellen, Hinweis nach E4/E4a mit passender Datenart, Autorenzeile „von [Autorenname]“ ohne Redaktions-Link. Jede Autorenseite hat die Unterzeile „[Schwerpunkt] · Redaktionelles Pseudonym“, den Prüf-/Verantwortungshinweis mit Impressum-Link und „KI-generierte Illustration“ (Überarbeitung 20.11.2026).
 8. Impressum nennt § 18 Abs. 2 MStV, den Verantwortlichen und den Hinweis auf Pseudonyme.
 9. Alle Tests grün. Cursor-Prüfung des Codes ohne kritischen Befund.
 10. Kostenprotokoll des ersten Laufs liegt vor, Abweichung höchstens ±50 % zu 4.4, sonst Schätzung anpassen.
