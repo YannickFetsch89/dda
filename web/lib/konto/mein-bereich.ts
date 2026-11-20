@@ -12,7 +12,7 @@ import { MELDUNG } from "./konfig";
 import { merklisteAufteilen } from "./merk-logik";
 import { eventsFuerIds } from "./merkliste-events";
 import { uuidGueltig } from "./pruefungen";
-import { kontoAntwort, type KontoKontext } from "./route";
+import { kontoAntwort, type KontoKontext, type KontoProfil } from "./route";
 
 // ── Sensibel-Menge (E13): nur Dienst-Client, Cache im Prozess, Fehler nie cachen ─────────────────────
 const SENSIBEL_MS = 10 * 60 * 1000;
@@ -82,8 +82,19 @@ export async function eingabeBauen(
   merkliste: KontoMerkliste | null,
   sensibel: ReadonlySet<string>,
 ): Promise<Eingabe> {
+  return eingabeAusProfil(ctx.profil!, merkliste, sensibel);
+}
+
+/**
+ * Wie eingabeBauen, aber ohne Sitzung: für den Versandjob der Geburtstagsmail (interne Route, Plan Geburtstagsmail G2),
+ * der Profil und Merkliste mit dem Dienst-Client je Nutzer liest.
+ */
+export async function eingabeAusProfil(
+  p: Pick<KontoProfil, "personalisierung" | "praeferenzen">,
+  merkliste: KontoMerkliste | null,
+  sensibel: ReadonlySet<string>,
+): Promise<Eingabe> {
   const pool = await eventPoolLaden();
-  const p = ctx.profil!;
   const zeit = new Map((merkliste?.zeilen ?? []).map((z) => [z.event_id, z.gemerkt_am]));
   const gemerkt: Gemerkt[] = p.personalisierung
     ? (merkliste?.events ?? []).map((event) => ({ event, gemerktAm: zeit.get(event.id) ?? "" }))
