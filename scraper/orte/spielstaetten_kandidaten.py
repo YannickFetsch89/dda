@@ -222,6 +222,8 @@ DUBLETTEN: list[tuple[re.Pattern, str]] = [
     (re.compile(r"^wp8( künstlerverein)?$", re.I), "WP8 Künstlerverein"),
     # Fund 20.11.2026 (Ortstexte): dasselbe Haus, Merowingerstraße 88
     (re.compile(r"^ballett(proben)?haus\b", re.I), "Balletthaus"),
+    # Fund 20.11.2026 (Ortstexte): „Bunker“ ist der Bilker Bunker, Aachener Straße 39 (Schleuse Zwei bleibt eigen)
+    (re.compile(r"^(bilker )?bunker$", re.I), "Bilker Bunker"),
 ]
 # Getrennt bis zur Prüfung (Plan 3.7, 7.2 Punkte 9 und 13): Name normalisiert → Prüfhinweis
 PRUEFHINWEISE: dict[str, str] = {
