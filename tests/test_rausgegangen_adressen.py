@@ -236,6 +236,7 @@ class ErgaenzenTest(unittest.TestCase):
             rg(titel="B", ort="Flow"),
         ]
         with mock.patch.object(ae, "daten_laden", return_value=([], [])), \
+                mock.patch.object(ae, "osm_suchen", side_effect=AssertionError("kein OSM-Abruf nötig")), \
                 mock.patch("database.client.get_supabase_client"):
             ae.adressen_schritt(events)
         self.assertEqual(events[1]["adresse"], "Mertensgasse 2, 40213 Düsseldorf")
@@ -284,3 +285,39 @@ class FftTest(unittest.TestCase):
         self.assertIsNone(adresse_fuer("FFT JUTA, Düsseldorf"))
         self.assertEqual(stadtteil_ermitteln("FFT Düsseldorf – Bühne II", ADRESSE_KAP1, "FFT Düsseldorf"), "Stadtmitte")
         self.assertEqual(stadtteil_ermitteln("FFT Düsseldorf", None, "Rausgegangen"), "Stadtmitte")
+
+
+def osm(name, road, plz, nr=None, city="Düsseldorf"):
+    return {"name": name, "display_name": f"{name}, {road}",
+            "address": {"road": road, "postcode": plz, "house_number": nr, "city": city}}
+
+
+class OsmTest(unittest.TestCase):
+    """OpenStreetMap statt Google Places (Auftraggeber 20.11.2026): nur eindeutige, passende Treffer im Gebiet."""
+
+    def test_treffer_mit_passendem_namen(self):
+        self.assertEqual(ae.osm_adresse_aus_treffer("Mamacita Taquería Bar", [osm("Mamacita", "Bolkerstraße", "40213", "20")]),
+                         "Bolkerstraße 20, 40213 Düsseldorf")
+
+    def test_kein_treffer_bei_fremdem_namen_plz_oder_mehrdeutig(self):
+        self.assertIsNone(ae.osm_adresse_aus_treffer("Mamacita", [osm("Pizzeria Roma", "Bolkerstraße", "40213", "1")]))
+        self.assertIsNone(ae.osm_adresse_aus_treffer("Neanderthal Museum",
+                                                     [osm("Neanderthal Museum", "Talstraße", "40822", "300", "Mettmann")]))
+        self.assertIsNone(ae.osm_adresse_aus_treffer("Atelier Rot", [osm("Atelier Rot", "Ackerstraße", "40233", "1"),
+                                                                     osm("Atelier Rot", "Lindenstraße", "40235", "9")]))
+        self.assertIsNone(ae.osm_adresse_aus_treffer("Düsseldorf", [osm("Düsseldorf", "Marktplatz", "40213", "1")]))
+
+    def test_ergaenzen_je_ort_ein_abruf_und_grenze(self):
+        events = [rg(titel="A", ort="Mamacita Taquería Bar"), rg(titel="B", ort="Mamacita Taquería Bar"),
+                  rg(titel="C", ort="Altstadt"), rg(titel="D", ort="Bar Zwei"), rg(titel="E", ort="Bar Drei")]
+        aufrufe = []
+
+        def suchen(ort):
+            aufrufe.append(ort)
+            return [osm("Mamacita", "Bolkerstraße", "40213", "20")] if "Mamacita" in ort else []
+
+        with mock.patch.object(ae, "osm_suchen", side_effect=suchen), mock.patch("time.sleep"):
+            z = ae.osm_ergaenzen(events, max_orte=2)
+        self.assertEqual(aufrufe, ["Mamacita Taquería Bar", "Bar Zwei"])   # Altstadt nie, Bar Drei im nächsten Lauf
+        self.assertEqual([e.get("adresse") for e in events[:2]], ["Bolkerstraße 20, 40213 Düsseldorf"] * 2)
+        self.assertEqual((z["gesucht"], z["gefunden"], z["events"], z["uebrig"]), (2, 1, 2, 1))

@@ -30,6 +30,8 @@ vi.mock("@/lib/spielplaetze-daten", () => ({
   ],
 }));
 vi.mock("@/components/ort-karten", () => ({ ortPfad: () => "/guides/x" }));
+// Magazin (Schalter an seit Schritt 7): eigene Einträge prüft tests/magazin.test.ts (magazinEintraege); hier leer
+vi.mock("@/lib/magazin-daten", () => ({ beitraegeLaden: async () => [], autorenLaden: async () => [], magazinHeute: async () => "2026-11-05" }));
 // Ortsseiten (Plan Locations 3.11): ein indexierbares Haus mit Event, eines ohne
 // (Die Regel selbst prüft tests/ortsseiten.test.ts; hier nur die Einbindung in die Sitemap.)
 vi.mock("@/lib/spielstaetten-daten", () => {

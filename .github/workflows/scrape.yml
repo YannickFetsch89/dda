@@ -38,8 +38,10 @@ jobs:
     # 22.04: Playwright 1.44 unterstützt neuere Ubuntu-Versionen noch nicht offiziell
     runs-on: ubuntu-22.04
     # 45 Minuten reichten seit dem 12.11.2026 nicht mehr: Die Läufe brachen in Schritt 3b ab, Club-Scores (3c) und
-    # IndexNow (3d) liefen nie. Scraper + Datenbank + KI-Schritte brauchen rund 45–50 Minuten (19.11.2026).
-    timeout-minutes: 75
+    # IndexNow (3d) liefen nie. Seit 20.11.2026 holt Schritt 3b alle offenen Beschreibungen (main.py, bis 90 Minuten
+    # für Veranstalter-Events plus etwa 25 s je Rausgegangen-Event). Der erste Lauf baut den Rückstand ab und kann
+    # über zwei Stunden dauern; danach rund 60–90 Minuten. GitHub erlaubt bis zu 360 Minuten je Job.
+    timeout-minutes: 240
     steps:
       - name: Code auschecken
         uses: actions/checkout@v4

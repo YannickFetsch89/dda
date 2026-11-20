@@ -15,6 +15,7 @@ const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 import { kurzDatum, tagMonat, zeitraumAuflösen } from "@/lib/datum";
 import { anzeigeTitel, zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
+import { WochenvorschauKasten } from "@/components/magazin-verweise";
 
 export async function generateMetadata(props: PageProps<"/wochenende">): Promise<Metadata> {
   return seitenMetadaten({
@@ -122,6 +123,8 @@ function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: strin
             Alle Events am Wochenende
           </Link>
         </div>
+        {/* „Die ganze Woche“ (Plan Redaktion 5.9): Wochenvorschau, die dieses Wochenende abdeckt */}
+        <WochenvorschauKasten von={tage[0].tag} bis={tage[2].tag} />
       </div>
     </>
   );

@@ -9,6 +9,7 @@ import { KalenderToggle } from "@/components/datum-waehler";
 import { Datumsleiste } from "@/components/datumsleiste";
 import { WochenendTag } from "@/components/wochenend-tag";
 import { WmStartBox } from "@/components/wm-startbox";
+import { MagazinStartBox } from "@/components/magazin-verweise";
 import { StartPersoenlich, VorschauLinks, VorschauLinksMit } from "@/components/start-persoenlich";
 import { kontenAktiv } from "@/lib/konto/konfig";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
@@ -373,6 +374,11 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             Ganzes Wochenende ansehen
           </Link>
         </section>
+
+        {/* Magazin (Plan Redaktion 5.9, E9): die drei neuesten Beiträge; ohne Beitrag oder bei Schalter aus nichts */}
+        <Suspense fallback={null}>
+          <MagazinStartBox />
+        </Suspense>
 
         <section id="newsletter" className="newsletter" style={{ marginTop: 24 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>

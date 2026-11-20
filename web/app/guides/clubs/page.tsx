@@ -14,6 +14,7 @@ import { BildImg } from "@/components/client";
 import { ClubKarte, clubPfad } from "@/components/club-karte";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
+import { MagazinLesetipp } from "@/components/magazin-verweise";
 import { Icon } from "@/components/karten";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { ScrollReihe } from "@/components/scroll-reihe";
@@ -294,6 +295,7 @@ export default async function Clubs(props: { searchParams: Promise<SP> }) {
       <Hero orte={alle} />
       <div className="container">
         <GuideEinleitung seite="clubs" werte={{ anzahl: zahl(alle.length) }} />
+        <MagazinLesetipp guide="clubs" />
       </div>
       <Suspense fallback={<Ansicht alle={alle} f={CLUB_STANDARD} naechste={naechste} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} naechste={naechste} />

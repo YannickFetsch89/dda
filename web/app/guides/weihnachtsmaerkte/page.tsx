@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import { BildImg } from "@/components/client";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
+import { MagazinLesetipp } from "@/components/magazin-verweise";
 import { Icon } from "@/components/karten";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { WM_BILD, WmKarte } from "@/components/wm-karte";
@@ -342,6 +343,7 @@ export default async function Weihnachtsmaerkte(props: { searchParams: Promise<S
       <Hero alle={alle} jahr={hubJahr(alle, await saisonTag())} />
       <div className="container">
         <GuideEinleitung seite="weihnachtsmaerkte" werte={{ anzahl: zahl(maerkte.length) }} />
+        <MagazinLesetipp guide="weihnachtsmaerkte" />
       </div>
       <Suspense fallback={<Ansicht alle={alle} tag={null} heute={null} f={WM_STANDARD} kurz={kurz} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} kurz={kurz} />

@@ -40,6 +40,7 @@ export function einbettungPruefen(typ: string, id: string): { typ: EinbettungsAr
 /**
  * Linkziel prüfen (Plan T2, Cursor-Prüfung 2 Befund 6): erst einmal dekodieren, dann die Regeln anwenden.
  * Intern nur „/…“ ohne zweiten Schrägstrich am Anfang, ohne Backslash und ohne „..“-Segment; extern nur https://.
+ * Dazu mailto: auf Adressen von diesdas.events (z. B. hallo@diesdas.events), ohne Zusätze wie ?subject= (20.11.2026).
  * Gibt das Ziel unverändert zurück (oder null = als Text ausgeben).
  */
 export function linkZiel(roh: string): { href: string; extern: boolean } | null {
@@ -52,6 +53,7 @@ export function linkZiel(roh: string): { href: string; extern: boolean } | null 
   }
   // Leerraum nur kodiert (%20), Steuerzeichen nie – auch nicht kodiert
   if (/\s/.test(ziel) || /[\u0000-\u001f\u007f]/.test(dekodiert)) return null;
+  if (/^mailto:[a-z0-9._%+-]+@diesdas\.events$/i.test(ziel)) return { href: ziel, extern: false };
   if (/^\/(?![/\\])/.test(dekodiert)) {
     if (dekodiert.includes("\\")) return null;
     const pfad = dekodiert.split(/[?#]/)[0];

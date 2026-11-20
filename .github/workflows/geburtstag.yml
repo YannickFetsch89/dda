@@ -1,0 +1,74 @@
+# Geburtstagsmail (Plan docs/plan-geburtstagsmail-2026-11-20.md, Kontenplan Schritt 9a)
+# Täglich 08:00 UTC (= 9 Uhr im Winter, 10 Uhr im Sommer). Echter Versand nur mit der Variable GEBURTSTAG_AKTIV=1.
+# Manuell: „probe“ (zählt nur), „test“ (Beispielmail an eine Adresse, schreibt nichts), „senden“.
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, SMTP_HOST, SMTP_PORT, SMTP_BENUTZER, SMTP_PASSWORT,
+#          GEBURTSTAG_TOKEN_SCHLUESSEL, GEBURTSTAG_JOB_SCHLUESSEL (dieselben zwei Schlüssel wie in deploy.yml).
+name: Geburtstagsmail
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      aufgabe:
+        description: "probe (nur zählen), test (Beispielmail) oder senden"
+        type: choice
+        options: [probe, test, senden]
+        default: probe
+      an:
+        description: "nur bei test: Empfängeradresse der Beispielmail"
+        type: string
+        required: false
+      nutzer:
+        description: "nur bei test, optional: Nutzer-ID für persönliche Tipps und echtes Abmelde-Token"
+        type: string
+        required: false
+
+concurrency:
+  group: geburtstag
+  cancel-in-progress: false
+
+jobs:
+  geburtstag:
+    # Zeitplan nur mit Schalter; manuell immer (der Job selbst verweigert „senden“ ohne Schalter)
+    if: github.event_name == 'workflow_dispatch' || vars.GEBURTSTAG_AKTIV == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python-Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Geburtstagsmail
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_BENUTZER: ${{ secrets.SMTP_BENUTZER }}
+          SMTP_PASSWORT: ${{ secrets.SMTP_PASSWORT }}
+          GEBURTSTAG_TOKEN_SCHLUESSEL: ${{ secrets.GEBURTSTAG_TOKEN_SCHLUESSEL }}
+          GEBURTSTAG_JOB_SCHLUESSEL: ${{ secrets.GEBURTSTAG_JOB_SCHLUESSEL }}
+          GEBURTSTAG_AKTIV: ${{ vars.GEBURTSTAG_AKTIV }}
+          AUFGABE: ${{ github.event_name == 'workflow_dispatch' && inputs.aufgabe || 'senden' }}
+          TEST_AN: ${{ inputs.an }}
+          TEST_NUTZER: ${{ inputs.nutzer }}
+          TZ: Europe/Berlin
+        run: |
+          if [ "$AUFGABE" = "test" ]; then
+            if [ -n "$TEST_NUTZER" ]; then
+              python -m pipeline.geburtstag_mails test --an "$TEST_AN" --nutzer "$TEST_NUTZER"
+            else
+              python -m pipeline.geburtstag_mails test --an "$TEST_AN"
+            fi
+          else
+            python -m pipeline.geburtstag_mails "$AUFGABE"
+          fi

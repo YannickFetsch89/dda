@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { MAGAZIN_VERLINKT, SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import {
   KONTO_EVENT, angemeldetOhneAlter, kontomodus, merkAbonnieren, merkenUmschalten, merkSnapshot, SCHLUESSEL, type KontoZustand,
 } from "@/lib/konto/merk-store";
@@ -379,6 +379,8 @@ const NAV = [
   { href: "/entdecken", label: "Entdecken" },
   { href: "/heute", label: "Heute" },
   { href: "/wochenende", label: "Wochenende" },
+  // Magazin (Plan Redaktion 5.9, E10): eigener Punkt hinter „Wochenende“
+  ...(MAGAZIN_VERLINKT ? [{ href: "/magazin", label: "Magazin" }] : []),
   { href: "/stadtteile", label: "Karte" },
 ];
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MAGAZIN_VERLINKT } from "@/lib/schalter";
 
 export const metadata: Metadata = {
   title: "Impressum",
@@ -59,7 +60,22 @@ export default function ImpressumSeite() {
         Rocktician® ist eine eingetragene Marke (Nr. 30 2018 206 154) beim Deutschen Patent- und Markenamt.
       </p>
 
-      <h2>Verantwortlich für den Inhalt gemäß § 55 Abs. 2 RStV</h2>
+      <h2>Datenquellen</h2>
+      <p>
+        Karten-, Adress- und Ortsdaten stammen teilweise aus OpenStreetMap,{" "}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+          © OpenStreetMap-Mitwirkende
+        </a>
+        , verfügbar unter der{" "}
+        <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener noreferrer">
+          Open Database License (ODbL)
+        </a>
+        .
+      </p>
+
+      {/* § 18 Abs. 2 MStV löst den früheren § 55 Abs. 2 RStV ab (Plan Redaktion, Schritt 5). Hinweis auf die Pseudonyme
+          und Link „Unsere Redaktion“ erst mit dem Magazin-Livegang (Einbaustelle 5.9, Schalter MAGAZIN_VERLINKT). */}
+      <h2>Verantwortlich für journalistisch-redaktionelle Inhalte gemäß § 5 DDG und § 18 Abs. 2 MStV</h2>
       <p>
         Yannick Fetsch
         <br />
@@ -67,6 +83,16 @@ export default function ImpressumSeite() {
         <br />
         40231 Düsseldorf
       </p>
+      {MAGAZIN_VERLINKT && (
+        <p>
+          Beiträge im Magazin erscheinen unter redaktionellen Pseudonymen, die für unterschiedliche Themenbereiche stehen.
+          Alle Beiträge werden vor der Veröffentlichung redaktionell geprüft und freigegeben. Mehr dazu unter{" "}
+          <Link href="/magazin/redaktion" className="link">
+            Unsere Redaktion
+          </Link>
+          .
+        </p>
+      )}
 
       <h2>Haftung für Inhalte</h2>
       <p>

@@ -9,6 +9,7 @@ Workshops, Pitches, Meetups, Konferenzen. Viele Events sind öffentlich zugängl
 Erstellt: 2026-04-02
 """
 import logging
+import re
 from datetime import date, timedelta
 from typing import Optional
 from urllib.parse import urljoin
@@ -117,6 +118,11 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
         beschr_el = el.find("p")
         if beschr_el:
             beschreibung = beschr_el.get_text(strip=True)[:300] or None
+
+        # STARTPLATZ hat auch einen Kölner Standort; dessen Events stehen mit im Kalender, bekamen aber die Düsseldorfer
+        # Adresse (Befund 20.11.2026: „AI Coding Hackathon … Köln“). Köln im Titel als eigenes Wort → nicht übernehmen.
+        if re.search(r"(?<![\w-])(Köln|Koeln|Cologne)(?![\w-])", titel, re.IGNORECASE):
+            return None
 
         # Bild
         bild_url = None

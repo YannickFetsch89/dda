@@ -250,8 +250,9 @@ def daten_im_text(text: str, jahr: int) -> list[date]:
 
 
 def link_ok(ziel: str, event_pfade: set[str]) -> bool:
-    """Externe Links nur https://, interne nur auf bekannte Seiten, Tagesseiten und ausgewählte Events (Prüfung c)."""
-    if ziel.startswith("https://"):
+    """Externe Links nur https://, interne nur auf bekannte Seiten, Tagesseiten und ausgewählte Events (Prüfung c).
+    mailto: nur auf Adressen von diesdas.events, ohne Zusätze (wie linkZiel in web/lib/magazin-markdown.ts)."""
+    if ziel.startswith("https://") or re.fullmatch(r"mailto:[A-Za-z0-9._%+-]+@diesdas\.events", ziel):
         return True
     if not ziel.startswith("/") or ziel.startswith("//") or ".." in ziel:
         return False

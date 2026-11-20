@@ -12,6 +12,7 @@ import { eventPoolLaden } from "@/lib/daten";
 import { hubOrte } from "@/lib/guide-stadtteile";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { MARKE_SATZ, seitenMetadaten } from "@/lib/seo";
+import { MAGAZIN_VERLINKT } from "@/lib/schalter";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -198,6 +199,13 @@ export default async function Ueber() {
             Wir stecken unsere Köpfe in Event-Pläne, durchforsten Stadtteil-Blogs, sprechen mit Veranstaltern, Gastronomen und Machern aus der
             Nachbarschaft – damit du es auf einen Blick hast.
           </p>
+          {MAGAZIN_VERLINKT && (
+            <p>
+              Im <Link href="/magazin">Magazin</Link> ordnen wir das Programm ein: Wochenvorschau, Saisonthemen und Tipps
+              für jeden Geschmack. Wie dort gearbeitet wird, steht unter{" "}
+              <Link href="/magazin/redaktion">Unsere Redaktion</Link>.
+            </p>
+          )}
         </div>
       </section>
 

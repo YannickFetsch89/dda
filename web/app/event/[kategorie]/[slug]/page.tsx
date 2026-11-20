@@ -1,5 +1,6 @@
 // Event-Detail via SEO-Slug: /event/{kategorie}/{slug}
 import type { Metadata } from "next";
+import { ErwaehntImMagazin } from "@/components/magazin-verweise";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
@@ -328,6 +329,8 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                 ))}
               </section>
             )}
+            {/* „Erwähnt im Magazin“ (Plan Redaktion 5.9): höchstens zwei Beiträge, die dieses Event einbetten */}
+            <ErwaehntImMagazin eventId={e.id} />
           </aside>
         </div>
 
