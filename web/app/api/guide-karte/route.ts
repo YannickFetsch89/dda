@@ -17,7 +17,7 @@ import { lokalesBild, orteLaden } from "@/lib/orte";
 import {
   artInfo, entfernung, filterLesen as orteFilterLesen, orteFiltern, ortSeitePfad, profil, stadtVon,
 } from "@/lib/spielstaetten";
-import { spielstaettenLaden } from "@/lib/spielstaetten-daten";
+import { fremdeHausIds, guideHaeuserLaden, spielstaettenLaden, uebersichtEintraege } from "@/lib/spielstaetten-daten";
 import {
   filterLesen as spielplatzFilterLesen, filtern as spielplaetzeFiltern, ortStadtteilSlug, sortieren as spielplaetzeSortieren,
 } from "@/lib/spielplaetze";
@@ -84,7 +84,10 @@ export async function GET(request: Request) {
       // Ortsseiten (Plan Locations 3.8): alle Häuser mit Koordinaten, gefiltert wie /orte; nahe=<slug> → dieser Ort
       // und die 12 nächsten. Nur lokale Bilder, nie ein Google-Foto (Plan 3.13).
       const { orte: alle } = await spielstaettenLaden();
-      const haeuser = alle.filter((o) => !o.parentId && o.latitude != null && o.longitude != null);
+      // Dieselben Einträge wie die Liste: auch Guide-Häuser von Sälen (zakk) mit Link auf ihre Guide-Seite
+      const { orte: guide } = await guideHaeuserLaden(fremdeHausIds(alle));
+      const eintraege = uebersichtEintraege(alle, guide);
+      const haeuser = eintraege.haeuser.filter((o) => o.latitude != null && o.longitude != null);
       let auswahl = orteFiltern(haeuser, orteFilterLesen(sp));
       const mitte = sp.nahe ? alle.find((o) => o.slug === sp.nahe) : undefined;
       if (sp.nahe) {
@@ -107,7 +110,7 @@ export async function GET(request: Request) {
         const info = artInfo(profil(o).art);
         return {
           id: o.id, name: o.name, typLabel: info.wert, icon: info.icon, stadtteil: o.stadtteil ?? stadtVon(o),
-          preis: null, rating: null, anzahl: null, bild: lokalesBild(o.bild_url), href: ortSeitePfad(o.slug),
+          preis: null, rating: null, anzahl: null, bild: lokalesBild(o.bild_url), href: eintraege.pfad.get(o.id) ?? ortSeitePfad(o.slug),
           lat: o.latitude!, lng: o.longitude!,
         };
       }));

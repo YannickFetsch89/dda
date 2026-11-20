@@ -39,5 +39,13 @@ export async function OrtProgramm({ ort, titel = "Nächste Events hier" }: { ort
     ...saele.map((s) => gruppe(s.id, kurz(s.name), ortSeitePfad(s.slug), programm.events.filter((e) => e.ort_id === s.id))),
     ...(haus.length ? [gruppe("haus", "Haus allgemein", null, haus)] : []),
   ];
-  return <section className="gd-abschnitt">{kopf}<SaalFilter gruppen={gruppen} /></section>;
+  return (
+    <section className="gd-abschnitt">
+      <SaalFilter titel={titel} gruppen={gruppen} />
+      {/* Echte Links auf die Saalseiten, auch ohne JavaScript */}
+      <noscript>
+        <p className="os-saal-link">Säle: {saele.map((s, i) => <span key={s.id}>{i ? " · " : ""}<a href={ortSeitePfad(s.slug)}>{kurz(s.name)}</a></span>)}</p>
+      </noscript>
+    </section>
+  );
 }

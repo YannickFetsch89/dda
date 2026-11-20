@@ -22,7 +22,7 @@ import {
   ORTE_BASIS, artInfo, artVon, entfernung, indexierbar, ortSeitePfad, profil, saalEvents, stadtVon,
 } from "@/lib/spielstaetten";
 import {
-  kinderVon, ortZeileLaden, programmLaden, spielstaetteLaden, spielstaettenLaden, type Spielstaette,
+  kinderVon, ortZeileAbfragen, programmLaden, spielstaetteLaden, spielstaettenLaden, type Spielstaette,
 } from "@/lib/spielstaetten-daten";
 import { spielstaetteJsonLd } from "@/lib/spielstaetten-json-ld";
 import type { DddEvent, DddOrt } from "@/lib/typen";
@@ -43,7 +43,7 @@ interface Stand {
   kinder: Spielstaette[];
   alle: Spielstaette[];
   ids: string[];
-  /** Spielstätten-Liste nicht ladbar: Kinder und Säle fehlen → Programm „gerade nicht verfügbar“, noindex */
+  /** Spielstätten-Liste oder Haus eines Saals nicht ladbar: Kinder, Säle bzw. Haus fehlen → Programm „gerade nicht verfügbar“, noindex */
   listeFehler: boolean;
 }
 
@@ -52,12 +52,14 @@ async function laden(props: Props): Promise<{ stand: Stand | null; fehler: boole
   if (!slug) return { stand: null, fehler: false };
   const [{ ort, fehler }, liste] = await Promise.all([spielstaetteLaden(slug), spielstaettenLaden()]);
   if (!ort) return { stand: null, fehler };
-  const haus = ort.parentId ? await ortZeileLaden(ort.parentId) : null;
+  // Haus eines Saals: ein Abfragefehler zählt wie ein Listenfehler (Hinweis statt falscher Liste, noindex)
+  const hausAbfrage = ort.parentId ? await ortZeileAbfragen(ort.parentId) : { ort: null, fehler: false };
+  const haus = hausAbfrage.ort;
   const kinder = kinderVon(ort.id, liste.orte);
   // Eine Abfrage je Haus (Plan 3.9): Säle laden das Programm ihres Hauses und filtern daraus
   const hausId = haus?.id ?? ort.id;
   const ids = [hausId, ...kinderVon(hausId, liste.orte).map((k) => k.id)].sort();
-  return { stand: { ort, haus, kinder, alle: liste.orte, ids, listeFehler: liste.fehler }, fehler: false };
+  return { stand: { ort, haus, kinder, alle: liste.orte, ids, listeFehler: liste.fehler || hausAbfrage.fehler }, fehler: false };
 }
 
 function eigeneEvents(stand: Stand, events: DddEvent[], saal: string | null): DddEvent[] {

@@ -14,12 +14,17 @@ export interface SaalGruppe {
   inhalt: ReactNode;
 }
 
-export function SaalFilter({ gruppen }: { gruppen: SaalGruppe[] }) {
+export function SaalFilter({ titel, gruppen }: { titel: string; gruppen: SaalGruppe[] }) {
   const [wahl, setWahl] = useState(gruppen[0]?.id ?? "");
   const aktiv = gruppen.find((g) => g.id === wahl) ?? gruppen[0];
   if (!aktiv) return null;
   return (
     <>
+      {/* Zahl der gewählten Gruppe, nicht die aller Termine */}
+      <div className="gd-abschnitt__kopf">
+        <h2 className="d">{titel}</h2>
+        <span className="muted">{aktiv.anzahl} Termine</span>
+      </div>
       <div className="os-saele" role="group" aria-label="Nach Saal filtern">
         {gruppen.map((g) => (
           <button key={g.id} type="button" className={`gd-chip${g.id === aktiv.id ? " gd-chip--an" : ""}`}
