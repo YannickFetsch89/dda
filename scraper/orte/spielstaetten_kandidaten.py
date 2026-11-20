@@ -237,7 +237,7 @@ ENTSCHIEDEN: dict[str, tuple[str, str]] = {
     "bilker bunker": ("", "eigener Ort trotz gleicher Adresse wie Schleuse Zwei (Entscheidung 19.11.2026)"),
     "schleuse zwei": ("", "eigener Ort trotz gleicher Adresse wie Bilker Bunker (Entscheidung 19.11.2026)"),
     # Entscheidung 20.11.2026 (Abschnitt 9): eigene Ortsseite; nie Teil des Kö-Clubs (EVENT_ORTE_AUSSCHLUSS bleibt)
-    "theater an der koe": ("", "eigene Ortsseite (Entscheidung 20.11.2026)"),
+    "theater an der koe": ("neue Ortsseite", "eigene Ortsseite (Entscheidung 20.11.2026)"),
 }
 # Kein Haus, keine Seite (Plan 3.7)
 KEIN_HAUS = re.compile(r"gustaf-gründgens-platz", re.I)

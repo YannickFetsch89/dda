@@ -128,7 +128,7 @@ class TestHaeuser(unittest.TestCase):
         for kette in ("Starbucks", "Starbucks Reserve", "Starbucks Schadowstr"):
             self.assertEqual(_zeile(zeilen, kette)["vorschlag"], "keine Seite (Kette)")
         self.assertEqual(_zeile(zeilen, "CADO Kaffeebar")["vorschlag"], "keine Seite (Guide unsichtbar)")
-        self.assertEqual(_zeile(zeilen, "Theater an der Kö")["vorschlag"], "offen: Abschnitt 9")
+        self.assertEqual(_zeile(zeilen, "Theater an der Kö")["vorschlag"], "neue Ortsseite")  # Entscheidung 20.11.2026
 
     def test_dhaus_central_eigenes_haus(self):
         # Entscheidung 19.11.2026: Central (Worringer Straße 140) ist eigenes Haus mit drei Sälen
@@ -144,7 +144,7 @@ class TestHaeuser(unittest.TestCase):
         zeilen = _bauen({"Stone im Ratinger Hof": _n(6), "Bilker Bunker": _n(12), "Theater an der Kö": _n(5)})
         self.assertEqual(_zeile(zeilen, "Stone im Ratinger Hof")["vorschlag"], "keine Seite (geschlossen)")
         self.assertEqual(_zeile(zeilen, "Bilker Bunker")["vorschlag"], "neue Ortsseite")
-        self.assertEqual(_zeile(zeilen, "Theater an der Kö")["vorschlag"], "offen: Abschnitt 9")
+        self.assertEqual(_zeile(zeilen, "Theater an der Kö")["vorschlag"], "neue Ortsseite")  # Entscheidung 20.11.2026
 
     def test_slug_kollision_ist_hinweis(self):
         # Gleicher Slug heißt nicht gleicher Ort (Plan 3.3 Punkt 7): nur Hinweis, der Auftraggeber entscheidet
