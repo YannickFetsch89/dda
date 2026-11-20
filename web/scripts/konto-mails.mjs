@@ -236,7 +236,7 @@ const VORLAGEN = [
       inhalt: [
         absatz("Hallo!"),
         absatz("Das Passwort für dein Konto bei dies.das.düsseldorf ({{ .Email }}) wurde gerade geändert."),
-        kasten("Warst du das nicht? Dann setz dein Passwort sofort über „Passwort vergessen“ neu und schreib uns an moin@rocktician.com."),
+        kasten("Warst du das nicht? Dann setz dein Passwort sofort über „Passwort vergessen“ neu und schreib uns an hallo@diesdas.events."),
         button("{{ .SiteURL }}/konto/passwort-vergessen", "Passwort neu setzen"),
       ].join("\n"),
     }),
@@ -251,7 +251,7 @@ const VORLAGEN = [
       inhalt: [
         absatz("Hallo!"),
         absatz("Die Mailadresse deines Kontos bei dies.das.düsseldorf wurde von <b>{{ .OldEmail }}</b> auf <b>{{ .Email }}</b> geändert."),
-        kasten("Warst du das nicht? Dann schreib uns bitte sofort an moin@rocktician.com."),
+        kasten("Warst du das nicht? Dann schreib uns bitte sofort an hallo@diesdas.events."),
       ].join("\n"),
     }),
   },

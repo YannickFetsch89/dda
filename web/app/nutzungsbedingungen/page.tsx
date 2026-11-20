@@ -32,7 +32,7 @@ export default function NutzungsbedingungenSeite() {
       <p>
         (2) Anbieter ist die Rocktician e.&thinsp;K., Inhaber Yannick Fetsch, Erkrather Str. 401, 40231 Düsseldorf,
         eingetragen im Handelsregister des Amtsgerichts Mannheim unter HRA 707668, E-Mail:{" "}
-        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> (im Folgenden „wir“).
+        <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a> (im Folgenden „wir“).
       </p>
       <p>(3) Die Website lässt sich auch ohne Konto nutzen. Für die Nutzung ohne Konto gelten diese Bedingungen nicht.</p>
       <p>(4) Abweichende Bedingungen der Nutzerinnen und Nutzer gelten nicht.</p>
@@ -117,7 +117,7 @@ export default function NutzungsbedingungenSeite() {
       <p>(1) Der Nutzungsvertrag läuft auf unbestimmte Zeit.</p>
       <p>
         (2) Sie können ihn jederzeit ohne Frist beenden, indem Sie Ihr Konto im Bereich „Konto“ löschen oder uns per
-        E-Mail an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> darum bitten. Mit der Löschung entfernen wir
+        E-Mail an <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a> darum bitten. Mit der Löschung entfernen wir
         Ihr Konto und die zugehörigen Daten nach Maßgabe der Datenschutzerklärung.
       </p>
 
@@ -196,7 +196,7 @@ export default function NutzungsbedingungenSeite() {
       </p>
       <p>
         Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (Rocktician e.&thinsp;K., Inhaber Yannick Fetsch, Erkrather Str.
-        401, 40231 Düsseldorf, E-Mail: <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>) mittels einer
+        401, 40231 Düsseldorf, E-Mail: <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a>) mittels einer
         eindeutigen Erklärung (z.&thinsp;B. eine E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen,
         informieren. Sie können dafür das beigefügte Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben
         ist. Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung des Widerrufsrechts
@@ -212,7 +212,7 @@ export default function NutzungsbedingungenSeite() {
       <h3>Muster-Widerrufsformular</h3>
       <p>(Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses Formular aus und senden Sie es zurück.)</p>
       <p className="rechtliches__kasten">
-        – An Rocktician e.&thinsp;K., Erkrather Str. 401, 40231 Düsseldorf, E-Mail: moin@rocktician.com:
+        – An Rocktician e.&thinsp;K., Erkrather Str. 401, 40231 Düsseldorf, E-Mail: hallo@diesdas.events:
         <br />– Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Bereitstellung der
         folgenden digitalen Dienstleistung: Nutzerkonto auf diesdas.events
         <br />– Abgeschlossen am (*):
