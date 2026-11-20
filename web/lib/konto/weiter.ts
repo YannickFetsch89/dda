@@ -1,6 +1,8 @@
 // Ziel nach der Anmeldung prüfen (Plan 5.1 Schritt 14). Eigene Datei ohne Node-Abhängigkeiten: auch im Browser nutzbar.
 
-const STANDARD_ZIEL = "/merkliste";
+// Seit Mein dies.das (20.11.2026, Cursor-Livebefund) die Übersicht statt der Merkliste. Links mit ausdrücklichem
+// `weiter=` (z. B. von der Merkliste) bleiben unverändert.
+const STANDARD_ZIEL = "/konto";
 
 /**
  * Prüft das Ziel nach der Anmeldung (`weiter`, Plan 5.1 Schritt 14). Gegen offene Redirects:

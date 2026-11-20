@@ -191,7 +191,7 @@ function Willkommen({ daten }: { daten: FragebogenDaten }) {
     }
     if (a.status === 200) {
       if (werte.sensibel_ok) await nurGeraetHochladen();
-      router.push(typeof a.daten.ziel === "string" ? a.daten.ziel : "/merkliste");
+      router.push(typeof a.daten.ziel === "string" ? a.daten.ziel : "/konto");
       return;
     }
     setFehler(fehlerText(a));

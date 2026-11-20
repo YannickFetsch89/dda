@@ -123,7 +123,7 @@ describe("weiterPruefen", () => {
     "//evil.example", "https://evil.example", "/\\evil", "javascript:alert(1)", "/a\u0000b", "%2F%2Fevil.example",
     "%252F%252Fevil.example", "/%5Cevil", "/%255Cevil", "/a//b", "/a%2Fb", "%0d%0a", "%E0%A4%A", "", 7, "/" + "x".repeat(200),
   ])("weist %s ab", (wert) => {
-    expect(weiterPruefen(wert)).toBe("/merkliste");
+    expect(weiterPruefen(wert)).toBe("/konto");
   });
 });
 
@@ -279,7 +279,9 @@ describe("zielNachAnmeldung", () => {
     expect(zielNachAnmeldung({ ...p, mindestalter_bestaetigt_am: null }, "/heute")).toBe("/konto/willkommen");
     expect(zielNachAnmeldung({ ...p, onboarding_fertig_am: null }, "/heute")).toBe("/konto/willkommen");
     expect(zielNachAnmeldung(p, "/heute")).toBe("/heute");
-    expect(zielNachAnmeldung(p, "//evil")).toBe("/merkliste");
+    expect(zielNachAnmeldung(p, "//evil")).toBe("/konto");
+    // Ohne weiter: Übersicht (20.11.2026)
+    expect(zielNachAnmeldung(p, undefined)).toBe("/konto");
   });
 });
 
