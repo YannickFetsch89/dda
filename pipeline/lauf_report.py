@@ -195,7 +195,14 @@ class LaufReport:
                 "status": "fehler" if fehlermeldung else "erfolgreich",
                 "fehlermeldung": (fehlermeldung or "")[:2000] or None,
             }
-            self._db.table("scraper_laeufe").update(update).eq("id", self.lauf_id).execute()
+            try:
+                self._db.table("scraper_laeufe").update(update).eq("id", self.lauf_id).execute()
+            except Exception as e:
+                # Eine Kennzahl ohne Spalte (z. B. vergessene Migration) darf den Bericht nicht ganz kippen:
+                # Status und Ende ohne Kennzahlen speichern, die Ergebnisse je Quelle trotzdem schreiben.
+                logger.warning("Kennzahlen des Lauf-Reports nicht speicherbar (%s) – speichere nur den Status", e)
+                basis = {k: update[k] for k in ("beendet_am", "status", "fehlermeldung")}
+                self._db.table("scraper_laeufe").update(basis).eq("id", self.lauf_id).execute()
             if self.ergebnisse:
                 zeilen = [{**e, "lauf_id": self.lauf_id} for e in self.ergebnisse]
                 self._db.table("scraper_ergebnisse").insert(zeilen).execute()
