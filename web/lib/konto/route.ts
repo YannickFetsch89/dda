@@ -123,6 +123,11 @@ export const hinweisFuer = (p: KontoProfil | null) => (p?.mindestalter_bestaetig
 
 type Handler = (ctx: KontoKontext, routenKontext: { params: Promise<Record<string, string>> }) => Promise<Response>;
 
+/** Pfad fürs Log: Teile über 40 Zeichen (Tokens) werden zu „…“; UUIDs (36 Zeichen) bleiben. */
+export function pfadFuerLog(pfad: string): string {
+  return pfad.split("/").map((teil) => (teil.length > 40 ? "…" : teil)).join("/");
+}
+
 /** Baut eine Route mit allen gemeinsamen Prüfungen. */
 export function kontoRoute(opt: KontoOptionen, handler: Handler) {
   return async (request: Request, routenKontext: { params: Promise<Record<string, string>> }): Promise<Response> => {
@@ -195,8 +200,9 @@ export function kontoRoute(opt: KontoOptionen, handler: Handler) {
       antwort.headers.set("Cache-Control", "private, no-store");
       return antwort;
     } catch (err) {
-      // Nie den Body loggen (Passwörter), nur die Fehlerart
-      console.error(`Konto-Route ${new URL(request.url).pathname} fehlgeschlagen: ${err instanceof Error ? err.name : "unbekannt"}`);
+      // Nie den Body loggen (Passwörter), nur die Fehlerart. Lange Pfadteile (z. B. das One-Click-Token der
+      // Geburtstagsmail) werden maskiert, damit kein Abmelde-Token im Anwendungslog landet (Cursor-Hinweis 20.11.2026).
+      console.error(`Konto-Route ${pfadFuerLog(new URL(request.url).pathname)} fehlgeschlagen: ${err instanceof Error ? err.name : "unbekannt"}`);
       return kontoAntwort(500, { fehler: "Das hat leider nicht geklappt. Bitte versuch es später noch einmal." });
     }
   };

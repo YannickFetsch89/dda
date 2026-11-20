@@ -2,6 +2,7 @@
 import { GuideStadtteilLinks } from "@/components/guide-stadtteil";
 import { seitenAlternates } from "@/lib/seo";
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
+import { MagazinLesetipp } from "@/components/magazin-verweise";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -292,6 +293,7 @@ export default async function RestaurantsCafes(props: { searchParams: Promise<SP
       <Hero orte={alle} />
       <div className="container">
         <GuideEinleitung seite="restaurants-cafes" werte={{ anzahl: zahl(alle.length) }} />
+        <MagazinLesetipp guide="restaurants-cafes" />
       </div>
       {/* Schmale Leiste „dies.das empfiehlt dir was“ – bleibt beim Scrollen oben, öffnet den Fragebogen */}
       <Fragebogen basis={BASIS} daten={fragebogenDaten(alle)} />

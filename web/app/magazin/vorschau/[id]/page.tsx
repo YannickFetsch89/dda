@@ -67,10 +67,12 @@ async function VorschauInhalt({ params, searchParams }: Props) {
       <figure className="mz-hero">
         {/* eslint-disable-next-line @next/next/no-img-element -- statische Datei aus public/ */}
         <img src={hero.pfad} alt={hero.alt} width={1200} height={675} />
-        <figcaption>
-          {hero.ki ? "Symbolbild (KI-generiert)" : hero.nachweis}
-          {hero.ersatz ? " · Rubrik-Ersatzbild (gespeichertes Bild fehlt oder ist nicht erlaubt)" : ""}
-        </figcaption>
+        {(hero.ki || hero.nachweis || hero.ersatz) && (
+          <figcaption>
+            {hero.ki ? "Symbolbild (KI-generiert)" : hero.nachweis}
+            {hero.ersatz ? " · Rubrik-Ersatzbild (gespeichertes Bild fehlt oder ist nicht erlaubt)" : ""}
+          </figcaption>
+        )}
       </figure>
       {b.kurzfassung?.length ? (
         <aside className="mz-blick">

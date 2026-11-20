@@ -100,10 +100,13 @@ async function BeitragInhalt({ params }: Props) {
       <figure className="mz-hero">
         {/* eslint-disable-next-line @next/next/no-img-element -- statische, bereits optimierte Datei aus public/ */}
         <img src={hero.pfad} alt={hero.alt} width={1200} height={675} fetchPriority="high" decoding="async" />
-        <figcaption>
-          {hero.ki ? "Symbolbild (KI-generiert)" : hero.nachweis}
-          {hero.ki && hero.nachweis !== "Symbolbild" ? ` · ${hero.nachweis}` : ""}
-        </figcaption>
+        {/* Nachweis nur bei fremden Bildern, KI-Symbolbilder immer gekennzeichnet (Auftraggeber, 20.11.2026) */}
+        {(hero.ki || hero.nachweis) && (
+          <figcaption>
+            {hero.ki ? "Symbolbild (KI-generiert)" : hero.nachweis}
+            {hero.ki && hero.nachweis && hero.nachweis !== "Symbolbild" ? ` · ${hero.nachweis}` : ""}
+          </figcaption>
+        )}
       </figure>
 
       {b.kurzfassung?.length ? (
@@ -159,7 +162,7 @@ async function BeitragInhalt({ params }: Props) {
       )}
 
       <p className="mz-entstehung">
-        {entstehungsHinweis(b)} <Link href="/magazin/redaktion">Unsere Redaktion</Link>
+        {entstehungsHinweis(b)}
       </p>
 
       {weiter.length > 0 && (

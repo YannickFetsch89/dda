@@ -14,7 +14,7 @@ const ZEILEN: [string, string, string, string][] = [
   [
     "Name und Geburtsdatum (Pflichtangaben)",
     "Vorname, Nachname, Geburtsdatum",
-    "Art. 6 Abs. 1 lit. b DSGVO (Nutzungsvertrag): Geburtsdatum zur Prüfung des Mindestalters von 16 Jahren, Name für Ticketkäufe über das Konto und für die persönliche Anrede auf der Website und in der App",
+    "Art. 6 Abs. 1 lit. b DSGVO (Nutzungsvertrag): Geburtsdatum zur Prüfung des Mindestalters von 16 Jahren, Name für Ticketkäufe über das Konto und für die persönliche Anrede auf der Website, in der App und in E-Mails",
     "bis zur Löschung des Kontos",
   ],
   ["Merkliste im Konto", "IDs der gemerkten Events, Zeitpunkt des Merkens", "Art. 6 Abs. 1 lit. b DSGVO", "wie das Konto"],

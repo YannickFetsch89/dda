@@ -9,7 +9,7 @@ import { filtern, istKostenlos, kategorieZaehlen, stadtteileZaehlen } from "@/li
 import { ZEITRAUM_OPTIONEN, plusTage } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { stadtteilPfad } from "@/lib/landing";
-import { SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { MAGAZIN_VERLINKT, SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import { kontenAktiv } from "@/lib/konto/konfig";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
@@ -66,6 +66,7 @@ export function Kopf() {
               <Link href="/entdecken">Entdecken</Link>
               <Link href="/heute">Heute</Link>
               <Link href="/wochenende">Wochenende</Link>
+              {MAGAZIN_VERLINKT && <Link href="/magazin">Magazin</Link>}
               <Link href="/stadtteile">Stadtteile &amp; Karte</Link>
               <span className="popover__titel">Guides</span>
               <Link href="/guides">Alle Guides</Link>
@@ -176,6 +177,14 @@ export async function Fuss() {
           <Link href="/orte">Veranstaltungsorte</Link>
           <Link href="/guides">Alle Guides</Link>
         </div>
+        {MAGAZIN_VERLINKT && (
+          <div className="fuss__spalte">
+            <b>Magazin</b>
+            <Link href="/magazin">Alle Beiträge</Link>
+            <Link href="/magazin/redaktion">Unsere Redaktion</Link>
+            <Link href="/rss">RSS-Feed</Link>
+          </div>
+        )}
         <div className="fuss__spalte">
           <b>Service</b>
           <Link href="/event-melden">Event melden</Link>

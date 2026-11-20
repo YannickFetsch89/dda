@@ -25,4 +25,5 @@ export const WEIHNACHTSMAERKTE_VERLINKT = true;
  * An (Livegang, Schritt 7): Menü, Footer, Startseite, Sitemap, Feed, Feed-Link im <head>, publishingPrinciples.
  * Von Hand dann: public/llms.txt (Abschnitt „## Magazin“). Die IndexNow-Meldung der Pipeline folgt dem Feed (T6).
  */
-export const MAGAZIN_VERLINKT = false;
+// An seit dem Livegang (Schritt 7, 20.11.2026, Auftraggeber: „Yes, build it like this“).
+export const MAGAZIN_VERLINKT = true;
