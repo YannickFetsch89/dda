@@ -75,7 +75,7 @@ export default function ImpressumSeite() {
 
       {/* § 18 Abs. 2 MStV löst den früheren § 55 Abs. 2 RStV ab (Plan Redaktion, Schritt 5). Hinweis auf die Pseudonyme
           und Link „Unsere Redaktion“ erst mit dem Magazin-Livegang (Einbaustelle 5.9, Schalter MAGAZIN_VERLINKT). */}
-      <h2>Verantwortlich für journalistisch-redaktionelle Inhalte gemäß § 18 Abs. 2 MStV</h2>
+      <h2>Verantwortlich für journalistisch-redaktionelle Inhalte gemäß § 5 DDG und § 18 Abs. 2 MStV</h2>
       <p>
         Yannick Fetsch
         <br />

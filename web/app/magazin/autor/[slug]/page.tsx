@@ -1,6 +1,6 @@
 // Autorenseite eines redaktionellen Pseudonyms (Plan 2.3 Punkt 4, überarbeitet 20.11.2026 nach rechtlicher Prüfung):
 // dezente Unterzeile „Schwerpunkt · Redaktionelles Pseudonym“ statt Hinweiskasten, kleiner Prüf- und
-// Verantwortungshinweis (§ 18 Abs. 2 MStV) mit Links auf Redaktion und Impressum, „KI-generierte Illustration von …“.
+// Verantwortungshinweis (§ 5 DDG und § 18 Abs. 2 MStV, Auftraggeber 20.11.2026) mit Links auf Redaktion und Impressum, „KI-generierte Illustration von …“.
 // Unbekannte oder inaktive Autoren: 404 aus proxy.ts.
 export const instant = false;
 import type { Metadata } from "next";
@@ -64,8 +64,8 @@ async function AutorInhalt({ params }: Props) {
           <p className="mz-autorkopf__fach">{autor.schwerpunkt} · Redaktionelles Pseudonym</p>
           <p className="mz-teaser">{autor.kurzbeschreibung}</p>
           <p className="mz-autorkopf__hinweis">
-            Alle Beiträge werden vor Veröffentlichung redaktionell geprüft. Verantwortlich für den Inhalt nach § 18 Abs. 2
-            MStV: {VERANTWORTLICH}. Weitere Informationen siehe <Link href="/magazin/redaktion">Redaktion</Link> und{" "}
+            Alle Beiträge werden vor Veröffentlichung redaktionell geprüft. Verantwortlich für den Inhalt nach § 5 DDG und
+            § 18 Abs. 2 MStV: {VERANTWORTLICH}. Weitere Informationen siehe <Link href="/magazin/redaktion">Redaktion</Link> und{" "}
             <Link href="/impressum">Impressum</Link>.
           </p>
         </div>

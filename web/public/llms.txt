@@ -33,7 +33,7 @@ Wichtig: Die Eventdaten ändern sich täglich. Bitte für konkrete Termine immer
 
 - [Magazin](https://diesdas.events/magazin): Beiträge der Redaktion zu Düsseldorf – Wochenvorschau, Monats-Tipps, Saisonthemen wie Weihnachtsmärkte, Nachtleben, Genuss, Familie und Stadtleben. Termine, Uhrzeiten und Preise stehen in den eingebetteten Event-Karten und kommen live aus dem Kalender.
 - Rubriken: https://diesdas.events/magazin/rubrik/NAME (wochenvorschau, monats-tipps, saison, nachtleben, genuss, familie, stadtleben)
-- [Unsere Redaktion](https://diesdas.events/magazin/redaktion): wie Beiträge entstehen und geprüft werden, Autorennamen als redaktionelle Pseudonyme, Verantwortung nach § 18 Abs. 2 MStV
+- [Unsere Redaktion](https://diesdas.events/magazin/redaktion): wie Beiträge entstehen und geprüft werden, Autorennamen als redaktionelle Pseudonyme, Verantwortung nach § 5 DDG und § 18 Abs. 2 MStV
 - [RSS-Feed](https://diesdas.events/magazin/feed.xml)
 
 ## Mehr
