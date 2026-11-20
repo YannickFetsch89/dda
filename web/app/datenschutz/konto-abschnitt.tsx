@@ -195,7 +195,7 @@ export function KontoAbschnitt({ nr }: { nr: number }) {
         <b>Ihre Daten herunterladen.</b> Im Konto können Sie Ihre Kontodaten, Interessen, Einwilligungen und Ihre
         Merkliste als Datei herunterladen (Art. 20 DSGVO). Der Download ersetzt nicht Ihr Recht auf Auskunft nach Art. 15
         DSGVO. Eine vollständige Auskunft erhalten Sie per E-Mail an{" "}
-        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>.
+        <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a>.
       </p>
       <p>
         <b>Empfänger und Drittland.</b> Die Kontodaten speichern wir bei Supabase (Abschnitt 9) in der EU (AWS,

@@ -8,7 +8,7 @@ import { kontoAntwort, kontoRoute, ZEIT } from "@/lib/konto/route";
  * aus der Datenschutzerklärung, Abschnitt 13 (web/app/datenschutz/konto-abschnitt.tsx) – bei Änderungen dort mitziehen.
  */
 const AUSKUNFT = {
-  verantwortlicher: "Rocktician e. K., Inhaber Yannick Fetsch, Erkrather Str. 401, 40231 Düsseldorf, moin@rocktician.com",
+  verantwortlicher: "Rocktician e. K., Inhaber Yannick Fetsch, Erkrather Str. 401, 40231 Düsseldorf, hallo@diesdas.events",
   zwecke_und_rechtsgrundlagen: [
     { zweck: "Konto führen, Anmeldung", daten: "Mailadresse, Passwort (nur als Hash bei Supabase), Zeitpunkte, Sitzungen", grundlage: "Art. 6 Abs. 1 lit. b DSGVO" },
     { zweck: "Pflichtangaben", daten: "Vorname, Nachname, Geburtsdatum (Altersprüfung ab 16, Ticketkäufe über das Konto, persönliche Anrede)", grundlage: "Art. 6 Abs. 1 lit. b DSGVO" },
@@ -32,8 +32,8 @@ const AUSKUNFT = {
   ],
   herkunft: "Alle Daten hast du selbst angegeben oder sie sind bei der Nutzung deines Kontos entstanden.",
   automatisierte_entscheidungen: "Keine automatisierte Entscheidung nach Art. 22 DSGVO. Persönliche Vorschläge wählen nur Events aus.",
-  deine_rechte: "Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20), Widerspruch (Art. 21), Widerruf von Einwilligungen (Art. 7 Abs. 3) – vieles direkt im Konto, sonst per Mail an moin@rocktician.com. Beschwerde bei einer Aufsichtsbehörde, z. B. der Landesbeauftragten für Datenschutz und Informationsfreiheit NRW.",
-  nicht_in_dieser_datei: "Anmeldeprotokolle bei Supabase (IP-Adresse, Zeitpunkt; 7 Tage) und Server-Logfiles (30 Tage). Eine Kopie bekommst du auf Anfrage per Mail an moin@rocktician.com.",
+  deine_rechte: "Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20), Widerspruch (Art. 21), Widerruf von Einwilligungen (Art. 7 Abs. 3) – vieles direkt im Konto, sonst per Mail an hallo@diesdas.events. Beschwerde bei einer Aufsichtsbehörde, z. B. der Landesbeauftragten für Datenschutz und Informationsfreiheit NRW.",
+  nicht_in_dieser_datei: "Anmeldeprotokolle bei Supabase (IP-Adresse, Zeitpunkt; 7 Tage) und Server-Logfiles (30 Tage). Eine Kopie bekommst du auf Anfrage per Mail an hallo@diesdas.events.",
 };
 
 export const GET = kontoRoute(
@@ -69,7 +69,7 @@ export const GET = kontoRoute(
       erstellt: new Date().toISOString(),
       hinweis:
         "Auskunft nach Art. 15 DSGVO: oben die Angaben zur Verarbeitung, darunter eine Kopie deiner Daten im Konto. " +
-        "Fragen oder eine Auskunft per Mail: moin@rocktician.com.",
+        "Fragen oder eine Auskunft per Mail: hallo@diesdas.events.",
       auskunft_art_15: AUSKUNFT,
       konto: { email: s.email, vorname: p.vorname, nachname: p.nachname, angelegt: p.erstellt_am, letzte_anmeldung: letzteAnmeldung },
       interessen: p.praeferenzen ?? {},

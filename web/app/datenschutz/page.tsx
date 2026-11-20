@@ -33,7 +33,7 @@ export default function DatenschutzSeite() {
         <br />
         Erkrather Str. 401, 40231 Düsseldorf
         <br />
-        E-Mail: <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>
+        E-Mail: <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a>
         <br />
         Telefon: <a href="tel:+4917657605826">+49 176 576 05 826</a>
       </p>
@@ -295,7 +295,7 @@ export default function DatenschutzSeite() {
         Newsletter. Bevor die erste Ausgabe verschickt wird, bitten wir Sie per E-Mail, Ihre Anmeldung zu
         bestätigen; ohne Bestätigung erhalten Sie keinen Newsletter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a
         DSGVO (Einwilligung). Sie können Ihre Anmeldung jederzeit per E-Mail an{" "}
-        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> widerrufen – dann löschen wir Ihre
+        <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a> widerrufen – dann löschen wir Ihre
         E-Mail-Adresse unverzüglich. Sobald der Versand startet, enthält zusätzlich jede Ausgabe einen
         Abmeldelink.
       </p>
@@ -314,7 +314,7 @@ export default function DatenschutzSeite() {
         (letzten) Event-Tag (die Löschung läuft alle paar Tage), unabhängig davon, ob sie veröffentlicht oder
         abgelehnt wurde. Ein
         veröffentlichtes Event bleibt ohne Ihre Kontaktdaten in unserem Kalender. Eine frühere Löschung können
-        Sie jederzeit per E-Mail an <a href="mailto:moin@rocktician.com">moin@rocktician.com</a> verlangen.
+        Sie jederzeit per E-Mail an <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a> verlangen.
       </p>
       <p>
         Zum Schutz vor Missbrauch (Spam, automatisierte Massen-Einträge) verarbeitet unser Server bei beiden
@@ -347,7 +347,7 @@ export default function DatenschutzSeite() {
       </ul>
       <p>
         Zur Ausübung Ihrer Rechte wenden Sie sich bitte an:{" "}
-        <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>
+        <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a>
       </p>
       {konten && (
         <p>

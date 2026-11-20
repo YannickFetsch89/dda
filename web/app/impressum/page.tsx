@@ -39,7 +39,7 @@ export default function ImpressumSeite() {
       <p>
         Mobil: <a href="tel:+4917657605826">+49 176 576 05 826</a>
         <br />
-        E-Mail: <a href="mailto:moin@rocktician.com">moin@rocktician.com</a>
+        E-Mail: <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a>
       </p>
 
       <h2>Handelsregister</h2>
