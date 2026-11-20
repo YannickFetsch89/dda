@@ -91,29 +91,42 @@ def _tipp_zeile(t: dict) -> tuple[str, str]:
     return zeile_html, zeile_text
 
 
-def mail_bauen(an: str, tipps: list[dict], token: str, vorlage: Optional[str] = None) -> EmailMessage:
-    """Mail mit Text- und HTML-Teil (G9), Abmeldelink und List-Unsubscribe-Kopfzeilen (G4)."""
+TIPPS_SATZ = "Hier haben wir ein paar ausgewählte Tipps, falls du heute noch was unternehmen willst:"
+
+
+def anrede(vorname: Optional[str]) -> str:
+    """„Hallo <Vorname>,“ (Wunsch des Auftraggebers vom 20.11.2026); ohne Vornamen „Hallo,“."""
+    name = " ".join(str(vorname or "").split())[:60]
+    return f"Hallo {name}," if name else "Hallo,"
+
+
+def mail_bauen(an: str, tipps: list[dict], token: str, vorlage: Optional[str] = None,
+               vorname: Optional[str] = None) -> EmailMessage:
+    """Mail mit Text- und HTML-Teil (G9), Abmeldelink und List-Unsubscribe-Kopfzeilen (G4), Anrede mit Vornamen."""
     seite, one_click = abmelde_urls(token)
+    gruss = anrede(vorname)
     tipps = [t for t in tipps if isinstance(t, dict) and t.get("titel")][:3]
     zeilen = [_tipp_zeile(t) for t in tipps]
 
     if zeilen:
         block_html = (
             '<p class="titel" style="margin:8px 0 12px;font-family:-apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, '
-            'sans-serif;font-size:16px;font-weight:700;line-height:1.4;color:#1B2540;">Falls du heute noch etwas vorhast:</p>'
+            f'sans-serif;font-size:16px;font-weight:700;line-height:1.4;color:#1B2540;">{html.escape(TIPPS_SATZ)}</p>'
             + "".join(h for h, _ in zeilen)
             + '<div style="height:12px;line-height:12px;">&nbsp;</div>'
         )
-        block_text = "Falls du heute noch etwas vorhast:\n\n" + "\n\n".join(t for _, t in zeilen) + "\n\n"
+        block_text = f"{TIPPS_SATZ}\n\n" + "\n\n".join(t for _, t in zeilen) + "\n\n"
     else:
         block_html, block_text = "", ""
 
     roh = vorlage if vorlage is not None else VORLAGE.read_text(encoding="utf-8")
-    inhalt_html = roh.replace("{{TIPPS}}", block_html).replace("{{ABMELDEN_URL}}", html.escape(seite, quote=True))
+    inhalt_html = (roh.replace("{{TIPPS}}", block_html)
+                   .replace("{{ABMELDEN_URL}}", html.escape(seite, quote=True))
+                   .replace("{{ANREDE}}", html.escape(gruss)))
     inhalt_text = (
         "Alles Gute zum Geburtstag!\n\n"
-        "Hallo!\n\n"
-        "Heute ist dein Tag, und wir gratulieren dir herzlich. Wir wünschen dir ein schönes neues Lebensjahr, "
+        f"{gruss}\n\n"
+        "heute ist dein Tag, und wir gratulieren dir herzlich. Wir wünschen dir ein schönes neues Lebensjahr, "
         "mit vielen guten Abenden in Düsseldorf.\n\n"
         f"{block_text}"
         f"Alles für heute: {SITE_URL}/heute\n\n"
@@ -220,6 +233,16 @@ def _mailadresse(db, nutzer_id: str) -> Optional[str]:
     return str(user.email)
 
 
+def _vorname(db, nutzer_id: str) -> Optional[str]:
+    """Vorname aus profiles (Pflichtangabe seit E16) oder None – die Mail sagt dann nur „Hallo,“."""
+    try:
+        zeilen = db.table("profiles").select("vorname").eq("id", nutzer_id).limit(1).execute().data or []
+    except Exception:
+        return None
+    wert = zeilen[0].get("vorname") if zeilen and isinstance(zeilen[0], dict) else None
+    return str(wert) if wert else None
+
+
 def empfaenger_ids(daten: Any) -> list[str]:
     """Antwort von geburtstag_empfaenger (SETOF uuid): Liste von Strings oder von {"geburtstag_empfaenger": id}."""
     ids: list[str] = []
@@ -265,7 +288,8 @@ def versenden(db, tag: date, versender, tipps_quelle: Callable[[list[str]], Opti
             if not adresse:
                 raise ValueError("keine bestätigte Mailadresse")
             tipps = antwort.tipps.get(nutzer_id, []) if antwort else []
-            versender.senden(mail_bauen(adresse, tipps, abmelde_token(nutzer_id, token_schluessel)))
+            versender.senden(mail_bauen(adresse, tipps, abmelde_token(nutzer_id, token_schluessel),
+                                        vorname=_vorname(db, nutzer_id)))
             zahlen["gesendet"] += 1
         except Exception as e:
             zahlen["fehlgeschlagen"] += 1
@@ -320,7 +344,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         # Ohne --nutzer ein Token, das zu keinem Konto passt (der Link zeigt dann „ungültig“)
         token = abmelde_token(a.nutzer or "00000000-0000-4000-8000-000000000000", token_schluessel)
         with _versender() as v:
-            v.senden(mail_bauen(a.an, tipps, token))
+            v.senden(mail_bauen(a.an, tipps, token, vorname=_vorname(db, a.nutzer) if a.nutzer else None))
         logger.info(f"Geburtstagsmail Testmail gesendet ({len(tipps)} Tipps), nichts in der Datenbank geändert")
         return 0
 

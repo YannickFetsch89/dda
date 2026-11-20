@@ -7,7 +7,7 @@ from pipeline import geburtstag_mails as g
 ID = "11111111-1111-4111-8111-111111111111"
 # Derselbe Vektor steht in web/tests/geburtstag.test.ts: Python und TypeScript rechnen gleich
 VEKTOR = "11111111-1111-4111-8111-111111111111.BRfJlKb2M3AvQu-zT11zVD367NArUYwl-_3hz0aCAEc"
-VORLAGE = "<html><body>{{TIPPS}}<a href=\"{{ABMELDEN_URL}}\">ab</a></body></html>"
+VORLAGE = "<html><body><p>{{ANREDE}}</p>{{TIPPS}}<a href=\"{{ABMELDEN_URL}}\">ab</a></body></html>"
 
 
 def test_token_gleich_typescript():
@@ -39,8 +39,25 @@ def test_mail_kopfzeilen_und_teile():
 
 def test_ohne_tipps_kein_tippblock():
     m = g.mail_bauen("a@example.org", [], VEKTOR, vorlage=VORLAGE)
-    assert "Falls du heute" not in m.get_body(("html",)).get_content()
-    assert "Falls du heute" not in m.get_body(("plain",)).get_content()
+    assert "ausgewählte Tipps" not in m.get_body(("html",)).get_content()
+    assert "ausgewählte Tipps" not in m.get_body(("plain",)).get_content()
+
+
+def test_anrede_mit_vornamen_und_tippsatz():
+    tipps = [{"titel": "Jazz", "ort": "zakk", "uhrzeit": "20:00", "pfad": "/e"}]
+    m = g.mail_bauen("a@example.org", tipps, VEKTOR, vorlage=VORLAGE, vorname="Erika")
+    h, t = m.get_body(("html",)).get_content(), m.get_body(("plain",)).get_content()
+    assert "<p>Hallo Erika,</p>" in h
+    assert "Hallo Erika,\n\nheute ist dein Tag" in t
+    assert g.TIPPS_SATZ in t and g.TIPPS_SATZ == "Hier haben wir ein paar ausgewählte Tipps, falls du heute noch was unternehmen willst:"
+    assert "ausgewählte Tipps, falls du heute noch was unternehmen willst:" in h
+
+
+def test_anrede_maskiert_und_ohne_namen():
+    m = g.mail_bauen("a@example.org", [], VEKTOR, vorlage=VORLAGE, vorname="<b>Ed</b>")
+    assert "Hallo &lt;b&gt;Ed&lt;/b&gt;," in m.get_body(("html",)).get_content()
+    assert g.anrede(None) == "Hallo,"
+    assert g.anrede("  Anna   Lena ") == "Hallo Anna Lena,"
 
 
 def test_tipps_hoechstens_drei_und_maskiert():
@@ -90,6 +107,26 @@ class FakeDb:
         admin = type("A", (), {"get_user_by_id": lambda _s, nid: _Nutzer(self.adressen[nid]) if nid in self.adressen else None})()
         self.auth = type("Auth", (), {"admin": admin})()
 
+    def table(self, name):
+        """profiles.select("vorname").eq("id", …).limit(1).execute() → Vorname „Erika“ für ID, sonst keiner."""
+        db = self
+
+        class Abfrage:
+            def select(self, *_):
+                return self
+
+            def eq(self, _spalte, wert):
+                self.wert = wert
+                return self
+
+            def limit(self, _n):
+                return self
+
+            def execute(self):
+                return _Antwort([{"vorname": "Erika"}] if name == "profiles" and self.wert == ID else [])
+        db.aufrufe.append(("table", name))
+        return Abfrage()
+
     def rpc(self, name, args):
         self.aufrufe.append((name, args))
         if name == "geburtstag_empfaenger":
@@ -126,6 +163,8 @@ def test_lauf_sendet_und_ueberspringt_beanspruchte():
     assert z == {"gefunden": 2, "gesendet": 1, "uebersprungen": 1, "fehlgeschlagen": 0}
     assert len(v.mails) == 1 and v.mails[0]["To"] == "a@example.org"
     assert "Jazz" in v.mails[0].get_body(("html",)).get_content()
+    # Vorname aus dem Profil in der Anrede
+    assert "Hallo Erika," in v.mails[0].get_body(("plain",)).get_content()
 
 
 def test_sendefehler_gibt_frei():
@@ -155,7 +194,7 @@ def test_tipps_ausfall_mail_ohne_tipps():
     v = FakeVersender()
     z = g.versenden(db, TAG, v, lambda ids: None, "testschluessel")
     assert z["gesendet"] == 1
-    assert "Falls du heute" not in v.mails[0].get_body(("html",)).get_content()
+    assert "ausgewählte Tipps" not in v.mails[0].get_body(("html",)).get_content()
 
 
 def test_keine_empfaenger_keine_tipps_abfrage():
@@ -217,5 +256,5 @@ def test_senden_ohne_schalter_verschickt_nichts(monkeypatch):
 
 def test_vorlage_hat_platzhalter():
     roh = g.VORLAGE.read_text(encoding="utf-8")
-    assert "{{TIPPS}}" in roh and "{{ABMELDEN_URL}}" in roh
+    assert "{{TIPPS}}" in roh and "{{ABMELDEN_URL}}" in roh and "{{ANREDE}}" in roh
     assert "BEISPIEL" not in roh
