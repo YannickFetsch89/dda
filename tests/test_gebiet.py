@@ -66,6 +66,8 @@ class GebietNachtragTest(unittest.TestCase):
         for ort, adresse in [("Stadthalle Mülheim", ""), ("Theater Mülheim", ""), ("Kirche", "Hochdahl"),
                              ("Kirche", "Büderich"), ("Bar", "Osterath"), ("Mayersche Essen", "Mayersche Essen"),
                              ("Lufre Event & Gastronomie", "Lufre Event & Gastronomie, Kamp-Lintfort"),
+                             ("Bürgerhaus Telgte", "Bürgerhaus Telgte"),
+                             ("Grefrather EisSport & EventPark", "Grefrather EisSport & EventPark"),
                              ("Erlebnisbauernhof Gertrudenhof", "")]:
             with self.subTest(ort=ort, adresse=adresse):
                 self.assertIsNotNone(grund_ausserhalb({"ort": ort, "adresse": adresse}))

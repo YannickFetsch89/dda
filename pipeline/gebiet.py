@@ -53,6 +53,8 @@ STAEDTE_EINDEUTIG = [
     "Kamp-Lintfort",
     # Nachtrag 20.11.2026 (Befund Rausgegangen/PRINZ.de): Hanau („House of Banksy Hanau“), Hürth (Gertrudenhof)
     "Hanau", "Hürth",
+    # Nachtrag 20.11.2026 (Kandidatenliste Ortsseiten, PRINZ.de): Bürgerhaus Telgte, Grefrath (Kreis Viersen)
+    "Telgte", "Grefrath",
 ]
 # Mehrdeutig (normales Wort oder Teil von Düsseldorfer Namen): nur als eigener Abschnitt
 STAEDTE_ABSCHNITT = ["Köln", "Koeln", "Cologne", "Essen", "Frankfurt"]
@@ -67,6 +69,8 @@ AUSWAERTIGE_ORTE = {
     "mayersche essen",
     # Nachtrag 20.11.2026 (Geo-Prüfung Ortsseiten): Erlebnisbauernhof in Hürth bei Köln
     "gertrudenhof",
+    # Nachtrag 20.11.2026: „Grefrather EisSport & EventPark“ (Stadt nur als Adjektiv im Namen)
+    "grefrather eissport",
 }
 
 _PLZ = re.compile(r"(?<!\d)(\d{5})(?!\d)")
