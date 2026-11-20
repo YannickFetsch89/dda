@@ -465,8 +465,18 @@ describe("JSON-LD und Kennzeichnung", () => {
     expect(linkZiel("https://example.com/quelle")?.extern).toBe(true);
   });
 
-  it("Autorenzeile nennt das Pseudonym als solches; Hinweis am Ende wählt die Datenart (E4a)", () => {
-    expect(renderToStaticMarkup(createElement(AutorZeile, { autor: AUTOR }))).toContain("(redaktionelles Pseudonym)");
+  it("mailto nur auf Adressen von diesdas.events, ohne Zusätze (20.11.2026)", () => {
+    expect(linkZiel("mailto:hallo@diesdas.events")).toEqual({ href: "mailto:hallo@diesdas.events", extern: false });
+    expect(linkZiel("mailto:x@example.com")).toBeNull();
+    expect(linkZiel("mailto:hallo@diesdas.events?subject=x")).toBeNull();
+    expect(linkZiel("mailto:hallo@diesdas.events.example.com")).toBeNull();
+  });
+
+  it("Autorenzeile ohne Pseudonym-Zusatz und ohne Redaktions-Link; Hinweis am Ende wählt die Datenart (E4a)", () => {
+    const zeile = renderToStaticMarkup(createElement(AutorZeile, { autor: AUTOR }));
+    expect(zeile).toContain(`>${AUTOR.name}</a>`);
+    expect(zeile).not.toContain("Pseudonym");
+    expect(zeile).not.toContain("/magazin/redaktion");
     expect(entstehungsHinweis({ event_ids: ["a"], ort_slugs: [] })).toContain("aus unseren Eventdaten");
     expect(entstehungsHinweis({ event_ids: [], ort_slugs: ["x"] })).toContain("aus unseren Ortsdaten");
     expect(entstehungsHinweis({ event_ids: ["a"], ort_slugs: ["x"] })).toContain("aus unseren Event- und Ortsdaten");
@@ -506,8 +516,12 @@ describe("Bilder", () => {
     expect(heroFuer(beitrag({ hero_bild: "/fallback/theater-1.webp" }))).toMatchObject({ pfad: "/fallback/theater-1.webp", ersatz: false, ki: true });
     expect(heroFuer(beitrag({ hero_bild: "/fallback/sprachcafe-2.webp" }))).toMatchObject({ pfad: RUBRIK_ERSATZ.wochenvorschau, ersatz: true });
     expect(heroFuer(beitrag({ hero_bild: "/ort-bilder/weihnachtsmaerkte/koe-on-ice.webp" })).ersatz).toBe(true);
+    // Eigene Fotos ohne sichtbaren Nachweis, fremde mit (Auftraggeber, 20.11.2026)
     expect(heroFuer(beitrag({ hero_bild: "/ort-bilder/weihnachtsmaerkte/maerchen-markt.webp", hero_ki: false, hero_nachweis: "Foto: dies.das.düsseldorf" })))
-      .toMatchObject({ ersatz: false, ki: false, nachweis: "Foto: dies.das.düsseldorf" });
+      .toMatchObject({ ersatz: false, ki: false, nachweis: "" });
+    expect(heroFuer(beitrag({ hero_bild: "/ort-bilder/weihnachtsmaerkte/maerchen-markt.webp", hero_ki: false, hero_nachweis: "dies.das.düsseldorf" })).nachweis).toBe("");
+    expect(heroFuer(beitrag({ hero_bild: "/magazin-bilder/x/hero.webp", hero_ki: false, hero_nachweis: "Foto: Stadt Düsseldorf" })).nachweis)
+      .toBe("Foto: Stadt Düsseldorf");
     expect(heroErlaubt("/magazin-bilder/x/hero.webp")).toBe(true);
     expect(heroErlaubt("/ort-bilder/events/further-nikolausmarkt.webp")).toBe(false);
   });
