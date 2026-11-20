@@ -1,13 +1,14 @@
 // JSON-LD der Ortsseiten (Plan docs/plan-locations-2026-11-18.md, 3.11): nur mit bestätigter Adresse; Typ je Art,
 // kein LocalBusiness; ItemList nur mit echten kommenden Events; Säle mit containedInPlace (kanonische Haus-URL);
 // addressLocality ist die Stadt aus der PLZ, nie der Stadtteil.
+import { ohneFett } from "./beschreibung";
 import { eventPfad } from "./pfade";
 import { artInfo, stadtVon } from "./spielstaetten";
 import type { DddEvent, DddOrt } from "./typen";
 
 export function spielstaetteJsonLd(
   o: DddOrt, art: string | null, siteUrl: string, pfad: string, haus: { name: string; pfad: string } | null,
-  events: DddEvent[], adresseBestaetigt: boolean,
+  events: DddEvent[], adresseBestaetigt: boolean, beschreibung: string | null = null,
 ): Record<string, unknown> | null {
   if (!adresseBestaetigt || !o.adresse) return null;
   const [strasse] = o.adresse.split(", ");
@@ -17,6 +18,8 @@ export function spielstaetteJsonLd(
     "@type": artInfo(art).schemaTyp,
     name: o.name,
     url: `${siteUrl}${pfad}`,
+    // Nur freigegebener Text (Plan 3.14), ohne „**“-Hervorhebungen
+    ...(beschreibung ? { description: ohneFett(beschreibung) } : {}),
     address: {
       "@type": "PostalAddress",
       streetAddress: strasse,

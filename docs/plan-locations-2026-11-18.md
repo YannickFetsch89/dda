@@ -659,7 +659,8 @@ Es bleibt das **eine** Namensschema aus `pipeline/ortsnamen.py`, ohne zweites da
 - **Ohne Datei** zeigt die Seite die Ersatzkachel: Art-Piktogramm, Farbe, Name.
 
 ### 3.14 Texte
-- Zwei bis vier Sätze in `data/spielstaetten/texte.csv`, **jeder Satz mit einer öffentlichen Quellen-URL**.
+- **Auftraggeber 20.11.2026:** möglichst **5 bis 10 Sätze**, nur Belegbares, sonst kürzer (mindestens 2). Gegliedert wie die Weihnachtsmärkte: Absätze durch Leerzeile, Schlagwörter **fett** (die Ortsseite zeigt sie, Meta-Description und JSON-LD ohne Sternchen). Werkzeug: `scraper/orte/spielstaetten_texte.py` (Prüfung: eine Quelle je Satz, kein „wir“, Hinweis bei Uhrzeit/Preis/Spielzeit). Bilder: `scraper/orte/ortsbilder.py`.
+- Ursprünglich: Zwei bis vier Sätze in `data/spielstaetten/texte.csv`, **jeder Satz mit einer öffentlichen Quellen-URL**.
 - Der Auftraggeber gibt sie vor dem Indexieren frei.
 - Keine vom Haus übernommenen „wir“-Texte, keine erfundenen Öffnungszeiten, keine erfundene Barrierefreiheit.
 

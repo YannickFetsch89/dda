@@ -204,3 +204,18 @@ describe("Cursor-Komplettprüfung 20.11.", () => {
     }
   });
 });
+
+describe("Texte der Ortsseiten (Plan 3.14, Schritt 4)", () => {
+  it("JSON-LD: description nur mit freigegebenem Text und ohne „**“", async () => {
+    const { spielstaetteJsonLd: ld } = await import("@/lib/spielstaetten-json-ld");
+    const o = ort({ id: "tonhalle", adresse: "Ehrenhof 1, 40479 Düsseldorf" });
+    const mit = ld(o, null, "https://diesdas.events", "/orte/tonhalle", null, [], true, "Die **Tonhalle** am **Ehrenhof**.\n\nZweiter Absatz.")!;
+    expect(mit.description).toBe("Die Tonhalle am Ehrenhof.\n\nZweiter Absatz.");
+    expect(ld(o, null, "https://diesdas.events", "/orte/tonhalle", null, [], true)!.description).toBeUndefined();
+  });
+
+  it("Ortsseite zeigt den Text mit Fettschrift", () => {
+    const seite = readFileSync(join(__dirname, "..", "app", "orte", "[slug]", "page.tsx"), "utf8");
+    expect(seite).toMatch(/<BeschreibungText text=\{ort\.beschreibung\} fett \/>/);
+  });
+});

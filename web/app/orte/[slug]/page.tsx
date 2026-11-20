@@ -241,7 +241,8 @@ async function JsonLd({ stand, art }: { stand: Stand; art: string | null }) {
   const daten = [
     spielstaetteJsonLd(stand.ort.parentId && stand.haus ? { ...stand.ort, adresse: stand.ort.adresse ?? stand.haus.adresse, latitude: stand.ort.latitude ?? stand.haus.latitude, longitude: stand.ort.longitude ?? stand.haus.longitude } : stand.ort,
       art, SITE_URL, pfad, stand.haus ? { name: stand.haus.name, pfad: hausPfad(stand.haus) } : null,
-      programm.fehler ? [] : eigeneEvents(stand, programm.events, null), adresseBestaetigt(stand)),
+      programm.fehler ? [] : eigeneEvents(stand, programm.events, null), adresseBestaetigt(stand),
+      profil(stand.ort).textFreigegeben ? stand.ort.beschreibung : null),
     brotkrumenJsonLd(SITE_URL, [
       { name: "Start", pfad: "/" },
       { name: "Orte", pfad: ORTE_BASIS },
@@ -303,7 +304,8 @@ export default async function OrtSeite(props: Props) {
           {p.textFreigegeben && ort.beschreibung && (
             <section className="cl-block">
               <h2 className="d">Über den Ort</h2>
-              <BeschreibungText text={ort.beschreibung} />
+              {/* Redaktioneller Text mit Absätzen und **Schlagwörtern** (wie die Weihnachtsmärkte) */}
+              <BeschreibungText text={ort.beschreibung} fett />
             </section>
           )}
         </div>
