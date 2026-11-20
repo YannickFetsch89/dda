@@ -148,6 +148,9 @@ class TestClubsProfil(unittest.TestCase):
     def test_ausschluss_und_nicht_im_in_event_orte(self):
         alle = {"Kö Club", "Theater an der Kö", "zakk – nicht im zakk"}
         self.assertNotIn("Theater an der Kö", event_orte("Kö Club", alle, "koe-club-duesseldorf-friedrichstadt"))
+        # Fund 20.11.2026: fremde Orte an der Kö gehören nicht zum Kö-Club
+        fremd = {"KÖ Galerie Düsseldorf", "Kö on Ice", "Winterwelt Kö-on-Ice", "Poccino am Kö-Bogen"}
+        self.assertFalse(fremd & set(event_orte("Kö Club - Düsseldorf", alle | fremd, "koe-club-duesseldorf-friedrichstadt")))
         ort = {"name": "Kö Club", "slug": "koe-club-duesseldorf-friedrichstadt",
                "extras": {"club": {"event_orte": ["Kö Club", "Theater an der Kö"]}}}
         self.assertNotIn("Theater an der Kö", event_orte_vereinigen(ort, []))

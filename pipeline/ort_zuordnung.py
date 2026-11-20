@@ -39,6 +39,11 @@ logger = logging.getLogger(__name__)
 EVENT_ORTE_AUSSCHLUSS: dict[str, dict[str, str]] = {
     "koe-club-duesseldorf-friedrichstadt": {
         "Theater an der Kö": "Theater an der Kö ist ein eigenes Haus, kein Teil des Kö-Clubs (Plan 3.2, 19.11.2026)",
+        # Fund 20.11.2026: „Kö“ am Anfang traf fremde Orte an der Königsallee bzw. am Kö-Bogen
+        "KÖ Galerie Düsseldorf": "Einkaufszentrum an der Königsallee, nicht der Kö-Club (20.11.2026)",
+        "Kö on Ice": "Eisbahn an der Kö, nicht der Kö-Club (20.11.2026)",
+        "Winterwelt Kö-on-Ice": "Eisbahn an der Kö, nicht der Kö-Club (20.11.2026)",
+        "Poccino am Kö-Bogen": "Café am Kö-Bogen, nicht der Kö-Club (20.11.2026)",
     },
 }
 
