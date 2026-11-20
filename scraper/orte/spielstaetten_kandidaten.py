@@ -229,15 +229,15 @@ PRUEFHINWEISE: dict[str, str] = {
     "xafe in kap 1 zentralbibliothek": "gleiche Adresse wie Zentralbibliothek, nicht zusammenlegen",
 }
 # Offene Einzelentscheidungen (Plan Abschnitt 9): keine Seite und kein 308, bis entschieden
-ABSCHNITT_9: dict[str, str] = {
-    "theater an der koe": "eigene Ortsseite? Verknüpfung mit dem Kö-Club wird in jedem Fall gelöst (Abschnitt 9, 3.2)",
-}
+ABSCHNITT_9: dict[str, str] = {}
 # Entschieden vom Auftraggeber am 19.11.2026 (Abschnitt 9): Name normalisiert → (Vorschlag oder leer, Hinweis)
 ENTSCHIEDEN: dict[str, tuple[str, str]] = {
     "stone im ratinger hof": ("keine Seite (geschlossen)",
                               "seit Jahren geschlossen – Events werden auf „Ratinger Hof“ umgeschrieben (Schritt 2)"),
     "bilker bunker": ("", "eigener Ort trotz gleicher Adresse wie Schleuse Zwei (Entscheidung 19.11.2026)"),
     "schleuse zwei": ("", "eigener Ort trotz gleicher Adresse wie Bilker Bunker (Entscheidung 19.11.2026)"),
+    # Entscheidung 20.11.2026 (Abschnitt 9): eigene Ortsseite; nie Teil des Kö-Clubs (EVENT_ORTE_AUSSCHLUSS bleibt)
+    "theater an der koe": ("", "eigene Ortsseite (Entscheidung 20.11.2026)"),
 }
 # Kein Haus, keine Seite (Plan 3.7)
 KEIN_HAUS = re.compile(r"gustaf-gründgens-platz", re.I)
