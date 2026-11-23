@@ -611,3 +611,41 @@ describe("Flaggen mit Zeitpunkt (Abschnitt 8)", () => {
     expect(highlights({ heute: HEUTE, events: [zugpferd, abgelaufen] } as unknown as EventPool).highlight?.id).toBe("z");
   });
 });
+
+describe("Redaktions-Schalter „nicht empfehlen“ (23.11.2026)", () => {
+  const T = "2026-11-14";
+  const capitol = ev({ id: "c", titel: "Magie der Travestie", kategorie: "kultur", ort: "Capitol Theater", datum: T, uhrzeit: "20:00", bild_url: BILD, nicht_empfehlen: true });
+  const markt = ev({ id: "m", titel: "Veganer Weihnachtsmarkt", kategorie: "food", ort: "Jugendkirche", datum: T, uhrzeit: "12:00", bild_url: BILD });
+  const konzert = ev({ id: "k", titel: "Konzert", kategorie: "musik", ort: "Tonhalle", datum: T, uhrzeit: "19:00", bild_url: BILD });
+
+  it("hat keine Stufe und fällt aus Tipp und Picks", () => {
+    expect(stufe(capitol)).toBeNull();
+    const p = plaetzeAm([capitol, markt, konzert], T);
+    const ids = [p.tipp, ...p.picks].map((x) => x!.id);
+    expect(ids).not.toContain("c");
+    expect(ids).toEqual(expect.arrayContaining(["m", "k"]));
+  });
+
+  it("schlägt Tipp-, Highlight- und Top-Flagge", () => {
+    const alles = { ...capitol, tipp_des_tages: true, highlight_der_woche: true, highlight_gesetzt_am: `${HEUTE}T10:00:00Z`, top_event_des_monats: true, top_gesetzt_am: `${HEUTE}T10:00:00Z` };
+    expect(highlightGilt(alles, HEUTE)).toBe(false);
+    expect(topGilt(alles, HEUTE)).toBe(false);
+    expect(plaetzeAm([alles, markt], T).tipp?.id).toBe("m");
+    const pool = { heute: HEUTE, jetzt: `${HEUTE}T10:00:00Z`, events: [alles, konzert], alle: [alles, konzert], quelle: "beispiel", fehler: null } as unknown as EventPool;
+    const h = highlights(pool);
+    expect([h.highlight?.id, h.top?.id]).not.toContain("c");
+  });
+
+  it("fällt aus „Beliebt“ und der Wochenend-Box", () => {
+    const k = stufenKontext([capitol, markt], HEUTE);
+    expect(beliebtAuswahl([capitol, markt], [], k, null).map((e) => e.id)).toEqual(["m"]);
+    const pool = { heute: HEUTE, jetzt: `${HEUTE}T10:00:00Z`, events: [capitol, markt], alle: [capitol, markt], quelle: "beispiel", fehler: null } as unknown as EventPool;
+    const sa = wochenendProgramm(pool).find((t) => t.kurz === "Sa")!;
+    expect(sa.events.map((e) => e.id)).toEqual(["m"]);
+  });
+
+  it("ohne Spalte (vor der Migration) ändert sich nichts", () => {
+    const ohne = { ...capitol, nicht_empfehlen: undefined };
+    expect(stufe(ohne)).not.toBeNull();
+  });
+});

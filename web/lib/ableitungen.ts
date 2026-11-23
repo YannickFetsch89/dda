@@ -589,7 +589,7 @@ function setzTag(zeitpunkt: string): string | null {
 
 /** Highlight-Flagge gilt sieben Tage ab dem Setz-Tag (Europe/Berlin); ohne Zeitpunkt nie. */
 export function highlightGilt(e: DddEvent, heute: string): boolean {
-  if (!e.highlight_der_woche || !e.highlight_gesetzt_am) return false;
+  if (!e.highlight_der_woche || !e.highlight_gesetzt_am || e.nicht_empfehlen) return false;
   const tag = setzTag(e.highlight_gesetzt_am);
   if (!tag) return false;
   const alter = tageZwischen(tag, heute);
@@ -598,14 +598,17 @@ export function highlightGilt(e: DddEvent, heute: string): boolean {
 
 /** Top-Flagge gilt bis zum Ende des Monats, in dem sie gesetzt wurde (Europe/Berlin); ohne Zeitpunkt nie. */
 export function topGilt(e: DddEvent, heute: string): boolean {
-  if (!e.top_event_des_monats || !e.top_gesetzt_am) return false;
+  if (!e.top_event_des_monats || !e.top_gesetzt_am || e.nicht_empfehlen) return false;
   const tag = setzTag(e.top_gesetzt_am);
   return !!tag && tag <= heute && tag.slice(0, 7) === heute.slice(0, 7);
 }
 
-/** Stufe 0–3 für die Empfehlungen; abgesagte Events haben keine Stufe (null). */
+/**
+ * Stufe 0–3 für die Empfehlungen; abgesagte Events und solche mit dem Redaktions-Schalter „nicht empfehlen“
+ * haben keine Stufe (null) und fallen damit aus allen Plätzen, die Stufe ≥ 1 verlangen.
+ */
 export function breite(e: DddEvent, k: StufenKontext): Stufe | null {
-  if (e.abgesagt) return null;
+  if (e.abgesagt || e.nicht_empfehlen) return null;
   const gemerkt = k.stufen.get(e.id);
   if (gemerkt !== undefined) return gemerkt;
   const s = stufeRechnen(e, k);
@@ -651,7 +654,8 @@ export function amFokustag(e: DddEvent, tag: string): boolean {
  * Bis 7 Tage Laufzeit (einschließlich gezählt) an jedem Tag, ab 8 Tagen nur am Fokustag.
  */
 export function tippGilt(e: DddEvent, tag: string | null): boolean {
-  if (!e.tipp_des_tages || e.abgesagt) return false;
+  // „nicht empfehlen“ schlägt die Tipp-Flagge (beide gesetzt = kein Tipp)
+  if (!e.tipp_des_tages || e.abgesagt || e.nicht_empfehlen) return false;
   // Laufzeit einschließlich gezählt (wie beim Fokustag): 1.–7. gilt jeden Tag, 1.–8. nur am Fokustag (Auftraggeber 13.11.2026)
   if (tag === null || !istMehrtaegig(e) || tageZwischen(e.datum, e.datum_bis!) + 1 <= 7) return true;
   return fokustag(e) === tag;
