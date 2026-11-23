@@ -94,4 +94,23 @@ Dann setzt ein kleiner Weiterleiter auf dem Server den Kopf. Das ist ein Node-Sk
 
 ## Zurück
 
-Den aufgehobenen alten Inhalt wieder in **nginx Directives** von admin.diesdas.events einsetzen. In `dashboard/dashboard.sh` die Zeile `BASIS=alt` und `--server.baseUrlPath` entfernen, dann deployen.
+Den aufgehobenen alten Inhalt wieder in **nginx Directives** von admin.diesdas.events einsetzen. Bis zum 23.11.2026 stand dort:
+
+```
+add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+location = /robots.txt {
+    default_type text/plain;
+    return 200 "User-agent: *\nDisallow: /\n";
+}
+location / {
+    proxy_pass http://127.0.0.1:8502;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_read_timeout 86400;
+}
+```
+
+Umgestellt am 23.11.2026. Live mit `curl` geprüft: `/` → 308 `/admin`, `/admin` → 307 Anmeldung, `/api/admin/ich` → 401, `/entdecken` → 404, `/alt/` → 200. `diesdas.events/admin` liefert mit gefälschtem Kopf 404. In `dashboard/dashboard.sh` die Zeile `BASIS=alt` und `--server.baseUrlPath` entfernen, dann deployen.
