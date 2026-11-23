@@ -1,0 +1,62 @@
+# Zugriffs-Muster (nur lesen, nur von Hand; Ergänzung zu diagnose.yml) – nach dem Ausfall 23.11.2026 durch Massenabrufe der Guides.
+# Liest das nginx-Zugriffs-Log auf dem Server und gibt Muster aus: Pfade, Abfragen, Parameter, Statuscodes, Referer,
+# Anfragen je Minute. Gibt NIE Adressen (IPs) aus. Startet und ändert nichts auf dem Server.
+name: Zugriffs-Muster
+
+on:
+  workflow_dispatch:
+    inputs:
+      pfad:
+        description: "Pfad, dessen Abfragen ausgewertet werden"
+        type: string
+        default: "/guides/restaurants-cafes"
+      zeilen:
+        description: "Anzahl der letzten Log-Zeilen"
+        type: string
+        default: "5000"
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Zugriffs-Log auswerten
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PFAD: ${{ inputs.pfad }}
+          ZEILEN: ${{ inputs.zeilen }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: PFAD,ZEILEN
+          script: |
+            LOG=/log/access.log
+            [ -r "$LOG" ] || { echo "Zugriffs-Log nicht lesbar"; exit 1; }
+            case "$ZEILEN" in ''|*[!0-9]*) ZEILEN=5000 ;; esac
+            case "$PFAD" in /*) ;; *) PFAD=/guides/restaurants-cafes ;; esac
+            T=$(mktemp)
+            # Nur Zeitstempel, Anfrage, Status, Referer, User-Agent – ohne Adresse (Feld 1)
+            tail -n "$ZEILEN" "$LOG" | awk -F'"' '{split($1,a," "); split($3,s," "); print a[4] "\t" $2 "\t" s[1] "\t" $4 "\t" $6}' > "$T"
+            echo "=== Zeitraum der letzten $ZEILEN Zeilen"
+            head -1 "$T" | cut -f1; tail -1 "$T" | cut -f1
+            echo "=== Statuscodes für $PFAD"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); split(r[2],u,"?"); if (u[1]==p) print $3}' "$T" | sort | uniq -c | sort -rn
+            echo "=== Anfragen für $PFAD je Minute (letzte 15 Minuten im Ausschnitt)"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); split(r[2],u,"?"); if (u[1]==p) print substr($1,2,17)}' "$T" | uniq -c | tail -15
+            echo "=== Häufigste vollständige Abfragen für $PFAD (Top 30)"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); n=index(r[2],"?"); u=(n?substr(r[2],1,n-1):r[2]); q=(n?substr(r[2],n+1):"(keine)"); if (u==p) print q}' "$T" | sort | uniq -c | sort -rn | head -30
+            echo "=== Anzahl verschiedener Abfragen für $PFAD"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); n=index(r[2],"?"); u=(n?substr(r[2],1,n-1):r[2]); if (u==p) print substr(r[2],n+1)}' "$T" | sort -u | wc -l
+            echo "=== Parameter-Namen (wie oft kommen sie vor)"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); n=index(r[2],"?"); u=(n?substr(r[2],1,n-1):r[2]); if (u==p && n) { m=split(substr(r[2],n+1),kv,"&"); for(i=1;i<=m;i++){split(kv[i],x,"="); print x[1]} } }' "$T" | sort | uniq -c | sort -rn
+            echo "=== Werte je Parameter (Top 8 je Name)"
+            for NAME in typ stadtteil kueche preis tags sort anzahl ansicht _rsc; do
+              echo "--- $NAME"
+              awk -F'\t' -v p="$PFAD" -v k="$NAME" '{split($2,r," "); n=index(r[2],"?"); u=(n?substr(r[2],1,n-1):r[2]); if (u==p && n) { m=split(substr(r[2],n+1),kv,"&"); for(i=1;i<=m;i++){split(kv[i],x,"="); if (x[1]==k) print x[2]} } }' "$T" | sort | uniq -c | sort -rn | head -8
+            done
+            echo "=== Referer für $PFAD (Top 10)"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); split(r[2],u,"?"); if (u[1]==p) print $4}' "$T" | sort | uniq -c | sort -rn | head -10
+            echo "=== HTTP-Methode und Protokoll für $PFAD"
+            awk -F'\t' -v p="$PFAD" '{split($2,r," "); split(r[2],u,"?"); if (u[1]==p) print r[1], r[3]}' "$T" | sort | uniq -c | sort -rn
+            rm -f "$T"
