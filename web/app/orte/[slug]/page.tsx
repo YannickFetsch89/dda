@@ -104,7 +104,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 function Kopfbild({ ort, art }: { ort: DddOrt; art: string | null }) {
   const lokal = lokalesBild(ort.bild_url);
   const version = ort.extras.foto_version;
-  const src = lokal ? `${lokal}${typeof version === "number" && version > 1 ? `?v=${version}` : ""}` : null;
+  const src = lokal ? `${lokal}${typeof version === "number" && version >= 1 ? `?v=${version}` : ""}` : null;
   const info = artInfo(art);
   if (!src) {
     return (

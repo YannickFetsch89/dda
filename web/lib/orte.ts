@@ -120,7 +120,8 @@ function googleFoto(o: DddOrt): GoogleFoto | null {
  */
 export function ortBildUrl(o: DddOrt): string | null {
   const version = o.extras.foto_version;
-  const v = typeof version === "number" && version > 1 ? `?v=${version}` : "";
+  // Ab Version 1 (Cursor-Prüfung 3b): Die erste Bildwahl im Admin setzt 0 → 1, die Adresse muss sich dabei ändern
+  const v = typeof version === "number" && version >= 1 ? `?v=${version}` : "";
   const lokal = lokalesBild(o.bild_url);
   if (lokal) return `${lokal}${v}`;
   // Sonst immer über den eigenen Server – auch ein eigenes bild_url kann auf einem fremden Server liegen

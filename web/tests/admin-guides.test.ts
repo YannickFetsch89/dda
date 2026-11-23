@@ -85,3 +85,12 @@ describe("Stammdaten aus CSV-Importen gesperrt (Q6)", () => {
     expect(stammdatenPruefen({ name: "Neu" }, "kneipe").ok).toBe(true);
   });
 });
+
+describe("Nachträge Cursor-Prüfung Stufe 3b", () => {
+  it("Bildadresse bekommt die Version ab 1 (erste Bildwahl im Admin, Befund 2)", async () => {
+    const { ortBildUrl } = await import("@/lib/orte");
+    const ort = (v: unknown) => ({ slug: "x", bild_url: "/ort-bilder/orte/x.webp", extras: { foto_version: v } }) as unknown as import("@/lib/typen").DddOrt;
+    expect(ortBildUrl(ort(1))).toBe("/ort-bilder/orte/x.webp?v=1");
+    expect(ortBildUrl(ort(undefined))).toBe("/ort-bilder/orte/x.webp");
+  });
+});

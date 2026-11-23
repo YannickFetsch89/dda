@@ -19,7 +19,7 @@ import { protokollieren } from "@/lib/admin/protokoll";
 import { adminAntwort, adminRoute } from "@/lib/admin/route";
 import { EVENTS_CACHE_TAG } from "@/lib/daten";
 import { heuteBerlin } from "@/lib/datum";
-import { ORTE_CACHE_TAG } from "@/lib/orte";
+import { MIN_QUALITAETS_SCORE, ORTE_CACHE_TAG } from "@/lib/orte";
 import { orteZwischenspeicherVerwerfen } from "@/lib/pfad-pruefung";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -185,6 +185,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/orte/
       const erlaubt = art === "club" ? CLUB_AKTIONEN : art === "wm" ? WM_AKTIONEN : SPIELPLATZ_AKTIONEN;
       if (!erlaubt.includes(schritt)) return adminAntwort(400, { fehler: "Unbekannte Aktion." }, setCookies);
       const wert = typeof body.wert === "string" || typeof body.wert === "number" ? String(body.wert) : null;
+      // Ein aktiver Club wird nur zur Bar, wenn er im Bar-Hub sichtbar wird (Score ≥ 7): Nur dann leitet die alte
+      // Club-URL weiter (pfad-pruefung.ts, ortEntscheidung), sonst endete sie als 404 (Cursor-Prüfung 3b, Befund 1).
+      if (art === "club" && schritt === "aus_hub" && bisher.typ === "club") {
+        const { data: s } = await db.from("orte").select("aktiv, qualitaets_score").eq("id", id).maybeSingle();
+        if (s?.aktiv && (Number(s.qualitaets_score) || 0) < MIN_QUALITAETS_SCORE) {
+          return adminAntwort(400, { fehler: `Zuerst den Score auf mindestens ${MIN_QUALITAETS_SCORE} setzen – sonst wird die bisherige Club-Adresse eine 404.`, code: "eingabe" }, setCookies);
+        }
+      }
       const { data, error } =
         art === "club"
           ? await db.rpc("admin_club_setzen", { p_id: id, p_aktion: schritt, p_grund: grund || null })

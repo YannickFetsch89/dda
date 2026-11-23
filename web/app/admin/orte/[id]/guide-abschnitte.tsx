@@ -258,7 +258,9 @@ export function ClubAbschnitt({ o, ausfuehren, laeuft }: { o: GuideOrt; ausfuehr
         </form>
       )}
       {o.typ === "club" && s.imHub && (o.qualitaets_score ?? 0) < 7 && (
-        <p className="admin-unterzeile">Vorher den Score (oben) auf mindestens 7 setzen, damit die Bar-Seite sichtbar ist.</p>
+        <p className="admin-unterzeile">
+          Zur Bar geht erst ab Score 7 (oben setzen): Nur dann leitet die bisherige Club-Adresse auf die Bar-Seite weiter.
+        </p>
       )}
     </section>
   );

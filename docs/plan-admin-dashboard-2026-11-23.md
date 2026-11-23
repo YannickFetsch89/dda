@@ -635,6 +635,9 @@ Stufe 3b – Bilder und Guide-Pflege (23.11.2026):
 - **Weihnachtsmärkte:** Rang 1–5 ist eindeutig (ein anderer Markt mit dem Rang verliert ihn). Freischalten mit derselben Bedingung wie `weihnachtsmaerkte_freischalten.sql`.
 - **Spielplätze:** `name_unklar` und `kein_stadtteil` lassen sich nicht bestätigen (sperren immer, Korrektur über `korrekturen.csv`). Freischalten mit derselben Bedingung wie `spielplaetze_freischalten.sql`.
 - **Offen für 3c:** Vorschläge (Ortsnamen, `ort_id`-Nachtrag, Adressen/Geo, Import aus Kandidaten).
+- **Cursor-Prüfung Stufe 3b (deploybar, SQL ausgeführt):**
+  - Befund 1 (mittel) behoben: Ein aktiver Club wird nur zur Bar, wenn sein Score mindestens 7 ist (Route). Nur dann leitet die alte Club-URL auf die Bar-Seite; darunter wäre sie eine 404 geworden. Bar-Seiten unter 7 auszuliefern hätte die Score-Regel der Guides aufgeweicht.
+  - Befund 2 (gering) behoben: `?v=` hängt ab `foto_version` 1 an der Bildadresse (`ortBildUrl`, Ortsseiten-Kopfbild), damit auch die erste Bildwahl im Admin eine neue Adresse ergibt.
 
 ## Prüfhistorie
 
@@ -650,3 +653,4 @@ Stufe 3b – Bilder und Guide-Pflege (23.11.2026):
 - 23.11.2026: Stufe 2 LIVE (cf82caf). Stufe 3a Orte gebaut (lokal), SQL S4 `admin_orte_2026-11-23.sql`; Notizen in Anhang F.
 - 23.11.2026: SQL S4 ausgeführt, Cursor-Prüfung 3a deploybar, 4 Befunde eingearbeitet (Anhang F).
 - 23.11.2026: Stufe 3a LIVE (38899b9). Stufe 3b Bilder und Guide-Pflege gebaut (lokal), SQL `admin_guides_2026-11-23.sql`, Q6 entschieden; Notizen in Anhang F.
+- 23.11.2026: SQL `admin_guides_2026-11-23.sql` ausgeführt, Cursor-Prüfung 3b deploybar, 2 Befunde eingearbeitet (Anhang F).
