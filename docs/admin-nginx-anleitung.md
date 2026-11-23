@@ -6,7 +6,7 @@ Stand 23.11.2026. Plan: `docs/plan-admin-dashboard-2026-11-23.md`, Abschnitt 3.2
 
 **Wo:** ISPConfig → **Sites** → **Website** → Domain anklicken → Reiter **Options** (deutsch „Optionen“) → Feld **nginx Directives** („nginx-Direktiven“).
 
-> Falls dieses Feld fehlt oder nicht bearbeitbar ist, bitte **nicht weitermachen**. Kurz Bescheid geben, dann bauen wir die Alternative aus Abschnitt C.
+> Geprüft am 23.11.2026: Das Feld ist bearbeitbar. Bei admin.diesdas.events wurde es schon für die Weiterleitung an Streamlit genutzt. Abschnitt C entfällt damit.
 
 ---
 
@@ -35,8 +35,14 @@ Für die Website ändert diese Zeile nichts, solange der neue Code sie nicht lie
 Mit dem Deploy zieht das alte Streamlit-Dashboard auf `/alt/` um. Bis zu dieser Umstellung ist admin.diesdas.events kurz nicht erreichbar.
 
 1. In ISPConfig die Website **admin.diesdas.events** öffnen → **Options** → **nginx Directives**.
-2. Den bisherigen Inhalt (Weiterleitung an `127.0.0.1:8502`) **durch Folgendes ersetzen**. Vorher den alten Inhalt kopieren und aufheben, damit man zurück kann.
+2. Den bisherigen Inhalt **durch Folgendes ersetzen**. Vorher den alten Inhalt kopieren und aufheben, damit man zurück kann. Die ersten beiden Teile, also `X-Robots-Tag` und `robots.txt`, stehen heute schon so drin (Screenshot vom 23.11.2026) und bleiben unverändert.
    ```
+   add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+   location = /robots.txt {
+       default_type text/plain;
+       return 200 "User-agent: *\nDisallow: /\n";
+   }
+
    # Startseite → /admin
    location = / {
        return 308 /admin;
@@ -53,6 +59,9 @@ Mit dem Deploy zieht das alte Streamlit-Dashboard auf `/alt/` um. Bis zu dieser 
    }
    location = /icon.svg {
        proxy_pass http://127.0.0.1:3847;
+       proxy_set_header Host $host;
+       proxy_set_header X-Forwarded-Proto $scheme;
+       proxy_set_header X-Real-IP $remote_addr;
        proxy_set_header X-DDD-Bereich admin;
    }
 
@@ -71,7 +80,7 @@ Mit dem Deploy zieht das alte Streamlit-Dashboard auf `/alt/` um. Bis zu dieser 
        return 404;
    }
    ```
-   Die Zeilen mit `Host`, `X-Forwarded-Proto`, `X-Forwarded-For` und `X-Real-IP` bitte genauso übernehmen, wie sie bei diesdas.events stehen. Stehen dort andere Werte, gelten die von diesdas.events.
+   Der Block ist so fertig zum Einfügen. `Host $host` und `X-Real-IP` entsprechen dem bisherigen Block für Streamlit.
 3. Speichern. Nach etwa einer Minute ist der neue Bereich unter https://admin.diesdas.events erreichbar, das alte Dashboard unter https://admin.diesdas.events/alt/.
 4. Kurz Bescheid geben. Claude prüft dann mit `curl`:
    - `https://admin.diesdas.events/` → 308 auf `/admin`
