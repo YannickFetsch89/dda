@@ -66,7 +66,7 @@ import {
   magazinBeitragEntscheidung, pfadPruefen, routeVon, sha256Hex, speicherLeeren, vorschauPruefen,
 } from "@/lib/pfad-pruefung";
 import { seitenAlternates, seitenMetadaten } from "@/lib/seo";
-import { AutorZeile, MagazinOrtKarte, MagazinText } from "@/components/magazin";
+import { AutorZeile, eventsGruppieren, MagazinOrtKarte, MagazinText } from "@/components/magazin";
 import { erwaehntIn, lesetippFuer, startAuswahl, wochenvorschauFuer } from "@/components/magazin-verweise";
 import { config as proxyConfig } from "@/proxy";
 import { magazinEintraege } from "@/app/sitemap";
@@ -636,5 +636,18 @@ describe("Verweise aufs Magazin", () => {
     expect(erwaehntIn(liste, "e1").map((b) => b.slug)).toEqual(["woche", "alt"]);
     expect(erwaehntIn(liste, "e2").map((b) => b.slug)).toEqual(["alt"]);
     expect(erwaehntIn(liste, "x")).toEqual([]);
+  });
+});
+
+
+// ---------- Event-Karten nebeneinander (23.11.2026) ----------
+describe("Event-Einbettungen gruppieren", () => {
+  it("fasst aufeinanderfolgende Events zusammen, Text und andere Einbettungen trennen die Gruppen", () => {
+    const e = (id: string) => ({ art: "einbettung" as const, typ: "event" as const, id });
+    const teile = eventsGruppieren([
+      e("a"), e("b"), { art: "absatz", inhalt: [{ art: "text", text: "x" }] }, e("c"),
+      { art: "einbettung", typ: "guide", id: "weihnachtsmaerkte" }, e("d"), e("e"), e("f"),
+    ]);
+    expect(teile.map((t) => (t.art === "events" ? t.ids.join("") : t.art))).toEqual(["ab", "absatz", "c", "einbettung", "def"]);
   });
 });

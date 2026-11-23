@@ -84,14 +84,40 @@ function TagKasten({ tag }: { tag: string }) {
   );
 }
 
+/** Aufeinanderfolgende Event-Einbettungen als eine Gruppe – sie stehen im Raster nebeneinander (Auftraggeber, 23.11.2026). */
+export type TextTeil = Block | { art: "events"; ids: string[] };
+
+export function eventsGruppieren(bloecke: Block[]): TextTeil[] {
+  const teile: TextTeil[] = [];
+  for (const b of bloecke) {
+    const letzte = teile[teile.length - 1];
+    if (b.art === "einbettung" && b.typ === "event") {
+      if (letzte?.art === "events") letzte.ids.push(b.id);
+      else teile.push({ art: "events", ids: [b.id] });
+    } else {
+      teile.push(b);
+    }
+  }
+  return teile;
+}
+
 /** Beitragstext mit Einbettungen. Events und Orte kommen live aus der Datenbank (Plan T3). */
 export function MagazinText({ bloecke, events, orte, heute }: { bloecke: Block[]; events: DddEvent[]; orte: MagazinOrt[]; heute: string }) {
   const eventNach = new Map(events.map((e) => [e.id, e]));
   const ortNach = new Map(orte.map((o) => [o.slug, o]));
   return (
     <div className="mz-text">
-      {bloecke.map((b, i) => {
+      {eventsGruppieren(bloecke).map((b, i) => {
         switch (b.art) {
+          case "events": {
+            // Gelöschte oder nicht mehr geladene Events fallen still heraus (wie bisher die einzelne Karte)
+            const karten = b.ids.map((id) => eventNach.get(id)).filter((e): e is DddEvent => !!e);
+            return karten.length ? (
+              <div key={i} className="mz-einbettungen" role="list">
+                {karten.map((e) => <EventKarte key={e.id} e={e} heute={heute} />)}
+              </div>
+            ) : null;
+          }
           case "h2":
             return <h2 key={i} id={b.id} className="d">{b.text}</h2>;
           case "h3":
@@ -103,14 +129,6 @@ export function MagazinText({ bloecke, events, orte, heute }: { bloecke: Block[]
             return b.nummeriert ? <ol key={i}>{punkte}</ol> : <ul key={i}>{punkte}</ul>;
           }
           case "einbettung": {
-            if (b.typ === "event") {
-              const e = eventNach.get(b.id);
-              return e ? (
-                <div key={i} className="mz-einbettung" role="list">
-                  <EventKarte e={e} heute={heute} />
-                </div>
-              ) : null;
-            }
             if (b.typ === "ort") {
               const o = ortNach.get(b.id);
               return o ? <MagazinOrtKarte key={i} ort={o} /> : null;

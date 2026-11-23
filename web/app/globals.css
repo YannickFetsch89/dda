@@ -2357,7 +2357,8 @@ html:not([data-konto="1"]) .tabbar--konto { display: none; }
 .mz-karte__titel a::after { content: ""; position: absolute; inset: 0; }
 .mz-karte { position: relative; }
 .mz-karte__teaser { margin: 0; color: var(--ddd-text-body); font-size: 15px; line-height: 1.45; }
-.mz-beitrag { max-width: 860px; }
+/* Breiter seit 23.11.2026: Event-Karten im Raster nebeneinander, Fließtext bleibt bei gut lesbarer Zeilenlänge */
+.mz-beitrag { max-width: 960px; }
 .mz-kopf { margin: 8px 0 16px; }
 .mz-rubrik-label { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ddd-gold); }
 .mz-zeile { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--ddd-text-muted); margin: 8px 0 0; }
@@ -2373,13 +2374,17 @@ html:not([data-konto="1"]) .tabbar--konto { display: none; }
 .mz-toc { border: 1px solid var(--ddd-border); border-radius: var(--r-card-s); padding: 12px 18px; margin: 0 0 20px; }
 .mz-toc summary { font-weight: 700; cursor: pointer; }
 .mz-toc ol { margin: 8px 0 0; padding-left: 20px; line-height: 1.6; }
-.mz-text { max-width: 68ch; font-size: 17px; line-height: 1.65; color: var(--ddd-text-body); }
+.mz-text { max-width: 46rem; font-size: 17px; line-height: 1.65; color: var(--ddd-text-body); }
 .mz-text h2 { font-size: 28px; line-height: 1.2; margin: 32px 0 10px; color: var(--ddd-text); scroll-margin-top: 90px; }
 .mz-text h3 { font-size: 19px; margin: 24px 0 8px; color: var(--ddd-text); }
 .mz-text p { margin: 0 0 14px; }
 .mz-text a { color: var(--ddd-link); text-decoration: underline; text-underline-offset: 2px; }
 .mz-text ul, .mz-text ol { margin: 0 0 14px; padding-left: 22px; }
-.mz-einbettung { margin: 16px 0 20px; max-width: 420px; }
+/* Event-Karten im Beitrag: mobil untereinander, ab Tablet zwei bis drei nebeneinander */
+.mz-einbettungen { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin: 16px 0 24px; }
+.mz-einbettungen .karte { min-width: 0; }
+/* Karten sehen aus wie überall auf der Seite: ohne die Link-Unterstreichung und -Farbe des Fließtexts */
+.mz-text .mz-einbettungen a { color: inherit; text-decoration: none; }
 .mz-ort { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 12px 0 16px; border: 1px solid var(--ddd-border); border-radius: var(--r-card-s); background: var(--ddd-surface); color: var(--ddd-text); text-decoration: none; }
 .mz-text a.mz-ort { text-decoration: none; color: var(--ddd-text); }
 a.mz-ort:hover { border-color: var(--ddd-gold); }
