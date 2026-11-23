@@ -1,6 +1,6 @@
 // Datenzugriff für Orte (Restaurants, Cafés etc.)
 // Analog zu daten.ts – cached per "use cache" und cacheLife.
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { leseClient } from "./supabase-server";
 import { lokalesBild } from "./bilder";
 import type { DddOrt, OrtTyp } from "./typen";
@@ -42,6 +42,9 @@ const EXTRAS_FELDER = [
   "weihnachtsmarkt",
 ];
 export const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
+
+/** Cache-Markierung aller Orte-Lader (revalidateTag nach Änderungen im Admin-Bereich) */
+export const ORTE_CACHE_TAG = "orte";
 
 export type Zeile = Record<string, unknown>;
 
@@ -181,6 +184,7 @@ const NORMAL = { stale: 300, revalidate: 600, expire: 3600 };
 /** Alle aktiven Orte eines Typs laden (nur Score ≥ MIN_QUALITAETS_SCORE). */
 export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = supabaseClient();
   if (!client) {
     cacheLife(KURZ);
@@ -226,6 +230,7 @@ export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
 /** Einzelnen Ort per Slug laden (nur aktiv und Score ≥ MIN_QUALITAETS_SCORE). */
 export async function ortLaden(slug: string): Promise<DddOrt | null> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = supabaseClient();
   if (!client) {
     cacheLife(KURZ);
@@ -261,6 +266,7 @@ export async function ortLaden(slug: string): Promise<DddOrt | null> {
  */
 export async function clubOrteLaden(): Promise<DddOrt[]> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = supabaseClient();
   if (!client) {
     cacheLife(KURZ);

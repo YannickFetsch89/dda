@@ -6,6 +6,7 @@ import { heuteBerlin } from "./datum";
 import { mitSpalten, normalisieren, type Zeile } from "./daten";
 import { istRubrik, type MagazinAutor, type MagazinBeitrag, type Rubrik } from "./magazin";
 import { ortEntscheidung, type OrtHub, type OrtKopf } from "./pfad-pruefung";
+import { ORTE_CACHE_TAG } from "./orte";
 import { SPIELPLAETZE_VERLINKT } from "./schalter";
 import { dienstClient, leseClient } from "./supabase-server";
 import type { DddEvent } from "./typen";
@@ -186,6 +187,7 @@ export async function orteFuerSlugs(slugs: string[]): Promise<MagazinOrt[]> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
   cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
+  cacheTag(ORTE_CACHE_TAG); // und nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client || !slugs.length) return [];
   const { data, error } = await client

@@ -1,8 +1,8 @@
 // Datenzugriff für den Weihnachtsmarkt-Guide (Plan 5.1): eigener Lader OHNE Score-Schwelle (orteLaden verlangt
 // qualitaets_score ≥ 7 und fiele aus). Sichtbar ist jede aktive Zeile mit typ weihnachtsmarkt (Freischaltung per SQL).
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { heuteBerlin } from "./datum";
-import { SPALTEN_MIT_EXTRAS, normalisieren, type Zeile } from "./orte";
+import { SPALTEN_MIT_EXTRAS, normalisieren, type Zeile, ORTE_CACHE_TAG } from "./orte";
 import { leseClient } from "./supabase-server";
 import type { DddOrt } from "./typen";
 
@@ -12,6 +12,7 @@ const NORMAL = { stale: 300, revalidate: 600, expire: 3600 };
 /** Alle aktiven Weihnachtsmärkte (gecacht, 10 Minuten). */
 export async function weihnachtsmaerkteLaden(): Promise<DddOrt[]> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);

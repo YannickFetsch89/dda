@@ -184,3 +184,10 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 .admin-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5; }
 .admin-vorschau { max-width: 820px; }
 .admin-feld .admin-filterleiste { flex-wrap: nowrap; }
+
+/* Zwei Buttons nebeneinander (z. B. Text: Entwurf / Freigabe, Stufe 3a) */
+.admin-knopfreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

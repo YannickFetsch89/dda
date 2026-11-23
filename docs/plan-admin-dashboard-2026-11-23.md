@@ -610,6 +610,17 @@ Stufe 2 (23.11.2026):
   - Bewusst hingenommen: `admin_magazin_speichern` übernimmt das Prüfergebnis der Route. Ein direkter Aufruf mit Admin-Sitzung und Zwei-Faktor könnte grün melden – der Admin ist die Redaktion und darf ohnehin veröffentlichen.
   - Bewusst erweitert: Aufmacherbilder aus `/fallback/` gelten nach der Liste der Website (`ERLAUBTE_FALLBACK_HEROS`, alle ≥ 675 px), nicht nur die sieben Rubrik-Ersatzbilder der Pipeline.
 
+Stufe 3a – Orte (23.11.2026):
+- **Teilbereiche:** 3a = Orte-Liste, Stammdaten, Score, Texte der Spielstätten, Zuordnung lösen, Zusammenlegen, Schließen/Löschen. 3b = Bilder (Kandidaten, `bild_fokus`) und Guide-Pflege (Clubs ↔ Bar, Weihnachtsmärkte Top 5/Ruhetage, Spielplätze freischalten mit Prüf-Codes, typabhängige `extras`-Formulare, `freigeschaltet_am`). 3c = Vorschläge (Ortsnamen, `ort_id`-Nachtrag, Adressen/Geo, Import).
+- **SQL S4:** `database/admin_orte_2026-11-23.sql`: Policies `orte_admin_lesen`/`orte_admin_aendern` (ist_admin()) und fünf DEFINER-Funktionen: `admin_ort_zusammenlegen`, `admin_ort_schliessen` (mit `p_loeschen`), `admin_ort_text_speichern` (Entwurf oder Freigabe), `admin_ort_zuordnung_loesen`, `admin_ort_score_setzen`.
+- **Slug und Typ** sind in 3a nicht änderbar (URL-Wechsel; Typwechsel Clubs ↔ Bar kommt mit `vorher_typ` in 3b). Abschalten nur über „Schließen“ mit Weiterleitung, auch bei Nicht-Spielstätten (strenger als der Trigger, Plan 4.7).
+- **Texte:** Entwurf in `extras.spielstaette.text_entwurf` {text, quellen, datum}; Freigabe setzt `beschreibung` und `text_freigegeben` und löscht den Entwurf. Nur Spielstätten (nur dort gibt es die Freigabe). Bei anderen Typen bleibt die Beschreibung ein Stammdatenfeld. Später kann `scraper/orte/spielstaetten_texte.py` Entwürfe direkt in `text_entwurf` schreiben statt SQL-Dateien.
+- **Zuordnung lösen:** setzt `ort_id` NULL und `ort_id` in `redaktion_felder` (Feldschutz aus Stufe 1d). Eine ganze Schreibweise aus `event_orte` lösen gehört zur Guide-Pflege (3b), weil `clubs_profil.py` die Club-Liste neu berechnet.
+- **Score:** `extras.score_manuell` = Begründung; `flaechensuche.py` lässt den Score dann stehen. Spielplätze und Weihnachtsmärkte haben eigene Scores (3b).
+- **Zusammenlegen:** wie `orte_balletthaus_zusammen_2026-11-20.sql`, zusätzlich Säle umhängen und Schreibweisen beider Listen (club, spielstaette) plus Name übernehmen. Ziel muss aktiv sein.
+- **Cache:** Alle Orte-Lader (`orte.ts`, `spielstaetten-daten.ts`, `spielplaetze-daten.ts`, `weihnachtsmaerkte-daten.ts`, `orteFuerSlugs`) bekommen `cacheTag("orte")`; die Routen leeren ihn nach jeder Änderung (bei Event-Umzug auch `events`).
+- **Bekannt:** Für geschlossene Guide-Orte (Restaurant, Club …) bleibt `/guides/<hub>/<slug>` eine 404 – `ort_weiterleitungen` wirkt nur unter `/orte/<slug>` (wie bisher, z. B. Gertrudenhof).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -621,3 +632,4 @@ Stufe 2 (23.11.2026):
 - 23.11.2026: Stufe 1a gebaut (09b56cb, lokal), Umsetzungsnotizen in Anhang F.
 - 23.11.2026: Stufen 1b und 1c LIVE (5246581, 11d3945), Stufe 1d LIVE (c16f017, Cursor: deploybar, 5 Hinweise behoben), Stufe 1e gebaut (lokal); Notizen in Anhang F.
 - 23.11.2026: Stufe 1 komplett LIVE (eeb93fd), Stufe 2 Magazin gebaut (lokal); Notizen in Anhang F.
+- 23.11.2026: Stufe 2 LIVE (cf82caf). Stufe 3a Orte gebaut (lokal), SQL S4 `admin_orte_2026-11-23.sql`; Notizen in Anhang F.

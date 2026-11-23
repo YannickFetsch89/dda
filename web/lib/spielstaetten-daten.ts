@@ -2,12 +2,12 @@
 // - eigene Ladefunktion, nicht orteLaden() (kein Qualitäts-Score – sichtbar ist jede aktive Spielstätte)
 // - Programm über events.ort_id (Haus plus Kinder), NICHT eventPoolLaden(): alle kommenden Termine, seitenweise,
 //   keine Beispieldaten; bei Fehler kurzes Cache-Leben und fehler = true (Seite zeigt „Gerade nicht verfügbar“).
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { heuteBerlin } from "./datum";
 import { indexierbar, profil } from "./spielstaetten";
 import { mitSpalten, normalisieren as eventNormalisieren } from "./daten";
 import { istSichtbarerClub } from "./clubs";
-import { MIN_QUALITAETS_SCORE, normalisieren, SPALTEN_MIT_EXTRAS, type Zeile } from "./orte";
+import { MIN_QUALITAETS_SCORE, normalisieren, SPALTEN_MIT_EXTRAS, type Zeile, ORTE_CACHE_TAG } from "./orte";
 import { leseClient } from "./supabase-server";
 import { buendeln } from "./termine";
 import type { DddEvent, DddOrt } from "./typen";
@@ -30,6 +30,7 @@ function mitEltern(z: Zeile): Spielstaette {
 /** Alle aktiven Spielstätten (seitenweise). `fehler`: Liste unvollständig → nur kurz gecacht. */
 export async function spielstaettenLaden(): Promise<{ orte: Spielstaette[]; fehler: boolean }> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);
@@ -69,6 +70,7 @@ export async function spielstaettenLaden(): Promise<{ orte: Spielstaette[]; fehl
  */
 export async function spielstaetteLaden(slug: string): Promise<{ ort: Spielstaette | null; fehler: boolean }> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);
@@ -97,6 +99,7 @@ export async function spielstaetteLaden(slug: string): Promise<{ ort: Spielstaet
  */
 export async function ortZeileAbfragen(id: string): Promise<{ ort: DddOrt | null; fehler: boolean }> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);
@@ -132,6 +135,7 @@ export interface Programm {
  */
 export async function programmLaden(ids: string[]): Promise<Programm> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const heute = heuteBerlin();
   const client = leseClient();
   if (!client || !ids.length) {
@@ -177,6 +181,7 @@ export function kinderVon(hausId: string, alle: Spielstaette[]): Spielstaette[] 
  */
 export async function eventOrtLink(eventId: string): Promise<{ name: string; pfad: string } | null> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);
@@ -220,6 +225,7 @@ export function sichtbarerPfad(o: DddOrt): string | null {
  */
 export async function kommendeJeOrt(): Promise<{ anzahl: Map<string, number>; fehler: boolean }> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const heute = heuteBerlin();
   const client = leseClient();
   const anzahl = new Map<string, number>();
@@ -263,6 +269,7 @@ export function indexierbareOrte(alle: Spielstaette[], anzahl: Map<string, numbe
 /** Guide-Häuser von Sälen (das Haus ist keine Spielstätte, z. B. der Club zakk) – für die Übersicht /orte. */
 export async function guideHaeuserLaden(ids: string[]): Promise<{ orte: DddOrt[]; fehler: boolean }> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client || !ids.length) {
     cacheLife(KURZ);

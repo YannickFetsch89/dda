@@ -1,7 +1,7 @@
 // Datenzugriff für den Guide „Spielplätze“ (Plan 5.1): eigene Abfrage OHNE Score-Schwelle – sichtbar ist jeder aktive
 // Spielplatz (freigeschaltet per SQL, Schritt 6). Mit extras.spielplatz (Profil), Google-Foto und Fotoversion.
-import { cacheLife } from "next/cache";
-import { SPALTEN_MIT_EXTRAS, normalisieren, type Zeile } from "./orte";
+import { cacheLife, cacheTag } from "next/cache";
+import { SPALTEN_MIT_EXTRAS, normalisieren, type Zeile, ORTE_CACHE_TAG } from "./orte";
 import { leseClient } from "./supabase-server";
 import type { DddOrt } from "./typen";
 
@@ -12,6 +12,7 @@ const SEITENGROESSE = 1000;
 /** Alle aktiven Spielplätze (seitenweise, gecacht). */
 export async function spielplaetzeLaden(): Promise<DddOrt[]> {
   "use cache";
+  cacheTag(ORTE_CACHE_TAG); // Admin-Bereich leert ihn nach Änderungen an Orten (Plan Admin-Dashboard 4.7)
   const client = leseClient();
   if (!client) {
     cacheLife(KURZ);

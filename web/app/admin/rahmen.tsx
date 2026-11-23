@@ -13,7 +13,7 @@ const NAVIGATION: { titel: string; href?: string; stufe?: string }[] = [
   { titel: "Empfehlungen", href: "/admin/empfehlungen" },
   { titel: "Scraper", href: "/admin/scraper" },
   { titel: "Magazin", href: "/admin/magazin" },
-  { titel: "Orte & Guides", stufe: "3" },
+  { titel: "Orte & Guides", href: "/admin/orte" },
   { titel: "Instagram", stufe: "eigener Plan" },
   { titel: "Newsletter", stufe: "4" },
   { titel: "Meldungen", stufe: "5" },
