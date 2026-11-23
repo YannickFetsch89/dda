@@ -1,6 +1,6 @@
-# Plan: Admin-Dashboard neu (admin.diesdas.events) – zweite Fassung, 23.11.2026
+# Plan: Admin-Dashboard neu (admin.diesdas.events) – dritte Fassung, 23.11.2026
 
-**Status:** ENTWURF, zweite Fassung. Die Entscheidungen E1–E9 und Q5–Q8 sind am 23.11.2026 wie vorgeschlagen bestätigt. Die 15 Befunde der Cursor-Prüfung 1 sind eingearbeitet (Anhang B). Die Cursor-Prüfung 2 steht aus. Nicht freigegeben, nichts gebaut.
+**Status:** ENTWURF, dritte Fassung. Die Entscheidungen E1–E9 und Q5–Q8 sind am 23.11.2026 wie vorgeschlagen bestätigt. Eingearbeitet sind die Befunde der Cursor-Prüfungen 1 (15 Befunde, Anhang B) und 2 (6 Befunde und ein eigener Fund, Anhang C). Cursor-Prüfung 3 steht aus. Nicht freigegeben, nichts gebaut.
 **Grundlage:** Entscheidungen des Auftraggebers vom 23.11.2026 (Abschnitt 2) und Bestand am Stand `79c7459` (Abschnitt 1).
 **Gebaut wird erst nach Freigabe**, und zwar stufenweise. Jede Stufe hat eigene SQL, einen eigenen Deploy und eine eigene Abnahme.
 
@@ -115,7 +115,8 @@ Regeln aus dem Betrieb:
    - **Beide** Websites setzen einen festen Kopf, der einen vom Browser mitgeschickten Wert überschreibt:
      - diesdas.events: `proxy_set_header X-DDD-Bereich web;`
      - admin.diesdas.events: `proxy_set_header X-DDD-Bereich admin;`
-   - admin.diesdas.events leitet an `127.0.0.1:3847` (Next) statt an 8502, **aber nur diese Pfade:** `/admin`, `/api/admin`, `/_next`, `/bild`, `/fallback`, `/magazin-bild`, `/ort-foto`, `/ort-bilder`, `/magazin-autoren`, `/fonts`, `/icon.svg`.
+   - **Reihenfolge (Cursor-Prüfung 2, Befund 1):** Der Eintrag auf **diesdas.events** kommt **vor** dem ersten Deploy mit Admin-Code (Schritt 1a-0 in Abschnitt 7). Er ändert für die Website nichts, solange der Code ihn nicht liest. Ohne ihn käme jeder, der `X-DDD-Bereich: admin` selbst mitschickt, auf der öffentlichen Website an die Admin-Routen. Dort fängt ihn zwar noch die Anmeldung ab, aber die Trennung wäre weg. Nach dem Eintrag prüft Claude mit `curl -H "X-DDD-Bereich: admin" https://diesdas.events/admin`, dass weiter 404 kommt.
+   - admin.diesdas.events leitet an `127.0.0.1:3847` (Next) statt an 8502, **aber nur diese Pfade:** `/admin`, `/api/admin`, `/_next` (dort liegen auch die Schriften unter `/_next/static/media`), `/bild`, `/fallback`, `/magazin-bild`, `/magazin-autoren`, `/ort-foto`, `/ort-bilder`, `/icon.svg`.
    - `location = /` → `return 308 /admin;` (relative Adresse, kein localhost in `Location`).
    - Alle anderen Pfade → `return 404;`.
    - Für den Übergang zusätzlich `location /alt/` → 8502 mit WebSocket (4.1).
@@ -176,6 +177,7 @@ Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in
   - Letzter Scraper-Lauf: Status, Alter (gelb > 4 Tage, rot > 7 Tage, Rhythmus 3 Tage), Zahl der Quellen mit Warnung.
   - Deploy, Wächter, Geburtstagsmails, Magazin-Job: letzter Lauf laut GitHub (E3).
   - Website: Antwort von `diesdas.events/robots.txt` (Server-Abruf beim Laden der Seite).
+  - Host-Trennung: `https://diesdas.events/admin` mit selbst gesetztem `X-DDD-Bereich: admin` muss 404 liefern, sonst rot (8).
 - **Zu erledigen** (je Zeile Anzahl + Link):
   - offene Meldungen (`event_meldungen.status = 'neu'`);
   - Magazin-Entwürfe `in_pruefung` (rot, wenn `gueltig_von` in ≤ 2 Tagen);
@@ -214,11 +216,19 @@ Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprun
   - Neue Spalte `events.redaktion_felder text[] NOT NULL DEFAULT '{}'`. Jedes im Dashboard geänderte Feld kommt hinein.
   - `_anreicherungs_update_bauen` (`database/client.py:75–135`) prüft sie an **allen drei Stellen**: in der Schleife über `_ANREICHERBARE_FELDER` (inklusive `bild_url` und `kategorie`), im Uhrzeit-Block (`:120–124`) und beim Quellenwechsel (`:127–133`, Felder aus `_QUELL_FELDER + _VORRANG_FELDER`). Ein Feld in `redaktion_felder` wird nie ins `update` geschrieben. Das gilt auch für `quelle_name`/`quelle_url`, falls die Redaktion sie gesetzt hat, und für `ort_id`.
   - **`abgesagt`:** `false` gilt in der Schleife heute als leer und würde von der Quelle wieder auf `true` gesetzt. Steht `abgesagt` in `redaktion_felder`, bleibt es so, wie die Redaktion es gesetzt hat.
-  - `titel`, `datum`, `ort`, `datum_bis`, `unterkategorie`, `abgelehnt` und `nicht_empfehlen` schreibt der Builder nicht. Sie brauchen keinen Feldschutz, aber Teil B.
+  - `titel`, `datum`, `ort`, `datum_bis`, `abgelehnt` und `nicht_empfehlen` schreibt weder der Builder noch ein anderer Schritt im Lauf. Für sie reicht Teil B.
+  - **Weitere Schreiber im selben Lauf** (Cursor-Prüfung 2, Befund 2, plus eigener Fund): Sie lassen Felder aus `redaktion_felder` ebenfalls stehen. Umgesetzt wird das als Filter in ihrer Abfrage, `not.redaktion_felder.cs.{feld}`, oder als Prüfung vor dem `update`.
+    - `pipeline/unterkategorien.py` **`vereinheitlichen()`** (`:208–244`): setzt `unterkategorie` neu, auch wenn sie gefüllt ist → `unterkategorie`. (`nachtragen()` füllt nur leere, braucht nichts.)
+    - `pipeline/beschreibung_quellen.py` **`veranstalter_nachziehen()`** (`:669–741`): ersetzt `beschreibung`, wenn der alte Text kürzer als 200 Zeichen ist oder der neue länger (`ersetzen_erlaubt`, `:584–587`) → `beschreibung`.
+    - `pipeline/beschreibung_quellen.py` **`beschreibungen_nachziehen()`** (`:471–511`): ersetzt bei Rausgegangen-Events ohne `beschreibung_gesucht_am` die Beschreibung ohne Längenprüfung → `beschreibung`. (Eigener Fund, nicht im Cursor-Befund.)
+    - Nur leere Felder füllen und brauchen deshalb nichts (laut Cursor-Prüfung 2 geprüft): `adressen_ergaenzen`, `stadtteil_mapper`, `categorizer.kategorisieren`, `reihen_zuordnen`, `ort_zuordnung` im Lauf. `konten_aufraeumen` schreibt keine Events.
+    - **Stufe 3:** Die Annahme von Ortsnamen- und `ort_id`-Vorschlägen schreibt `ort` bzw. `ort_id` nur, wenn das Feld nicht in `redaktion_felder` steht. `abgleich_ort` bleibt dabei unverändert.
   - Button „Redaktionsänderungen zurücksetzen“: leert `redaktion_felder` und `abgleich_*` für ein Event.
 - **Schutz vor Überschreiben (E7), Teil B: Wiederfinden** (Cursor-Befund 2):
   - Neue Spalten `abgleich_titel`, `abgleich_datum`, `abgleich_uhrzeit`, `abgleich_ort`. Ändert die Redaktion **zum ersten Mal** eines der vier Felder `titel`, `datum`, `uhrzeit` oder `ort`, schreibt die Route alle vier mit den **bisherigen** Werten. Spätere Änderungen lassen sie stehen; das sind die Werte der Quelle.
   - **Neuer Schritt 0** in `database/client.py` vor Schritt 1: Suche nach einer Zeile mit `abgleich_titel = titel`, `abgleich_datum = datum`, `abgleich_ort = ort` des eingehenden Events und passender Uhrzeit gegen `abgleich_uhrzeit` (dieselbe Regel wie Schritt 1, `:306–312`). Ein Treffer gilt als `bestehendes`, die Schritte 1–3 entfallen. Der Treffer geht danach durch die Anreicherung mit Feldschutz (Teil A).
+    - **Ohne eingehende Uhrzeit** (Cursor-Prüfung 2, Befund 3) passt jede Uhrzeit. Schritt 0 trifft dann nur, wenn **genau eine** Zeile übrig bleibt. Bei mehreren bearbeiteten Vorstellungen desselben Titels am selben Tag laufen stattdessen die Schritte 1–3 wie bisher. Mit Uhrzeit ist der Treffer eindeutig, weil verschiedene Vorstellungen verschiedene `abgleich_uhrzeit` haben.
+    - Ablauf im Lauf: Ein Treffer läuft in den bestehenden `else`-Zweig (Anreicherung, `duplikate += 1`). `neu_pro_quelle` zählt weiter nur Inserts. `tagesbestand` bleibt allein bei Schritt 3.
   - **Warum ein eigener Schritt statt Änderungen in Schritt 1–3:** Damit sind alle vier Fälle gedeckt: geänderter Titel, Ort, Uhrzeit, Datum, auch zusammen. Schritt 2 (Slug und Uhrzeit) und Schritt 3 (Ähnlichkeit am selben Datum, gleiche Quelle mit anderer Uhrzeit ist ein eigener Termin) bleiben unverändert und können eine umgestellte Uhrzeit oder ein umgestelltes Datum nicht wiederfinden.
   - Index auf `(abgleich_datum, abgleich_titel)` mit `WHERE abgleich_datum IS NOT NULL`.
   - **Eindeutigkeit:** Der Unique-Schlüssel `(titel, datum, ort, uhrzeit)` (`database/schema.sql:37–39`) kann beim Bearbeiten greifen, wenn es die Zielkombination schon gibt. Die Route meldet das als „Gibt es schon: <Link>, als Dublette zusammenlegen?“.
@@ -239,13 +249,16 @@ Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprun
 ### 4.5 Stufe 1e: Empfehlungen
 
 - **Tagesvorschau** `/admin/empfehlungen?tag=2026-11-28`: zeigt genau, was die Startseite unter `/?datum=2026-11-28` zeigt (Tipp, Picks, „Diese Woche beliebt“, Wochenend-Tipps).
-  - **Gleiche Rechnung, eine Funktion** (Cursor-Befund 6): Die Aufrufe aus `web/app/page.tsx:62–121` wandern in eine Funktion `startseitenAuswahl(pool, vergangene, datumParam)` in `web/lib/startseite.ts`. Startseite und Vorschau rufen **nur** diese Funktion. Sie enthält:
-    - Pool aus `eventPoolLaden` (gebündelt, `abgelehnt` schon weg), danach `abgesagt` entfernt;
+  - **Gleiche Rechnung, eine Funktion** (Cursor-Befund 6): Die Rechnung für Tipp, Picks, Beliebt und Wochenende aus `web/app/page.tsx:62–121` wandert in eine Funktion `startseitenAuswahl(pool, vergangene, datumParam)` in `web/lib/startseite.ts`. Startseite und Vorschau rufen für diese vier Blöcke **nur** diese Funktion.
+    - **Sie rechnet nur, sie lädt nicht** (Cursor-Prüfung 2, Befund 5). Kein `"use cache"`. Das Laden (`eventPoolLaden`, `vergangeneWochenendEvents`) bleibt in der Seite bzw. in der Admin-Route, das Caching der Startseite ändert sich nicht.
+    - Kennzahlen, Abend, Frisch, Stadtteile, Themen und Tagesleiste bleiben in `page.tsx`.
+    - Sie bekommt bzw. rechnet:
+    - den Pool aus `eventPoolLaden` (gebündelt, `abgelehnt` schon weg); `abgesagt` entfernt sie selbst;
     - `heute` und `jetzt` aus dem Pool für `stufenKontext`, `highlightGilt` und `topGilt`. Der gewählte Tag geht nur als `fokusTag` ein (`null`, sobald von ≠ bis);
     - `startPlaetze(filtern(…, { von, bis, mitLanglaeufern: true }), stufen, fokusTag)`;
     - `beliebtAuswahl` mit Tag und Woche ohne Langläufer und `schonGezeigt` aus Tipp und Picks;
     - `wochenendProgramm(pool, vergangeneWochenendEvents(pool.heute))`. Die Box hängt an `pool.heute`, nicht am gewählten Tag. Das zeigt die Vorschau so an.
-  - Ein Test sichert, dass `page.tsx` danach dieselbe Ausgabe liefert.
+  - Ein Test sichert für denselben Pool, dass die vier Blöcke (Tipp, Picks, Beliebt, Wochenende) gleich der bisherigen Rechnung in `page.tsx` sind.
   - **„Warum“:** Einen fertigen Grund-Text gibt es nicht. Neu ist `stufeErklaeren(e, k)` in `ableitungen.ts`. Sie liefert dieselben Schritte wie `stufeRechnen` als Liste: Stamm oder Sprachhinweis (`istStamm`), Grundstufe (`grundstufe`, `ZUGPFERD_ORTE`), Serie (`serienErkennen`), Langläufer (`istLanglaeufer`), Flagge. Dazu kommen „nicht empfehlen“ und der Fokustag. Ein Test sichert, dass die erklärte Stufe gleich `breite()` ist.
 - Darunter alle weiteren Kandidaten des Tages, sortiert nach `nachEmpfehlung`, je mit den Buttons **Tipp des Tages**, **Highlight der Woche**, **Top-Event des Monats**, **nicht empfehlen**. Nach dem Klick rechnet die Vorschau neu.
 - **Kalender** der nächsten 30 Tage: je Tag der Tipp (Redaktion oder automatisch), geltende Highlight- und Top-Flagge, Hinweis „kein Bild“.
@@ -256,19 +269,28 @@ Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprun
 - **Redaktionsplan:** Kalender mit festen Terminen (Wochenvorschau Fr → Ausgabe Mo–So, Monats-Tipps am 28.) und allen Beiträgen nach `gueltig_von`/`veroeffentlicht_am` mit Status. Fehlender Entwurf für einen festen Termin = rot.
 - **Entwürfe:**
   - Liste nach Status.
-  - Vorschau im Admin-Bereich mit demselben Renderer wie `/magazin/vorschau/[id]`. Der Vorschau-Schlüssel ist im Admin-Bereich nicht nötig, weil die Admin-Sitzung reicht.
+  - Vorschau im Admin-Bereich mit denselben Bausteinen wie `/magazin/vorschau/[id]`. Der Vorschau-Schlüssel ist dort nicht nötig, weil die Admin-Sitzung reicht.
+    - Die öffentliche Vorschau-Seite lädt über `vorschauLaden` (Service-Schlüssel, `web/lib/magazin-daten.ts:204–221`) und prüft den Hash. Das bleibt unverändert (Cursor-Prüfung 2, Befund 4).
+    - Die Admin-Vorschau holt den Beitrag über `admin_magazin_beitrag`. Daraus baut `beitragAus` (`magazin-daten.ts:14–18`) einen `MagazinBeitrag`. Das Artikel-Markup aus `web/app/magazin/vorschau/[id]/page.tsx:38–56` wandert dafür in eine gemeinsame Komponente `MagazinArtikel` (Autor, `heroFuer`, `parsen`, `MagazinText`). Beide Seiten nutzen sie.
+    - Daneben ruft die Admin-Vorschau `eventsFuerIds`, `orteFuerSlugs` und `autorenLaden` auf, wie die öffentliche Seite.
   - Ergebnis der automatischen Prüfung (`pruefung` jsonb) als Liste (a)–(i) mit grün/rot.
   - KI-Angaben aus `ki_entwurf` (Modell, Kosten).
 - **Bearbeiten:** `titel`, `seo_titel`, `teaser`, `inhalt_md` (Editor mit Live-Vorschau), `kurzfassung`, `faq`, `hero_*`, `gueltig_*`, `korrektur_hinweis`. Nach dem Speichern läuft die Prüfung erneut, über einen Job (`magazin.yml`, Schritt `pruefen`) oder über eine Route, falls die Prüfung in TypeScript vorliegt (bei der Umsetzung klären).
 - **Events tauschen** (Wochenvorschau, Monats-Tipps): Ein Event aus der Auswahl entfernen oder durch einen Kandidaten ersetzen. Das ändert `event_ids` und den betreffenden Block in `inhalt_md`.
 - **Rechte (Cursor-Befund 3):** Der Admin-Token kann heute keine Entwürfe lesen. Es fehlen die Spalten-GRANTs und eine Policy. `UPDATE` ist nicht vergeben, und jedes Update einer veröffentlichten Zeile als `authenticated` wirft `magazin_veroeffentlicht_gesperrt`. Deshalb läuft **der ganze Magazin-Bereich über `SECURITY DEFINER`-Funktionen** (S3), nicht über Tabellenrechte:
   - lesen: `admin_magazin_liste(status)`, `admin_magazin_beitrag(id)` (alle Spalten), `admin_magazin_kosten(monat)`;
-  - schreiben: `admin_magazin_speichern(id, felder jsonb)`. Nur die Felder aus „Bearbeiten“ sind erlaubt, nie `status`, `freigegeben_*`, `vorschau_hash`, `pruefung` oder `ki_entwurf`. Danach `pruefung` zurück auf „neu prüfen“;
-  - `admin_magazin_veroeffentlichen(id)`, `admin_magazin_zurueckziehen(id)`, `admin_magazin_korrektur(id, hinweis, inhalt_md)` für veröffentlichte Beiträge;
+  - anlegen: `admin_magazin_anlegen(rubrik, autor_slug, titel)` legt einen leeren Entwurf mit `status = 'entwurf'` an und gibt die `id` zurück (Cursor-Prüfung 2, Befund 4: `authenticated` darf nicht einfügen);
+  - schreiben: `admin_magazin_speichern(id, felder jsonb)`.
+    - Nur die Felder aus „Bearbeiten“ und **`event_ids`** (für „Events tauschen“) sind erlaubt.
+    - Nie `status`, `freigegeben_*`, `vorschau_hash`, `pruefung` oder `ki_entwurf`.
+    - **Nur für `entwurf` und `in_pruefung`.** Bei `veroeffentlicht` oder `zurueckgezogen` wirft die Funktion einen Fehler. Sonst würde sie als `postgres` am Korrekturhinweis vorbei schreiben.
+    - Danach geht `pruefung` zurück auf „neu prüfen“;
+  - `admin_magazin_veroeffentlichen(id)`, `admin_magazin_zurueckziehen(id)`, `admin_magazin_korrektur(id, hinweis, inhalt_md)`. Die letzte ist der einzige Weg, einen veröffentlichten Beitrag zu ändern: Sie setzt `korrektur_hinweis` und `aktualisiert_am` immer mit;
   - Autoren: `admin_magazin_autor_speichern(slug, felder jsonb)`.
   - **Wirkung auf den Trigger:** In einer `SECURITY DEFINER`-Funktion mit Eigentümer `postgres` ist `current_user = postgres`, auch im Trigger `magazin_status_pruefen` (`magazin_2026-11-19.sql:164–206`). `maschine` ist dann falsch, die Sperre „nur Redaktion“ öffnet sich. **Das ist gewollt:** Der Admin ist die Redaktion (D3). Die **Pflichtprüfungen des Triggers bleiben**: nur aus `in_pruefung`, Pflichtfelder, `pruefung->>'ergebnis' = 'gruen'`. Die Funktion `admin_magazin_speichern` kann den Status nicht ändern; nur `…_veroeffentlichen` und `…_zurueckziehen` tun das.
-- **Veröffentlichen:** Button → `admin_magazin_veroeffentlichen(id)`. Setzt `status = 'veroeffentlicht'`, `freigegeben_von` (Mailadresse aus `auth.jwt()`), `freigegeben_am`, `veroeffentlicht_am` (falls leer: jetzt) und leert `vorschau_hash`. Danach `revalidateTag` der Magazin-Caches, IndexNow über den bestehenden Job (`melden`, stündlich).
-- **Zurückziehen, Korrekturhinweis, neuer Beitrag** (Rubriken `saison`, `stadtleben`, `nachtleben`, `genuss`, `familie` ohne Job) als leerer Entwurf.
+- **Veröffentlichen:** Button → `admin_magazin_veroeffentlichen(id)`. Setzt `status = 'veroeffentlicht'`, `freigegeben_von` (Mailadresse aus `auth.jwt()`), `freigegeben_am`, `veroeffentlicht_am` (falls leer: jetzt) und leert `vorschau_hash`. Danach IndexNow über den bestehenden Job (`melden`, stündlich).
+- **Cache** (Cursor-Prüfung 2, Befund 4): Die Magazin-Loader haben heute nur `cacheLife(MAGAZIN_CACHE)` (`magazin-daten.ts:62–179`). `magazinHeute`, `beitraegeLaden`, `beitragLaden`, `autorenLaden`, `eventsFuerIds` und `orteFuerSlugs` bekommen `cacheTag("magazin")`. Nach Veröffentlichen, Zurückziehen, Korrektur und Autor-Speichern ruft die Route `revalidateTag("magazin", { expire: 0 })` auf. Bei Entwürfen ist das nicht nötig, sie sind öffentlich unsichtbar.
+- **Zurückziehen, Korrektur, neuer Beitrag:** Ein neuer Beitrag (Rubriken `saison`, `stadtleben`, `nachtleben`, `genuss`, `familie`, ohne Job) entsteht über `admin_magazin_anlegen` als leerer Entwurf.
 - **Job starten:** Wochenvorschau oder Monats-Tipps neu erzeugen (`magazin.yml`, `dry_run` wählbar).
 - **Autoren:** Liste, bearbeiten. Profilbilder bleiben Dateien im Repo, wie heute.
 - **KI-Kosten:** Summe je Monat aus `magazin_ki_kosten`.
@@ -327,15 +349,13 @@ Nur der Platz, gebaut wird es im eigenen Plan „Instagram-Posting“:
 
 ## 5. Datenmodell und SQL-Bedarf (führt der Auftraggeber aus, jeweils vor dem Deploy der Stufe)
 
-| Nr. | Stufe | Datei (Vorschlag) | Inhalt |
-|---|---|---|---|
 Alle `SECURITY DEFINER`-Funktionen folgen demselben Muster (3.3): Eigentümer `postgres`, erste Prüfung `ist_admin()`, `SET search_path = public, pg_temp`, `REVOKE EXECUTE … FROM PUBLIC, anon`, `GRANT EXECUTE … TO authenticated`, Protokolleintrag in `admin_protokoll` in derselben Transaktion.
 
 | Nr. | Stufe | Datei (Vorschlag) | Inhalt |
 |---|---|---|---|
-| S1 | 1a | `database/admin_grundlagen_<datum>.sql` | **`admin_protokoll`** (id, zeitpunkt, admin_id, aktion, tabelle, ziel_id, vorher jsonb, nachher jsonb). RLS: lesen und einfügen nur `ist_admin()`, kein Update/Delete. **`admin_vorschlaege`** (id, art, ziel_tabelle, ziel_id, vorschlag jsonb, begruendung, status `offen/angenommen/abgelehnt`, quelle_lauf, erstellt_am, entschieden_von/_am, eindeutiger Schlüssel `(art, ziel_id, schluessel)` gegen Doppelvorschläge). Die Pipeline schreibt als `service_role`, der Admin liest per Policy `ist_admin()`. Entscheiden nur über die Funktionen aus S2. |
+| S1 | 1a | `database/admin_grundlagen_<datum>.sql` | **`admin_protokoll`** (id, zeitpunkt, admin_id, aktion, tabelle, ziel_id, vorher jsonb, nachher jsonb). RLS: lesen und einfügen nur `ist_admin()`, kein Update/Delete. **`admin_vorschlaege`** (id, art, ziel_tabelle, ziel_id, `schluessel text NOT NULL` (je Art festgelegt, z. B. bei `dublette` „behalten-id:dubletten-id“, bei `gebiet` die Event-ID), vorschlag jsonb, begruendung, status `offen/angenommen/abgelehnt`, quelle_lauf, erstellt_am, entschieden_von/_am; eindeutig `(art, schluessel)` gegen Doppelvorschläge, die Pipeline schreibt mit `ON CONFLICT DO NOTHING`, so bleiben abgelehnte liegen). Die Pipeline schreibt als `service_role`, der Admin liest per Policy `ist_admin()`. Entschieden wird nur über die Funktionen aus S2 (ab 1d). |
 | S2 | 1d | `database/admin_events_<datum>.sql` | `events.redaktion_felder text[] NOT NULL DEFAULT '{}'`, `events.abgleich_titel text`, `abgleich_datum date`, `abgleich_uhrzeit time`, `abgleich_ort text` mit Teilindex. Die bestehende Policy „Admins ändern Events“ (`auth_rollen.sql:152–157`, UPDATE mit `ist_admin()`) deckt die neuen Spalten. DEFINER-Funktionen: `admin_dublette_zusammenlegen(behalten, dublette)` (mit Merkliste und `event_seo_entscheidungen`, 4.4), `admin_gebiet_entfernen(event)`, `admin_vorschlag_annehmen(id)` und `admin_vorschlag_ablehnen(id)`. Die beiden letzten verteilen je Art an die passende Funktion. |
-| S3 | 2 | `database/admin_magazin_<datum>.sql` | Nur DEFINER-Funktionen, keine neuen Tabellenrechte für `authenticated`: `admin_magazin_liste`, `_beitrag`, `_kosten`, `_speichern` (Feld-Whitelist, kein Status), `_veroeffentlichen`, `_zurueckziehen`, `_korrektur`, `_autor_speichern` (4.6). Der Trigger `magazin_status_pruefen` bleibt unverändert. |
+| S3 | 2 | `database/admin_magazin_<datum>.sql` | Nur DEFINER-Funktionen, keine neuen Tabellenrechte für `authenticated`: `admin_magazin_liste`, `_beitrag`, `_kosten`, `_anlegen`, `_speichern` (Feld-Whitelist inkl. `event_ids`, kein Status, nur `entwurf`/`in_pruefung`), `_veroeffentlichen`, `_zurueckziehen`, `_korrektur`, `_autor_speichern` (4.6). Der Trigger `magazin_status_pruefen` bleibt unverändert. |
 | S4 | 3 | `database/admin_orte_<datum>.sql` | Policies `orte_admin_lesen` (SELECT, `ist_admin()`) und `orte_admin_aendern` (UPDATE, `ist_admin()`) auf `orte`. DEFINER-Funktionen: `admin_ort_zusammenlegen(von, nach)`, `admin_ort_schliessen(id, weiterleitung)`, `admin_ort_text_freigeben(id)`, `admin_ort_zuordnung_loesen(event, ort)`. `ort_weiterleitungen` wird nur über diese Funktionen geschrieben. |
 | S5 | 4 | `database/newsletter_doi_<datum>.sql` | Spalten für Token-Zeitpunkt, Versandstatus der Bestätigung. Aufräumregel. |
 | S6 | 5 | `database/admin_rest_<datum>.sql` | `admin_konten_kennzahlen()`, `quellen_einstellungen`. |
@@ -362,13 +382,18 @@ Python-Änderungen: `database/client.py` (E7: Feldschutz an drei Stellen, Schrit
   - Whitelist beim Bearbeiten: Unbekannte Felder werden abgewiesen, `redaktion_felder` und `abgleich_*` werden richtig gepflegt (nur beim ersten Ändern).
 - **Python** (`tests/`):
   - Feldschutz an allen drei Stellen: Schleife inklusive `bild_url`, `kategorie` und `abgesagt = false`; Uhrzeit-Block; Quellenwechsel.
-  - Schritt 0 findet das Event wieder bei geändertem Titel, Ort, Uhrzeit, Datum und bei Datum plus Uhrzeit zusammen. Ohne `abgleich_*` laufen die Schritte 1–3 unverändert.
+  - Schritt 0 findet das Event wieder bei geändertem Titel, Ort, Uhrzeit, Datum und bei Datum plus Uhrzeit zusammen. Ohne `abgleich_*` laufen die Schritte 1–3 unverändert. Ohne eingehende Uhrzeit und mit zwei bearbeiteten Vorstellungen trifft Schritt 0 nicht, dann greifen die Schritte 1–3.
+  - `vereinheitlichen()`, `veranstalter_nachziehen()` und `beschreibungen_nachziehen()` lassen Felder aus `redaktion_felder` stehen.
   - Warnregeln gleich wie in TypeScript (gemeinsame Fixture).
   - Vorschläge statt SQL in Dubletten und Gebiet; die Feldliste der Dubletten wie in `dubletten_sql.py`.
 - **SQL:** Kontrollabfragen am Ende jeder Datei, wie bisher. Dazu je Funktion: Aufruf als Nicht-Admin wirft, Aufruf als `anon` ist nicht erlaubt.
   - Dublette: Merkliste wird umgezogen, und bei doppelt Gemerkten bleibt genau eine Zeile.
   - Gebiet: Mit Merkliste wird abgelehnt statt gelöscht.
-  - Magazin: `_speichern` kann den Status nicht ändern. `_veroeffentlichen` scheitert bei `pruefung` ≠ grün.
+  - Magazin:
+    - `_speichern` kann den Status nicht ändern und wirft bei `veroeffentlicht`.
+    - `_anlegen` legt einen Entwurf an.
+    - `_veroeffentlichen` scheitert bei `pruefung` ≠ grün.
+    - `_korrektur` setzt `korrektur_hinweis` und `aktualisiert_am`.
 - **Von Hand je Stufe:** Login mit Admin- und Nicht-Admin-Konto, eine Änderung je Bereich, sichtbare Wirkung auf der Website, Protokolleintrag, Rückgängig.
 
 ---
@@ -378,7 +403,8 @@ Python-Änderungen: `database/client.py` (E7: Feldschutz an drei Stellen, Schrit
 | Schritt | Inhalt | SQL vorher | Freigabe |
 |---|---|---|---|
 | 0 | Dieser Plan, Cursor-Prüfung, Freigabe | – | Plan |
-| 1a | Grundgerüst, Login mit Zwei-Faktor, Protokoll, Proxy-Regeln, nginx-Umstellung beider Websites (Kopf `X-DDD-Bereich`, Pfadliste, `/alt`) | S1 | Deploy, dann nginx durch Auftraggeber (Anleitung), dann Prüfung mit `curl` |
+| 1a-0 | **Vor jedem Admin-Code:** nginx diesdas.events bekommt `proxy_set_header X-DDD-Bereich web;` (Auftraggeber, Anleitung). Kein Deploy | – | Auftraggeber; danach prüft Claude mit `curl`, dass die Website unverändert läuft |
+| 1a | Grundgerüst, Login mit Zwei-Faktor, Protokoll, Proxy-Regeln. Danach nginx admin.diesdas.events umstellen (Kopf `admin`, Pfadliste, `/` → 308, `/alt`) | S1 | Deploy, dann nginx admin durch Auftraggeber, dann Prüfung mit `curl` gegen beide Hosts, auch mit selbst gesetztem Kopf |
 | 1b | Cockpit | – | Deploy |
 | 1c | Scraper + Warnregeln + Warn-Mail (E8) | – | Deploy |
 | 1d | Events, Schutz vor Überschreiben (Feldschutz, Schritt 0), Dubletten/Gebiet als Vorschläge, Cache-Tags | S2 | Deploy, erster Scraper-Lauf danach im Report prüfen |
@@ -398,7 +424,10 @@ Jeder Schritt: lokal bauen und testen, Cursor-Prüfung der Umsetzung, Push nur m
 - **Gemeinsamer Build:** Ein Fehler im Admin-Code legt auch die Website lahm. Gegenmittel: Tests, `tsc`, Build vor jedem Push. Admin-Code nur unter `web/app/admin`, `web/app/api/admin`, `web/lib/admin`.
 - **Rechte:** Ein Fehler in der Rollenprüfung würde die Datenbank öffnen. Gegenmittel: RLS bleibt die zweite Sicherung, weil mit dem Admin-Token geschrieben wird und nicht mit dem Service-Key. Jede DEFINER-Funktion prüft `ist_admin()` selbst. Tests für 401/403 und SQL-Tests als Nicht-Admin.
 - **DEFINER öffnet Trigger-Sperren:** In den Funktionen ist `current_user = postgres`. Sperren, die an `current_user` hängen, gelten dort nicht (Magazin). Gegenmittel: Feld-Whitelist in jeder Funktion, keine Funktion mit freiem SQL oder freien Spaltennamen.
-- **Host-Trennung hängt an nginx:** Setzt eine der beiden Websites den Kopf `X-DDD-Bereich` nicht, ist der Admin-Bereich geschlossen (Website) oder nicht erreichbar (Admin). Unsicher offen ist er in keinem Fall. Prüfung nach Schritt 1a mit `curl` gegen beide Hosts.
+- **Host-Trennung hängt an nginx** (Cursor-Prüfung 2, Befund 1):
+  - Setzt admin.diesdas.events den Kopf nicht, ist der Admin-Bereich nicht erreichbar.
+  - **Überschreibt diesdas.events den Kopf nicht**, kann jeder, der `X-DDD-Bereich: admin` selbst mitschickt, die Admin-Routen auf der öffentlichen Website aufrufen. Dort steht dann nur noch die Anmeldung mit Zwei-Faktor davor.
+  - Gegenmittel: Schritt 1a-0 setzt den Kopf auf diesdas.events **vor** dem ersten Admin-Code. Nach jedem Deploy und jeder nginx-Änderung prüft Claude mit `curl -H "X-DDD-Bereich: admin" https://diesdas.events/admin`, dass 404 kommt. Das Cockpit macht diese Prüfung zusätzlich bei jedem Aufruf und zeigt rot, wenn sie fehlschlägt.
 - **Pipeline-Änderung (E7):** Der Abgleich ist heikel (Duplikate, Quellenwechsel). Gegenmittel: Python-Tests mit echten Fällen, erster Lauf nach dem Deploy wird im Scraper-Report geprüft.
 - **Zwei Dashboards gleichzeitig:** Während des Übergangs können beide dasselbe Event ändern. Hingenommen, weil es nur einen Admin gibt.
 - **GitHub-Token** auf dem Server: Fine-grained, nur dieses Repo, `Actions: read and write`, `Variables: read`, sonst nichts. Wer ihn hat, kann Workflows starten, aber keinen Code ändern. Er läuft nach 1 Jahr ab; das Cockpit zeigt den Ablauf an.
@@ -426,55 +455,38 @@ Jeder Schritt: lokal bauen und testen, Cursor-Prüfung der Umsetzung, Push nur m
 
 ---
 
-## Anhang A: Cursor-Prüf-Prompt (zweite Fassung)
+## Anhang A: Cursor-Prüf-Prompt (dritte Fassung)
 
 ```
-Prüfe die **zweite Fassung** des Plans `docs/plan-admin-dashboard-2026-11-23.md` (Admin-Bereich neu unter
+Prüfe die **dritte Fassung** des Plans `docs/plan-admin-dashboard-2026-11-23.md` (Admin-Bereich neu unter
 admin.diesdas.events) erneut gegen den tatsächlichen Code im Repo. Ändere keinen Code und keinen Plan – nur Befunde.
 
-Deine Prüfung 1 hatte 15 Befunde (4 kritisch, 8 mittel, 3 gering). Alle sind eingearbeitet; Anhang B nennt die
-Stellen. Die wichtigsten Änderungen:
-- 3.2: Host-Trennung über den Kopf `X-DDD-Bereich`, den beide nginx-Websites fest setzen (web/admin). nginx lässt auf
-  dem Admin-Host nur eine Pfadliste durch und macht `/` → 308 `/admin` selbst. proxy.ts als zweite Sicherung:
-  Matcher um "/", "/admin/:path*", "/api/admin/:path*", 404 ohne Kopf vor allen bestehenden Zweigen, 308 mit
-  relativer Location. `ADMIN_LOKAL` nur ohne x-forwarded-*.
-- 3.3: eigener Rahmen `adminRoute` statt `kontoRoute`; `sitzungsCookie`/`cookiesLoeschen`/`sitzungAusAnfrage`
-  bekommen Parameter; eigene Origin-Prüfung mit `ADMIN_URL` und `ddd_admin`.
-- 4.4 / E7: Feldschutz an allen drei Stellen in `_anreicherungs_update_bauen` inkl. `abgesagt`; neue Spalten
-  `abgleich_titel/_datum/_uhrzeit/_ort`, gesetzt beim ersten Ändern eines der vier Felder; neuer **Schritt 0** in
-  database/client.py vor Schritt 1, der über diese Spalten sucht.
-- 4.4: `admin_dublette_zusammenlegen` und `admin_gebiet_entfernen` als SECURITY DEFINER, Merkliste per UPDATE
-  umziehen (doppelt Gemerkte vorher löschen), Gebiet mit Merkliste → abgelehnt statt DELETE.
-- 4.4 Cache: `cacheTag("events")` in eventPoolLaden, vergangeneWochenendEvents, eventLaden;
-  `revalidateTag("events", { expire: 0 })`; Bild-Cache je Event.
-- 4.5: `startseitenAuswahl(pool, vergangene, datumParam)` in web/lib/startseite.ts, von page.tsx und Vorschau
-  genutzt; `stufeErklaeren` für das „Warum“.
-- 4.6 / S3: Magazin komplett über DEFINER-Funktionen (lesen, speichern mit Feld-Whitelist, veröffentlichen,
-  zurückziehen, Korrektur, Autoren, Kosten); keine neuen Tabellenrechte. Die Sperre „nur Redaktion“ öffnet sich
-  in den Funktionen gewollt, die Pflichtprüfungen bleiben.
-- 4.7 / S4: Admin-Policies SELECT/UPDATE mit ist_admin() auf orte, Rest als DEFINER.
-- S1 jetzt in 1a (Protokoll und Vorschläge), E3-Token mit Actions read/write.
+Deine Prüfung 2 hatte 6 Befunde (1 kritisch, 3 mittel, 2 gering). Alle sind eingearbeitet; Anhang C nennt die
+Stellen. Dazu ein eigener Fund: `beschreibungen_nachziehen()` (pipeline/beschreibung_quellen.py:471–511) ersetzt
+bei Rausgegangen-Events die Beschreibung ebenfalls. Die wichtigsten Änderungen:
+- 3.2 / 7 / 8: Neuer Schritt 1a-0 – nginx diesdas.events setzt `X-DDD-Bereich web` VOR dem ersten Admin-Code;
+  Prüfung per curl mit selbst gesetztem Kopf, zusätzlich als Ampel im Cockpit. Risiko-Text präzisiert.
+  Schriften: `/_next/static/media`, `/fonts` aus der nginx-Liste gestrichen.
+- 4.4 Teil A: weitere Schreiber beachten `redaktion_felder`: `unterkategorien.vereinheitlichen()`,
+  `beschreibung_quellen.veranstalter_nachziehen()` und `beschreibungen_nachziehen()`. Stufe-3-Vorschläge
+  (Ortsnamen, ort_id) schreiben nur ohne Eintrag in `redaktion_felder` und lassen `abgleich_ort` stehen.
+- 4.4 Teil B: Schritt 0 ohne eingehende Uhrzeit nur bei genau einer Zeile.
+- 4.5: `startseitenAuswahl` rechnet nur (kein Laden, kein "use cache"); Test vergleicht die vier Blöcke.
+- 4.6 / S3: `admin_magazin_anlegen`; `event_ids` in der Whitelist; `_speichern` nur für entwurf/in_pruefung;
+  `_korrektur` als einziger Weg für Veröffentlichte; gemeinsame Komponente `MagazinArtikel`;
+  `cacheTag("magazin")` an den Loadern, `revalidateTag("magazin", { expire: 0 })`.
+- 5: Tabellenkopf repariert, `schluessel` in admin_vorschlaege, eindeutig `(art, schluessel)`.
 
 Prüfe bitte:
-1. Sind alle 15 Befunde aus Prüfung 1 gelöst (Anhang B)?
-2. 3.2: Reicht der Kopf `X-DDD-Bereich` als Trennung, wenn beide nginx-Websites ihn per proxy_set_header fest
-   setzen? Läuft die neue 404-Prüfung vor allen bestehenden Zweigen in proxy.ts, ohne deren Verhalten zu ändern?
-   Ist `new NextResponse(null, { status: 308, headers: { Location: "/admin" } })` hinter nginx korrekt? Fehlen
-   Pfade in der nginx-Liste (z. B. weitere öffentliche Ordner, die Admin-Seiten laden)?
-3. 4.4 Schritt 0: Passt er in den Ablauf von database/client.py:296–335 (inkl. tagesbestand und
-   neu_pro_quelle), ohne Schritt 1–3 für Events ohne abgleich_* zu ändern? Kann Schritt 0 ein falsches Event
-   treffen? Wie verhält er sich bei mehreren Uhrzeiten (mehrere Vorstellungen am Tag)?
-4. 4.4 Feldschutz: Sind die drei Stellen vollständig (Schleife, Uhrzeit-Block, Quellenwechsel)? Gibt es weitere
-   Schreibwege der Pipeline auf events (z. B. adressen_ergaenzen, ort_zuordnung-Nachtrag, beschreibung_quellen,
-   kategorisierung, stadtteil_mapper, reihen_zuordnen, konten_aufraeumen), die `redaktion_felder` beachten müssen?
-5. 4.4 Merkliste: Ist `UPDATE merkliste SET event_id` in einer DEFINER-Funktion mit den Triggern und Policies aus
-   database/konten_2026-11-16.sql vereinbar (gibt es UPDATE-Trigger, Statistik-Tabellen, merk_statistik)?
-6. 4.5: Deckt `startseitenAuswahl` alles ab, was page.tsx heute rechnet (inkl. Kennzahlen, Tagesleiste nicht)?
-   Lässt sich page.tsx so umbauen, ohne das Caching (cacheComponents, eventPoolLaden) zu ändern?
-7. 4.6 / S3: Ist die Funktionsliste vollständig für Liste, Vorschau, Bearbeiten, Veröffentlichen, Zurückziehen,
-   Korrektur? Wie ruft die bestehende Vorschau-Rendering-Logik (web/app/magazin/vorschau, magazin-daten.ts) einen
-   Beitrag ab, und kann der Admin-Bereich sie mit `admin_magazin_beitrag` speisen?
-8. Abschnitt 5–7: Widersprüche zwischen 3, 4, 5, 6 und 7 nach dieser Fassung?
+1. Sind alle 6 Befunde aus Prüfung 2 gelöst (Anhang C)?
+2. Gibt es außer den jetzt genannten noch Schreiber auf `events`, die Redaktionsänderungen überschreiben können
+   (main.py-Ablauf vollständig, auch Aufräum- und Nachtragsschritte, pipeline/ort_zuordnung Nachtrag im Lauf)?
+3. 4.6: Lässt sich das Artikel-Markup aus web/app/magazin/vorschau/[id]/page.tsx als gemeinsame Komponente
+   herauslösen, ohne die öffentliche Magazin-Beitragsseite oder die Vorschau zu verändern? Wird
+   `cacheTag("magazin")` an allen sechs Loadern die öffentliche Seite korrekt erneuern (Sitemap, Feed, Autorenseiten)?
+4. Abschnitt 5 / S1: Reicht `(art, schluessel)` mit `ON CONFLICT DO NOTHING`, damit abgelehnte Vorschläge nicht
+   wiederkommen, aber ein geänderter Sachverhalt (z. B. anderes Ziel-Event) neu vorgeschlagen wird?
+5. Widersprüche zwischen den Abschnitten oder zu Anhang B/C nach dieser Fassung?
 
 Ausgabe je Befund: Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile) · Befund ·
 Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen E1–E9 und
@@ -503,8 +515,22 @@ Alle 15 Befunde sind am Code nachgeprüft und stimmen (`web/proxy.ts`, `database
 | 14 | gering | Warnregeln: Ebene und Median-Grundlage unklar | 4.3 (Tabelle mit Ebene, Median nur `ok`/`leer`) |
 | 15 | gering | Feldliste der Dubletten, Merkliste bleibt heute hängen, Titelbereinigung | 4.4 „Dubletten“ |
 
+## Anhang C: Cursor-Prüfung 2 vom 23.11.2026 – Einarbeitung
+
+Alle 6 Befunde sind am Code nachgeprüft und stimmen (`pipeline/unterkategorien.py:208–244`, `pipeline/beschreibung_quellen.py:584–587` und `:669–741`, `web/lib/magazin-daten.ts:62–221`, `database/client.py:296–335`). Cursor bestätigt außerdem: Die neue 404-Prüfung ändert die bestehenden Proxy-Zweige nicht, die relative `Location: /admin` ist hinter nginx richtig, Schritt 0 passt vor Schritt 1, und das Umziehen der Merkliste ist mit den Triggern vereinbar (nur `merkliste_vor_insert`, kein UPDATE-Trigger).
+
+| Nr. | Schwere | Befund (kurz) | Eingearbeitet in |
+|---|---|---|---|
+| 1 | kritisch | Kopf nur sicher, wenn diesdas.events ihn überschreibt; Reihenfolge Deploy/nginx | 3.2 Punkt 1 (Reihenfolge, `curl`-Prüfung), 4.2 (Ampel), 7 (Schritt 1a-0), 8 (Risiko neu formuliert) |
+| 2 | mittel | `vereinheitlichen()` und `veranstalter_nachziehen()` schreiben an `redaktion_felder` vorbei | 4.4 Teil A „Weitere Schreiber“, 6; eigener Fund `beschreibungen_nachziehen()` ebenda |
+| 3 | mittel | Schritt 0 ohne Uhrzeit kann bei mehreren Vorstellungen die falsche treffen | 4.4 Teil B, 6 |
+| 4 | mittel | Magazin: Anlegen fehlt, `event_ids` nicht in der Whitelist, `_speichern` schreibt Veröffentlichte, Admin-Vorschau, Cache-Tags | 4.6 (Rechte, Entwürfe, Cache, neuer Beitrag), 5 (S3), 6 |
+| 5 | gering | `startseitenAuswahl` lädt oder rechnet? | 4.5 |
+| 6 | gering | Tabellenköpfe in Abschnitt 5, `schluessel` fehlt | 5 |
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
 - 23.11.2026: Auftraggeber bestätigt E1–E9 und Q5–Q8 wie vorgeschlagen.
 - 23.11.2026: Cursor-Prüfung 1: nicht freigabefähig, 15 Befunde (4 kritisch). Alle nachgeprüft und eingearbeitet → zweite Fassung.
+- 23.11.2026: Cursor-Prüfung 2: nicht freigabefähig, 6 Befunde (1 kritisch) plus ein eigener Fund. Alle nachgeprüft und eingearbeitet → dritte Fassung.
