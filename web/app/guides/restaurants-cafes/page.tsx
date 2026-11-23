@@ -18,7 +18,8 @@ import {
   PREIS_STUFEN, preisStufeOrt, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
-import { orteLaden } from "@/lib/orte";
+import { cacheLife, cacheTag } from "next/cache";
+import { orteLaden, ORTE_CACHE_TAG } from "@/lib/orte";
 import { brauhaeuserFuerRestaurants } from "@/lib/kneipen-daten";
 import type { DddOrt } from "@/lib/typen";
 
@@ -96,11 +97,25 @@ function Ansicht({ ansichten }: { ansichten: { label: string; icon: string; href
   );
 }
 
-async function Inhalt({ searchParams, alle }: { searchParams: Promise<SP>; alle: DddOrt[] }) {
-  // Orte einmal laden (gecached) und an Hero und Liste weitergeben
-  // Brauhäuser aus dem Kneipen-Hub erscheinen zusätzlich hier (E1) – ihr Link bleibt die Kneipen-URL
-  const sp = await searchParams;
-  const f = filterLesen(sp);
+/**
+ * Filter aus der Adresse lesen und auf die kanonische Abfrage bringen (gleiche Filter → gleicher Schlüssel); gerechnet
+ * wird in InhaltGecacht. Absicherung nach dem Ausfall 23.11.2026 (Massenabrufe dieser Seite, Speicherüberlauf).
+ */
+async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
+  const f = filterLesen(await searchParams);
+  const abfrage = filterHref(BASIS, f, {}).split("?")[1] ?? "";
+  return <InhaltGecacht schluessel={abfrage} />;
+}
+
+/** Filterleiste und Ergebnisse je Filterkombination gecacht (Schlüssel: kanonische Abfrage, Tag „orte“). */
+async function InhaltGecacht({ schluessel }: { schluessel: string }) {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
+  cacheTag(ORTE_CACHE_TAG);
+  // Orte gecacht laden; Brauhäuser aus dem Kneipen-Hub erscheinen zusätzlich hier (E1) – ihr Link bleibt die Kneipen-URL
+  const [eigene, brauhaeuser] = await Promise.all([orteLaden([...TYPEN]), brauhaeuserFuerRestaurants()]);
+  const alle = [...eigene, ...brauhaeuser];
+  const f = filterLesen(Object.fromEntries(new URLSearchParams(schluessel)));
   const href = (a: Partial<GuideFilter>) => filterHref(BASIS, f, a);
 
   const ergebnis = sortieren(filtern(alle, f), f.sort);
@@ -304,7 +319,7 @@ export default async function RestaurantsCafes(props: { searchParams: Promise<SP
           </div>
         }
       >
-        <Inhalt searchParams={props.searchParams} alle={alle} />
+        <Inhalt searchParams={props.searchParams} />
       </Suspense>
       <GuideStadtteilLinks hub="restaurants-cafes" orte={alle} />
       <GuideSeoText seite="restaurants-cafes" />

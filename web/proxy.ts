@@ -14,7 +14,7 @@ import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidung
 import { ADMIN_OFFENE_SEITEN, hatAdminKopf, istAdminBereich, istAdminPfad } from "@/lib/admin/bereich";
 import { ADMIN_COOKIE } from "@/lib/admin/konfig";
 import { cookieLesen } from "@/lib/konto/cookies";
-import { bremsAdresse, BREMSE_FENSTER_MS, gebremst, istGuideUebersicht, sammelGebremst } from "@/lib/bremse";
+import { bremsAdresse, BREMSE_FENSTER_MS, gebremst, istGuideUebersicht, parameterBereinigen, sammelGebremst, sammelGrenzePruefen } from "@/lib/bremse";
 
 const GONE_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Event nicht mehr verfügbar · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><h1>Dieses Event ist nicht mehr verfügbar.</h1><p>Die Seite wurde entfernt, weil das Event schon lange vorbei ist.</p><p><a href="/entdecken" style="color:#457b9d">Aktuelle Events in Düsseldorf entdecken</a></p></body></html>`;
 
@@ -75,8 +75,20 @@ export async function proxy(request: NextRequest) {
         },
       });
     }
-    // Gemeinsame Grenze je Übersicht über alle Adressen (die Abrufe kamen von über 1.300 Adressen)
-    if (istGuideUebersicht(pfad) && sammelGebremst(pfad)) {
+    // Unbekannte Parameter → 308 auf die saubere Adresse, ohne zu rechnen (Cache-Brecher, Tracking)
+    if (istGuideUebersicht(pfad)) {
+      const bereinigt = parameterBereinigen(pfad, request.nextUrl.searchParams);
+      if (bereinigt !== null) {
+        const ziel = new URL(pfad, request.url);
+        ziel.search = bereinigt;
+        const antwort = NextResponse.redirect(ziel, 308);
+        antwort.headers.set("Cache-Control", "no-store");
+        return antwort;
+      }
+    }
+    // Gemeinsame Grenze je Übersicht über alle Adressen (die Abrufe kamen von über 1.300 Adressen) – bei gecachten
+    // Übersichten nur für Aufrufe mit Filtern; ohne Filter kommen sie aus dem Cache und kosten kaum etwas
+    if (istGuideUebersicht(pfad) && sammelGrenzePruefen(pfad, request.nextUrl.searchParams) && sammelGebremst(pfad)) {
       return new NextResponse("Gerade ist hier sehr viel los. Bitte in einer Minute noch einmal versuchen.", {
         status: 503,
         headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "30" },

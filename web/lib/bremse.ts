@@ -59,3 +59,48 @@ export function sammelGebremst(schluessel: string, jetzt: number = Date.now(), m
 
 /** Guide-Übersicht (/guides/<hub>, ohne Unterseite) – dort rechnet jede Anfrage alle Orte neu */
 export const istGuideUebersicht = (pfad: string) => /^\/guides\/[^/]+$/.test(pfad);
+
+// ---------- Saubere Adressen der Guide-Übersichten (Absicherung nach dem Ausfall 23.11.2026) ----------
+// Unbekannte Parameter (Cache-Brecher, Tracking) leitet der Proxy per 308 auf die Adresse ohne sie um, bevor gerechnet
+// wird. Nur für Übersichten, deren Filter feststehen (lib/guide-filter.ts, lib/kneipen.ts, lib/clubs.ts). „_rsc“ nutzt
+// Next für Seitenwechsel im Browser und bleibt immer.
+export const GUIDE_PARAMETER: Readonly<Record<string, readonly string[]>> = {
+  "restaurants-cafes": ["typ", "stadtteil", "kueche", "preis", "tags", "sort", "anzahl", "ansicht"],
+  "kneipen-bars": ["art", "stadtteil", "spez", "vibe", "hh", "raucher", "sort", "anzahl", "ansicht"],
+  clubs: ["art", "stadtteil", "genre", "eintritt", "stufe", "sort", "ansicht"],
+};
+const INTERN = ["_rsc"];
+
+/**
+ * Bereinigte Abfrage für eine Guide-Übersicht oder null, wenn nichts zu ändern ist (auch: Übersicht ohne feste Liste).
+ * Entfernt unbekannte Parameter und doppelte Werte desselben Parameters (der erste gilt).
+ */
+export function parameterBereinigen(pfad: string, suche: URLSearchParams): string | null {
+  const hub = pfad.split("/")[2] ?? "";
+  const erlaubt = GUIDE_PARAMETER[hub];
+  if (!erlaubt) return null;
+  const neu = new URLSearchParams();
+  let geaendert = false;
+  for (const [k, w] of suche) {
+    if ((!erlaubt.includes(k) && !INTERN.includes(k)) || neu.has(k)) {
+      geaendert = true;
+      continue;
+    }
+    neu.append(k, w);
+  }
+  return geaendert ? neu.toString().replace(/%2C/g, ",") : null;
+}
+
+/** Übersichten, deren Inhalt je Filterkombination gecacht ist (ohne Filter: kaum Kosten, keine gemeinsame Grenze) */
+export const GECACHTE_UEBERSICHTEN: readonly string[] = ["restaurants-cafes"];
+
+/** Gemeinsame Grenze nötig? Immer bei Filtern; ohne Filter nur bei Übersichten, die nicht gecacht sind. */
+export function sammelGrenzePruefen(pfad: string, suche: URLSearchParams): boolean {
+  return hatGuideFilter(suche) || !GECACHTE_UEBERSICHTEN.includes(pfad.split("/")[2] ?? "");
+}
+
+/** Hat die Abfrage Filter (also etwas, das die Übersicht neu rechnen lässt)? „_rsc“ zählt nicht. */
+export function hatGuideFilter(suche: URLSearchParams): boolean {
+  for (const k of suche.keys()) if (!INTERN.includes(k)) return true;
+  return false;
+}

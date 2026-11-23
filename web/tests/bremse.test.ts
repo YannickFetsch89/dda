@@ -1,6 +1,6 @@
 // Bremse gegen Massenabrufe der Guides (Ausfall 23.11.2026)
 import { describe, expect, it } from "vitest";
-import { bremsAdresse, bremseZuruecksetzen, gebremst, istGuideUebersicht, sammelGebremst } from "@/lib/bremse";
+import { bremsAdresse, bremseZuruecksetzen, gebremst, istGuideUebersicht, parameterBereinigen, sammelGebremst, sammelGrenzePruefen } from "@/lib/bremse";
 import { config as proxyConfig } from "@/proxy";
 
 describe("Bremse je Adresse", () => {
@@ -32,5 +32,22 @@ describe("Gemeinsame Grenze der Guide-Übersichten", () => {
     expect(istGuideUebersicht("/guides/restaurants-cafes")).toBe(true);
     expect(istGuideUebersicht("/guides/restaurants-cafes/zum-schiffchen")).toBe(false);
     expect(istGuideUebersicht("/guides")).toBe(false);
+  });
+});
+
+describe("Saubere Adressen der Guide-Übersichten", () => {
+  const p = (s: string) => new URLSearchParams(s);
+  it("unbekannte und doppelte Parameter weg, _rsc bleibt, bekannte bleiben", () => {
+    expect(parameterBereinigen("/guides/restaurants-cafes", p("stadtteil=bilk&_=123&utm_source=x"))).toBe("stadtteil=bilk");
+    expect(parameterBereinigen("/guides/restaurants-cafes", p("kueche=a,b&kueche=c"))).toBe("kueche=a,b");
+    expect(parameterBereinigen("/guides/restaurants-cafes", p("stadtteil=bilk&_rsc=abc"))).toBeNull();
+    expect(parameterBereinigen("/guides/restaurants-cafes", p(""))).toBeNull();
+    expect(parameterBereinigen("/guides/spielplaetze", p("irgendwas=1"))).toBeNull(); // ohne feste Liste: nichts
+  });
+  it("gemeinsame Grenze: gecachte Übersicht nur mit Filtern, andere immer", () => {
+    expect(sammelGrenzePruefen("/guides/restaurants-cafes", p(""))).toBe(false);
+    expect(sammelGrenzePruefen("/guides/restaurants-cafes", p("_rsc=x"))).toBe(false);
+    expect(sammelGrenzePruefen("/guides/restaurants-cafes", p("stadtteil=bilk"))).toBe(true);
+    expect(sammelGrenzePruefen("/guides/kneipen-bars", p(""))).toBe(true);
   });
 });
