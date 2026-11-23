@@ -6,6 +6,7 @@
 // POST { aktion: "schliessen", ziel, grund, loeschen } → admin_ort_schliessen (mit Weiterleitung)
 // POST { aktion: "zusammenlegen", nach, grund }        → admin_ort_zusammenlegen (dieser Ort geht in „nach“ auf)
 // POST { aktion: "zuordnung_loesen", event }           → admin_ort_zuordnung_loesen
+// GET ?vergangene=1 → statt der kommenden die letzten 100 Events (auch alte Zuordnungen lösen, Cursor 3a Befund 4)
 import { revalidateTag } from "next/cache";
 import { aenderungen, oeffentlicherPfad, ortKopf, stammdatenPruefen, STAMMDATEN_FELDER, textPruefen } from "@/lib/admin/orte";
 import { protokollieren } from "@/lib/admin/protokoll";
@@ -13,6 +14,7 @@ import { adminAntwort, adminRoute } from "@/lib/admin/route";
 import { EVENTS_CACHE_TAG } from "@/lib/daten";
 import { heuteBerlin } from "@/lib/datum";
 import { ORTE_CACHE_TAG } from "@/lib/orte";
+import { orteZwischenspeicherVerwerfen } from "@/lib/pfad-pruefung";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SPALTEN =
@@ -27,6 +29,8 @@ type OrtZeile = Record<string, unknown> & { id: string; slug: string; typ: strin
 
 function cacheLeeren(events: boolean) {
   revalidateTag(ORTE_CACHE_TAG, { expire: 0 });
+  // Der Proxy merkt sich /orte- und Guide-Entscheidungen bis zu 10 Minuten (Cursor-Prüfung 3a, Befund 1)
+  orteZwischenspeicherVerwerfen();
   if (events) revalidateTag(EVENTS_CACHE_TAG, { expire: 0 });
 }
 
@@ -50,18 +54,19 @@ export async function GET(request: Request, ctx: RouteContext<"/api/admin/orte/[
     if (!data) return adminAntwort(404, { fehler: "Nicht gefunden." }, setCookies);
     const ort = data as unknown as OrtZeile;
     const heute = heuteBerlin(new Date());
+    const vergangene = new URL(request.url).searchParams.get("vergangene") === "1";
+    const eventAbfrage = db
+      .from("events")
+      .select("id, titel, datum, datum_bis, uhrzeit, ort, abgelehnt, abgesagt, quelle_name", { count: "exact" })
+      .eq("ort_id", id);
     const [haus, saele, weiterAufMich, eigeneWeiter, events] = await Promise.all([
       ort.parent_id ? db.from("orte").select("id, name, slug, aktiv").eq("id", String(ort.parent_id)).maybeSingle() : Promise.resolve({ data: null }),
       db.from("orte").select("id, name, slug, aktiv").eq("parent_id", id).order("name"),
       db.from("ort_weiterleitungen").select("alter_slug, grund, erstellt_am").eq("ziel_ort_id", id).order("alter_slug"),
       db.from("ort_weiterleitungen").select("alter_slug, ziel_ort_id, grund").eq("alter_slug", ort.slug).maybeSingle(),
-      db
-        .from("events")
-        .select("id, titel, datum, datum_bis, uhrzeit, ort, abgelehnt, abgesagt, quelle_name", { count: "exact" })
-        .eq("ort_id", id)
-        .or(`datum.gte.${heute},datum_bis.gte.${heute}`)
-        .order("datum")
-        .limit(60),
+      vergangene
+        ? eventAbfrage.order("datum", { ascending: false }).limit(100)
+        : eventAbfrage.or(`datum.gte.${heute},datum_bis.gte.${heute}`).order("datum").limit(60),
     ]);
     return adminAntwort(
       200,
@@ -74,6 +79,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/admin/orte/[
         eigeneWeiterleitung: eigeneWeiter.data ?? null,
         events: events.data ?? [],
         eventsGesamt: events.count ?? 0,
+        vergangene,
       },
       setCookies,
     );
@@ -116,6 +122,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/orte/
       if (ziel && !UUID.test(ziel)) return adminAntwort(400, { fehler: "Ungültiges Ziel.", code: "eingabe" }, setCookies);
       if (grund.length < 3) return adminAntwort(400, { fehler: "Bitte einen Grund angeben.", code: "eingabe" }, setCookies);
       const loeschen = body.loeschen === true;
+      // Spielplätze und Weihnachtsmärkte leiten nur als abgeschaltete Zeile (mit freigeschaltet_am) auf ihren Hub
+      // weiter; gelöscht endete /guides/… als 404 (Cursor-Prüfung 3a, Befund 2). Löschen erst mit der Guide-Pflege (3b).
+      if (loeschen && (bisher.typ === "spielplatz" || bisher.typ === "weihnachtsmarkt")) {
+        return adminAntwort(400, { fehler: "Spielplätze und Weihnachtsmärkte bitte nur schließen, nicht löschen.", code: "eingabe" }, setCookies);
+      }
       const { data, error } = await db.rpc("admin_ort_schliessen", { p_id: id, p_ziel: ziel, p_grund: grund, p_loeschen: loeschen });
       if (error) return fehler(error);
       cacheLeeren(true);

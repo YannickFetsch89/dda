@@ -98,17 +98,34 @@ export const tagGueltig = (datum: string): boolean => istGueltigerTag(datum);
 const TREFFER_MS = 10 * 60 * 1000; // wie der Daten-Cache der Seiten
 const FEHLT_MS = 2 * 60 * 1000; // neue Events erscheinen schnell
 const MAX_EINTRAEGE = 5000;
-const speicher = new Map<string, { wert: unknown; bis: number }>();
+const speicher = new Map<string, { wert: unknown; bis: number; seit: number }>();
+
+// Stand der Orte (Admin-Bereich, Plan Admin-Dashboard 4.7, Cursor-Prüfung 3a Befund 1): Nach Schließen, Zusammenlegen
+// oder Freischalten verwirft die Route alle gemerkten Orte-Einträge (ort:, ort-weiter:, ort-id:). Über globalThis,
+// damit es auch gilt, wenn Proxy und Route-Handler getrennt gebündelt sind (gleicher Node-Prozess).
+const ORTE_STAND = "__dddOrteStand";
+
+/** Alle gemerkten Orte-Entscheidungen dieses Prozesses ungültig machen. */
+export function orteZwischenspeicherVerwerfen(): void {
+  (globalThis as Record<string, unknown>)[ORTE_STAND] = Date.now();
+}
+
+function orteStand(): number {
+  const w = (globalThis as Record<string, unknown>)[ORTE_STAND];
+  return typeof w === "number" ? w : 0;
+}
 
 async function gemerkt<T>(
   schluessel: string, laden: () => Promise<T | undefined>, zeiten: { treffer: number; fehlt: number } = { treffer: TREFFER_MS, fehlt: FEHLT_MS },
 ): Promise<T | undefined> {
   const e = speicher.get(schluessel);
-  if (e && e.bis > Date.now()) return e.wert as T;
+  const veraltet = !!e && schluessel.startsWith("ort") && e.seit <= orteStand();
+  if (e && e.bis > Date.now() && !veraltet) return e.wert as T;
   const wert = await laden();
   if (wert === undefined) return undefined; // Fehler nicht merken
   if (speicher.size >= MAX_EINTRAEGE) speicher.delete(speicher.keys().next().value as string);
-  speicher.set(schluessel, { wert, bis: Date.now() + (wert === null ? zeiten.fehlt : zeiten.treffer) });
+  const jetzt = Date.now();
+  speicher.set(schluessel, { wert, bis: jetzt + (wert === null ? zeiten.fehlt : zeiten.treffer), seit: jetzt });
   return wert;
 }
 

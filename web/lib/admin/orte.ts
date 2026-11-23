@@ -77,6 +77,9 @@ export function stammdatenPruefen(eingabe: Record<string, unknown>, typ: string)
     if (!(STAMMDATEN_FELDER as readonly string[]).includes(k)) return { ok: false, fehler: `Feld „${k}“ ist hier nicht bearbeitbar.` };
     if (k === "aktiv") {
       if (w !== true) return { ok: false, fehler: "Abschalten bitte über „Schließen“ (mit Weiterleitung)." };
+      // Spielplätze und Weihnachtsmärkte brauchen beim Freischalten freigeschaltet_am, sonst endet die Guide-URL nach
+      // einem späteren Schließen als 404 (Cursor-Prüfung 3a, Befund 2). Das pflegt erst die Guide-Pflege (3b).
+      if (typ === "spielplatz" || typ === "weihnachtsmarkt") return { ok: false, fehler: "Spielplätze und Weihnachtsmärkte werden mit der Guide-Pflege freigeschaltet (Stufe 3b)." };
       felder.aktiv = true;
     } else if (k === "latitude" || k === "longitude") {
       if (w === null || w === "") {

@@ -71,6 +71,7 @@ interface Daten {
   eigeneWeiterleitung: { alter_slug: string; ziel_ort_id: string | null; grund: string | null } | null;
   events: EventZeile[];
   eventsGesamt: number;
+  vergangene: boolean;
 }
 
 const KOPF = { "Content-Type": "application/json" };
@@ -153,14 +154,15 @@ export function OrtBearbeiten() {
   const [laeuft, setLaeuft] = useState(false);
   const [zielZusammen, setZielZusammen] = useState<Kurz | null>(null);
   const [zielSchliessen, setZielSchliessen] = useState<Kurz | null>(null);
+  const [vergangene, setVergangene] = useState(false);
 
   const laden = useCallback(async () => {
-    const r = await fetch(`/api/admin/orte/${id}`, { cache: "no-store" });
+    const r = await fetch(`/api/admin/orte/${id}${vergangene ? "?vergangene=1" : ""}`, { cache: "no-store" });
     if (r.status === 401) return window.location.assign("/admin/anmelden");
     const x = (await r.json().catch(() => ({}))) as Daten & { fehler?: string };
     if (!r.ok || !x.ort) return setMeldung({ art: "fehler", text: x.fehler ?? "Ort nicht gefunden." });
     setD(x);
-  }, [id]);
+  }, [id, vergangene]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- einmaliges Laden beim Öffnen
@@ -254,6 +256,8 @@ export function OrtBearbeiten() {
   const entwurf = o.spielstaette?.text_entwurf;
   const freigabe = o.spielstaette?.text_freigegeben;
   const schreibweisen = o.spielstaette?.event_orte ?? o.club?.event_orte ?? [];
+  // Spielplätze und Weihnachtsmärkte: Freischalten und Löschen erst mit der Guide-Pflege (3b), Cursor 3a Befund 2
+  const guideTyp = o.typ === "spielplatz" || o.typ === "weihnachtsmarkt";
 
   return (
     <>
@@ -328,13 +332,14 @@ export function OrtBearbeiten() {
             <option key={s} value={s} />
           ))}
         </datalist>
-        {!o.aktiv && (
+        {!o.aktiv && !guideTyp && (
           <fieldset className="admin-feld admin-feld--breit admin-schalter">
             <label>
               <input type="checkbox" name="aktiv" /> freischalten (aktiv)
             </label>
           </fieldset>
         )}
+        {!o.aktiv && guideTyp && <p className="admin-feld--breit">Freischalten kommt mit der Guide-Pflege (Stufe 3b).</p>}
         <div className="admin-feld--breit">
           <button className="admin-knopf" type="submit" disabled={laeuft}>
             {laeuft ? "Speichert …" : "Stammdaten speichern"}
@@ -398,9 +403,16 @@ export function OrtBearbeiten() {
       )}
 
       <section className="admin-karte">
-        <h2>Kommende Events ({d.eventsGesamt})</h2>
+        <h2>
+          {d.vergangene ? "Alle zugeordneten Events" : "Kommende Events"} ({d.eventsGesamt})
+        </h2>
+        <p>
+          <button type="button" className="admin-knopf admin-knopf--leise" onClick={() => setVergangene(!vergangene)}>
+            {vergangene ? "nur kommende zeigen" : "auch vergangene zeigen"}
+          </button>
+        </p>
         {d.events.length === 0 ? (
-          <p>Keine kommenden Events zugeordnet.</p>
+          <p>Keine Events zugeordnet.</p>
         ) : (
           <ul className="admin-liste">
             {d.events.map((e) => (
@@ -421,14 +433,19 @@ export function OrtBearbeiten() {
             ))}
           </ul>
         )}
-        {d.eventsGesamt > d.events.length && <p className="admin-unterzeile">Gezeigt: die nächsten {d.events.length}.</p>}
+        {d.eventsGesamt > d.events.length && (
+          <p className="admin-unterzeile">
+            Gezeigt: {d.vergangene ? `die neuesten ${d.events.length}` : `die nächsten ${d.events.length}`}.
+          </p>
+        )}
       </section>
 
       <section className="admin-karte">
         <h2>Zusammenlegen</h2>
         <p>
-          Dieser Ort ist dasselbe Haus wie ein anderer: Er geht im anderen auf. Die Zeile wird gelöscht, /orte/{o.slug} leitet weiter, Events, Säle und
-          Schreibweisen ziehen um.
+          Dieser Ort ist dasselbe Haus wie ein anderer: Er geht im anderen auf. Die Zeile wird gelöscht, /orte/{o.slug} leitet weiter, Events und Säle
+          ziehen um. Ist das Ziel ein Club oder eine Spielstätte, kommen die Schreibweisen im Kalender und der Name dazu (nur dort ordnet die Pipeline
+          über Schreibweisen zu).
         </p>
         {zielZusammen ? (
           <form onSubmit={zusammenlegen} className="admin-filterleiste">
@@ -476,9 +493,11 @@ export function OrtBearbeiten() {
               Grund
               <input name="grund" required minLength={3} placeholder="z. B. dauerhaft geschlossen" />
             </label>
-            <label className="admin-schalter">
-              <input type="checkbox" name="loeschen" /> Zeile löschen
-            </label>
+            {!guideTyp && (
+              <label className="admin-schalter">
+                <input type="checkbox" name="loeschen" /> Zeile löschen
+              </label>
+            )}
             <button className="admin-knopf" type="submit" disabled={laeuft}>
               Schließen
             </button>

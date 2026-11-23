@@ -620,6 +620,11 @@ Stufe 3a – Orte (23.11.2026):
 - **Zusammenlegen:** wie `orte_balletthaus_zusammen_2026-11-20.sql`, zusätzlich Säle umhängen und Schreibweisen beider Listen (club, spielstaette) plus Name übernehmen. Ziel muss aktiv sein.
 - **Cache:** Alle Orte-Lader (`orte.ts`, `spielstaetten-daten.ts`, `spielplaetze-daten.ts`, `weihnachtsmaerkte-daten.ts`, `orteFuerSlugs`) bekommen `cacheTag("orte")`; die Routen leeren ihn nach jeder Änderung (bei Event-Umzug auch `events`).
 - **Bekannt:** Für geschlossene Guide-Orte (Restaurant, Club …) bleibt `/guides/<hub>/<slug>` eine 404 – `ort_weiterleitungen` wirkt nur unter `/orte/<slug>` (wie bisher, z. B. Gertrudenhof).
+- **Cursor-Prüfung Stufe 3a (deploybar, SQL S4 ausgeführt):**
+  - Befund 1 (mittel) behoben: Der Proxy merkte sich eine aktive Spielstätte bis zu 10 Minuten. Jede Orte-Änderung im Admin setzt jetzt einen Stand in `globalThis` (`orteZwischenspeicherVerwerfen`), gemerkte `ort:`/`ort-weiter:`/`ort-id:`-Einträge davor gelten nicht mehr. Proxy läuft laut Build mit `runtime: nodejs` im selben Prozess.
+  - Befund 2 (mittel) behoben: Spielplätze und Weihnachtsmärkte lassen sich in 3a weder über das Häkchen freischalten noch löschen (nur schließen; dann greift die Hub-Weiterleitung über `freigeschaltet_am`). Freischalten kommt mit der Guide-Pflege 3b.
+  - Befund 3 (gering): Schreibweisen ordnet die Pipeline nur bei Clubs und Spielstätten zu; die Oberfläche sagt das jetzt so. Die Funktion bleibt unverändert.
+  - Befund 4 (gering) behoben: „auch vergangene zeigen“ listet die letzten 100 zugeordneten Events, auch alte Zuordnungen lassen sich lösen.
 
 ## Prüfhistorie
 
@@ -633,3 +638,4 @@ Stufe 3a – Orte (23.11.2026):
 - 23.11.2026: Stufen 1b und 1c LIVE (5246581, 11d3945), Stufe 1d LIVE (c16f017, Cursor: deploybar, 5 Hinweise behoben), Stufe 1e gebaut (lokal); Notizen in Anhang F.
 - 23.11.2026: Stufe 1 komplett LIVE (eeb93fd), Stufe 2 Magazin gebaut (lokal); Notizen in Anhang F.
 - 23.11.2026: Stufe 2 LIVE (cf82caf). Stufe 3a Orte gebaut (lokal), SQL S4 `admin_orte_2026-11-23.sql`; Notizen in Anhang F.
+- 23.11.2026: SQL S4 ausgeführt, Cursor-Prüfung 3a deploybar, 4 Befunde eingearbeitet (Anhang F).

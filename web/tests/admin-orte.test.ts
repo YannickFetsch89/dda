@@ -1,5 +1,5 @@
 // Tests zu Stufe 3a (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.7): Stammdaten, Texte, öffentlicher Pfad
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { aenderungen, oeffentlicherPfad, ortKopf, stammdatenPruefen, STADTTEILE, textPruefen } from "@/lib/admin/orte";
 
 const QUELLE = "https://de.wikipedia.org/wiki/Capitol_Theater_(Düsseldorf)";
@@ -74,5 +74,46 @@ describe("Öffentlicher Pfad (wie der Proxy)", () => {
     expect(oeffentlicherPfad("x", kopf("spielplatz", true, null))).toBe("/guides/spielplaetze/x");
     expect(oeffentlicherPfad("x", kopf("weihnachtsmarkt", false, null))).toBeNull();
     expect(oeffentlicherPfad("x", kopf("ausflug", true, 9))).toBeNull();
+  });
+});
+
+describe("Nachträge Cursor-Prüfung Stufe 3a", () => {
+  it("Spielplatz und Weihnachtsmarkt nicht über das Aktiv-Häkchen freischalten (Befund 2)", () => {
+    expect(stammdatenPruefen({ aktiv: true }, "spielplatz").ok).toBe(false);
+    expect(stammdatenPruefen({ aktiv: true }, "weihnachtsmarkt").ok).toBe(false);
+    expect(stammdatenPruefen({ adresse: "Am Markt 1" }, "weihnachtsmarkt").ok).toBe(true);
+  });
+
+  it("Proxy vergisst gemerkte Orte nach einer Änderung im Admin-Bereich (Befund 1)", async () => {
+    const { pfadPruefen, speicherLeeren, orteZwischenspeicherVerwerfen } = await import("@/lib/pfad-pruefung");
+    speicherLeeren();
+    const alt = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_KEY };
+    process.env.SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_KEY = "test";
+    let aktiv = true;
+    vi.stubGlobal("fetch", async (url: string) => {
+      if (url.includes("/orte?") && url.includes("slug=eq.capitol-theater")) {
+        // anon sieht nur aktive Zeilen
+        return new Response(aktiv ? '[{"typ":"spielstaette","aktiv":true,"qualitaets_score":null}]' : "[]", { status: 200 });
+      }
+      if (url.includes("/ort_weiterleitungen?")) return new Response('[{"ziel_ort_id":null}]', { status: 200 });
+      return new Response("[]", { status: 200 });
+    });
+    try {
+      expect(await pfadPruefen("/orte/capitol-theater")).toEqual({ art: "weiter" });
+      aktiv = false; // im Admin geschlossen
+      expect(await pfadPruefen("/orte/capitol-theater")).toEqual({ art: "weiter" }); // noch gemerkt
+      await new Promise((r) => setTimeout(r, 2));
+      orteZwischenspeicherVerwerfen();
+      await new Promise((r) => setTimeout(r, 2));
+      expect(await pfadPruefen("/orte/capitol-theater")).toEqual({ art: "umleiten", ziel: "/orte" });
+    } finally {
+      vi.unstubAllGlobals();
+      for (const [k, v] of [["SUPABASE_URL", alt.url], ["SUPABASE_KEY", alt.key]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+      speicherLeeren();
+    }
   });
 });
