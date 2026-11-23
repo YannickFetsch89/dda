@@ -85,3 +85,34 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 /* Dunkles Design: Navy-Button auf dunklem Grund wäre kaum zu sehen */
 [data-theme="dark"] .admin-knopf:not(.admin-knopf--leise) { background: var(--ddd-gold); color: var(--ddd-navy); }
 [data-theme="dark"] .admin-knopf:not(.admin-knopf--leise):hover { background: var(--ddd-gold-hover); }
+
+/* Cockpit (Stufe 1b) */
+.admin-kopfzeile { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.admin-abschnitt { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; color: var(--ddd-text-muted); margin: 28px 0 10px; }
+.admin-kennzahlen { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 700px) { .admin-kennzahlen { grid-template-columns: repeat(4, 1fr); } }
+.admin-kennzahlen > div { background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; }
+.admin-kennzahlen strong { font-size: 26px; color: var(--ddd-text); line-height: 1.1; }
+.admin-kennzahlen span { font-size: 13px; color: var(--ddd-text-muted); }
+
+.admin-ampeln { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 700px) { .admin-ampeln { grid-template-columns: repeat(2, 1fr); } }
+.admin-ampel { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-radius: 12px; padding: 12px 14px; }
+.admin-ampel div { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.admin-ampel strong { color: var(--ddd-text); }
+.admin-ampel small { color: var(--ddd-text-muted); font-size: 12px; }
+.admin-ampel a { font-size: 13px; color: var(--ddd-link); }
+.admin-punkt { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; background: var(--ddd-disabled-fg); }
+.admin-ampel--gruen .admin-punkt { background: var(--ddd-success); }
+.admin-ampel--gelb .admin-punkt { background: var(--ddd-warning); }
+.admin-ampel--rot .admin-punkt { background: var(--ddd-error); }
+.admin-ampel--rot { border-color: var(--ddd-error); }
+
+.admin-liste { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.admin-liste__eintrag { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-left: 4px solid var(--ddd-disabled-fg); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+.admin-liste__eintrag span:last-child { color: var(--ddd-text-muted); }
+.admin-liste__eintrag--gruen { border-left-color: var(--ddd-success); }
+.admin-liste__eintrag--gelb { border-left-color: var(--ddd-warning); }
+.admin-liste__eintrag--rot { border-left-color: var(--ddd-error); }
+.admin-zahl { font-weight: 700; min-width: 2.5em; color: var(--ddd-text); }
+.admin-marke-klein { font-size: 11px; font-weight: 700; background: var(--ddd-subtle); border-radius: 4px; padding: 1px 6px; }

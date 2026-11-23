@@ -1,0 +1,86 @@
+{
+  "beschreibung": "Gemeinsame Fixture für die Warnregeln W1–W6 (Plan Admin-Dashboard 4.3). Geprüft von web/tests/admin-cockpit.test.ts und ab Stufe 1c von tests/test_lauf_warnungen.py.",
+  "faelle": [
+    {
+      "name": "alle Quellenregeln, letzter Lauf beendet",
+      "jetzt": "2026-11-23T12:00:00Z",
+      "laeufe": [
+        { "id": "l1", "gestartet_am": "2026-11-08T05:00:00Z", "beendet_am": "2026-11-08T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "l2", "gestartet_am": "2026-11-11T05:00:00Z", "beendet_am": "2026-11-11T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "l3", "gestartet_am": "2026-11-14T05:00:00Z", "beendet_am": "2026-11-14T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "l4", "gestartet_am": "2026-11-17T05:00:00Z", "beendet_am": "2026-11-17T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "l5", "gestartet_am": "2026-11-20T05:00:00Z", "beendet_am": "2026-11-20T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "l6", "gestartet_am": "2026-11-23T05:00:00Z", "beendet_am": "2026-11-23T06:10:00Z", "status": "erfolgreich", "speicher_fehler": 3 }
+      ],
+      "ergebnisse": [
+        { "lauf_id": "l6", "quelle": "fehlerhaft", "status": "fehler", "anzahl": 0, "meldung": "HTTP 500" },
+        { "lauf_id": "l5", "quelle": "fehlerhaft", "status": "ok", "anzahl": 20 },
+
+        { "lauf_id": "l6", "quelle": "leer_geworden", "status": "leer", "anzahl": 0 },
+        { "lauf_id": "l5", "quelle": "leer_geworden", "status": "ok", "anzahl": 12 },
+        { "lauf_id": "l4", "quelle": "leer_geworden", "status": "ok", "anzahl": 15 },
+        { "lauf_id": "l3", "quelle": "leer_geworden", "status": "leer", "anzahl": 0 },
+
+        { "lauf_id": "l6", "quelle": "eingebrochen", "status": "ok", "anzahl": 8 },
+        { "lauf_id": "l5", "quelle": "eingebrochen", "status": "ok", "anzahl": 40 },
+        { "lauf_id": "l4", "quelle": "eingebrochen", "status": "saisonal", "anzahl": 0 },
+        { "lauf_id": "l3", "quelle": "eingebrochen", "status": "ok", "anzahl": 38 },
+        { "lauf_id": "l2", "quelle": "eingebrochen", "status": "leer", "anzahl": 0 },
+        { "lauf_id": "l1", "quelle": "eingebrochen", "status": "ok", "anzahl": 44 },
+
+        { "lauf_id": "l6", "quelle": "dauerkaputt", "status": "fehler", "anzahl": 0 },
+        { "lauf_id": "l5", "quelle": "dauerkaputt", "status": "uebersprungen", "anzahl": 0 },
+        { "lauf_id": "l4", "quelle": "dauerkaputt", "status": "leer", "anzahl": 0 },
+        { "lauf_id": "l3", "quelle": "dauerkaputt", "status": "fehler", "anzahl": 0 },
+
+        { "lauf_id": "l6", "quelle": "klein_aber_normal", "status": "ok", "anzahl": 1 },
+        { "lauf_id": "l5", "quelle": "klein_aber_normal", "status": "ok", "anzahl": 5 },
+        { "lauf_id": "l4", "quelle": "klein_aber_normal", "status": "ok", "anzahl": 6 },
+
+        { "lauf_id": "l6", "quelle": "saisonpause", "status": "saisonal", "anzahl": 0 },
+        { "lauf_id": "l5", "quelle": "saisonpause", "status": "saisonal", "anzahl": 0 },
+        { "lauf_id": "l4", "quelle": "saisonpause", "status": "ok", "anzahl": 30 },
+
+        { "lauf_id": "l6", "quelle": "gesund", "status": "ok", "anzahl": 50 },
+        { "lauf_id": "l5", "quelle": "gesund", "status": "ok", "anzahl": 48 }
+      ],
+      "erwartet": [
+        { "regel": "W6", "quelle": null },
+        { "regel": "W4", "quelle": "dauerkaputt" },
+        { "regel": "W1", "quelle": "dauerkaputt" },
+        { "regel": "W3", "quelle": "eingebrochen" },
+        { "regel": "W1", "quelle": "fehlerhaft" },
+        { "regel": "W2", "quelle": "leer_geworden" }
+      ]
+    },
+    {
+      "name": "Lauf hängt; Quellenregeln nehmen den letzten beendeten Lauf",
+      "jetzt": "2026-11-23T08:00:00Z",
+      "laeufe": [
+        { "id": "a", "gestartet_am": "2026-11-20T05:00:00Z", "beendet_am": "2026-11-20T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "b", "gestartet_am": "2026-11-23T05:00:00Z", "beendet_am": null, "status": "laeuft", "speicher_fehler": null }
+      ],
+      "ergebnisse": [
+        { "lauf_id": "a", "quelle": "zakk", "status": "fehler", "anzahl": 0 },
+        { "lauf_id": "b", "quelle": "zakk", "status": "ok", "anzahl": 10 }
+      ],
+      "erwartet": [
+        { "regel": "W5", "quelle": null },
+        { "regel": "W1", "quelle": "zakk" }
+      ]
+    },
+    {
+      "name": "seit über 4 Tagen kein Lauf",
+      "jetzt": "2026-11-25T06:00:00Z",
+      "laeufe": [
+        { "id": "x", "gestartet_am": "2026-11-20T05:00:00Z", "beendet_am": "2026-11-20T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 }
+      ],
+      "ergebnisse": [
+        { "lauf_id": "x", "quelle": "gesund", "status": "ok", "anzahl": 20 }
+      ],
+      "erwartet": [
+        { "regel": "W5", "quelle": null }
+      ]
+    }
+  ]
+}
