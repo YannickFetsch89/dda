@@ -121,7 +121,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
   const warnungen = scraper ? warnungenBerechnen(scraper.laeufe, scraper.ergebnisse, jetzt) : [];
   const ampeln: Ampel[] = [
     scraper
-      ? scraperAmpel(scraper.laeufe, warnungen, jetzt, scraper.laeufe[0]?.github_run_url ?? null)
+      ? scraperAmpel(scraper.laeufe, warnungen, jetzt, "/admin/scraper")
       : { schluessel: "scraper", titel: "Scraper-Lauf", farbe: "grau", text: "Protokoll nicht lesbar.", zeitpunkt: null, link: null },
     workflowAmpel("deploy", "Deploy", deploy, jetzt, null),
     workflowAmpel("waechter", "Website-Wächter", waechter, jetzt, 1),

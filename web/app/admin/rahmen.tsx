@@ -10,7 +10,7 @@ const NAVIGATION: { titel: string; href?: string; stufe?: string }[] = [
   { titel: "Cockpit", href: "/admin" },
   { titel: "Events", stufe: "1d" },
   { titel: "Empfehlungen", stufe: "1e" },
-  { titel: "Scraper", stufe: "1c" },
+  { titel: "Scraper", href: "/admin/scraper" },
   { titel: "Magazin", stufe: "2" },
   { titel: "Orte & Guides", stufe: "3" },
   { titel: "Instagram", stufe: "eigener Plan" },

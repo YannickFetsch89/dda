@@ -116,3 +116,19 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 .admin-liste__eintrag--rot { border-left-color: var(--ddd-error); }
 .admin-zahl { font-weight: 700; min-width: 2.5em; color: var(--ddd-text); }
 .admin-marke-klein { font-size: 11px; font-weight: 700; background: var(--ddd-subtle); border-radius: 4px; padding: 1px 6px; }
+
+/* Scraper (Stufe 1c) */
+.admin-tabelle-rahmen { overflow-x: auto; background: var(--ddd-surface); border: 1px solid var(--ddd-border); border-radius: 12px; }
+.admin-tabelle { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-tabelle th { text-align: left; font-size: 12px; font-weight: 600; color: var(--ddd-text-muted); padding: 10px 12px; border-bottom: 1px solid var(--ddd-border); white-space: nowrap; }
+.admin-tabelle td { padding: 8px 12px; border-bottom: 1px solid var(--ddd-border); vertical-align: top; }
+.admin-tabelle tr:last-child td { border-bottom: 0; }
+.admin-tabelle small { color: var(--ddd-text-muted); }
+.admin-zeile--rot td:first-child { box-shadow: inset 4px 0 0 var(--ddd-error); }
+.admin-zeile--gelb td:first-child { box-shadow: inset 4px 0 0 var(--ddd-warning); }
+.admin-verlauf { display: inline-flex; gap: 3px; }
+.admin-verlauf__punkt { min-width: 26px; height: 20px; border-radius: 4px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: var(--ddd-disabled-bg); }
+.admin-verlauf__punkt--ok { background: var(--ddd-success); }
+.admin-verlauf__punkt--leer { background: var(--ddd-warning); }
+.admin-verlauf__punkt--fehler { background: var(--ddd-error); }
+.admin-verlauf__punkt--saisonal, .admin-verlauf__punkt--uebersprungen { background: var(--ddd-disabled-fg); }

@@ -213,3 +213,8 @@ class LaufReport:
             )
         except Exception as e:
             logger.warning("Lauf-Report konnte nicht gespeichert werden: %s", e)
+            return
+
+        # Warn-Mail bei W1/W2/W4/W6 oder abgebrochenem Lauf (Plan Admin-Dashboard 4.3, E8); wirft nie
+        from pipeline.lauf_warnungen import warnmail_nach_lauf
+        warnmail_nach_lauf(self._db, self.lauf_id)

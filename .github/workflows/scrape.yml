@@ -98,6 +98,11 @@ jobs:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           # Ortsseiten (Plan Locations 3.11): 1 = neue/geänderte /orte-URLs nach dem Lauf an IndexNow melden
           ORTSSEITEN_MELDEN: ${{ vars.ORTSSEITEN_MELDEN }}
+          # Warn-Mail nach dem Lauf (Plan Admin-Dashboard 4.3, E8): dieselben SMTP-Secrets wie geburtstag.yml
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_BENUTZER: ${{ secrets.SMTP_BENUTZER }}
+          SMTP_PASSWORT: ${{ secrets.SMTP_PASSWORT }}
           TZ: Europe/Berlin
         run: |
           mkdir -p logs

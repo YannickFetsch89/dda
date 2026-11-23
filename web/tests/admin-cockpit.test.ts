@@ -1,7 +1,8 @@
 // Tests zum Cockpit, Stufe 1b (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.2 und 4.3)
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { workflowStarten } from "@/lib/admin/github";
 import { eventLuecken, scraperAmpel, tokenAmpel, workflowAmpel } from "@/lib/admin/ampeln";
 import { warnungenBerechnen, type ErgebnisZeile, type LaufZeile } from "@/lib/admin/warnregeln";
 import { ev } from "./hilfen";
@@ -76,5 +77,35 @@ describe("Lücken aus dem Event-Pool", () => {
     expect(l.ohneAdresse).toBe(1);
     expect(l.eventsHeute).toBe(1);
     expect(l.events7Tage).toBe(2);
+  });
+});
+
+describe("Lauf starten über GitHub (Stufe 1c)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("ohne Token kein Start", async () => {
+    vi.stubEnv("ADMIN_GITHUB_TOKEN", "");
+    const r = await workflowStarten("scrape");
+    expect(r.ok).toBe(false);
+  });
+
+  it("startet scrape.yml auf dem Arbeitszweig, 204 = ok", async () => {
+    vi.stubEnv("ADMIN_GITHUB_TOKEN", "github_pat_test");
+    const abruf = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", abruf);
+    expect(await workflowStarten("scrape")).toEqual({ ok: true });
+    const [url, init] = abruf.mock.calls[0];
+    expect(String(url)).toMatch(/\/actions\/workflows\/scrape\.yml\/dispatches$/);
+    expect(JSON.parse(init.body)).toEqual({ ref: "claude/setup-project-structure-5QNOf" });
+    expect(init.headers.Authorization).toBe("Bearer github_pat_test");
+  });
+
+  it("GitHub-Fehler wird gemeldet", async () => {
+    vi.stubEnv("ADMIN_GITHUB_TOKEN", "github_pat_test");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 403 })));
+    expect(await workflowStarten("scrape")).toEqual({ ok: false, meldung: "GitHub antwortet mit 403" });
   });
 });

@@ -33,6 +33,33 @@ function token(): string | null {
   return process.env.ADMIN_GITHUB_TOKEN?.trim() || null;
 }
 
+/** Arbeitszweig: Deploy und Läufe laufen auf diesem Zweig */
+export const ZWEIG = "claude/setup-project-structure-5QNOf";
+
+/** Startet einen Workflow per workflow_dispatch (braucht Actions: write). GitHub antwortet mit 204 ohne Lauf-ID. */
+export async function workflowStarten(name: WorkflowName): Promise<{ ok: true } | { ok: false; meldung: string }> {
+  const t = token();
+  if (!t) return { ok: false, meldung: "GitHub nicht verbunden (Token fehlt)." };
+  try {
+    const antwort = await fetch(`https://api.github.com/repos/${repo()}/actions/workflows/${WORKFLOWS[name]}/dispatches`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${t}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ref: ZWEIG }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (antwort.status === 204) return { ok: true };
+    return { ok: false, meldung: `GitHub antwortet mit ${antwort.status}` };
+  } catch (e) {
+    return { ok: false, meldung: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Letzter Lauf eines Workflows (egal welcher Zweig oder Auslöser). */
 export async function letzterLauf(name: WorkflowName): Promise<GithubErgebnis> {
   const t = token();
