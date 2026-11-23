@@ -94,10 +94,21 @@ export function EventBearbeiten() {
     ev.preventDefault();
     if (!e) return;
     const f = new FormData(ev.currentTarget);
+    // Nur geänderte Felder schicken (Cursor-Prüfung 1d): Ein unveränderter langer Text blockiert sonst das Speichern
+    // anderer Felder, und unberührte Felder bleiben sicher ungeschützt.
+    const norm = (w: unknown) => (typeof w === "string" ? w.trim() : w ?? "");
     const felder: Record<string, unknown> = {};
-    for (const t of TEXTFELDER) felder[t.feld] = String(f.get(t.feld) ?? "");
-    felder.kategorie = String(f.get("kategorie") ?? "");
-    for (const s of ["abgesagt", "abgelehnt", "nicht_empfehlen"]) felder[s] = f.get(s) === "on";
+    for (const t of TEXTFELDER) {
+      const neu = String(f.get(t.feld) ?? "");
+      const alt = t.feld === "uhrzeit" ? (e.uhrzeit ?? "").slice(0, 5) : e[t.feld];
+      if (norm(neu) !== norm(alt)) felder[t.feld] = neu;
+    }
+    const kategorie = String(f.get("kategorie") ?? "");
+    if (kategorie !== kategorieAusDb(e.kategorie)) felder.kategorie = kategorie;
+    for (const s of ["abgesagt", "abgelehnt", "nicht_empfehlen"] as const) {
+      if ((f.get(s) === "on") !== e[s]) felder[s] = f.get(s) === "on";
+    }
+    if (!Object.keys(felder).length) return setMeldung({ art: "ok", text: "Keine Änderung." });
     setLaeuft(true);
     const { ok, daten } = await senden(e.id, { felder });
     setLaeuft(false);

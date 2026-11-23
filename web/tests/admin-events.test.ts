@@ -1,6 +1,6 @@
 // Tests zu Events bearbeiten, Stufe 1d (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.4)
 import { describe, expect, it } from "vitest";
-import { eingabenPruefen, kategorieInDb, updateBauen, type EventZeile } from "@/lib/admin/events";
+import { eingabenPruefen, kategorieInDb, uhrzeitUebernehmen, updateBauen, type EventZeile } from "@/lib/admin/events";
 
 const bisher: EventZeile = {
   id: "e1",
@@ -67,5 +67,16 @@ describe("Update mit Feldschutz und abgleich_* (4.4 Teil A und B)", () => {
     const { update } = updateBauen({ ...bisher, titel: "Konzert (neu)", abgleich_datum: "2026-11-28" }, { titel: "Konzert (ganz neu)" });
     expect(update).not.toHaveProperty("abgleich_titel");
     expect(update).not.toHaveProperty("abgleich_datum");
+  });
+});
+
+describe("Uhrzeit beim Zusammenlegen (gleich wie pipeline/vorschlaege.py)", () => {
+  it("leere Uhrzeit wird gefüllt, Veranstalter schlägt Sammel-Quelle, sonst bleibt sie", () => {
+    const rg = { quelle_name: "Rausgegangen", quelle_url: "https://rausgegangen.de/x" };
+    const zakk = { quelle_name: "zakk", quelle_url: "https://zakk.de/x" };
+    expect(uhrzeitUebernehmen({ ...rg, uhrzeit: null }, { ...zakk, uhrzeit: "20:00:00" })).toBe(true);
+    expect(uhrzeitUebernehmen({ ...rg, uhrzeit: "19:00:00" }, { ...zakk, uhrzeit: "20:00:00" })).toBe(true);
+    expect(uhrzeitUebernehmen({ ...zakk, uhrzeit: "20:00:00" }, { ...rg, uhrzeit: "19:00:00" })).toBe(false);
+    expect(uhrzeitUebernehmen({ ...rg, uhrzeit: "19:00:00" }, { ...rg, uhrzeit: null })).toBe(false);
   });
 });

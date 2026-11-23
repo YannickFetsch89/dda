@@ -3,7 +3,7 @@
 // POST { aktion: "zuruecksetzen" }     → redaktion_felder und abgleich_* leeren (Pipeline darf wieder schreiben)
 // POST { aktion: "dublette", behalten } → dieses Event ist Dublette von „behalten“ (admin_dublette_zusammenlegen)
 import { revalidateTag } from "next/cache";
-import { eingabenPruefen, updateBauen, type EventZeile } from "@/lib/admin/events";
+import { eingabenPruefen, uhrzeitUebernehmen, updateBauen, type EventZeile } from "@/lib/admin/events";
 import { protokollieren } from "@/lib/admin/protokoll";
 import { adminAntwort, adminRoute } from "@/lib/admin/route";
 import { EVENTS_CACHE_TAG } from "@/lib/daten";
@@ -57,13 +57,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/event
     if (body.aktion === "dublette") {
       const behalten = typeof body.behalten === "string" ? body.behalten : "";
       if (!UUID.test(behalten) || behalten === id) return adminAntwort(400, { fehler: "Ungültiges Ziel-Event." }, setCookies);
-      const { data: ziel } = await db.from("events").select("id, slug, kategorie").eq("id", behalten).maybeSingle();
+      const { data: ziel } = await db.from("events").select("id, slug, kategorie, uhrzeit, quelle_name, quelle_url").eq("id", behalten).maybeSingle();
       if (!ziel?.slug) return adminAntwort(400, { fehler: "Ziel-Event hat keine Seite (kein Slug)." }, setCookies);
       const { data, error } = await db.rpc("admin_dublette_zusammenlegen", {
         p_behalten: behalten,
         p_dublette: id,
         p_ziel: eventPfad({ id: ziel.id, slug: ziel.slug, kategorie: kategorieAusDb(ziel.kategorie) }),
-        p_uhrzeit_uebernehmen: false,
+        // Gleiche Regel wie der Vorschlagsweg (pipeline/vorschlaege.py): Veranstalter-Uhrzeit schlägt Sammel-Quelle.
+        // Die Absage der Dublette übernimmt die Funktion selbst (d.abgesagt).
+        p_uhrzeit_uebernehmen: uhrzeitUebernehmen(ziel, bisher),
         p_absage: false,
       });
       if (error) return adminAntwort(400, { fehler: error.message, code: "db" }, setCookies);

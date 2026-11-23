@@ -12,9 +12,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/vorsc
     if (!UUID.test(id)) return adminAntwort(404, { fehler: "Nicht gefunden." }, setCookies);
     const aktion = body.aktion;
     if (aktion !== "annehmen" && aktion !== "ablehnen") return adminAntwort(400, { fehler: "Aktion annehmen oder ablehnen." }, setCookies);
+    // Vorher lesen: Beim Zusammenlegen kann das behaltene Event ein Bild bekommen (Cursor-Prüfung Stufe 1d)
+    const { data: v } = await admin!.db.from("admin_vorschlaege").select("art, vorschlag").eq("id", id).maybeSingle();
     const { data, error } = await admin!.db.rpc(aktion === "annehmen" ? "admin_vorschlag_annehmen" : "admin_vorschlag_ablehnen", { p_id: id });
     if (error) return adminAntwort(400, { fehler: error.message, code: "db" }, setCookies);
-    if (aktion === "annehmen") revalidateTag(EVENTS_CACHE_TAG, { expire: 0 });
+    if (aktion === "annehmen") {
+      revalidateTag(EVENTS_CACHE_TAG, { expire: 0 });
+      const behalten = (v?.vorschlag as { behalten?: unknown } | null)?.behalten;
+      if (v?.art === "dublette" && typeof behalten === "string" && UUID.test(behalten)) revalidateTag(`event-bild-${behalten.toLowerCase()}`, { expire: 0 });
+    }
     return adminAntwort(200, { ok: true, ergebnis: data }, setCookies);
   });
 }

@@ -102,7 +102,7 @@ export function eingabenPruefen(eingabe: Record<string, unknown>): { ok: true; f
           stadtteil: [80, false],
           unterkategorie: [60, false],
           preis: [100, false],
-          beschreibung: [5000, false],
+          beschreibung: [20000, false],
         };
         const [max, pflicht] = grenzen[feld];
         const t = text(wert, max, pflicht);
@@ -156,6 +156,28 @@ export function updateBauen(bisher: EventZeile, felder: Partial<Record<Feld, Wer
     update.abgleich_ort = bisher.ort;
   }
   return { update, geaendert };
+}
+
+/** Sammel-Quellen wie in pipeline/deduplication.py (_AGGREGATOR_MUSTER): Uhrzeit dort oft der Einlass */
+const AGGREGATOR = /rausgegangen|visitd(?:ue|ü)sseldorf|allevents|resident advisor|ra\.co|prinz|kulturportal|eventfinder|meinestadt|eventbrite|ticketmaster|songkick/i;
+
+export function istAggregator(e: { quelle_name?: unknown; quelle_url?: unknown }): boolean {
+  return AGGREGATOR.test(`${typeof e.quelle_name === "string" ? e.quelle_name : ""} ${typeof e.quelle_url === "string" ? e.quelle_url : ""}`);
+}
+
+/**
+ * Uhrzeit der Dublette übernehmen? Gleiche Regel wie pipeline/vorschlaege.py: wenn die behaltene keine hat, oder beide
+ * abweichen und die behaltene von einer Sammel-Quelle kommt, die Dublette vom Veranstalter (Cursor-Prüfung 1d).
+ */
+export function uhrzeitUebernehmen(
+  behalten: { uhrzeit?: unknown; quelle_name?: unknown; quelle_url?: unknown },
+  dublette: { uhrzeit?: unknown; quelle_name?: unknown; quelle_url?: unknown },
+): boolean {
+  const ub = typeof behalten.uhrzeit === "string" ? behalten.uhrzeit.slice(0, 5) : "";
+  const ud = typeof dublette.uhrzeit === "string" ? dublette.uhrzeit.slice(0, 5) : "";
+  if (!ud) return false;
+  if (!ub) return true;
+  return ub !== ud && istAggregator(behalten) && !istAggregator(dublette);
 }
 
 /** Filter der Event-Liste (4.4) */

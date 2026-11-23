@@ -96,21 +96,34 @@ def vorschlaege_schreiben(db, zeilen: list[dict]) -> int:
     return len(zeilen)
 
 
-def vorschlaege_erzeugen(lauf_id: Optional[str] = None) -> dict[str, int]:
-    """Dubletten und Gebiet für alle sichtbaren Events ab heute. Wirft nicht; meldet nur ins Log."""
-    from database.client import get_supabase_client
-    from pipeline.deduplication import titel_status_bereinigen
-    from pipeline.dubletten_sql import events_laden
+def _alle_sichtbaren(db) -> list[dict]:
+    """Alle sichtbaren Events ohne untere Datumsgrenze – wie gebiet.py --sql, damit auch Langläufer mit Start vor
+    heute geprüft werden (Cursor-Prüfung Stufe 1d)."""
+    zeilen, start = [], 0
+    while True:
+        teil = (db.table("events").select("id, titel, datum, ort, adresse, quelle_name")
+                .eq("abgelehnt", False).order("id").range(start, start + 999).execute().data or [])
+        zeilen.extend(teil)
+        if len(teil) < 1000:
+            return zeilen
+        start += 1000
 
+
+def vorschlaege_erzeugen(lauf_id: Optional[str] = None) -> dict[str, int]:
+    """Dubletten (ab heute) und Gebiet (ganzer sichtbarer Bestand). Wirft nie, auch nicht beim Import; meldet ins Log."""
     ergebnis = {"dublette": 0, "gebiet": 0}
     try:
+        from database.client import get_supabase_client
+        from pipeline.deduplication import titel_status_bereinigen
+        from pipeline.dubletten_sql import events_laden
+
         db = get_supabase_client()
         events = events_laden(date.today().isoformat())
         original = {e["id"]: dict(e) for e in events}
         for e in events:
             titel_status_bereinigen(e)
         ergebnis["dublette"] = vorschlaege_schreiben(db, dubletten_vorschlaege(events, original, lauf_id))
-        ergebnis["gebiet"] = vorschlaege_schreiben(db, gebiet_vorschlaege(list(original.values()), lauf_id))
+        ergebnis["gebiet"] = vorschlaege_schreiben(db, gebiet_vorschlaege(_alle_sichtbaren(db), lauf_id))
         logger.info("Vorschläge geprüft: %d Dubletten-Paare, %d außerhalb des Gebiets (neue und schon bekannte)",
                     ergebnis["dublette"], ergebnis["gebiet"])
     except Exception as e:
