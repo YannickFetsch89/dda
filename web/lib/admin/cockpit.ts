@@ -124,7 +124,9 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       ? scraperAmpel(scraper.laeufe, warnungen, jetzt, "/admin/scraper")
       : { schluessel: "scraper", titel: "Scraper-Lauf", farbe: "grau", text: "Protokoll nicht lesbar.", zeitpunkt: null, link: null },
     workflowAmpel("deploy", "Deploy", deploy, jetzt, null),
-    workflowAmpel("waechter", "Website-Wächter", waechter, jetzt, 1),
+    // GitHub führt den 15-Minuten-Zeitplan nur alle paar Stunden aus (gemessen 20.–23.11.: Abstände 4–8 h); der
+    // eigentliche Wächter ist der Cron auf dem Server. Gelb erst ab 12 Stunden ohne Lauf.
+    workflowAmpel("waechter", "Website-Wächter", waechter, jetzt, 12),
     workflowAmpel("geburtstag", "Geburtstagsmails", geburtstag, jetzt, 26),
     workflowAmpel("magazin", "Magazin-Job", magazin, jetzt, 3),
     web,
@@ -156,7 +158,9 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       anzahl: luecken?.tageOhneTipp.length ?? null,
       farbe: !luecken ? "grau" : luecken.tageOhneTipp.length ? "gelb" : "gruen",
       link: null,
-      hinweis: luecken?.tageOhneTipp.length ? luecken.tageOhneTipp.slice(0, 5).join(", ") + (luecken.tageOhneTipp.length > 5 ? " …" : "") : undefined,
+      hinweis: luecken?.tageOhneTipp.length
+        ? luecken.tageOhneTipp.slice(0, 5).map((t) => `${t.slice(8, 10)}.${t.slice(5, 7)}.`).join(", ") + (luecken.tageOhneTipp.length > 5 ? " …" : "")
+        : undefined,
     },
     { schluessel: "ohne_bild", titel: "Events ohne Bild (7 Tage)", anzahl: luecken?.ohneBild ?? null, farbe: luecken ? (luecken.ohneBild ? "gelb" : "gruen") : "grau", link: null },
     { schluessel: "ohne_stadtteil", titel: "Events ohne Stadtteil (7 Tage)", anzahl: luecken?.ohneStadtteil ?? null, farbe: luecken ? (luecken.ohneStadtteil ? "gelb" : "gruen") : "grau", link: null },

@@ -61,7 +61,7 @@ export function workflowAmpel(schluessel: string, titel: string, g: GithubErgebn
   } else if (l.conclusion === "skipped") text = "übersprungen (Schalter aus)";
   if (farbe === "gruen" && maxStunden !== null && alterStunden(l.erstellt_am, jetzt) > maxStunden) {
     farbe = "gelb";
-    text = `${text}, aber seit über ${maxStunden} Stunden kein Lauf`;
+    text = `${text}, aber seit über ${maxStunden} Stunde${maxStunden === 1 ? "" : "n"} kein Lauf`;
   }
   return { ...basis, farbe, text: `Letzter Lauf ${text}`, zeitpunkt: l.erstellt_am, link: l.url };
 }
