@@ -11,7 +11,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { entdeckenZiel, pfadPruefen } from "@/lib/pfad-pruefung";
 import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidungen";
-import { ADMIN_OFFENE_SEITEN, istAdminBereich, istAdminPfad } from "@/lib/admin/bereich";
+import { ADMIN_OFFENE_SEITEN, hatAdminKopf, istAdminBereich, istAdminPfad } from "@/lib/admin/bereich";
 import { ADMIN_COOKIE } from "@/lib/admin/konfig";
 import { cookieLesen } from "@/lib/konto/cookies";
 
@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
   // Location lehnt der Proxy dagegen mit 500 ab („Invalid URL“, lokal gemessen 23.11.2026).
   // Auf der Website läuft „/“ unverändert weiter, ohne die übrigen Zweige.
   if (pfad === "/") {
-    if (istAdminBereich(request.headers)) {
+    if (hatAdminKopf(request.headers)) {
       const antwort = NextResponse.redirect(new URL("/admin", request.url), 308);
       antwort.headers.set("Cache-Control", "no-store");
       return antwort;

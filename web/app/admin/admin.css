@@ -160,3 +160,19 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 .admin-vorschlag > div { flex: 1 1 320px; line-height: 1.5; }
 .admin-vorschlag a { color: var(--ddd-link); }
 .admin-aktionen { display: flex; gap: 8px; margin-left: auto; }
+
+/* Empfehlungen (Stufe 1e) */
+.admin-empf-raster { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+@media (min-width: 900px) { .admin-empf-raster { grid-template-columns: 1fr 1fr; } .admin-empf-raster--drei { grid-template-columns: repeat(3, 1fr); } }
+.admin-empf-zeile { display: flex; flex-direction: column; gap: 3px; padding: 6px 0; border-bottom: 1px solid var(--ddd-border); font-size: 14px; flex: 1 1 360px; }
+.admin-empf-zeile:last-child { border-bottom: 0; }
+.admin-empf-zeile a { color: var(--ddd-text); }
+.admin-empf-zeile small { color: var(--ddd-text-muted); }
+.admin-empf-gruende { font-size: 12px; color: var(--ddd-text-muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.admin-empf-kandidat .admin-empf-zeile { border-bottom: 0; padding: 0; }
+.admin-kalender { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.admin-kalender__tag { text-align: left; font: inherit; font-size: 13px; display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 10px; border: 1px solid var(--ddd-border); background: var(--ddd-surface); color: var(--ddd-text-body); cursor: pointer; }
+.admin-kalender__tag span { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.admin-kalender__tag small { color: var(--ddd-text-muted); }
+.admin-kalender__tag--redaktion { border-left: 4px solid var(--ddd-gold); }
+.admin-kalender__tag--aktiv { outline: 2px solid var(--ddd-gold); }

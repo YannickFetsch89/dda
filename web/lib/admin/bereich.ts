@@ -22,3 +22,11 @@ export function istAdminPfad(pfad: string): boolean {
 
 /** Seiten, die ohne Admin-Cookie erreichbar sein müssen */
 export const ADMIN_OFFENE_SEITEN = new Set(["/admin/anmelden"]);
+
+/**
+ * Nur der echte Kopf von admin.diesdas.events, ohne den Entwicklungsschalter. Für „/“ → /admin: Mit ADMIN_LOKAL soll
+ * die Startseite der Website beim Entwickeln weiter erreichbar bleiben.
+ */
+export function hatAdminKopf(headers: Headers): boolean {
+  return headers.get(BEREICH_KOPF)?.trim().toLowerCase() === "admin";
+}

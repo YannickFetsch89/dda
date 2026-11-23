@@ -630,6 +630,45 @@ function stufeRechnen(e: DddEvent, k: StufenKontext): Stufe {
   return s as Stufe;
 }
 
+export interface StufenErklaerung {
+  stufe: Stufe | null;
+  /** Lesbare Schritte in der Reihenfolge von stufeRechnen */
+  gruende: string[];
+}
+
+/**
+ * Warum hat ein Event diese Stufe? Dieselben Schritte wie breite()/stufeRechnen als Text, für die Tagesvorschau im
+ * Admin-Bereich (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.5). Ein Test sichert stufe === breite().
+ */
+export function stufeErklaeren(e: DddEvent, k: StufenKontext): StufenErklaerung {
+  if (e.abgesagt) return { stufe: null, gruende: ["abgesagt"] };
+  if (e.nicht_empfehlen) return { stufe: null, gruende: ["Redaktion: nicht empfehlen"] };
+  if (istStamm(e)) return { stufe: 0, gruende: ["Stamm oder Sprachhinweis – nie Pick"] };
+  const gruende: string[] = [];
+  const g = grundstufe(e);
+  if (g === 3) {
+    gruende.push(ZUGPFERD_TITEL.test(e.titel) ? "Zugpferd-Titel → 3" : istHeimspiel(e) ? "Heimspiel → 3" : "Zugpferd-Ort → 3");
+  } else if (g === 1) {
+    gruende.push("Szene (Jam, Open Stage, Open Mic, Karaoke) → 1");
+  } else {
+    gruende.push(istZugpferdOrt(e.ort) ? "Zugpferd-Ort, aber kleines Format → 2" : "normal → 2");
+  }
+  let s: number = g;
+  if (k.serien.has(e.id)) {
+    gruende.push(s > 1 ? "Serie → höchstens 1" : "Serie");
+    s = Math.min(s, 1);
+  }
+  if (istLanglaeufer(e) && !ZUGPFERD_TITEL.test(e.titel)) {
+    if (s > 2) gruende.push("läuft lange → höchstens 2");
+    s = Math.min(s, 2);
+  }
+  if (highlightGilt(e, k.heute) || topGilt(e, k.heute)) {
+    gruende.push("Highlight- oder Top-Flagge → +1");
+    s = Math.min(s + 1, 3);
+  }
+  return { stufe: s as Stufe, gruende };
+}
+
 // ---------- Empfehlungen: Fokustag und Tipp-Flagge (Abschnitt 7 und 8) ----------
 
 /** Event mit `datum_bis` nach `datum` (nicht nur Langläufer). */

@@ -157,7 +157,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       titel: "Tage ohne Redaktions-Tipp (14 Tage)",
       anzahl: luecken?.tageOhneTipp.length ?? null,
       farbe: !luecken ? "grau" : luecken.tageOhneTipp.length ? "gelb" : "gruen",
-      link: null,
+      link: "/admin/empfehlungen",
       hinweis: luecken?.tageOhneTipp.length
         ? luecken.tageOhneTipp.slice(0, 5).map((t) => `${t.slice(8, 10)}.${t.slice(5, 7)}.`).join(", ") + (luecken.tageOhneTipp.length > 5 ? " …" : "")
         : undefined,

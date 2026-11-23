@@ -589,6 +589,13 @@ Stufen 1b–1d (23.11.2026):
 - **Admin-Rahmen:** Er liegt in `Suspense`, weil `usePathname` bei `/admin/events/[id]` erst im Browser feststeht.
 - **Offen:** Für den Feldschutz in `categorizer.kategorisieren()` gibt es keinen eigenen Test (der Schritt ruft die KI). Den Code hat Cursor bei der Umsetzungsprüfung gesehen.
 
+Stufe 1e (23.11.2026):
+- `web/lib/startseite.ts` (`startseitenAuswahl`) rechnet Tipp, Picks, „Beliebt“ und Wochenende. Startseite und Admin-Vorschau nutzen sie beide.
+  - Ein Test vergleicht die vier Blöcke mit der bisherigen Rechnung.
+  - Lokal gegen live verglichen: gleiche Tipps und Picks für den 28.11., für heute und für das Wochenende.
+- `stufeErklaeren` in `ableitungen.ts`. Ein Test sichert, dass ihre Stufe gleich `breite()` ist.
+- `/` → `/admin` greift nur mit dem echten Kopf `X-DDD-Bereich: admin` (`hatAdminKopf`), nicht mit `ADMIN_LOKAL`. So bleibt die Startseite beim Entwickeln erreichbar.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -598,4 +605,4 @@ Stufen 1b–1d (23.11.2026):
 - 23.11.2026: Cursor-Prüfung 3: freigabefähig, 4 Hinweise (1 mittel, 3 gering), nachgeprüft und eingearbeitet.
 - 23.11.2026: Cursor-Prüfung 4: freigabefähig nach Trennung des Filter-Satzes, 4 Hinweise eingearbeitet → vierte Fassung. **Vom Auftraggeber freigegeben.**
 - 23.11.2026: Stufe 1a gebaut (09b56cb, lokal), Umsetzungsnotizen in Anhang F.
-- 23.11.2026: Stufen 1b und 1c LIVE (5246581, 11d3945), Stufe 1d gebaut (lokal); Notizen in Anhang F.
+- 23.11.2026: Stufen 1b und 1c LIVE (5246581, 11d3945), Stufe 1d LIVE (c16f017, Cursor: deploybar, 5 Hinweise behoben), Stufe 1e gebaut (lokal); Notizen in Anhang F.
