@@ -57,6 +57,16 @@ jobs:
             echo "--- Herzschlag-Fallback /tmp:"; tail -5 /tmp/dda-waechter.txt 2>/dev/null || echo "keiner"
             echo "--- Letzte Starts laut Log:"; grep -n "Website wird gestartet" logs/website.log 2>/dev/null | tail -5 || true
             echo "--- Letzte 80 Zeilen website.log:"; tail -80 logs/website.log 2>/dev/null || echo "Log fehlt"
+            # Zugriffe (Speicherüberlauf 23.11.2026: welche Anfragen kommen kurz vor einem Absturz?). Nur Pfade und Zahlen.
+            for ZUGRIFF in /log/access.log ../log/access.log "$HOME/../log/access.log" /var/log/ispconfig/httpd/diesdas.events/access.log; do
+              if [ -r "$ZUGRIFF" ]; then
+                echo "--- Zugriffs-Log $ZUGRIFF: häufigste Pfade der letzten 3000 Anfragen"
+                tail -3000 "$ZUGRIFF" | awk '{print $7}' | sed 's/?.*//' | sort | uniq -c | sort -rn | head -30
+                echo "--- häufigste Clients (User-Agent) der letzten 3000 Anfragen"
+                tail -3000 "$ZUGRIFF" | awk -F'"' '{print $6}' | sort | uniq -c | sort -rn | head -10
+                break
+              fi
+            done
             echo "===== DIAGNOSE ENDE ====="
 
             set -e
@@ -129,14 +139,15 @@ jobs:
               echo "Geburtstag-Token-Schlüssel in web/.env.local gesetzt"
             fi
             # Newsletter Double-Opt-in (Plan Admin-Dashboard 4.9): Token-Schlüssel der Bestätigen-/Abmelde-Routen
-            if [ -n "$NEWSLETTER_TOKEN_SCHLUESSEL" ]; then
+            # Ohne sed (Deploy 23.11.2026 brach mit „unterminated s command“ ab): Leerzeichen und Zeilenumbrüche aus dem
+            # Secret entfernen, alte Zeile herausfiltern, neue anhängen.
+            NL_SCHLUESSEL=$(printf '%s' "$NEWSLETTER_TOKEN_SCHLUESSEL" | tr -d ' \r\n\t')
+            if [ -n "$NL_SCHLUESSEL" ]; then
               touch web/.env.local
-              if grep -q "^NEWSLETTER_TOKEN_SCHLUESSEL=" web/.env.local; then
-                sed -i "s|^NEWSLETTER_TOKEN_SCHLUESSEL=.*|NEWSLETTER_TOKEN_SCHLUESSEL=$NEWSLETTER_TOKEN_SCHLUESSEL|" web/.env.local
-              else
-                echo "NEWSLETTER_TOKEN_SCHLUESSEL=$NEWSLETTER_TOKEN_SCHLUESSEL" >> web/.env.local
-              fi
-              echo "Newsletter-Token-Schlüssel in web/.env.local gesetzt"
+              grep -v "^NEWSLETTER_TOKEN_SCHLUESSEL=" web/.env.local > web/.env.local.neu || true
+              printf 'NEWSLETTER_TOKEN_SCHLUESSEL=%s\n' "$NL_SCHLUESSEL" >> web/.env.local.neu
+              mv web/.env.local.neu web/.env.local
+              echo "Newsletter-Token-Schlüssel in web/.env.local gesetzt (${#NL_SCHLUESSEL} Zeichen)"
             fi
             if [ -n "$GEBURTSTAG_JOB_SCHLUESSEL" ]; then
               touch web/.env.local
