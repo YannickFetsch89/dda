@@ -14,6 +14,7 @@ import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidung
 import { ADMIN_OFFENE_SEITEN, hatAdminKopf, istAdminBereich, istAdminPfad } from "@/lib/admin/bereich";
 import { ADMIN_COOKIE } from "@/lib/admin/konfig";
 import { cookieLesen } from "@/lib/konto/cookies";
+import { bremsAdresse, BREMSE_FENSTER_MS, gebremst } from "@/lib/bremse";
 
 const GONE_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Event nicht mehr verfügbar · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><h1>Dieses Event ist nicht mehr verfügbar.</h1><p>Die Seite wurde entfernt, weil das Event schon lange vorbei ist.</p><p><a href="/entdecken" style="color:#457b9d">Aktuelle Events in Düsseldorf entdecken</a></p></body></html>`;
 
@@ -59,6 +60,21 @@ export async function proxy(request: NextRequest) {
     antwort.headers.set("Referrer-Policy", "no-referrer");
     antwort.headers.set("X-Robots-Tag", "noindex, nofollow");
     return antwort;
+  }
+
+  // Bremse gegen Massenabrufe der Guides (Ausfall 23.11.2026: ~3.000 Abrufe von /guides/restaurants-cafes durch einen
+  // einzelnen Client, Speicherüberlauf alle ~40 s). Vor jeder Rechnung: zu viele Aufrufe derselben Adresse → 429.
+  if (pfad === "/guides" || pfad.startsWith("/guides/")) {
+    if (gebremst(bremsAdresse(request.headers))) {
+      return new NextResponse("Zu viele Anfragen. Bitte in einer Minute noch einmal versuchen.", {
+        status: 429,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+          "Retry-After": String(Math.ceil(BREMSE_FENSTER_MS / 1000)),
+        },
+      });
+    }
   }
 
   // Ein einzelner Kategorie- oder Stadtteil-Filter ist die Landingpage → 301 (Filter mit mehr Parametern bleiben noindex)
@@ -109,7 +125,8 @@ export const config = {
   // Eventseiten (auch /event/<uuid>), Tage, Reihen, Guide-Orte, Landingpages, /entdecken (301 für Einzelfilter),
   // Magazin (Plan Redaktion T4: /magazin/:path* trifft auch /magazin selbst) und /feed.xml (308 auf den Magazin-Feed)
   matcher: [
-    "/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides/:hub/:slug", "/guides/:hub/stadtteil/:slug", "/kategorie/:slug",
+    // Guides: alle Pfade (auch die Hub-Seiten selbst) – wegen der Bremse gegen Massenabrufe (23.11.2026)
+    "/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides", "/guides/:path*", "/kategorie/:slug",
     "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken", "/magazin/:path*", "/feed.xml",
     // Ortsseiten (Plan Locations 3.10): aktive Spielstätte 200, Guide-Slug 308 auf die kanonische Guide-URL,
     // alter Slug 308 über ort_weiterleitungen, sonst echte 404. /orte selbst ist die Übersicht (immer 200).

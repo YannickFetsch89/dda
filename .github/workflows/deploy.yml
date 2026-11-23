@@ -62,6 +62,8 @@ jobs:
               if [ -r "$ZUGRIFF" ]; then
                 echo "--- Zugriffs-Log $ZUGRIFF: häufigste Pfade der letzten 3000 Anfragen"
                 tail -3000 "$ZUGRIFF" | awk '{print $7}' | sed 's/?.*//' | sort | uniq -c | sort -rn | head -30
+                echo "--- Anzahl verschiedener Adressen unter den letzten 3000 Anfragen (nur die Zahl, keine Adressen)"
+                tail -3000 "$ZUGRIFF" | awk '{print $1}' | sort -u | wc -l
                 echo "--- häufigste Clients (User-Agent) der letzten 3000 Anfragen"
                 tail -3000 "$ZUGRIFF" | awk -F'"' '{print $6}' | sort | uniq -c | sort -rn | head -10
                 break
