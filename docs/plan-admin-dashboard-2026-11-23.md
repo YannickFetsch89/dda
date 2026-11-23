@@ -1,6 +1,6 @@
-# Plan: Admin-Dashboard neu (admin.diesdas.events) – erste Fassung, 23.11.2026
+# Plan: Admin-Dashboard neu (admin.diesdas.events) – zweite Fassung, 23.11.2026
 
-**Status:** ENTWURF, Entscheidungen E1–E9 und Q5–Q8 am 23.11.2026 wie vorgeschlagen bestätigt. Cursor-Prüfung ausstehend, nicht freigegeben, nichts gebaut.
+**Status:** ENTWURF, zweite Fassung. Die Entscheidungen E1–E9 und Q5–Q8 sind am 23.11.2026 wie vorgeschlagen bestätigt. Die 15 Befunde der Cursor-Prüfung 1 sind eingearbeitet (Anhang B). Die Cursor-Prüfung 2 steht aus. Nicht freigegeben, nichts gebaut.
 **Grundlage:** Entscheidungen des Auftraggebers vom 23.11.2026 (Abschnitt 2) und Bestand am Stand `79c7459` (Abschnitt 1).
 **Gebaut wird erst nach Freigabe**, und zwar stufenweise. Jede Stufe hat eigene SQL, einen eigenen Deploy und eine eigene Abnahme.
 
@@ -13,7 +13,8 @@
 - **Streamlit-App** aus `dashboard/` (`app.py` 763 Zeilen, `meldungen.py`, `seo_aufraeumen.py`, `auth.py`).
   - Läuft auf `127.0.0.1:8502`, gestartet von `dashboard/dashboard.sh` (Watchdog per PID-Datei, Jail ohne `ps`).
   - Davor steht nginx als eigene Website in ISPConfig (`HANDOVER.md:96–104`). `curl https://admin.diesdas.events` liefert `<title>Streamlit`.
-  - `deploy.yml` startet sie bei jedem Push neu und prüft `/_stcore/health`.
+  - `deploy.yml` startet sie bei jedem Push auf `claude/setup-project-structure-5QNOf` neu und prüft `/_stcore/health`.
+  - nginx gibt an die Apps den Host `localhost:<port>` und `X-Forwarded-Proto` weiter, nicht den öffentlichen Host (Kommentar in `web/proxy.ts:17–19`). Das ist wichtig für 3.2.
 - **Anmeldung** (`dashboard/auth.py`): Supabase-Passwort-Login. Zugang nur mit `profiles.rolle = 'admin'`. Jede Sitzung hat einen eigenen Client mit anon-Key und dem Token des Admins, alles läuft unter RLS (`ist_admin()`). Der Service-Key wird bewusst nicht benutzt.
 - **Tabs heute:** Tagesplaner, Event-Liste, Featured (Tipp/Highlight/Top/„nicht empfehlen“), Scraper-Report (nur lesen, „Jetzt neu scrapen“ startet `main.py` lokal per subprocess), Meldungen (prüfen, bearbeiten, freigeben), Newsletter (Liste, CSV), SEO-Aufräumen (`event_seo_entscheidungen`).
 
@@ -38,18 +39,28 @@ Hauptbefund: Ein großer Teil der täglichen Redaktionsarbeit läuft über SQL-D
 | Schalter | `KONTEN_AKTIV`, `MAGAZIN_AKTIV`, `GEBURTSTAG_AKTIV`, `ORTSSEITEN_MELDEN` | GitHub-Variablen | selten |
 
 **Wichtig für die Umsetzung:**
-- **Magazin veröffentlichen:** Der Trigger `magazin_status_pruefen` (`database/magazin_2026-11-19.sql:162–195`) lässt den Wechsel auf `veroeffentlicht` nur zu, wenn `current_user` nicht `service_role`, `anon` oder `authenticated` ist, also praktisch nur `postgres` im SQL-Editor. Ein Admin-Bereich braucht dafür eine `SECURITY DEFINER`-Funktion (Abschnitt 5, S2).
-- **Pipeline überschreibt Felder:** `_anreicherungs_update_bauen` (`database/client.py:75–120`) ersetzt bei einem Duplikat `bild_url` (Rausgegangen → andere Quelle), `kategorie` (`kategorie_ersetzen`), die `uhrzeit` und beim Quellenwechsel auch Beschreibung, Preis und Adresse. **Eine Korrektur im Dashboard kann also beim nächsten Lauf verschwinden.**
-- **Abgleich über Titel, Datum, Ort:** Die Pipeline findet bestehende Events über `titel + datum + ort` (`client.py:300`), danach über den Slug und über Ähnlichkeit. Ändert man im Dashboard Titel oder Ort, kann der nächste Lauf ein **neues Duplikat** anlegen. Beides löst E7 (Abschnitt 4.4).
+- **Magazin veröffentlichen:** Der Trigger `magazin_status_pruefen` (`database/magazin_2026-11-19.sql:162–195`) lässt den Wechsel auf `veroeffentlicht` nur zu, wenn `current_user` nicht `service_role`, `anon` oder `authenticated` ist, also praktisch nur `postgres` im SQL-Editor. Ein Admin-Bereich braucht dafür `SECURITY DEFINER`-Funktionen (Abschnitt 5, S3). `authenticated` hat auf `magazin_beitraege` heute nur `SELECT` auf die öffentlichen Spalten veröffentlichter Beiträge (`magazin_2026-11-19.sql:245–256`). Auf `magazin_ki_kosten` hat `authenticated` gar keinen Zugriff.
+- **Pipeline überschreibt Felder:** `_anreicherungs_update_bauen` (`database/client.py:75–135`) ersetzt bei einem Duplikat an drei Stellen:
+  1. in der Schleife `bild_url` (Rausgegangen → andere Quelle), `kategorie` (`kategorie_ersetzen`) und leere Felder, wobei `abgesagt = false` als leer gilt;
+  2. im Uhrzeit-Block (`:120–124`) die Uhrzeit, wenn ein Veranstalter gegen einen Aggregator steht;
+  3. beim Quellenwechsel (`:127–133`) Quelle, Bild, Beschreibung, Preis und Adresse.
+
+  **Eine Korrektur im Dashboard kann also beim nächsten Lauf verschwinden.**
+- **Abgleich:** Die Pipeline findet ein bestehendes Event so (`client.py:296–335`):
+  - Schritt 1: `titel + datum + ort` mit passender Uhrzeit.
+  - Schritt 2: Slug-Basis (aus den Quelldaten gerechnet) mit gleicher Uhrzeit. Eine andere Uhrzeit gilt als weitere Vorstellung und bekommt einen neuen Slug (`:186–198`).
+  - Schritt 3: Ähnlichkeit am selben Datum.
+
+  Ändert die Redaktion Uhrzeit oder Datum, legt der nächste Lauf eine **zweite Zeile** an. Der Unique-Schlüssel `(titel, datum, ort, uhrzeit)` lässt das zu. Titel oder Ort allein fängt meist Schritt 2 ab, weil der Slug bleibt. Beides löst E7 (Abschnitt 4.4).
 
 ### 1.3 Jobs (GitHub Actions)
 
 | Workflow | Was | Zeitplan | Schalter | Schreibt |
 |---|---|---|---|---|
-| `scrape.yml` | `main.py --jetzt` (Scraper, KI, Captions, Posten) | täglich 05:00 UTC, läuft nur jeden 3. Tag; manuell immer | `ORTSSEITEN_MELDEN` | `scraper_laeufe`, `scraper_ergebnisse`, Log als Artefakt |
+| `scrape.yml` | `main.py --jetzt` (Scraper, KI, Captions, Posten) | täglich 05:00 UTC, läuft nur jeden 3. Tag; manuell immer | – (`ORTSSEITEN_MELDEN` schaltet nur die IndexNow-Meldung der Ortsseiten) | `scraper_laeufe`, `scraper_ergebnisse`, Log als Artefakt |
 | `magazin.yml` | Wochenvorschau, Monats-Tipps, IndexNow, Prüfen | Fr 17:00, am 28. 17:00, stündlich, täglich 04:40 UTC | `MAGAZIN_AKTIV` | `magazin_beitraege`, `magazin_ki_kosten` |
 | `geburtstag.yml` | Geburtstagsmails | täglich 08:00 UTC | `GEBURTSTAG_AKTIV` | `profiles.geburtstagsmail_zuletzt` |
-| `deploy.yml` | Deploy per SSH | bei Push | `KONTEN_AKTIV` | – |
+| `deploy.yml` | Deploy per SSH | bei Push auf `claude/setup-project-structure-5QNOf` | `KONTEN_AKTIV` | – |
 | `waechter.yml` | Website-Wächter | alle 15 min | – | Server-Datei `logs/waechter.txt` |
 | `diagnose.yml` | Server-Diagnose | manuell | – | – |
 
@@ -94,40 +105,60 @@ Der Admin-Bereich wird Teil von `web/` (Routen unter `/admin/**` und `/api/admin
 
 ### 3.2 Ausliefern unter admin.diesdas.events (ohne Rewrite)
 
-Regel aus dem Betrieb: **Kein `NextResponse.rewrite` in `proxy.ts`**, hinter nginx gibt es live 500 (Memory „Proxy-Rewrite hinter nginx“, Commit faa29e8). Deshalb:
-- **nginx (ISPConfig, macht der Auftraggeber):** Die Website admin.diesdas.events leitet ab dem Wechsel alles unverändert an `127.0.0.1:3847` (die Next-App) statt an 8502. WebSocket-Weiterleitung braucht Next nicht.
-- **`proxy.ts`, Host `admin.diesdas.events`:**
-  - `/` → **308** auf `/admin`.
-  - Erlaubt: `/admin/**`, `/api/admin/**`, `/_next/**`, Schriften, Icons. Alles andere → echte **404** aus dem Proxy.
-  - Jede Antwort: `X-Robots-Tag: noindex, nofollow`, `Cache-Control: private, no-store`, `Referrer-Policy: no-referrer`.
-- **`proxy.ts`, Host `diesdas.events`:** `/admin/**` und `/api/admin/**` → **404**. So ist der Admin-Bereich nur über die Subdomain erreichbar.
-- Lokal (`localhost:3100`) gilt der Admin-Host über einen Schalter in `.env.local`, damit man ihn entwickeln kann.
+Regeln aus dem Betrieb:
+- **Kein `NextResponse.rewrite` in `proxy.ts`.** Hinter nginx gibt es live 500 (Memory „Proxy-Rewrite hinter nginx“, Commit faa29e8). Erlaubt sind nur Redirect und direkte Response, wie heute schon in `proxy.ts`.
+- **Next sieht den öffentlichen Host nicht.** nginx gibt `Host: localhost:3847` weiter. `request.nextUrl.hostname` ist für diesdas.events und admin.diesdas.events also gleich (Cursor-Befund 1). Eine Host-Regel braucht deshalb einen eigenen Kopf.
+
+**Lösung: zwei Sicherungen, nginx und Proxy.**
+
+1. **nginx (ISPConfig, macht der Auftraggeber, Anleitung kommt mit Schritt 1a):**
+   - **Beide** Websites setzen einen festen Kopf, der einen vom Browser mitgeschickten Wert überschreibt:
+     - diesdas.events: `proxy_set_header X-DDD-Bereich web;`
+     - admin.diesdas.events: `proxy_set_header X-DDD-Bereich admin;`
+   - admin.diesdas.events leitet an `127.0.0.1:3847` (Next) statt an 8502, **aber nur diese Pfade:** `/admin`, `/api/admin`, `/_next`, `/bild`, `/fallback`, `/magazin-bild`, `/ort-foto`, `/ort-bilder`, `/magazin-autoren`, `/fonts`, `/icon.svg`.
+   - `location = /` → `return 308 /admin;` (relative Adresse, kein localhost in `Location`).
+   - Alle anderen Pfade → `return 404;`.
+   - Für den Übergang zusätzlich `location /alt/` → 8502 mit WebSocket (4.1).
+2. **`web/proxy.ts`** (zweite Sicherung, testbar):
+   - Matcher um `"/"`, `"/admin/:path*"` und `"/api/admin/:path*"` ergänzen. `/_next` und die Bildpfade bleiben **außerhalb** des Matchers, damit die Website nicht langsamer wird. Die übrigen Matcher-Einträge und Zweige bleiben unverändert.
+   - `/admin/**` oder `/api/admin/**` **ohne** `X-DDD-Bereich: admin` → echte 404 (`NICHT_GEFUNDEN_HTML`). Diese Prüfung steht **vor** allen bestehenden Zweigen. Fehlt der Kopf, gilt die Anfrage als Website, der Admin-Bereich ist also geschlossen.
+   - `/` **mit** `X-DDD-Bereich: admin` → 308 mit `Location: /admin`, gebaut als `new NextResponse(null, { status: 308, headers: { Location: "/admin" } })`. Nie mit `request.url`, sonst zeigt `Location` auf localhost.
+   - Admin-Antworten bekommen `X-Robots-Tag: noindex, nofollow`, `Cache-Control: private, no-store`, `Referrer-Policy: no-referrer`. Das passiert im Proxy für `/admin` und `/api/admin` und zusätzlich über `headers()` in `next.config.ts`.
+3. **Lokal:** `ADMIN_LOKAL=1` in `web/.env.local` lässt `/admin` ohne Kopf zu, **nur** wenn die Anfrage nicht hinter einem Proxy kommt (gleiche Erkennung wie `erlaubteUrspruenge` in `web/lib/konto/pruefungen.ts:74–82`: kein `x-forwarded-*`). Ein Schalter, der nur am Host `localhost` hängt, träfe live ebenfalls zu, weil der Host dort `localhost:3847` ist.
+4. **Bildpfade auf dem Admin-Host** (Cursor-Befund 9): Eventkarten laden `/bild/event/<id>` und `/fallback/…` (`web/lib/bilder.ts:20–25`, `web/lib/symbolbild.ts:168`), die Magazin-Vorschau `/magazin-bild/…` (`web/lib/magazin-bilder.ts:89`), Orte `/ort-foto/…` und `/ort-bilder/…`. Deshalb stehen sie in der nginx-Liste. Diese Antworten sind ohnehin öffentlich, eigene Köpfe brauchen sie nicht.
 
 ### 3.3 Anmeldung und Sicherheit
 
 - **Login-Seite** `/admin/anmelden`: E-Mail und Passwort über Supabase (dieselben Konten wie auf der Website), danach Prüfung `profiles.rolle = 'admin'`. Ohne Admin-Rolle: Abmelden und neutrale Meldung.
-- **Eigenes Cookie** `ddd_admin` (HttpOnly, Secure, `SameSite=Strict`, `Path=/`, ohne `Domain`, gilt also nur für admin.diesdas.events). Es ist getrennt vom Konto-Cookie der Website (`Path=/api/konto`). Laufzeit 12 Stunden, Token-Erneuerung wie in `web/lib/konto/sitzung.ts`.
-- **Jede Seite und jede Route** prüft serverseitig Sitzung und Rolle, nicht nur das Layout.
-- **Datenbank mit dem Token des Admins** (RLS über `ist_admin()`), wie heute in Streamlit. Den Service-Key nur, wo RLS nicht reicht (Zahlen aus `auth.users`, Storage-Kopie bei Meldungen). Jede solche Stelle ist im Code markiert.
-- **Schreibende Routen:** nur `POST`, Origin-Prüfung (gibt es schon: `web/lib/konto/pruefungen.ts`), JSON, Größenlimit.
-- **Zwei-Faktor (E2):** Supabase bietet TOTP. Vorschlag: **in Stufe 1 einbauen**, weil der Bereich viel ändern darf (Events löschen, Beiträge veröffentlichen). Alternative: später.
+- **Eigenes Cookie** `ddd_admin` (HttpOnly, Secure, `SameSite=Strict`, `Path=/`, ohne `Domain`, gilt also nur für admin.diesdas.events). Laufzeit 12 Stunden.
+- **Was aus `web/lib/konto/` wiederverwendet wird** (Cursor-Befund 8):
+  - **Unverändert:** `authClientAnfrage`, `tokenPruefen`, `nutzerClient`. Sie hängen nicht an `KONTEN_AKTIV`.
+  - **Mit Parameter:** Heute setzt `sitzungsCookie` fest `ddd_sitzung`, `Path=/api/konto`, `SameSite=Lax`, 30 Tage (`cookies.ts:53–67`). `cookiesLoeschen` löscht nur die Konto-Cookies. Beide bekommen ein Optionsobjekt (Name, Pfad, SameSite, Max-Age), die Konto-Aufrufe bleiben bitgleich. `sitzungAusAnfrage` (`sitzung.ts:28–79`) bekommt den Cookie-Namen als Argument.
+  - **Nicht wiederverwendet:** `kontoRoute` (`route.ts:132–137`). Sie antwortet bei `KONTEN_AKTIV ≠ 1` mit 404 und hängt am Konto-Ablauf. Die Admin-Routen bekommen einen eigenen Rahmen `adminRoute` in `web/lib/admin/route.ts`: Bereichs-Kopf, Origin, JSON, Größe, Sitzung, Rolle, Zwei-Faktor-Stufe (`aal2`), Protokoll.
+  - **Origin-Prüfung:** `erlaubteUrspruenge` erlaubt live nur `SITE_URL`, und `originErlaubt` sucht nur `ddd_sitzung` (`pruefungen.ts:74–94`). Für den Admin-Bereich gibt es `ADMIN_URL` (`https://admin.diesdas.events`) und eine eigene Prüfung, die `ddd_admin` kennt und nur `ADMIN_URL` erlaubt. Die Konto-Prüfung bleibt unverändert.
+- **Jede Seite und jede Route** prüft serverseitig Sitzung, Rolle und Zwei-Faktor-Stufe, nicht nur das Layout.
+- **Datenbank mit dem Token des Admins** (RLS über `ist_admin()`), wie heute in Streamlit.
+  - Wo RLS oder Trigger den Admin-Token nicht durchlassen, laufen **`SECURITY DEFINER`-Funktionen**: Eigentümer `postgres`, erste Zeile `IF NOT public.ist_admin() THEN RAISE …`, fester `search_path`, `EXECUTE` nur für `authenticated`. Betroffen sind Dubletten, Gebiet, Magazin und Orte, die Liste steht in Abschnitt 5. `ist_admin()` liest `auth.uid()`, nicht `current_user`, und funktioniert deshalb auch in diesen Funktionen.
+  - Den Service-Key nur, wo es keine Funktion gibt (Zahlen aus `auth.users` in Stufe 5, Storage-Kopie bei Meldungen). Jede solche Stelle ist im Code markiert.
+- **Schreibende Routen:** nur `POST`, Origin-Prüfung (s. o.), JSON, Größenlimit.
+- **Zwei-Faktor (E2, entschieden: ja, Stufe 1a):** TOTP über Supabase Auth MFA. Beim ersten Login wird es eingerichtet. Ohne `aal2` gibt es nur die Einrichtungs- bzw. Code-Seite.
 - **Protokoll:** Jede schreibende Admin-Aktion landet in `admin_protokoll` (Abschnitt 5, S1), mit Vorher/Nachher. Einfache Feldänderungen lassen sich daraus zurücknehmen.
 
 ### 3.4 Jobs aus dem Admin-Bereich starten (E3)
 
 Für Python-Aufgaben (Scraper-Lauf, Magazin-Entwurf, Gebiet, Ortsnamen, Ortszuordnung) startet der Admin-Bereich den passenden **GitHub-Workflow** per `workflow_dispatch` und zeigt dessen Status an.
-- Dazu braucht es einen **Fine-grained Token** nur für dieses Repo mit `Actions: read and write` und `Variables: read` als Secret `ADMIN_GITHUB_TOKEN`. `deploy.yml` schreibt ihn in `web/.env.local`, wie die anderen Schlüssel.
+- Dazu braucht es einen **Fine-grained Token** nur für dieses Repo mit **`Actions: read and write`** (Starten per `workflow_dispatch` braucht Schreibrecht, Cursor-Befund 11) und **`Variables: read`** als Secret `ADMIN_GITHUB_TOKEN`. Weitere Rechte bekommt er nicht. `deploy.yml` schreibt ihn in `web/.env.local`, wie die anderen Schlüssel.
 - Der Admin-Bereich liest damit auch den Stand der letzten Läufe (Deploy, Wächter, Geburtstag, Magazin) fürs Cockpit.
 - **Schalter-Variablen werden nur angezeigt, nicht geändert** (E4). Ändern bleibt in GitHub, weil `KONTEN_AKTIV` erst mit einem Deploy wirkt.
 - Der heutige Knopf „Jetzt neu scrapen“ (startet `main.py` auf dem Server) entfällt. Gescrapt wird nur noch in GitHub Actions.
 
 ### 3.5 Vorschläge statt SQL-Dateien (E5)
 
-Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in eine Tabelle `admin_vorschlaege` (Abschnitt 5, S1). Im Admin-Bereich sieht man sie als Liste mit Begründung und nimmt sie einzeln oder gesammelt an oder lehnt sie ab. Erst die Annahme ändert die Daten, über eine Datenbank-Funktion mit `ist_admin()`-Prüfung.
+Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in eine Tabelle `admin_vorschlaege` (Abschnitt 5, S1). Im Admin-Bereich sieht man sie als Liste mit Begründung und nimmt sie einzeln oder gesammelt an oder lehnt sie ab. Erst die Annahme ändert die Daten, über eine `SECURITY DEFINER`-Funktion mit `ist_admin()`-Prüfung (3.3). Der Admin-Token allein darf weder Events löschen noch fremde Merklisten-Zeilen ändern.
 - **Stufe 1:** Dubletten, Gebiet (außerhalb D/Neuss/Ratingen).
 - **Stufe 3:** Ortsnamen, `ort_id`-Nachtrag, Adressen/Geo, Orte-Import.
 - Abgelehnte Vorschläge merkt sich die Tabelle, damit der nächste Lauf sie nicht wieder vorschlägt.
-- **Offene Frage (E6):** Sollen sehr sichere Vorschläge automatisch angewendet werden? Zum Beispiel ein Gebiet-Treffer mit eindeutiger Stadt außerhalb, etwa Köln. Vorschlag: **zuerst alles von Hand**. Nach zwei Wochen entscheiden wir je Art, was automatisch laufen darf.
+- **E6 (entschieden):** zuerst alles von Hand. Nach zwei Wochen entscheiden wir je Art, was automatisch laufen darf.
 
 ---
 
@@ -135,9 +166,9 @@ Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in
 
 ### 4.1 Stufe 1a: Grundgerüst
 
-- Routing, Login, Zwei-Faktor (falls E2 ja), Layout mit Navigation, `admin_protokoll`, gemeinsame Bausteine (Tabelle, Filterleiste, Bestätigungsdialog, Toast).
+- Routing (3.2), Login mit Zwei-Faktor, Layout mit Navigation, `admin_protokoll` **und** `admin_vorschlaege` (beide in S1, damit das Cockpit sie ab 1b zählen kann, Cursor-Befund 10), gemeinsame Bausteine (Tabelle, Filterleiste, Bestätigungsdialog, Toast).
 - **Navigation (fest, auch für spätere Stufen):** Cockpit · Events · Empfehlungen · Scraper · Magazin · Orte & Guides · Instagram · Newsletter · Meldungen · Konten · Technik · Protokoll. Was noch nicht gebaut ist, erscheint als „kommt in Stufe n“ mit Link auf den Streamlit-Tab, solange es ihn gibt.
-- **Übergang Streamlit (E7a):** Streamlit zieht auf `admin.diesdas.events/alt/` um (`--server.baseUrlPath alt`, nginx-Location `/alt` → 8502 mit WebSocket). Die Next-Proxy-Regel lässt `/alt/**` dann nicht erreichen. Darum braucht nginx die `/alt`-Location **vor** der allgemeinen. **Alternative:** Streamlit bleibt bis zum Ende von Stufe 1 auf admin.diesdas.events, und der neue Bereich wird so lange nur lokal getestet.
+- **Übergang Streamlit (E7a, entschieden):** Streamlit zieht auf `admin.diesdas.events/alt/` um (`--server.baseUrlPath alt` in `dashboard/dashboard.sh`, Health-Check in `deploy.yml` dann `/alt/_stcore/health`). nginx leitet `location /alt/` an 8502 mit WebSocket (3.2). `/alt` erreicht Next nie.
 
 ### 4.2 Stufe 1b: Cockpit (Startseite `/admin`)
 
@@ -159,16 +190,18 @@ Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in
 - **Quellen:** Je Quelle die letzten 10 Läufe als kleine Zeile (Anzahl, Status), letzter erfolgreicher Lauf, letzte Meldung.
 - **Warnregeln** (gerechnet beim Anzeigen, keine neue Tabelle):
 
-| Nr. | Regel | Stufe |
-|---|---|---|
-| W1 | Status `fehler` im letzten Lauf | rot |
-| W2 | 0 Events (`leer`), obwohl die Quelle in 2 der letzten 3 Läufe > 0 hatte. `saisonal` und `uebersprungen` zählen nicht | rot |
-| W3 | Anzahl < 40 % des Medians der letzten 5 Läufe (Median ≥ 10) | gelb |
-| W4 | Seit 3 Läufen kein `ok` | rot |
-| W5 | Lauf älter als 4 Tage oder noch `laeuft` nach 90 min | rot |
-| W6 | `speicher_fehler > 0` im Lauf | gelb |
+Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprungen | fehler`. Lauf-Status (`scraper_laeufe.status`): `laeuft | erfolgreich | fehler` (`database/scraper_report.sql:18`, `:43`).
 
-- **Benachrichtigung (E8):** Vorschlag: Am Ende jedes Laufs schickt `main.py` bei W1/W2/W4/W6 **eine Mail** an hallo@diesdas.events über denselben SMTP-Weg wie die Geburtstagsmails (`smtplib`, keine neue Bibliothek). Dieselben Regeln stehen dann in Python **und** TypeScript. Ein gemeinsamer Testfall sichert, dass beide gleich rechnen. **Alternative:** nur im Cockpit anzeigen, keine Mail.
+| Nr. | Ebene | Regel | Stufe |
+|---|---|---|---|
+| W1 | Quelle (`scraper_ergebnisse`) | Status `fehler` im letzten Lauf | rot |
+| W2 | Quelle | Status `leer`, obwohl die Quelle in 2 der letzten 3 Läufe `ok` mit Anzahl > 0 hatte | rot |
+| W3 | Quelle | Anzahl < 40 % des Medians. Der Median läuft über die letzten 5 Läufe der Quelle mit Status `ok` oder `leer`; `saisonal`, `uebersprungen` und `fehler` zählen nicht mit. Gilt nur bei Median ≥ 10 | gelb |
+| W4 | Quelle | In den letzten 3 Läufen der Quelle kein Status `ok`; `saisonal` und `uebersprungen` zählen nicht | rot |
+| W5 | Lauf (`scraper_laeufe`) | Letzter Lauf älter als 4 Tage, oder Status `laeuft` seit mehr als 90 min | rot |
+| W6 | Lauf | `speicher_fehler > 0` | gelb |
+
+- **Benachrichtigung (E8, entschieden):** Am Ende jedes Laufs schickt `main.py` bei W1, W2, W4 oder W6 **eine Mail** an hallo@diesdas.events. Der Weg ist derselbe SMTP-Weg wie bei den Geburtstagsmails (`smtplib`, keine neue Bibliothek). Die Regeln W1–W6 stehen in Python (`pipeline/lauf_warnungen.py`) **und** TypeScript (`web/lib/admin/warnregeln.ts`). Eine gemeinsame JSON-Fixture in `tests/fixtures/` prüft beide.
 - **Lauf starten** (E3): Button „Scraper-Lauf starten“ → `scrape.yml` per `workflow_dispatch`, danach Status-Anzeige.
 - **Quellen an/aus:** **nicht in Stufe 1** (braucht Änderungen in `main.py`). Vorgemerkt für Stufe 5.
 
@@ -177,17 +210,43 @@ Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in
 - **Liste und Suche:** Zeitraum, Kategorie, Stadtteil, Quelle, Ort, Text. Filter-Chips: abgelehnt, abgesagt, nicht empfehlen, ohne Bild, ohne Stadtteil, ohne Adresse, ohne `ort_id`, sensibel. Seitenweise, 50 je Seite.
 - **Detailseite** mit Vorschau der Eventkarte wie auf der Website und Link zur Live-Seite.
 - **Bearbeiten** (Whitelist): `titel`, `datum`, `datum_bis`, `uhrzeit`, `ort`, `adresse`, `stadtteil`, `kategorie`, `unterkategorie`, `preis`, `beschreibung`, `bild_url`, `ort_id`, dazu die Schalter `abgesagt`, `abgelehnt`, `nicht_empfehlen`. Der Slug bleibt immer gleich, damit Links und Merklisten halten.
-- **Schutz vor Überschreiben (E7):**
-  - Neue Spalte `events.redaktion_felder text[]`: Jedes im Dashboard geänderte Feld kommt hinein. `_anreicherungs_update_bauen` lässt diese Felder in Ruhe, auch bei Bild, Kategorie, Uhrzeit und Quellenwechsel.
-  - Neue Spalten `events.abgleich_titel` und `events.abgleich_ort`: Ändert die Redaktion Titel oder Ort, bleiben hier die Werte der Quelle stehen. Der Abgleich in `client.py` (Schritt 1) sucht zusätzlich über diese Spalten. So entsteht kein neues Duplikat.
-  - Ein Button „Redaktionsänderungen zurücksetzen“ leert `redaktion_felder` für ein Event.
-- **Dubletten:** Die Pipeline (`pipeline/dubletten_sql.py`, umgebaut) schreibt Vorschläge (E5). Die Annahme macht in einer Funktion dasselbe wie heute die SQL: behaltenes Event ergänzen, Dublette `abgelehnt = true`, 301 in `event_seo_entscheidungen`, Merklisten-Einträge auf das behaltene Event umziehen. Dazu in der Event-Detailseite **„Als Dublette von … markieren“** von Hand, mit Suche nach dem Ziel-Event.
-- **Gebiet:** `pipeline/gebiet.py` schreibt Vorschläge statt SQL. Annahme = Event löschen wie heute (`DELETE`). Ist es schon in einer Merkliste, wird es stattdessen `abgelehnt` (Prüfung in der Funktion).
-- **Cache:** Nach jeder Änderung wird der Event-Pool-Cache der Website geleert (`cacheTag('events')` in `eventPoolLaden`, `revalidateTag` in der Admin-Route).
+- **Schutz vor Überschreiben (E7), Teil A: Felder** (Cursor-Befund 5):
+  - Neue Spalte `events.redaktion_felder text[] NOT NULL DEFAULT '{}'`. Jedes im Dashboard geänderte Feld kommt hinein.
+  - `_anreicherungs_update_bauen` (`database/client.py:75–135`) prüft sie an **allen drei Stellen**: in der Schleife über `_ANREICHERBARE_FELDER` (inklusive `bild_url` und `kategorie`), im Uhrzeit-Block (`:120–124`) und beim Quellenwechsel (`:127–133`, Felder aus `_QUELL_FELDER + _VORRANG_FELDER`). Ein Feld in `redaktion_felder` wird nie ins `update` geschrieben. Das gilt auch für `quelle_name`/`quelle_url`, falls die Redaktion sie gesetzt hat, und für `ort_id`.
+  - **`abgesagt`:** `false` gilt in der Schleife heute als leer und würde von der Quelle wieder auf `true` gesetzt. Steht `abgesagt` in `redaktion_felder`, bleibt es so, wie die Redaktion es gesetzt hat.
+  - `titel`, `datum`, `ort`, `datum_bis`, `unterkategorie`, `abgelehnt` und `nicht_empfehlen` schreibt der Builder nicht. Sie brauchen keinen Feldschutz, aber Teil B.
+  - Button „Redaktionsänderungen zurücksetzen“: leert `redaktion_felder` und `abgleich_*` für ein Event.
+- **Schutz vor Überschreiben (E7), Teil B: Wiederfinden** (Cursor-Befund 2):
+  - Neue Spalten `abgleich_titel`, `abgleich_datum`, `abgleich_uhrzeit`, `abgleich_ort`. Ändert die Redaktion **zum ersten Mal** eines der vier Felder `titel`, `datum`, `uhrzeit` oder `ort`, schreibt die Route alle vier mit den **bisherigen** Werten. Spätere Änderungen lassen sie stehen; das sind die Werte der Quelle.
+  - **Neuer Schritt 0** in `database/client.py` vor Schritt 1: Suche nach einer Zeile mit `abgleich_titel = titel`, `abgleich_datum = datum`, `abgleich_ort = ort` des eingehenden Events und passender Uhrzeit gegen `abgleich_uhrzeit` (dieselbe Regel wie Schritt 1, `:306–312`). Ein Treffer gilt als `bestehendes`, die Schritte 1–3 entfallen. Der Treffer geht danach durch die Anreicherung mit Feldschutz (Teil A).
+  - **Warum ein eigener Schritt statt Änderungen in Schritt 1–3:** Damit sind alle vier Fälle gedeckt: geänderter Titel, Ort, Uhrzeit, Datum, auch zusammen. Schritt 2 (Slug und Uhrzeit) und Schritt 3 (Ähnlichkeit am selben Datum, gleiche Quelle mit anderer Uhrzeit ist ein eigener Termin) bleiben unverändert und können eine umgestellte Uhrzeit oder ein umgestelltes Datum nicht wiederfinden.
+  - Index auf `(abgleich_datum, abgleich_titel)` mit `WHERE abgleich_datum IS NOT NULL`.
+  - **Eindeutigkeit:** Der Unique-Schlüssel `(titel, datum, ort, uhrzeit)` (`database/schema.sql:37–39`) kann beim Bearbeiten greifen, wenn es die Zielkombination schon gibt. Die Route meldet das als „Gibt es schon: <Link>, als Dublette zusammenlegen?“.
+- **Dubletten** (Cursor-Befunde 4 und 15):
+  - `pipeline/dubletten_sql.py` schreibt Vorschläge (Art `dublette`) statt SQL. Dazu kommt in der Event-Detailseite **„Als Dublette von … markieren“** von Hand, mit Suche nach dem Ziel-Event.
+  - Die Annahme ruft `admin_dublette_zusammenlegen(behalten uuid, dublette uuid)` (`SECURITY DEFINER`, 3.3). Die Funktion macht für das Paar dasselbe wie `dubletten_sql.py:161–186` heute:
+    - behaltene Zeile: `COALESCE` auf `bild_url`, `beschreibung`, `preis`, `adresse`; Uhrzeit nur, wenn die behaltene leer ist oder ein Aggregator gegen einen Veranstalter steht; `abgesagt = true`, wenn die Dublette abgesagt ist. Felder aus `redaktion_felder` der behaltenen Zeile bleiben unberührt;
+    - Dublette: `abgelehnt = true`;
+    - `event_seo_entscheidungen`: `INSERT … aktion = 'weiterleiten'`, Ziel `/event/<kategorie>/<slug>` der behaltenen Zeile, `ON CONFLICT (event_id) DO UPDATE`.
+  - **Neu gegenüber heute, Merkliste:** Heute bleiben die Zeilen an der Dublette hängen und verschwinden auf der Website, weil `merkliste-events.ts` `abgelehnt = false` filtert. Die Funktion zieht sie per `UPDATE merkliste SET event_id = behalten WHERE event_id = dublette` um. Vorher löscht sie die Zeilen der Dublette bei Konten, die das behaltene Event schon gemerkt haben (Primärschlüssel `(nutzer_id, event_id)`). `UPDATE` läuft nicht durch `merkliste_vor_insert`, Mindestalter und Sensibel-Prüfung greifen also nicht neu. Das ist hingenommen, weil es dasselbe Event ist.
+  - Nicht Teil der Funktion: Jazz-Schmiede-Uhrzeiten und die Titelbereinigung ohne Paar (Abschnitt 3 der heutigen SQL). Sie werden eigene Vorschlagsarten (`titel_bereinigen`).
+- **Gebiet:** `pipeline/gebiet.py` schreibt Vorschläge (Art `gebiet`) statt SQL. Die Annahme ruft `admin_gebiet_entfernen(event uuid)` (`SECURITY DEFINER`). Ohne Merklisten-Zeile wird gelöscht wie heute (`DELETE`, `gebiet.py:194`). Mit Merklisten-Zeile wird stattdessen `abgelehnt = true` gesetzt, damit keine Merkliste still per `ON DELETE CASCADE` schrumpft.
+- **Cache** (Cursor-Befund 7):
+  - `cacheTag("events")` kommt in alle drei `"use cache"`-Funktionen, die Events halten: `eventPoolLaden`, `vergangeneWochenendEvents`, `eventLaden` (`web/lib/daten.ts`).
+  - Die Admin-Route ruft nach jeder Änderung `revalidateTag("events", { expire: 0 })` auf, wie `web/app/ort-foto/[slug]/route.ts:35`. Ohne `expire: 0` bliebe `stale: 300`.
+  - Ändert sich `bild_url`, wird zusätzlich der Bild-Cache dieses Events geleert (`/bild/event/<id>`, eigener Tag je Event).
 
 ### 4.5 Stufe 1e: Empfehlungen
 
-- **Tagesvorschau** `/admin/empfehlungen?tag=2026-11-28`: zeigt genau, was die Startseite an dem Tag zeigt (Tipp, Picks, „Diese Woche beliebt“, Wochenend-Tipps), gerechnet mit denselben Funktionen aus `web/lib/ableitungen.ts`. Je Event **warum**: Stufe 0–3 mit Grund (Stamm, Serie, Langläufer, Zugpferd-Ort), Flaggen, Fokustag.
+- **Tagesvorschau** `/admin/empfehlungen?tag=2026-11-28`: zeigt genau, was die Startseite unter `/?datum=2026-11-28` zeigt (Tipp, Picks, „Diese Woche beliebt“, Wochenend-Tipps).
+  - **Gleiche Rechnung, eine Funktion** (Cursor-Befund 6): Die Aufrufe aus `web/app/page.tsx:62–121` wandern in eine Funktion `startseitenAuswahl(pool, vergangene, datumParam)` in `web/lib/startseite.ts`. Startseite und Vorschau rufen **nur** diese Funktion. Sie enthält:
+    - Pool aus `eventPoolLaden` (gebündelt, `abgelehnt` schon weg), danach `abgesagt` entfernt;
+    - `heute` und `jetzt` aus dem Pool für `stufenKontext`, `highlightGilt` und `topGilt`. Der gewählte Tag geht nur als `fokusTag` ein (`null`, sobald von ≠ bis);
+    - `startPlaetze(filtern(…, { von, bis, mitLanglaeufern: true }), stufen, fokusTag)`;
+    - `beliebtAuswahl` mit Tag und Woche ohne Langläufer und `schonGezeigt` aus Tipp und Picks;
+    - `wochenendProgramm(pool, vergangeneWochenendEvents(pool.heute))`. Die Box hängt an `pool.heute`, nicht am gewählten Tag. Das zeigt die Vorschau so an.
+  - Ein Test sichert, dass `page.tsx` danach dieselbe Ausgabe liefert.
+  - **„Warum“:** Einen fertigen Grund-Text gibt es nicht. Neu ist `stufeErklaeren(e, k)` in `ableitungen.ts`. Sie liefert dieselben Schritte wie `stufeRechnen` als Liste: Stamm oder Sprachhinweis (`istStamm`), Grundstufe (`grundstufe`, `ZUGPFERD_ORTE`), Serie (`serienErkennen`), Langläufer (`istLanglaeufer`), Flagge. Dazu kommen „nicht empfehlen“ und der Fokustag. Ein Test sichert, dass die erklärte Stufe gleich `breite()` ist.
 - Darunter alle weiteren Kandidaten des Tages, sortiert nach `nachEmpfehlung`, je mit den Buttons **Tipp des Tages**, **Highlight der Woche**, **Top-Event des Monats**, **nicht empfehlen**. Nach dem Klick rechnet die Vorschau neu.
 - **Kalender** der nächsten 30 Tage: je Tag der Tipp (Redaktion oder automatisch), geltende Highlight- und Top-Flagge, Hinweis „kein Bild“.
 - Die Flaggen-Zeitpunkte setzt die Route wie heute `flagge_setzen` im Dashboard (`highlight_gesetzt_am`, `top_gesetzt_am`).
@@ -202,7 +261,13 @@ Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in
   - KI-Angaben aus `ki_entwurf` (Modell, Kosten).
 - **Bearbeiten:** `titel`, `seo_titel`, `teaser`, `inhalt_md` (Editor mit Live-Vorschau), `kurzfassung`, `faq`, `hero_*`, `gueltig_*`, `korrektur_hinweis`. Nach dem Speichern läuft die Prüfung erneut, über einen Job (`magazin.yml`, Schritt `pruefen`) oder über eine Route, falls die Prüfung in TypeScript vorliegt (bei der Umsetzung klären).
 - **Events tauschen** (Wochenvorschau, Monats-Tipps): Ein Event aus der Auswahl entfernen oder durch einen Kandidaten ersetzen. Das ändert `event_ids` und den betreffenden Block in `inhalt_md`.
-- **Veröffentlichen:** Button → RPC `admin_magazin_veroeffentlichen(id)` (`SECURITY DEFINER`, Eigentümer `postgres`, prüft `ist_admin()`). Dadurch gilt der bestehende Trigger mit allen Pflichtprüfungen weiter. Setzt `freigegeben_von`, `freigegeben_am`, `veroeffentlicht_am` und leert `vorschau_hash`. Danach Cache leeren, IndexNow über den bestehenden Job.
+- **Rechte (Cursor-Befund 3):** Der Admin-Token kann heute keine Entwürfe lesen. Es fehlen die Spalten-GRANTs und eine Policy. `UPDATE` ist nicht vergeben, und jedes Update einer veröffentlichten Zeile als `authenticated` wirft `magazin_veroeffentlicht_gesperrt`. Deshalb läuft **der ganze Magazin-Bereich über `SECURITY DEFINER`-Funktionen** (S3), nicht über Tabellenrechte:
+  - lesen: `admin_magazin_liste(status)`, `admin_magazin_beitrag(id)` (alle Spalten), `admin_magazin_kosten(monat)`;
+  - schreiben: `admin_magazin_speichern(id, felder jsonb)`. Nur die Felder aus „Bearbeiten“ sind erlaubt, nie `status`, `freigegeben_*`, `vorschau_hash`, `pruefung` oder `ki_entwurf`. Danach `pruefung` zurück auf „neu prüfen“;
+  - `admin_magazin_veroeffentlichen(id)`, `admin_magazin_zurueckziehen(id)`, `admin_magazin_korrektur(id, hinweis, inhalt_md)` für veröffentlichte Beiträge;
+  - Autoren: `admin_magazin_autor_speichern(slug, felder jsonb)`.
+  - **Wirkung auf den Trigger:** In einer `SECURITY DEFINER`-Funktion mit Eigentümer `postgres` ist `current_user = postgres`, auch im Trigger `magazin_status_pruefen` (`magazin_2026-11-19.sql:164–206`). `maschine` ist dann falsch, die Sperre „nur Redaktion“ öffnet sich. **Das ist gewollt:** Der Admin ist die Redaktion (D3). Die **Pflichtprüfungen des Triggers bleiben**: nur aus `in_pruefung`, Pflichtfelder, `pruefung->>'ergebnis' = 'gruen'`. Die Funktion `admin_magazin_speichern` kann den Status nicht ändern; nur `…_veroeffentlichen` und `…_zurueckziehen` tun das.
+- **Veröffentlichen:** Button → `admin_magazin_veroeffentlichen(id)`. Setzt `status = 'veroeffentlicht'`, `freigegeben_von` (Mailadresse aus `auth.jwt()`), `freigegeben_am`, `veroeffentlicht_am` (falls leer: jetzt) und leert `vorschau_hash`. Danach `revalidateTag` der Magazin-Caches, IndexNow über den bestehenden Job (`melden`, stündlich).
 - **Zurückziehen, Korrekturhinweis, neuer Beitrag** (Rubriken `saison`, `stadtleben`, `nachtleben`, `genuss`, `familie` ohne Job) als leerer Entwurf.
 - **Job starten:** Wochenvorschau oder Monats-Tipps neu erzeugen (`magazin.yml`, `dry_run` wählbar).
 - **Autoren:** Liste, bearbeiten. Profilbilder bleiben Dateien im Repo, wie heute.
@@ -210,6 +275,9 @@ Statt dass Python-Skripte SQL-Dateien erzeugen, schreiben sie **Vorschläge** in
 
 ### 4.7 Stufe 3: Orte und Guides
 
+- **Rechte (Cursor-Befund 12):** `orte_lesen` zeigt nur `aktiv = true` (`database/schema_orte.sql:65–71`). `orte_admin_alles` und `ort_weiterleitungen_admin` prüfen `auth.role() = 'service_role'`, nicht `ist_admin()` (`orte_spielstaetten_2026-11-19.sql:85–87`). S4 ergänzt deshalb:
+  - eine `SELECT`- und eine `UPDATE`-Policy mit `ist_admin()` auf `orte`, für die Liste und die Stammdaten;
+  - Zusammenlegen, Schließen, Löschen und Text freigeben als `SECURITY DEFINER`-Funktionen. Dabei bleibt der Trigger `orte_schutz` wirksam, die Funktion legt die Weiterleitung zuerst an.
 - **Orte-Liste** (`orte`): Filter nach Typ (Spielstätte, Club, Bar, Restaurant, Spielplatz, Weihnachtsmarkt …), aktiv/freigeschaltet, ohne Text, ohne Bild, ohne Geo.
 - **Ort bearbeiten:** Stammdaten (Name, Typ, Adresse, Stadtteil, Geo, Website), `aktiv`/`freigeschaltet_am`, Score und `score_manuell`, typabhängige `extras` (Formular je Typ, kein freies JSON).
 - **Texte:** Entwurf neben der Live-Fassung, Quellen, Button „Text freigeben“ (ersetzt `orte_texte_*.sql`).
@@ -261,32 +329,46 @@ Nur der Platz, gebaut wird es im eigenen Plan „Instagram-Posting“:
 
 | Nr. | Stufe | Datei (Vorschlag) | Inhalt |
 |---|---|---|---|
-| S1 | 1a/1d | `database/admin_grundlagen_<datum>.sql` | `admin_protokoll` (id, zeitpunkt, admin_id, aktion, tabelle, ziel_id, vorher jsonb, nachher jsonb). RLS: lesen/schreiben nur `ist_admin()`, kein Update/Delete. `admin_vorschlaege` (id, art, ziel_tabelle, ziel_id, vorschlag jsonb, begruendung, status `offen/angenommen/abgelehnt`, quelle_lauf, erstellt_am, entschieden_von/_am, eindeutiger Schlüssel gegen Doppelvorschläge). Pipeline schreibt als `service_role`, Admin liest und entscheidet. Funktionen `admin_vorschlag_annehmen(id)`/`ablehnen(id)` je Art. |
-| S2 | 1d | dieselbe Datei | `events.redaktion_felder text[] NOT NULL DEFAULT '{}'`, `events.abgleich_titel text`, `events.abgleich_ort text`. Prüfen, ob die RLS-Policy für Admin-Updates auf `events` alle neuen Felder erlaubt. Funktion `admin_dublette_zusammenlegen(behalten, dublette)`. |
-| S3 | 2 | `database/admin_magazin_<datum>.sql` | `admin_magazin_veroeffentlichen(id)` und `admin_magazin_zurueckziehen(id)` (`SECURITY DEFINER`, Eigentümer `postgres`, `ist_admin()`-Prüfung, `search_path` fest). Admin-Policies für Lesen/Ändern von Entwürfen (bisher nur `service_role` und SQL-Editor). |
-| S4 | 3 | `database/admin_orte_<datum>.sql` | Funktionen `admin_ort_zusammenlegen(von, nach)`, `admin_ort_schliessen(id, weiterleitung)`, `admin_ort_text_freigeben(id)`. Admin-Policies auf `orte`, `ort_weiterleitungen` prüfen. |
+Alle `SECURITY DEFINER`-Funktionen folgen demselben Muster (3.3): Eigentümer `postgres`, erste Prüfung `ist_admin()`, `SET search_path = public, pg_temp`, `REVOKE EXECUTE … FROM PUBLIC, anon`, `GRANT EXECUTE … TO authenticated`, Protokolleintrag in `admin_protokoll` in derselben Transaktion.
+
+| Nr. | Stufe | Datei (Vorschlag) | Inhalt |
+|---|---|---|---|
+| S1 | 1a | `database/admin_grundlagen_<datum>.sql` | **`admin_protokoll`** (id, zeitpunkt, admin_id, aktion, tabelle, ziel_id, vorher jsonb, nachher jsonb). RLS: lesen und einfügen nur `ist_admin()`, kein Update/Delete. **`admin_vorschlaege`** (id, art, ziel_tabelle, ziel_id, vorschlag jsonb, begruendung, status `offen/angenommen/abgelehnt`, quelle_lauf, erstellt_am, entschieden_von/_am, eindeutiger Schlüssel `(art, ziel_id, schluessel)` gegen Doppelvorschläge). Die Pipeline schreibt als `service_role`, der Admin liest per Policy `ist_admin()`. Entscheiden nur über die Funktionen aus S2. |
+| S2 | 1d | `database/admin_events_<datum>.sql` | `events.redaktion_felder text[] NOT NULL DEFAULT '{}'`, `events.abgleich_titel text`, `abgleich_datum date`, `abgleich_uhrzeit time`, `abgleich_ort text` mit Teilindex. Die bestehende Policy „Admins ändern Events“ (`auth_rollen.sql:152–157`, UPDATE mit `ist_admin()`) deckt die neuen Spalten. DEFINER-Funktionen: `admin_dublette_zusammenlegen(behalten, dublette)` (mit Merkliste und `event_seo_entscheidungen`, 4.4), `admin_gebiet_entfernen(event)`, `admin_vorschlag_annehmen(id)` und `admin_vorschlag_ablehnen(id)`. Die beiden letzten verteilen je Art an die passende Funktion. |
+| S3 | 2 | `database/admin_magazin_<datum>.sql` | Nur DEFINER-Funktionen, keine neuen Tabellenrechte für `authenticated`: `admin_magazin_liste`, `_beitrag`, `_kosten`, `_speichern` (Feld-Whitelist, kein Status), `_veroeffentlichen`, `_zurueckziehen`, `_korrektur`, `_autor_speichern` (4.6). Der Trigger `magazin_status_pruefen` bleibt unverändert. |
+| S4 | 3 | `database/admin_orte_<datum>.sql` | Policies `orte_admin_lesen` (SELECT, `ist_admin()`) und `orte_admin_aendern` (UPDATE, `ist_admin()`) auf `orte`. DEFINER-Funktionen: `admin_ort_zusammenlegen(von, nach)`, `admin_ort_schliessen(id, weiterleitung)`, `admin_ort_text_freigeben(id)`, `admin_ort_zuordnung_loesen(event, ort)`. `ort_weiterleitungen` wird nur über diese Funktionen geschrieben. |
 | S5 | 4 | `database/newsletter_doi_<datum>.sql` | Spalten für Token-Zeitpunkt, Versandstatus der Bestätigung. Aufräumregel. |
 | S6 | 5 | `database/admin_rest_<datum>.sql` | `admin_konten_kennzahlen()`, `quellen_einstellungen`. |
 | S7 | später | eigener Instagram-Plan | `instagram_posts`. |
 
-Python-Änderungen: `database/client.py` (E7), `pipeline/dubletten_sql.py` und `pipeline/gebiet.py` (Vorschläge statt SQL), `main.py` (Warn-Mail E8, später Quellen an/aus), in Stufe 3 `pipeline/ortsnamen.py`, `pipeline/ort_zuordnung.py`, `pipeline/adressen_ergaenzen.py`.
+Python-Änderungen: `database/client.py` (E7: Feldschutz an drei Stellen, Schritt 0), `pipeline/dubletten_sql.py` und `pipeline/gebiet.py` (Vorschläge statt SQL), `main.py` (Warn-Mail E8, später Quellen an/aus), in Stufe 3 `pipeline/ortsnamen.py`, `pipeline/ort_zuordnung.py`, `pipeline/adressen_ergaenzen.py`.
 
 ---
 
 ## 6. Tests
 
 - **Vitest** (`web/tests/admin-*.test.ts`):
-  - Proxy: Host-Regeln (Admin-Host `/` → 308, fremde Pfade 404, Haupthost `/admin` 404).
-  - Rollenprüfung: Route ohne Sitzung 401, ohne Admin-Rolle 403.
-  - Warnregeln W1–W6 mit Beispielläufen.
-  - Tagesvorschau gleich Startseite: für einen Beispieltag dieselbe Auswahl wie `startPlaetze`.
-  - Whitelist beim Bearbeiten: unbekannte Felder abgewiesen; `redaktion_felder` wird gepflegt.
+  - Proxy:
+    - `/admin` ohne `X-DDD-Bereich: admin` gibt 404, auch mit Host `localhost:3847` und `x-forwarded-proto`.
+    - `/` mit Kopf gibt 308 und `Location: /admin`, ohne localhost.
+    - `ADMIN_LOKAL=1` wirkt nur ohne `x-forwarded-*`.
+    - Die bestehenden Proxy-Tests bleiben grün.
+  - Sitzung: Die Konto-Cookies sind nach dem Umbau auf Parameter bitgleich. `ddd_admin` hat `Path=/`, `SameSite=Strict` und 12 h.
+  - Origin: Die Admin-Prüfung erlaubt nur `ADMIN_URL`, die Konto-Prüfung unverändert nur `SITE_URL`.
+  - Rollenprüfung: Route ohne Sitzung 401, ohne Admin-Rolle 403, ohne `aal2` 403.
+  - Warnregeln W1–W6 aus der gemeinsamen Fixture.
+  - `startseitenAuswahl` liefert für denselben Pool dasselbe wie die bisherige Rechnung in `page.tsx`.
+  - `stufeErklaeren` ergibt dieselbe Stufe wie `breite()`.
+  - Whitelist beim Bearbeiten: Unbekannte Felder werden abgewiesen, `redaktion_felder` und `abgleich_*` werden richtig gepflegt (nur beim ersten Ändern).
 - **Python** (`tests/`):
-  - `_anreicherungs_update_bauen` lässt `redaktion_felder` in Ruhe.
-  - Abgleich über `abgleich_titel`/`abgleich_ort` findet das umbenannte Event.
+  - Feldschutz an allen drei Stellen: Schleife inklusive `bild_url`, `kategorie` und `abgesagt = false`; Uhrzeit-Block; Quellenwechsel.
+  - Schritt 0 findet das Event wieder bei geändertem Titel, Ort, Uhrzeit, Datum und bei Datum plus Uhrzeit zusammen. Ohne `abgleich_*` laufen die Schritte 1–3 unverändert.
   - Warnregeln gleich wie in TypeScript (gemeinsame Fixture).
-  - Vorschläge statt SQL in Dubletten und Gebiet.
-- **SQL:** Kontrollabfragen am Ende jeder Datei (wie bisher). Ein Test, dass ein Nicht-Admin die Funktionen nicht aufrufen kann.
+  - Vorschläge statt SQL in Dubletten und Gebiet; die Feldliste der Dubletten wie in `dubletten_sql.py`.
+- **SQL:** Kontrollabfragen am Ende jeder Datei, wie bisher. Dazu je Funktion: Aufruf als Nicht-Admin wirft, Aufruf als `anon` ist nicht erlaubt.
+  - Dublette: Merkliste wird umgezogen, und bei doppelt Gemerkten bleibt genau eine Zeile.
+  - Gebiet: Mit Merkliste wird abgelehnt statt gelöscht.
+  - Magazin: `_speichern` kann den Status nicht ändern. `_veroeffentlichen` scheitert bei `pruefung` ≠ grün.
 - **Von Hand je Stufe:** Login mit Admin- und Nicht-Admin-Konto, eine Änderung je Bereich, sichtbare Wirkung auf der Website, Protokolleintrag, Rückgängig.
 
 ---
@@ -296,10 +378,10 @@ Python-Änderungen: `database/client.py` (E7), `pipeline/dubletten_sql.py` und `
 | Schritt | Inhalt | SQL vorher | Freigabe |
 |---|---|---|---|
 | 0 | Dieser Plan, Cursor-Prüfung, Freigabe | – | Plan |
-| 1a | Grundgerüst, Login, Protokoll, Proxy-Regeln, nginx-Umstellung (E7a) | S1 (Protokoll) | Deploy + nginx durch Auftraggeber |
+| 1a | Grundgerüst, Login mit Zwei-Faktor, Protokoll, Proxy-Regeln, nginx-Umstellung beider Websites (Kopf `X-DDD-Bereich`, Pfadliste, `/alt`) | S1 | Deploy, dann nginx durch Auftraggeber (Anleitung), dann Prüfung mit `curl` |
 | 1b | Cockpit | – | Deploy |
-| 1c | Scraper + Warnregeln (+ Mail, E8) | – | Deploy |
-| 1d | Events, Schutz vor Überschreiben, Dubletten/Gebiet als Vorschläge | S1 (Vorschläge), S2 | Deploy, erster Scraper-Lauf danach prüfen |
+| 1c | Scraper + Warnregeln + Warn-Mail (E8) | – | Deploy |
+| 1d | Events, Schutz vor Überschreiben (Feldschutz, Schritt 0), Dubletten/Gebiet als Vorschläge, Cache-Tags | S2 | Deploy, erster Scraper-Lauf danach im Report prüfen |
 | 1e | Empfehlungen | – | Deploy |
 | 2 | Magazin | S3 | Deploy, ein echter Beitrag über den neuen Weg |
 | 3 | Orte und Guides | S4 | Deploy je Teilbereich |
@@ -314,10 +396,12 @@ Jeder Schritt: lokal bauen und testen, Cursor-Prüfung der Umsetzung, Push nur m
 ## 8. Risiken
 
 - **Gemeinsamer Build:** Ein Fehler im Admin-Code legt auch die Website lahm. Gegenmittel: Tests, `tsc`, Build vor jedem Push. Admin-Code nur unter `web/app/admin`, `web/app/api/admin`, `web/lib/admin`.
-- **Rechte:** Ein Fehler in der Rollenprüfung würde die Datenbank öffnen. Gegenmittel: RLS bleibt die zweite Sicherung, weil mit dem Admin-Token geschrieben wird und nicht mit dem Service-Key. Tests für 401/403.
+- **Rechte:** Ein Fehler in der Rollenprüfung würde die Datenbank öffnen. Gegenmittel: RLS bleibt die zweite Sicherung, weil mit dem Admin-Token geschrieben wird und nicht mit dem Service-Key. Jede DEFINER-Funktion prüft `ist_admin()` selbst. Tests für 401/403 und SQL-Tests als Nicht-Admin.
+- **DEFINER öffnet Trigger-Sperren:** In den Funktionen ist `current_user = postgres`. Sperren, die an `current_user` hängen, gelten dort nicht (Magazin). Gegenmittel: Feld-Whitelist in jeder Funktion, keine Funktion mit freiem SQL oder freien Spaltennamen.
+- **Host-Trennung hängt an nginx:** Setzt eine der beiden Websites den Kopf `X-DDD-Bereich` nicht, ist der Admin-Bereich geschlossen (Website) oder nicht erreichbar (Admin). Unsicher offen ist er in keinem Fall. Prüfung nach Schritt 1a mit `curl` gegen beide Hosts.
 - **Pipeline-Änderung (E7):** Der Abgleich ist heikel (Duplikate, Quellenwechsel). Gegenmittel: Python-Tests mit echten Fällen, erster Lauf nach dem Deploy wird im Scraper-Report geprüft.
 - **Zwei Dashboards gleichzeitig:** Während des Übergangs können beide dasselbe Event ändern. Hingenommen, weil es nur einen Admin gibt.
-- **GitHub-Token** auf dem Server: Fine-grained, nur dieses Repo, nur Actions und Variablen lesen. Ablauf nach 1 Jahr: im Cockpit anzeigen.
+- **GitHub-Token** auf dem Server: Fine-grained, nur dieses Repo, `Actions: read and write`, `Variables: read`, sonst nichts. Wer ihn hat, kann Workflows starten, aber keinen Code ändern. Er läuft nach 1 Jahr ab; das Cockpit zeigt den Ablauf an.
 
 ---
 
@@ -327,7 +411,7 @@ Jeder Schritt: lokal bauen und testen, Cursor-Prüfung der Umsetzung, Push nur m
 |---|---|---|
 | E1 | Neuer Admin-Bereich in Next.js statt Streamlit? | ja (3.1) |
 | E2 | Zwei-Faktor (TOTP) für den Admin-Login schon in Stufe 1? | ja |
-| E3 | GitHub-Token für Jobs und Laufstatus? | ja, Fine-grained, nur Actions und Variablen lesen |
+| E3 | GitHub-Token für Jobs und Laufstatus? | ja, Fine-grained, nur dieses Repo: `Actions: read and write` (Starten braucht Schreibrecht), `Variables: read` |
 | E4 | Schalter nur anzeigen, nicht ändern? | ja |
 | E5 | Vorschläge statt SQL-Dateien (Dubletten, Gebiet, später Orte)? | ja |
 | E6 | Sichere Vorschläge automatisch anwenden? | zuerst nein, nach zwei Wochen je Art entscheiden |
@@ -342,46 +426,85 @@ Jeder Schritt: lokal bauen und testen, Cursor-Prüfung der Umsetzung, Push nur m
 
 ---
 
-## Anhang A: Cursor-Prüf-Prompt (erste Fassung)
+## Anhang A: Cursor-Prüf-Prompt (zweite Fassung)
 
 ```
-Prüfe den Plan `docs/plan-admin-dashboard-2026-11-23.md` (Admin-Bereich neu unter admin.diesdas.events) gegen den
-tatsächlichen Code im Repo. Ändere keinen Code und keinen Plan – nur Befunde.
+Prüfe die **zweite Fassung** des Plans `docs/plan-admin-dashboard-2026-11-23.md` (Admin-Bereich neu unter
+admin.diesdas.events) erneut gegen den tatsächlichen Code im Repo. Ändere keinen Code und keinen Plan – nur Befunde.
 
-Schwerpunkte:
-1. Abschnitt 1: Stimmen die Fakten zum Bestand (dashboard/auth.py, dashboard/app.py, deploy.yml, Workflows,
-   Trigger magazin_status_pruefen in database/magazin_2026-11-19.sql, publisher.py/main.py:326–330)?
-2. Abschnitt 3.2: Lassen sich die Host-Regeln in web/proxy.ts ohne NextResponse.rewrite umsetzen (nur Redirect und
-   direkte Response, siehe Kommentar in proxy.ts)? Bricht etwas an der bestehenden Pfad-Prüfung (web/lib/pfad-pruefung.ts)?
-   Erreichen /_next-Dateien und Schriften den Admin-Host?
-3. Abschnitt 3.3: Kann das Admin-Login die Sitzungslogik aus web/lib/konto/ (sitzung.ts, cookies.ts, clients.ts)
-   wiederverwenden, mit eigenem Cookie (Path=/, SameSite=Strict, host-only)? Wo hängt sie an KONTEN_AKTIV oder am
-   Cookie-Pfad /api/konto?
-4. Abschnitt 4.4 / E7: Reicht `redaktion_felder` in `_anreicherungs_update_bauen` (database/client.py:75–120), um
-   Redaktionsänderungen zu schützen (bild_url, kategorie, uhrzeit, Quellenwechsel)? Findet der Abgleich in
-   client.py (Schritt 1 titel+datum+ort, Schritt 2 Slug, Schritt 3 Ähnlichkeit) ein Event wieder, dessen Titel oder
-   Ort die Redaktion geändert hat, wenn zusätzlich über `abgleich_titel`/`abgleich_ort` gesucht wird? Was ist mit
-   geänderter Uhrzeit oder geändertem Datum?
-5. Abschnitt 4.4: Entspricht `admin_dublette_zusammenlegen` dem, was pipeline/dubletten_sql.py heute erzeugt
-   (inkl. event_seo_entscheidungen)? Was passiert mit Merklisten-Einträgen der Dublette?
-6. Abschnitt 4.5: Kann die Tagesvorschau dieselbe Auswahl liefern wie die Startseite (page.tsx: eventPoolLaden,
-   filtern mit mitLanglaeufern, stufenKontext, startPlaetze, beliebtAuswahl, wochenendProgramm mit vergangenen
-   Wochenendtagen)? Welche Eingaben fehlen?
-7. Abschnitt 4.4/4.5: Ist `cacheTag('events')` + `revalidateTag` mit cacheComponents und dem bestehenden
-   cacheLife in web/lib/daten.ts möglich, ohne die Startseite zu verlangsamen?
-8. Abschnitt 4.6 / S3: Umgeht `admin_magazin_veroeffentlichen` als SECURITY DEFINER (Eigentümer postgres) den
-   Trigger korrekt (current_user = postgres), ohne seine Pflichtprüfungen auszuhebeln? Welche RLS-Policies auf
-   magazin_beitraege fehlen für Admin-Lesen/-Ändern?
-9. Abschnitt 4.3: Sind die Warnregeln W1–W6 mit den Spalten von scraper_laeufe/scraper_ergebnisse
-   (database/scraper_report.sql, scraper_laeufe_ort_kennzahlen_2026-11-20.sql) rechenbar? Status-Werte richtig?
-10. Abschnitt 5: Fehlen Tabellen, Policies oder Funktionen? Widersprüche zwischen Abschnitt 4, 5 und 7?
+Deine Prüfung 1 hatte 15 Befunde (4 kritisch, 8 mittel, 3 gering). Alle sind eingearbeitet; Anhang B nennt die
+Stellen. Die wichtigsten Änderungen:
+- 3.2: Host-Trennung über den Kopf `X-DDD-Bereich`, den beide nginx-Websites fest setzen (web/admin). nginx lässt auf
+  dem Admin-Host nur eine Pfadliste durch und macht `/` → 308 `/admin` selbst. proxy.ts als zweite Sicherung:
+  Matcher um "/", "/admin/:path*", "/api/admin/:path*", 404 ohne Kopf vor allen bestehenden Zweigen, 308 mit
+  relativer Location. `ADMIN_LOKAL` nur ohne x-forwarded-*.
+- 3.3: eigener Rahmen `adminRoute` statt `kontoRoute`; `sitzungsCookie`/`cookiesLoeschen`/`sitzungAusAnfrage`
+  bekommen Parameter; eigene Origin-Prüfung mit `ADMIN_URL` und `ddd_admin`.
+- 4.4 / E7: Feldschutz an allen drei Stellen in `_anreicherungs_update_bauen` inkl. `abgesagt`; neue Spalten
+  `abgleich_titel/_datum/_uhrzeit/_ort`, gesetzt beim ersten Ändern eines der vier Felder; neuer **Schritt 0** in
+  database/client.py vor Schritt 1, der über diese Spalten sucht.
+- 4.4: `admin_dublette_zusammenlegen` und `admin_gebiet_entfernen` als SECURITY DEFINER, Merkliste per UPDATE
+  umziehen (doppelt Gemerkte vorher löschen), Gebiet mit Merkliste → abgelehnt statt DELETE.
+- 4.4 Cache: `cacheTag("events")` in eventPoolLaden, vergangeneWochenendEvents, eventLaden;
+  `revalidateTag("events", { expire: 0 })`; Bild-Cache je Event.
+- 4.5: `startseitenAuswahl(pool, vergangene, datumParam)` in web/lib/startseite.ts, von page.tsx und Vorschau
+  genutzt; `stufeErklaeren` für das „Warum“.
+- 4.6 / S3: Magazin komplett über DEFINER-Funktionen (lesen, speichern mit Feld-Whitelist, veröffentlichen,
+  zurückziehen, Korrektur, Autoren, Kosten); keine neuen Tabellenrechte. Die Sperre „nur Redaktion“ öffnet sich
+  in den Funktionen gewollt, die Pflichtprüfungen bleiben.
+- 4.7 / S4: Admin-Policies SELECT/UPDATE mit ist_admin() auf orte, Rest als DEFINER.
+- S1 jetzt in 1a (Protokoll und Vorschläge), E3-Token mit Actions read/write.
+
+Prüfe bitte:
+1. Sind alle 15 Befunde aus Prüfung 1 gelöst (Anhang B)?
+2. 3.2: Reicht der Kopf `X-DDD-Bereich` als Trennung, wenn beide nginx-Websites ihn per proxy_set_header fest
+   setzen? Läuft die neue 404-Prüfung vor allen bestehenden Zweigen in proxy.ts, ohne deren Verhalten zu ändern?
+   Ist `new NextResponse(null, { status: 308, headers: { Location: "/admin" } })` hinter nginx korrekt? Fehlen
+   Pfade in der nginx-Liste (z. B. weitere öffentliche Ordner, die Admin-Seiten laden)?
+3. 4.4 Schritt 0: Passt er in den Ablauf von database/client.py:296–335 (inkl. tagesbestand und
+   neu_pro_quelle), ohne Schritt 1–3 für Events ohne abgleich_* zu ändern? Kann Schritt 0 ein falsches Event
+   treffen? Wie verhält er sich bei mehreren Uhrzeiten (mehrere Vorstellungen am Tag)?
+4. 4.4 Feldschutz: Sind die drei Stellen vollständig (Schleife, Uhrzeit-Block, Quellenwechsel)? Gibt es weitere
+   Schreibwege der Pipeline auf events (z. B. adressen_ergaenzen, ort_zuordnung-Nachtrag, beschreibung_quellen,
+   kategorisierung, stadtteil_mapper, reihen_zuordnen, konten_aufraeumen), die `redaktion_felder` beachten müssen?
+5. 4.4 Merkliste: Ist `UPDATE merkliste SET event_id` in einer DEFINER-Funktion mit den Triggern und Policies aus
+   database/konten_2026-11-16.sql vereinbar (gibt es UPDATE-Trigger, Statistik-Tabellen, merk_statistik)?
+6. 4.5: Deckt `startseitenAuswahl` alles ab, was page.tsx heute rechnet (inkl. Kennzahlen, Tagesleiste nicht)?
+   Lässt sich page.tsx so umbauen, ohne das Caching (cacheComponents, eventPoolLaden) zu ändern?
+7. 4.6 / S3: Ist die Funktionsliste vollständig für Liste, Vorschau, Bearbeiten, Veröffentlichen, Zurückziehen,
+   Korrektur? Wie ruft die bestehende Vorschau-Rendering-Logik (web/app/magazin/vorschau, magazin-daten.ts) einen
+   Beitrag ab, und kann der Admin-Bereich sie mit `admin_magazin_beitrag` speisen?
+8. Abschnitt 5–7: Widersprüche zwischen 3, 4, 5, 6 und 7 nach dieser Fassung?
 
 Ausgabe je Befund: Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile) · Befund ·
-Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die offenen Fragen E1–E9 und
-Q5–Q8 entscheidet der Auftraggeber; sie blockieren die technische Prüfung nicht.
+Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen E1–E9 und
+Q5–Q8 hat der Auftraggeber getroffen; sie sind nicht Gegenstand der Prüfung.
 ```
+
+## Anhang B: Cursor-Prüfung 1 vom 23.11.2026 – Einarbeitung
+
+Alle 15 Befunde sind am Code nachgeprüft und stimmen (`web/proxy.ts`, `database/client.py`, `database/magazin_2026-11-19.sql`, `database/auth_rollen.sql`, `database/konten_2026-11-16.sql`, `database/schema_orte.sql`, `database/orte_spielstaetten_2026-11-19.sql`, `web/lib/konto/pruefungen.ts`).
+
+| Nr. | Schwere | Befund (kurz) | Eingearbeitet in |
+|---|---|---|---|
+| 1 | kritisch | Next sieht den öffentlichen Host nicht (`localhost:3847`), Matcher deckt `/`, `/admin`, `/_next` nicht | 1.1, 3.2 (Kopf `X-DDD-Bereich`, nginx-Pfadliste, Matcher, relative 308, `ADMIN_LOKAL` nur ohne Proxy), 6, 7 (1a), 8 |
+| 2 | kritisch | Geänderte Uhrzeit oder geändertes Datum erzeugt eine zweite Zeile, `abgleich_titel/_ort` reichen nicht | 1.2, 4.4 Teil B (vier `abgleich_*`-Spalten, Schritt 0), 5 (S2), 6 |
+| 3 | kritisch | Magazin: DEFINER öffnet die Sperre „nur Redaktion“, Admin-Token fehlen GRANTs und UPDATE | 1.2, 4.6 „Rechte“ (alles über DEFINER-Funktionen, Whitelist), 5 (S3), 6, 8 |
+| 4 | kritisch | Admin-Token darf kein DELETE und keine fremden Merklisten ändern, Funktionen nicht DEFINER | 3.3, 3.5, 4.4 (Dubletten, Gebiet), 5 (S2), 6 |
+| 5 | mittel | Feldschutz an drei Stellen, `abgesagt = false` gilt als leer | 1.2, 4.4 Teil A, 6 |
+| 6 | mittel | Tagesvorschau braucht dieselben Eingaben wie `page.tsx`, kein fertiger „Grund“ | 4.5 (`startseitenAuswahl`, `stufeErklaeren`), 6 |
+| 7 | mittel | `revalidateTag` braucht `{ expire: 0 }`, weitere Caches | 4.4 „Cache“ |
+| 8 | mittel | Cookie fest auf `ddd_sitzung`/`/api/konto`, `kontoRoute` hängt an `KONTEN_AKTIV`, Origin nur `SITE_URL` | 3.3 (Parameter, `adminRoute`, `ADMIN_URL`), 6 |
+| 9 | mittel | Bildpfade auf dem Admin-Host fehlen | 3.2 Punkt 1 und 4 |
+| 10 | mittel | Cockpit zählt Vorschläge vor deren SQL; Verweis S2 statt S3 | 1.2, 4.1, 5 (S1 in 1a), 7 |
+| 11 | mittel | Starten braucht `Actions: write` | 3.4, 8, 9 (E3) |
+| 12 | mittel | `orte`-Policies prüfen `service_role`, Admin sieht inaktive Orte nicht | 4.7 „Rechte“, 5 (S4) |
+| 13 | gering | Drei Sätze im Bestand ungenau (Verweis, Zeilen `75–120`, Push-Zweig, `ORTSSEITEN_MELDEN`) | 1.1, 1.2, 1.3 |
+| 14 | gering | Warnregeln: Ebene und Median-Grundlage unklar | 4.3 (Tabelle mit Ebene, Median nur `ok`/`leer`) |
+| 15 | gering | Feldliste der Dubletten, Merkliste bleibt heute hängen, Titelbereinigung | 4.4 „Dubletten“ |
 
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
 - 23.11.2026: Auftraggeber bestätigt E1–E9 und Q5–Q8 wie vorgeschlagen.
+- 23.11.2026: Cursor-Prüfung 1: nicht freigabefähig, 15 Befunde (4 kritisch). Alle nachgeprüft und eingearbeitet → zweite Fassung.
