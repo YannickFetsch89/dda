@@ -1,6 +1,6 @@
 # Plan: Admin-Dashboard neu (admin.diesdas.events) – erste Fassung, 23.11.2026
 
-**Status:** ENTWURF. Nicht freigegeben, nichts gebaut.
+**Status:** ENTWURF, Entscheidungen E1–E9 und Q5–Q8 am 23.11.2026 wie vorgeschlagen bestätigt. Cursor-Prüfung ausstehend, nicht freigegeben, nichts gebaut.
 **Grundlage:** Entscheidungen des Auftraggebers vom 23.11.2026 (Abschnitt 2) und Bestand am Stand `79c7459` (Abschnitt 1).
 **Gebaut wird erst nach Freigabe**, und zwar stufenweise. Jede Stufe hat eigene SQL, einen eigenen Deploy und eine eigene Abnahme.
 
@@ -321,9 +321,9 @@ Jeder Schritt: lokal bauen und testen, Cursor-Prüfung der Umsetzung, Push nur m
 
 ---
 
-## 9. Offene Fragen an den Auftraggeber
+## 9. Entscheidungen zu den offenen Fragen (alle wie vorgeschlagen bestätigt, 23.11.2026)
 
-| Nr. | Frage | Vorschlag |
+| Nr. | Frage | Entscheidung |
 |---|---|---|
 | E1 | Neuer Admin-Bereich in Next.js statt Streamlit? | ja (3.1) |
 | E2 | Zwei-Faktor (TOTP) für den Admin-Login schon in Stufe 1? | ja |
@@ -384,3 +384,4 @@ Q5–Q8 entscheidet der Auftraggeber; sie blockieren die technische Prüfung nic
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
+- 23.11.2026: Auftraggeber bestätigt E1–E9 und Q5–Q8 wie vorgeschlagen.
