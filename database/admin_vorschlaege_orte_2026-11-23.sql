@@ -18,10 +18,11 @@
 BEGIN;
 
 -- ── 1. Ortsname ──────────────────────────────────────────────────────────────
--- vorschlag: {alt, neu, events: [uuid], reihen_schluessel: {reihe_id: schluessel}}
+-- vorschlag: {alt, neu, events: [uuid], reihen: [{id, schluessel}]}
 -- Jedes Event einzeln: fiele es mit einem anderen Termin zusammen (Eindeutigkeit titel, datum, ort, uhrzeit), bleibt
--- es beim alten Namen (wie ortsnamen.py umbenennungen). Reihen: Ort der Reihe und Schlüssel ziehen mit (Slug bleibt);
--- ein schon vergebener Schlüssel wird übersprungen.
+-- es beim alten Namen (wie ortsnamen.py umbenennungen). Reihen (Cursor-Prüfung 3c, Befund 2): nur die aufgeführten,
+-- Ort und Schlüssel immer zusammen (schluessel NULL = bleibt gleich); ist der neue Schlüssel schon vergeben, bleibt die
+-- Reihe ganz beim alten Namen. Reihen mit geschützten Events stehen gar nicht im Vorschlag. Slugs bleiben.
 
 CREATE OR REPLACE FUNCTION public.admin_ortsname_anwenden(p_vorschlag JSONB)
 RETURNS JSONB
@@ -33,7 +34,7 @@ DECLARE
     alt TEXT := p_vorschlag->>'alt';
     neu TEXT := p_vorschlag->>'neu';
     eid TEXT;
-    rid TEXT;
+    r JSONB;
     k TEXT;
     n INTEGER;
     geaendert INTEGER := 0;
@@ -52,10 +53,11 @@ BEGIN
             uebersprungen := uebersprungen + 1;
         END;
     END LOOP;
-    UPDATE public.reihen SET ort = neu WHERE ort = alt;
-    FOR rid, k IN SELECT key, value FROM jsonb_each_text(coalesce(p_vorschlag->'reihen_schluessel', '{}'::jsonb)) LOOP
-        IF NOT EXISTS (SELECT 1 FROM public.reihen WHERE schluessel = k) THEN
-            UPDATE public.reihen SET schluessel = k WHERE id = rid::uuid;
+    FOR r IN SELECT jsonb_array_elements(coalesce(p_vorschlag->'reihen', '[]'::jsonb)) LOOP
+        k := nullif(r->>'schluessel', '');
+        IF k IS NULL OR NOT EXISTS (SELECT 1 FROM public.reihen WHERE schluessel = k) THEN
+            UPDATE public.reihen SET ort = neu, schluessel = coalesce(k, schluessel)
+            WHERE id = (r->>'id')::uuid AND ort = alt;
             GET DIAGNOSTICS n = ROW_COUNT;
             reihen := reihen + n;
         END IF;

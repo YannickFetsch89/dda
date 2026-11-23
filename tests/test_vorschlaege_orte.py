@@ -5,7 +5,7 @@ Vorschläge für Ortsnamen, Ortszuordnung und Adressen statt SQL-Dateien. Felder
 import unittest
 
 from pipeline.ort_zuordnung import OrteIndex
-from pipeline.vorschlaege import adresse_vorschlaege, ort_id_vorschlaege, ortsname_vorschlaege
+from pipeline.vorschlaege import adresse_vorschlaege, ort_id_vorschlaege, ortsname_plan, ortsname_vorschlaege
 
 
 def event(i, ort, **kw):
@@ -35,7 +35,43 @@ class Ortsnamen(unittest.TestCase):
         alt_k = reihen_schluessel("Rock am Montag", "Pitcher")
         if not neu_k or neu_k == alt_k:
             self.skipTest("Schlüssel unterscheidet Groß-/Kleinschreibung nicht – kein Reihen-Fall")
-        self.assertEqual(ortsname_vorschlaege([e], [{"id": "r2", "schluessel": neu_k, "ort": "x"}]), [])
+        reihen = [{"id": "r1", "schluessel": alt_k, "ort": "Pitcher", "titel": "Rock am Montag"},
+                  {"id": "r2", "schluessel": neu_k, "ort": "x", "titel": "y"}]
+        self.assertEqual(ortsname_vorschlaege([e], reihen), [])
+
+    def test_reihen_ort_nur_mit_schluessel_und_ohne_geschuetzte(self):
+        from pipeline.reihen_zuordnen import reihen_schluessel
+
+        e1 = event(1, "Pitcher", titel="Rock am Montag", reihe_id="r1")
+        e2 = event(2, "Pitcher", titel="Blues am Dienstag", reihe_id="r2", redaktion_felder=["ort"])
+        reihen = [{"id": "r1", "schluessel": reihen_schluessel("Rock am Montag", "Pitcher"), "ort": "Pitcher", "titel": "Rock am Montag"},
+                  {"id": "r2", "schluessel": reihen_schluessel("Blues am Dienstag", "Pitcher"), "ort": "Pitcher", "titel": "Blues am Dienstag"}]
+        v = ortsname_vorschlaege([e1, e2], reihen)[0]["vorschlag"]
+        self.assertEqual(v["events"], ["e1"])
+        self.assertEqual(v["reihen"], [{"id": "r1", "schluessel": reihen_schluessel("Rock am Montag", "Pitcher Rock HQ")}])
+
+
+class OrtsnamenPlan(unittest.TestCase):
+    """Cursor-Prüfung 3c, Befund 1: offene wachsen mit, abgelehnte bleiben, nach Annahme ein neuer"""
+
+    Z = {"art": "ortsname", "schluessel": "Pitcher→Pitcher Rock HQ", "vorschlag": {"events": ["e1", "e2"]}, "begruendung": "b"}
+
+    def test_neu(self):
+        self.assertEqual(ortsname_plan([self.Z], []), ([self.Z], []))
+
+    def test_offen_wird_aktualisiert(self):
+        anlegen, aktualisieren = ortsname_plan([self.Z], [{"id": "v1", "schluessel": self.Z["schluessel"], "status": "offen"}])
+        self.assertEqual(anlegen, [])
+        self.assertEqual(aktualisieren, [("v1", {"events": ["e1", "e2"]}, "b")])
+
+    def test_abgelehnt_bleibt_abgelehnt(self):
+        self.assertEqual(ortsname_plan([self.Z], [{"id": "v1", "schluessel": self.Z["schluessel"], "status": "abgelehnt"}]), ([], []))
+
+    def test_nach_annahme_neuer_mit_nummer(self):
+        bestehend = [{"id": "v1", "schluessel": self.Z["schluessel"], "status": "angenommen"},
+                     {"id": "v2", "schluessel": self.Z["schluessel"] + "#2", "status": "angenommen"}]
+        anlegen, _ = ortsname_plan([self.Z], bestehend)
+        self.assertEqual(anlegen[0]["schluessel"], "Pitcher→Pitcher Rock HQ#3")
 
 
 class Ortszuordnung(unittest.TestCase):

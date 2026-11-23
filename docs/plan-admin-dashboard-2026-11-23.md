@@ -648,6 +648,9 @@ Stufe 3c – Vorschläge zu Orten (23.11.2026):
 - **SQL:** `database/admin_vorschlaege_orte_2026-11-23.sql` legt `admin_vorschlag_annehmen` vollständig neu an (Dublette und Gebiet unverändert) und dazu `admin_ortsname_anwenden` (nur intern aufrufbar). Ein Event, das beim Umbenennen mit einem anderen Termin zusammenfiele, bleibt beim alten Namen (unique_violation je Event abgefangen). Ein `ort_id`-Vorschlag auf einen inzwischen inaktiven oder gelöschten Ort wird abgewiesen.
 - **Gesammelt:** `/api/admin/vorschlaege/sammel` nimmt bis zu 200 angezeigte Vorschläge an oder lehnt sie ab – nur für die drei Orte-Arten (setzen nur leere bzw. ungeschützte Felder). Dubletten und Gebiet bleiben Einzelentscheidungen.
 - **Bewusst nicht in 3c (bleiben Skripte):** Geo der Ortsseiten (`spielstaetten_geo.py`: Google-Suche, Bestätigung der Adresse von Hand, dann OpenStreetMap) und der Import neuer Ortsseiten aus `data/spielstaetten/kandidaten.csv` (Entscheidungen je Haus, Säle, Arten). Beides läuft selten und braucht die Sichtung in der CSV; bei Bedarf eigener Teilbereich.
+- **Cursor-Prüfung Stufe 3c (deploybar, SQL ausgeführt):**
+  - Befund 1 (mittel) behoben: Ortsnamen-Vorschläge wachsen mit (`ortsname_plan`): Ein offener Vorschlag für alt → neu bekommt bei jedem Lauf die aktuellen Events; nach einer Annahme entsteht ein neuer („alt→neu#2“ …), solange Events die alte Schreibweise tragen; eine Ablehnung gilt für die Schreibweise.
+  - Befund 2 (gering) behoben: Reihen bekommen den neuen Ort nur zusammen mit dem passenden Schlüssel (`vorschlag.reihen: [{id, schluessel}]`); Reihen mit einem geschützten Event bleiben ganz beim alten Namen. SQL dafür geändert, erneut auszuführen.
 
 ## Prüfhistorie
 
@@ -665,3 +668,4 @@ Stufe 3c – Vorschläge zu Orten (23.11.2026):
 - 23.11.2026: Stufe 3a LIVE (38899b9). Stufe 3b Bilder und Guide-Pflege gebaut (lokal), SQL `admin_guides_2026-11-23.sql`, Q6 entschieden; Notizen in Anhang F.
 - 23.11.2026: SQL `admin_guides_2026-11-23.sql` ausgeführt, Cursor-Prüfung 3b deploybar, 2 Befunde eingearbeitet (Anhang F).
 - 23.11.2026: Stufe 3b LIVE (81bb408). Stufe 3c Vorschläge zu Orten gebaut (lokal), SQL `admin_vorschlaege_orte_2026-11-23.sql`; Notizen in Anhang F.
+- 23.11.2026: SQL Stufe 3c ausgeführt, Cursor-Prüfung 3c deploybar, 2 Befunde eingearbeitet (SQL geändert, erneut auszuführen).

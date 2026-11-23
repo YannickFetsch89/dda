@@ -17,6 +17,7 @@ Aufruf von Hand:   python -m pipeline.vorschlaege            (alle Arten)
 Im Lauf:           main.py, Schritt 3e (vorschlaege_erzeugen)
 """
 import logging
+import re
 from datetime import date
 from typing import Optional
 
@@ -102,8 +103,13 @@ def _geschuetzt(e: dict, feld: str) -> bool:
 def ortsname_vorschlaege(events: list[dict], reihen: list[dict], lauf_id: Optional[str] = None) -> list[dict]:
     """
     Ein Vorschlag je alter → neuer Ortsname (Regeln wie pipeline/ortsnamen.py sql_erzeugen): Events mit Eintrag „ort“
-    in redaktion_felder bleiben, ebenso solche, die sonst mit einem anderen Termin zusammenfielen. Reihen-Schlüssel
-    (titel|ort) ziehen mit; wäre ein neuer Schlüssel schon vergeben, entfällt der Vorschlag für diesen Namen (Log).
+    in redaktion_felder bleiben, ebenso solche, die sonst mit einem anderen Termin zusammenfielen.
+
+    Reihen (Cursor-Prüfung 3c, Befund 2): Jede Reihe mit der alten Schreibweise bekommt den neuen Ort nur zusammen mit
+    dem passenden Schlüssel „titel|ort“ (vorschlag.reihen: [{id, schluessel}], schluessel None = bleibt gleich).
+    Reihen mit einem geschützten Event bleiben ganz beim alten Namen. Wäre ein neuer Schlüssel schon vergeben oder
+    doppelt, entfällt der Vorschlag für diesen Namen (Log).
+    Der Schlüssel des Vorschlags ist hier noch „alt→neu“; ortsname_schreiben hängt nach einer Annahme „#2“ usw. an.
     """
     from pipeline.ortsnamen import umbenennungen
     from pipeline.reihen_zuordnen import reihen_schluessel
@@ -116,29 +122,67 @@ def ortsname_vorschlaege(events: list[dict], reihen: list[dict], lauf_id: Option
         if _geschuetzt(e, "ort"):
             continue
         gruppen.setdefault((e["ort"], neu), []).append(eid)
+    geschuetzte_reihen = {e["reihe_id"] for e in events if e.get("reihe_id") and _geschuetzt(e, "ort")}
     vorhanden = {r["schluessel"] for r in reihen}
     zeilen = []
     for (alt, neu), ids in sorted(gruppen.items()):
-        reihen_neu: dict[str, str] = {}
-        for eid in ids:
-            e = nach_id[eid]
-            alt_k, neu_k = reihen_schluessel(e.get("titel") or "", alt), reihen_schluessel(e.get("titel") or "", neu)
-            if e.get("reihe_id") and alt_k and neu_k and alt_k != neu_k:
-                reihen_neu[e["reihe_id"]] = neu_k
-        if any(k in vorhanden for k in reihen_neu.values()) or len(set(reihen_neu.values())) < len(reihen_neu):
+        reihen_aenderung: list[dict] = []
+        for r in sorted((r for r in reihen if r.get("ort") == alt and r["id"] not in geschuetzte_reihen), key=lambda r: r["id"]):
+            neu_k = reihen_schluessel(r.get("titel") or "", neu)
+            reihen_aenderung.append({"id": r["id"], "schluessel": neu_k if neu_k and neu_k != r.get("schluessel") else None})
+        neue_k = [x["schluessel"] for x in reihen_aenderung if x["schluessel"]]
+        if any(k in vorhanden for k in neue_k) or len(set(neue_k)) < len(neue_k):
             logger.warning("Ortsname „%s“ → „%s“: Reihen-Schlüssel schon vergeben – kein Vorschlag, bitte klären", alt, neu)
             continue
         zeilen.append({
             "art": "ortsname",
             "ziel_tabelle": "events",
             "ziel_id": None,
-            "schluessel": f"{alt}→{neu}"[:300],
-            "vorschlag": {"alt": alt, "neu": neu, "events": sorted(ids), "reihen_schluessel": reihen_neu},
+            "schluessel": f"{alt}→{neu}"[:290],
+            "vorschlag": {"alt": alt, "neu": neu, "events": sorted(ids), "reihen": reihen_aenderung},
             "begruendung": f"Schreibweise vereinheitlichen: „{alt[:80]}“ → „{neu[:80]}“ ({len(ids)} Events, Liste in "
                            f"pipeline/ortsnamen.py).",
             "quelle_lauf": lauf_id,
         })
     return zeilen
+
+
+def ortsname_plan(zeilen: list[dict], bestehend: list[dict]) -> tuple[list[dict], list[tuple[str, dict, str]]]:
+    """
+    Wie die Ortsnamen-Vorschläge in die Tabelle kommen (rein, testbar; Cursor-Prüfung 3c, Befund 1):
+    - schon ein OFFENER Vorschlag für alt→neu → dessen Events und Reihen werden aktualisiert (neue Events kommen dazu);
+    - einmal ABGELEHNT → nichts (die Ablehnung gilt für die Schreibweise);
+    - nur ANGENOMMENE, aber noch Events mit alter Schreibweise → neuer Vorschlag „alt→neu#2“, „#3“ …;
+    - sonst neu mit „alt→neu“.
+    bestehend: Zeilen {id, schluessel, status} der Art ortsname. Rückgabe: (neu anlegen, [(id, vorschlag, begründung)]).
+    """
+    nach_basis: dict[str, list[dict]] = {}
+    for b in bestehend:
+        nach_basis.setdefault(re.sub(r"#\d+$", "", b["schluessel"]), []).append(b)
+    anlegen, aktualisieren = [], []
+    for z in zeilen:
+        vorher = nach_basis.get(z["schluessel"], [])
+        offen = [b for b in vorher if b["status"] == "offen"]
+        if any(b["status"] == "abgelehnt" for b in vorher):
+            continue
+        if offen:
+            aktualisieren.append((offen[0]["id"], z["vorschlag"], z["begruendung"]))
+        elif vorher:
+            anlegen.append({**z, "schluessel": f"{z['schluessel']}#{len(vorher) + 1}"})
+        else:
+            anlegen.append(z)
+    return anlegen, aktualisieren
+
+
+def ortsname_schreiben(db, zeilen: list[dict]) -> int:
+    """Ortsnamen-Vorschläge anlegen bzw. offene aktualisieren (ortsname_plan)."""
+    bestehend = _seiten(db, "admin_vorschlaege", "id,schluessel,status", lambda q: q.eq("art", "ortsname"))
+    anlegen, aktualisieren = ortsname_plan(zeilen, bestehend)
+    vorschlaege_schreiben(db, anlegen)
+    for vid, vorschlag, begruendung in aktualisieren:
+        db.table("admin_vorschlaege").update({"vorschlag": vorschlag, "begruendung": begruendung}) \
+            .eq("id", vid).eq("status", "offen").execute()
+    return len(anlegen) + len(aktualisieren)
 
 
 def ort_id_vorschlaege(events: list[dict], index, lauf_id: Optional[str] = None) -> list[dict]:
@@ -213,8 +257,8 @@ def _orte_vorschlaege(db, lauf_id: Optional[str]) -> dict[str, int]:
     heute = date.today().isoformat()
     try:
         events = _seiten(db, "events", "id,titel,datum,uhrzeit,ort,reihe_id,abgelehnt,redaktion_felder")
-        reihen = _seiten(db, "reihen", "id,schluessel,ort")
-        ergebnis["ortsname"] = vorschlaege_schreiben(db, ortsname_vorschlaege(events, reihen, lauf_id))
+        reihen = _seiten(db, "reihen", "id,schluessel,ort,titel")
+        ergebnis["ortsname"] = ortsname_schreiben(db, ortsname_vorschlaege(events, reihen, lauf_id))
     except Exception as e:
         logger.error("Ortsnamen-Vorschläge nicht erzeugt: %s", e)
     try:
