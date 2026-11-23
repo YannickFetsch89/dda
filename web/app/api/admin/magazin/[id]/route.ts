@@ -90,6 +90,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/magaz
     if (body.aktion === "korrektur") {
       const hinweis = typeof body.hinweis === "string" ? body.hinweis : "";
       const inhalt = typeof body.inhalt_md === "string" ? body.inhalt_md : null;
+      // Ein geleerter Text würde die veröffentlichte Fassung leeren (Cursor-Prüfung Stufe 2)
+      if (inhalt !== null && !inhalt.trim()) return adminAntwort(400, { fehler: "Der Text darf nicht leer sein.", code: "eingabe" }, setCookies);
       const { data, error } = await db.rpc("admin_magazin_korrektur", { p_id: id, p_hinweis: hinweis, p_inhalt_md: inhalt });
       if (error) return fehler(error);
       revalidateTag(MAGAZIN_CACHE_TAG, { expire: 0 });

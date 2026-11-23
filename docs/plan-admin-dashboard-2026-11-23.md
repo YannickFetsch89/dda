@@ -605,6 +605,10 @@ Stufe 2 (23.11.2026):
 - **`MagazinArtikel`:** Die gemeinsame Komponente nutzen die öffentliche Entwurfs-Vorschau und die Admin-Vorschau. Die öffentliche Beitragsseite bleibt unverändert (geringeres Risiko). Das weicht vom Wortlaut in 4.6 ab.
 - **Admin-Vorschau:** Sie ist eine Server-Komponente. Sie liest die Sitzung, erneuert sie aber nicht (`adminSitzungLesen`): Ein Erneuern würde den Refresh-Token verbrauchen, ohne das Cookie zu setzen.
 - **SQL S3:** `database/admin_magazin_2026-11-23.sql`, 11 Funktionen inklusive `admin_pflicht()` und `admin_magazin_autoren()`.
+- **Cursor-Prüfung Stufe 2 (deploybar):**
+  - Behoben: Wortgrenze 600–1800 für jede Rubrik; Datum im Kopf ohne Zeitraum ist rot; Redaktionsplan mit laufendem Monat; leerer Korrekturtext wird abgewiesen.
+  - Bewusst hingenommen: `admin_magazin_speichern` übernimmt das Prüfergebnis der Route. Ein direkter Aufruf mit Admin-Sitzung und Zwei-Faktor könnte grün melden – der Admin ist die Redaktion und darf ohnehin veröffentlichen.
+  - Bewusst erweitert: Aufmacherbilder aus `/fallback/` gelten nach der Liste der Website (`ERLAUBTE_FALLBACK_HEROS`, alle ≥ 675 px), nicht nur die sieben Rubrik-Ersatzbilder der Pipeline.
 
 ## Prüfhistorie
 

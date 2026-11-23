@@ -47,10 +47,11 @@ export function redaktionsplan(liste: ListenBeitrag[], heute: string): PlanTermi
   for (let i = 0; i < 6; i++, montag = plusTage(montag, 7)) {
     termine.push(termin("wochenvorschau", montag, plusTage(montag, -3), liste, heute));
   }
+  // Laufender und nächster Monat (Cursor-Prüfung Stufe 2: auch ein fehlender Entwurf für den laufenden Monat ist rot)
   const [j, m] = [Number(heute.slice(0, 4)), Number(heute.slice(5, 7))];
   for (let i = 0; i < 2; i++) {
-    const erster = new Date(Date.UTC(j, m - 1 + i + 1, 1)).toISOString().slice(0, 10);
-    const entwurf = new Date(Date.UTC(j, m - 1 + i, 28)).toISOString().slice(0, 10);
+    const erster = new Date(Date.UTC(j, m - 1 + i, 1)).toISOString().slice(0, 10);
+    const entwurf = new Date(Date.UTC(j, m - 2 + i, 28)).toISOString().slice(0, 10);
     termine.push(termin("monats-tipps", erster, entwurf, liste, heute));
   }
   return termine;

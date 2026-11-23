@@ -38,7 +38,8 @@ describe("Redaktionsplan", () => {
     expect(wochen[1].farbe).toBe("gelb");
     expect(wochen[2]).toMatchObject({ entwurfAm: "2026-12-04", farbe: "grau" });
     const monate = plan.filter((t) => t.rubrik === "monats-tipps");
-    expect(monate.map((t) => [t.von, t.entwurfAm])).toEqual([["2026-12-01", "2026-11-28"], ["2027-01-01", "2026-12-28"]]);
+    expect(monate.map((t) => [t.von, t.entwurfAm])).toEqual([["2026-11-01", "2026-10-28"], ["2026-12-01", "2026-11-28"]]);
+    expect(monate[0].farbe).toBe("rot"); // laufender Monat ohne Entwurf
   });
 
   it("verpasster Entwurfstag ohne Beitrag ist rot", () => {
@@ -58,13 +59,16 @@ describe("Eingaben", () => {
   });
 });
 
+// 630 Wörter Fließtext, damit die Wortgrenze (600–1800) erfüllt ist
+const FUELLTEXT = "In Flingern trifft man sich gern an der Ecke. ".repeat(70);
+
 const GUT: PruefEingabe = {
   rubrik: "stadtleben",
   titel: "Ein Abend in Flingern",
   teaser: "Wo es in Flingern abends gemütlich wird: drei Orte, an denen man gut sitzen kann und die Nachbarschaft trifft.",
   kurzfassung: ["Erster Punkt", "Zweiter Punkt", "Dritter Punkt"],
   faq: null,
-  inhalt_md: `## Unterwegs\n\nFlingern ist abends lebendig. Mehr im [Guide](/guides/kneipen-bars).\n\n{{event:${E1}}}\n`,
+  inhalt_md: `## Unterwegs\n\nFlingern ist abends lebendig. Mehr im [Guide](/guides/kneipen-bars).\n\n${FUELLTEXT}\n\n{{event:${E1}}}\n`,
   hero_bild: "/fallback/theater-3.webp",
   hero_alt: "Bühne",
   gueltig_von: null,
@@ -98,9 +102,9 @@ describe("Prüfung nach Bearbeitung (wie pipeline/magazin.py)", () => {
   });
 
   it("Daten in Überschriften nur im Zeitraum", () => {
-    const im = { ...GUT, gueltig_von: "2026-11-23", gueltig_bis: "2026-11-29", inhalt_md: "## Montag, 23. November\n\nText." };
+    const im = { ...GUT, gueltig_von: "2026-11-23", gueltig_bis: "2026-11-29", inhalt_md: `## Montag, 23. November\n\n${FUELLTEXT}` };
     expect(magazinPruefen(im, STATUS).ergebnis).toBe("gruen");
-    const aus = { ...im, inhalt_md: "## Montag, 7. Dezember\n\nText." };
+    const aus = { ...im, inhalt_md: `## Montag, 7. Dezember\n\n${FUELLTEXT}` };
     expect(magazinPruefen(aus, STATUS).punkte.join()).toContain("außerhalb des Zeitraums");
   });
 
@@ -112,5 +116,14 @@ describe("Prüfung nach Bearbeitung (wie pipeline/magazin.py)", () => {
     expect(linkErlaubt("//boese.de")).toBe(false);
     expect(teilen(`## Kopf\n\nText\n{{event:${E1}}}`)).toEqual({ ueberschriften: ["Kopf"], text: "Text" });
     expect(eingebetteteEvents(`{{event:${E1.toUpperCase()}}}`)).toEqual([E1]);
+  });
+});
+
+describe("Nachträge Cursor-Prüfung Stufe 2", () => {
+  it("Wortgrenze gilt für jede Rubrik", () => {
+    expect(magazinPruefen({ ...GUT, inhalt_md: "Kurz." }, STATUS).punkte.join()).toContain("(d) Text hat 1 Wörter");
+  });
+  it("Datum im Titel ohne Zeitraum ist rot", () => {
+    expect(magazinPruefen({ ...GUT, titel: "Tipps zum 3. Dezember" }, STATUS).punkte.join()).toContain("kein Zeitraum");
   });
 });

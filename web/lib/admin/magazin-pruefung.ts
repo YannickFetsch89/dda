@@ -35,7 +35,9 @@ const GOOGLE = /google|sterne-bewertung|\bbewertet mit\b|\d[,.]\d\s*sterne/i;
 const HUB_KOEPFE = ["Weihnachtsmärkte in Düsseldorf", "Clubs in Düsseldorf", "Restaurants & Cafés", "Kneipen & Bars", "Spielplätze in Düsseldorf"];
 const LINK = /\[([^\]]+)\]\(([^)\s]*)\)/g;
 const INTERNE_PRAEFIXE = ["/heute", "/morgen", "/wochenende", "/entdecken", "/guides", "/kategorie/", "/stadtteil", "/kostenlos", "/magazin", "/reihe/", "/event/"];
+// Wie pipeline/magazin.py: WOERTER.get(rubrik, (600, 1800)) – die Grenze gilt für jede Rubrik (Cursor-Prüfung Stufe 2)
 const WOERTER: Record<string, [number, number]> = { wochenvorschau: [600, 1800], "monats-tipps": [600, 1800] };
+const WOERTER_STANDARD: [number, number] = [600, 1800];
 const EINBETTUNG = /^\{\{(event|ort|guide|tag):[^}]+\}\}$/;
 const EVENT_EINBETTUNG = /\{\{event:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\}\}/gi;
 
@@ -110,8 +112,13 @@ export function magazinPruefen(b: PruefEingabe, eventStatus: Map<string, { abgel
   }
   const jahr = Number((b.gueltig_von ?? new Date().toISOString()).slice(0, 4));
   if (datenImText(fliessMitFaq, jahr).length) punkte.push("(b) Datumsangabe im Fließtext oder in der FAQ (Daten stehen in den Karten)");
+  const kopfDaten = datenImText(kopf, jahr);
+  if (kopfDaten.length && !(b.gueltig_von && b.gueltig_bis)) {
+    // Ohne Zeitraum lässt sich ein Datum im Kopf nicht prüfen (Cursor-Prüfung Stufe 2)
+    punkte.push("(b) Datum im Titel, Teaser oder in Überschriften, aber kein Zeitraum (von/bis) gesetzt");
+  }
   if (b.gueltig_von && b.gueltig_bis) {
-    for (const d of datenImText(kopf, jahr)) {
+    for (const d of kopfDaten) {
       const naechstes = `${Number(d.slice(0, 4)) + 1}${d.slice(4)}`;
       const drin = (x: string) => x >= b.gueltig_von! && x <= b.gueltig_bis!;
       if (!drin(d) && !drin(naechstes)) punkte.push(`(b) Datum ${d} außerhalb des Zeitraums ${b.gueltig_von}–${b.gueltig_bis}`);
@@ -128,11 +135,9 @@ export function magazinPruefen(b: PruefEingabe, eventStatus: Map<string, { abgel
   const teaserLaenge = (b.teaser ?? "").length;
   if (teaserLaenge < 80 || teaserLaenge > 160) punkte.push(`(d) Teaser hat ${teaserLaenge} Zeichen (80–160)`);
   if (kurz.length < 3 || kurz.length > 5) punkte.push(`(d) Kurzfassung hat ${kurz.length} Punkte (3–5)`);
-  const grenzen = WOERTER[b.rubrik];
-  if (grenzen) {
-    const woerter = text.split(/\s+/).filter(Boolean).length;
-    if (woerter < grenzen[0] || woerter > grenzen[1]) punkte.push(`(d) Text hat ${woerter} Wörter (${grenzen[0]}–${grenzen[1]})`);
-  }
+  const grenzen = WOERTER[b.rubrik] ?? WOERTER_STANDARD;
+  const woerter = text.split(/\s+/).filter(Boolean).length;
+  if (woerter < grenzen[0] || woerter > grenzen[1]) punkte.push(`(d) Text hat ${woerter} Wörter (${grenzen[0]}–${grenzen[1]})`);
 
   // (e) Clickbait; Ich-Form nur in der Stimme des Pseudonyms (FAQ-Fragen sind Leserstimme)
   const cb = CLICKBAIT.exec(alles);
