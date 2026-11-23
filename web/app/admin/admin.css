@@ -212,3 +212,13 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 .admin-bild-raster figure { margin: 0; }
 .admin-bild-raster img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; display: block; }
 .admin-bild-raster figcaption { font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+
+/* Zahlen-Kacheln (Newsletter, Stufe 4) */
+.admin-kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.admin-kacheln .admin-karte { margin: 0; }
+.admin-kacheln strong { display: block; font-size: 1.6rem; }

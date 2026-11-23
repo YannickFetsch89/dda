@@ -1,0 +1,64 @@
+# Newsletter: Bestätigungsmail (Double-Opt-in) – Plan docs/plan-admin-dashboard-2026-11-23.md, 4.9, Stufe 4 (E9)
+# Alle 15 Minuten. Echter Versand nur mit der Variable NEWSLETTER_AKTIV=1 (Zeitplan läuft sonst gar nicht).
+# Manuell: „probe“ (zählt nur), „test“ (Beispielmail an eine Adresse, schreibt nichts), „senden“.
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, SMTP_HOST, SMTP_PORT, SMTP_BENUTZER, SMTP_PASSWORT,
+#          NEWSLETTER_TOKEN_SCHLUESSEL (derselbe Schlüssel wie in deploy.yml).
+name: Newsletter-Bestätigung
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      aufgabe:
+        description: "probe (nur zählen), test (Beispielmail) oder senden"
+        type: choice
+        options: [probe, test, senden]
+        default: probe
+      an:
+        description: "nur bei test: Empfängeradresse der Beispielmail"
+        type: string
+        required: false
+
+concurrency:
+  group: newsletter
+  cancel-in-progress: false
+
+jobs:
+  newsletter:
+    # Zeitplan nur mit Schalter; manuell immer (der Job selbst verweigert „senden“ ohne Schalter)
+    if: github.event_name == 'workflow_dispatch' || vars.NEWSLETTER_AKTIV == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python-Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Bestätigungsmails
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_BENUTZER: ${{ secrets.SMTP_BENUTZER }}
+          SMTP_PASSWORT: ${{ secrets.SMTP_PASSWORT }}
+          NEWSLETTER_TOKEN_SCHLUESSEL: ${{ secrets.NEWSLETTER_TOKEN_SCHLUESSEL }}
+          NEWSLETTER_AKTIV: ${{ vars.NEWSLETTER_AKTIV }}
+          AUFGABE: ${{ github.event_name == 'workflow_dispatch' && inputs.aufgabe || 'senden' }}
+          TEST_AN: ${{ inputs.an }}
+          TZ: Europe/Berlin
+        run: |
+          if [ "$AUFGABE" = "test" ]; then
+            python -m pipeline.newsletter_bestaetigung test --an "$TEST_AN"
+          else
+            python -m pipeline.newsletter_bestaetigung "$AUFGABE"
+          fi

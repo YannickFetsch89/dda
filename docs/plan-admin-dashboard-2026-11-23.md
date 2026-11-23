@@ -652,6 +652,15 @@ Stufe 3c – Vorschläge zu Orten (23.11.2026):
   - Befund 1 (mittel) behoben: Ortsnamen-Vorschläge wachsen mit (`ortsname_plan`): Ein offener Vorschlag für alt → neu bekommt bei jedem Lauf die aktuellen Events; nach einer Annahme entsteht ein neuer („alt→neu#2“ …), solange Events die alte Schreibweise tragen; eine Ablehnung gilt für die Schreibweise.
   - Befund 2 (gering) behoben: Reihen bekommen den neuen Ort nur zusammen mit dem passenden Schlüssel (`vorschlag.reihen: [{id, schluessel}]`); Reihen mit einem geschützten Event bleiben ganz beim alten Namen. SQL dafür geändert, erneut auszuführen.
 
+Stufe 4 – Newsletter mit Double-Opt-in (23.11.2026):
+- **SQL:** `database/newsletter_doi_2026-11-23.sql`: Spalten `bestaetigung_gesendet_am`, `mails_gesendet`; Job-Funktionen `newsletter_bestaetigung_beanspruchen` (SKIP LOCKED, höchstens 3 Mails je Adresse), `_freigeben`, `newsletter_aufraeumen` (nur `service_role`); `admin_newsletter_zahlen` für den Admin.
+- **Job:** `pipeline/newsletter_bestaetigung.py`, Workflow `.github/workflows/newsletter.yml` alle 15 Minuten, nur mit Variable `NEWSLETTER_AKTIV=1` (E9). SMTP-Verbindung nur, wenn etwas zu senden ist; scheitert der Versand, wird die Anmeldung wieder frei. Neues Secret `NEWSLETTER_TOKEN_SCHLUESSEL` (hex, auch in `deploy.yml` → `web/.env.local`).
+- **Website:** Anmeldung legt an oder merkt eine neue Mail vor (frühestens nach 24 Stunden, höchstens 3); Antwort immer gleich. Seiten `/newsletter/bestaetigen` und `/newsletter/abmelden` (Token im Fragment, erst der Button schickt es), One-Click `/api/newsletter/abmelden/<token>` (RFC 8058, GET 405).
+- **Abweichung vom Plan:** Abmelden **löscht** die Adresse sofort, wie es die Datenschutzerklärung (Abschnitt 11) schon verspricht. Deshalb gibt es im Admin keine Liste „abgemeldet“, nur „bestätigt“ und „nicht bestätigt“. Unbestätigte werden 30 Tage nach der Bestätigungsmail gelöscht (nicht nach der Anmeldung), damit bestehende Anmeldungen ohne Double-Opt-in erst ihre Mail bekommen.
+- **Bestehende Anmeldungen** bekommen nach dem Einschalten einmal die Bestätigungsmail – angekündigt in der heutigen Datenschutzerklärung.
+- **Admin:** `/admin/newsletter` mit Zahlen, Liste, CSV-Export nur der Bestätigten (BOM, Formel-Schutz), Löschen auf Anfrage; Protokoll ohne Adressen.
+- **Rechtliches:** `docs/anwalt-newsletter-doi-2026-11-23.md` (Ablauf, vier Fragen, Entwurf Abschnitt 11 und Hinweis unter dem Formular). Die Datenschutzerklärung bleibt bis zur Freigabe unverändert; ebenso bleibt `NEWSLETTER_AKTIV` aus.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -669,3 +678,4 @@ Stufe 3c – Vorschläge zu Orten (23.11.2026):
 - 23.11.2026: SQL `admin_guides_2026-11-23.sql` ausgeführt, Cursor-Prüfung 3b deploybar, 2 Befunde eingearbeitet (Anhang F).
 - 23.11.2026: Stufe 3b LIVE (81bb408). Stufe 3c Vorschläge zu Orten gebaut (lokal), SQL `admin_vorschlaege_orte_2026-11-23.sql`; Notizen in Anhang F.
 - 23.11.2026: SQL Stufe 3c ausgeführt, Cursor-Prüfung 3c deploybar, 2 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
+- 23.11.2026: Stufe 3c LIVE (d3b0bf3). Stufe 4 Newsletter-Double-Opt-in gebaut (lokal), SQL `newsletter_doi_2026-11-23.sql`, Anwaltsvorlage; Notizen in Anhang F.

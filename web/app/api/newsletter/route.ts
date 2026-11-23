@@ -1,5 +1,8 @@
-// Newsletter-Anmeldung: speichert die E-Mail-Adresse in Supabase (newsletter_anmeldungen).
-// Vorerst ohne Double-Opt-in – es geht nur darum, keine Anmeldung zu verlieren.
+// Newsletter-Anmeldung mit Double-Opt-in (Plan Admin-Dashboard 4.9, Stufe 4): legt die Anmeldung an; die
+// Bestätigungsmail schickt der Job pipeline/newsletter_bestaetigung.py (alle 15 Minuten). Erst nach dem Klick auf den
+// Link in der Mail ist die Adresse bestätigt. Die Antwort ist immer gleich – sie verrät nicht, ob eine Adresse
+// schon angemeldet ist.
+import { anmeldungPlanen, type Bestand } from "@/lib/newsletter";
 import { absenderIp, antwort, emailGueltig, schreibClient, text, zuGross, zuVieleAnfragen } from "@/lib/formulare";
 
 export async function POST(request: Request) {
@@ -28,11 +31,30 @@ export async function POST(request: Request) {
   const db = schreibClient();
   if (!db) return antwort(503, { fehler: "Die Anmeldung ist gerade nicht möglich. Bitte versuch es später." });
 
-  const { error } = await db.from("newsletter_anmeldungen").insert({ email, quelle: "website" });
-  // 23505 = schon angemeldet → für den Nutzer genauso ein Erfolg (verrät nicht, ob die Adresse existiert)
-  if (error && error.code !== "23505") {
-    console.error(`Newsletter-Anmeldung fehlgeschlagen: ${error.code} ${error.message}`);
-    return antwort(500, { fehler: "Das hat leider nicht geklappt. Bitte versuch es später noch einmal." });
+  const fehlgeschlagen = () => antwort(500, { fehler: "Das hat leider nicht geklappt. Bitte versuch es später noch einmal." });
+  const { data: bestand, error: f1 } = await db
+    .from("newsletter_anmeldungen")
+    .select("id, bestaetigt_am, bestaetigung_gesendet_am, mails_gesendet")
+    .ilike("email", email.replace(/[\\%_]/g, (z) => `\\${z}`))
+    .maybeSingle();
+  if (f1) {
+    console.error(`Newsletter-Anmeldung: Bestand nicht lesbar (${f1.code ?? "fehler"})`);
+    return fehlgeschlagen();
+  }
+  const plan = anmeldungPlanen(bestand as Bestand | null);
+  if (plan === "anlegen") {
+    const { error } = await db.from("newsletter_anmeldungen").insert({ email, quelle: "website" });
+    // 23505: gleichzeitig angelegt → für den Nutzer genauso ein Erfolg
+    if (error && error.code !== "23505") {
+      console.error(`Newsletter-Anmeldung fehlgeschlagen: ${error.code} ${error.message}`);
+      return fehlgeschlagen();
+    }
+  } else if (plan === "erneut_senden" && bestand) {
+    const { error } = await db.from("newsletter_anmeldungen").update({ bestaetigung_gesendet_am: null }).eq("id", bestand.id).is("bestaetigt_am", null);
+    if (error) {
+      console.error(`Newsletter-Anmeldung: erneuter Versand nicht vorgemerkt (${error.code ?? "fehler"})`);
+      return fehlgeschlagen();
+    }
   }
   return antwort(200, { ok: true });
 }

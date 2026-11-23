@@ -458,12 +458,18 @@ export function DetailsVerhalten() {
   return null;
 }
 
-// ---------- Newsletter (speichert in Supabase über /api/newsletter, vorerst ohne Double-Opt-in) ----------
+// ---------- Newsletter (Anmeldung über /api/newsletter, Double-Opt-in: Bestätigungsmail vom Job, Plan Admin 4.9) ----------
 
 export function NewsletterForm() {
   const [zustand, setZustand] = useState<"bereit" | "sendet" | "fertig">("bereit");
   const [fehler, setFehler] = useState<string | null>(null);
-  if (zustand === "fertig") return <p style={{ fontWeight: 700 }} role="status">Danke! Du bist dabei – der Newsletter startet in Kürze.</p>;
+  if (zustand === "fertig") {
+    return (
+      <p style={{ fontWeight: 700 }} role="status">
+        Fast geschafft! Wir schicken dir eine Mail mit einem Bestätigungslink. Erst wenn du ihn anklickst, bekommst du den Newsletter.
+      </p>
+    );
+  }
   return (
     <div className="newsletter__form">
     <form
