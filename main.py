@@ -316,6 +316,12 @@ async def _schritte_ausfuehren(report: LaufReport):
     except Exception as e:
         logger.error("IndexNow fehlgeschlagen: %s", e)
 
+    # Schritt 3e: Dubletten und Events außerhalb des Gebiets als Vorschläge für den Admin-Bereich
+    # (Plan docs/plan-admin-dashboard-2026-11-23.md, 3.5) – ändert selbst nichts, wirft nicht
+    logger.info("--- Schritt 3e: Vorschläge für den Admin-Bereich ---")
+    from pipeline.vorschlaege import vorschlaege_erzeugen
+    vorschlaege_erzeugen(report.lauf_id)
+
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")
     from pipeline import caption_generator

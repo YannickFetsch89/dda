@@ -132,3 +132,31 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 .admin-verlauf__punkt--leer { background: var(--ddd-warning); }
 .admin-verlauf__punkt--fehler { background: var(--ddd-error); }
 .admin-verlauf__punkt--saisonal, .admin-verlauf__punkt--uebersprungen { background: var(--ddd-disabled-fg); }
+
+/* Events und Vorschläge (Stufe 1d) */
+.admin-filterleiste { display: flex; flex-wrap: wrap; gap: 0 12px; align-items: flex-end; }
+.admin-filterleiste .admin-feld { margin-bottom: 0; min-width: 140px; flex: 1 1 140px; }
+.admin-filterleiste .admin-knopf { margin-bottom: 1px; }
+.admin-feld select, .admin-feld textarea {
+  font: inherit; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--ddd-border);
+  background: var(--ddd-surface); color: var(--ddd-text-body);
+}
+.admin-feld textarea { resize: vertical; min-height: 120px; }
+.admin-feld small { color: var(--ddd-warning); font-weight: 600; }
+.admin-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.admin-chip { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--ddd-border); background: var(--ddd-surface); color: var(--ddd-text-body); cursor: pointer; }
+.admin-chip[aria-pressed="true"] { background: var(--ddd-navy); border-color: var(--ddd-navy); color: #fff; }
+[data-theme="dark"] .admin-chip[aria-pressed="true"] { background: var(--ddd-gold); border-color: var(--ddd-gold); color: var(--ddd-navy); }
+.admin-zeile--grau td { opacity: 0.55; }
+.admin-hinweise { display: flex; flex-wrap: wrap; gap: 4px; }
+.admin-tabelle td a { color: var(--ddd-text); font-weight: 600; }
+.admin-seiten { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 16px 0; font-size: 14px; }
+.admin-formular { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+@media (min-width: 800px) { .admin-formular { grid-template-columns: 1fr 1fr; } }
+.admin-feld--breit { grid-column: 1 / -1; }
+.admin-schalter { border: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.admin-schalter label { display: flex; gap: 6px; align-items: center; }
+.admin-vorschlag { align-items: flex-start; }
+.admin-vorschlag > div { flex: 1 1 320px; line-height: 1.5; }
+.admin-vorschlag a { color: var(--ddd-link); }
+.admin-aktionen { display: flex; gap: 8px; margin-left: auto; }

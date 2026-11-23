@@ -581,6 +581,14 @@ Abweichungen vom Wortlaut, beim Bau gemessen:
 - **Website-Rahmen:** Der Wurzel-Layout rendert Kopf, Fuß und Tab-Leiste auch unter `/admin`. Statt alle Seiten in eine Routengruppe zu verschieben, blendet `app/admin/admin.css` sie per `body:has(.admin-rahmen)` aus.
 - **Streamlit unter `/alt`:** Mit dem Deploy von 1a startet Streamlit mit `--server.baseUrlPath alt`. Bis nginx für admin.diesdas.events umgestellt ist (`docs/admin-nginx-anleitung.md`, Teil B), ist das alte Dashboard kurz nicht erreichbar.
 
+Stufen 1b–1d (23.11.2026):
+- **Cockpit (1b):** Die Ampel des GitHub-Wächters wird erst nach 12 Stunden ohne Lauf gelb. Grund: GitHub führt den 15-Minuten-Zeitplan nur alle 4–8 Stunden aus (Läufe 20.–23.11.). Die Zahlen, die der Admin-Token nicht sehen darf (Magazin-Entwürfe, Konten), liefert `admin_cockpit_zahlen()` (`database/admin_cockpit_2026-11-23.sql`).
+- **Scraper (1c):** Python-Tests laufen mit `unittest`, pytest ist nicht installiert und kommt nicht dazu.
+- **Vorschläge (1d):** `pipeline/dubletten_sql.py` und `pipeline/gebiet.py` bleiben als Werkzeuge für SQL von Hand. Die Vorschläge schreibt das neue Modul `pipeline/vorschlaege.py` mit deren Regeln (`paare_finden`, `grund_ausserhalb`), aufgerufen in `main.py` als Schritt 3e.
+- **Feldschutz (1d):** In `_anreicherungs_update_bauen` filtert eine einzige Stelle am Ende alle Schlüssel aus `redaktion_felder` aus dem Update. Damit sind alle vier Schreibstellen abgedeckt.
+- **Admin-Rahmen:** Er liegt in `Suspense`, weil `usePathname` bei `/admin/events/[id]` erst im Browser feststeht.
+- **Offen:** Für den Feldschutz in `categorizer.kategorisieren()` gibt es keinen eigenen Test (der Schritt ruft die KI). Den Code hat Cursor bei der Umsetzungsprüfung gesehen.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -590,3 +598,4 @@ Abweichungen vom Wortlaut, beim Bau gemessen:
 - 23.11.2026: Cursor-Prüfung 3: freigabefähig, 4 Hinweise (1 mittel, 3 gering), nachgeprüft und eingearbeitet.
 - 23.11.2026: Cursor-Prüfung 4: freigabefähig nach Trennung des Filter-Satzes, 4 Hinweise eingearbeitet → vierte Fassung. **Vom Auftraggeber freigegeben.**
 - 23.11.2026: Stufe 1a gebaut (09b56cb, lokal), Umsetzungsnotizen in Anhang F.
+- 23.11.2026: Stufen 1b und 1c LIVE (5246581, 11d3945), Stufe 1d gebaut (lokal); Notizen in Anhang F.

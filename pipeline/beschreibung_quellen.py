@@ -460,6 +460,8 @@ def offene_rausgegangen_events(db, limit: int) -> list[dict]:
         .select("id,titel,ort,adresse,datum,uhrzeit,slug,beschreibung,quelle_name,quelle_url")
         .gte("datum", date.today().isoformat())
         .is_("beschreibung_gesucht_am", "null")
+        # Feldschutz (Plan Admin-Dashboard 4.4 Teil A): von der Redaktion geschriebene Beschreibung nicht ersetzen
+        .not_.contains("redaktion_felder", ["beschreibung"])
         .or_("quelle_name.ilike.*rausgegangen*,quelle_url.ilike.*rausgegangen.de*")
         .order("datum")
         .limit(limit)
@@ -602,6 +604,8 @@ def offene_veranstalter_events(db) -> list[dict]:
             .gte("datum", date.today().isoformat())
             .eq("abgelehnt", False)
             .is_("beschreibung_gesucht_am", "null")
+            # Feldschutz (Plan Admin-Dashboard 4.4 Teil A)
+            .not_.contains("redaktion_felder", ["beschreibung"])
             .is_("beschreibung_quelle", "null")
             .not_.is_("quelle_url", "null")
             .not_.ilike("quelle_name", "*rausgegangen*")

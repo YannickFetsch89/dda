@@ -8,7 +8,8 @@ import { useEffect, useState, type ReactNode } from "react";
 
 const NAVIGATION: { titel: string; href?: string; stufe?: string }[] = [
   { titel: "Cockpit", href: "/admin" },
-  { titel: "Events", stufe: "1d" },
+  { titel: "Events", href: "/admin/events" },
+  { titel: "Vorschläge", href: "/admin/vorschlaege" },
   { titel: "Empfehlungen", stufe: "1e" },
   { titel: "Scraper", href: "/admin/scraper" },
   { titel: "Magazin", stufe: "2" },
@@ -59,7 +60,7 @@ export function AdminRahmen({ children }: { children: ReactNode }) {
         <nav className="admin-nav" aria-label="Admin-Bereiche">
           {NAVIGATION.map((n) =>
             n.href ? (
-              <Link key={n.titel} href={n.href} aria-current={pfad === n.href ? "page" : undefined}>
+              <Link key={n.titel} href={n.href} aria-current={pfad === n.href || (n.href !== "/admin" && pfad.startsWith(n.href + "/")) ? "page" : undefined}>
                 {n.titel}
               </Link>
             ) : (

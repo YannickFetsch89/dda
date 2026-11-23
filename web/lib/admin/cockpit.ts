@@ -151,7 +151,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       link: null,
       hinweis: zahlen?.magazin_naechste ? `nächste Ausgabe ab ${zahlen.magazin_naechste}` : undefined,
     },
-    { schluessel: "vorschlaege", titel: "Offene Vorschläge", anzahl: vorschlaege, farbe: vorschlaege ? "gelb" : "gruen", link: null, hinweis: "ab Stufe 1d" },
+    { schluessel: "vorschlaege", titel: "Offene Vorschläge", anzahl: vorschlaege, farbe: vorschlaege ? "gelb" : "gruen", link: "/admin/vorschlaege" },
     {
       schluessel: "tipps",
       titel: "Tage ohne Redaktions-Tipp (14 Tage)",
@@ -162,9 +162,9 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
         ? luecken.tageOhneTipp.slice(0, 5).map((t) => `${t.slice(8, 10)}.${t.slice(5, 7)}.`).join(", ") + (luecken.tageOhneTipp.length > 5 ? " …" : "")
         : undefined,
     },
-    { schluessel: "ohne_bild", titel: "Events ohne Bild (7 Tage)", anzahl: luecken?.ohneBild ?? null, farbe: luecken ? (luecken.ohneBild ? "gelb" : "gruen") : "grau", link: null },
-    { schluessel: "ohne_stadtteil", titel: "Events ohne Stadtteil (7 Tage)", anzahl: luecken?.ohneStadtteil ?? null, farbe: luecken ? (luecken.ohneStadtteil ? "gelb" : "gruen") : "grau", link: null },
-    { schluessel: "ohne_adresse", titel: "Events ohne Adresse (7 Tage)", anzahl: luecken?.ohneAdresse ?? null, farbe: luecken ? (luecken.ohneAdresse ? "gelb" : "gruen") : "grau", link: null },
+    { schluessel: "ohne_bild", titel: "Events ohne Bild (7 Tage)", anzahl: luecken?.ohneBild ?? null, farbe: luecken ? (luecken.ohneBild ? "gelb" : "gruen") : "grau", link: "/admin/events?filter=ohne_bild" },
+    { schluessel: "ohne_stadtteil", titel: "Events ohne Stadtteil (7 Tage)", anzahl: luecken?.ohneStadtteil ?? null, farbe: luecken ? (luecken.ohneStadtteil ? "gelb" : "gruen") : "grau", link: "/admin/events?filter=ohne_stadtteil" },
+    { schluessel: "ohne_adresse", titel: "Events ohne Adresse (7 Tage)", anzahl: luecken?.ohneAdresse ?? null, farbe: luecken ? (luecken.ohneAdresse ? "gelb" : "gruen") : "grau", link: "/admin/events?filter=ohne_adresse" },
   ];
 
   const letzterStart = scraper?.laeufe[0]?.gestartet_am ?? null;

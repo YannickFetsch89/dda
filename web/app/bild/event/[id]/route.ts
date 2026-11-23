@@ -1,6 +1,6 @@
 // Event-Bild über den eigenen Server ausliefern (Bild-Proxy, siehe lib/bild-proxy.ts).
 // Nur Bilder, die zu einem Event in unserer Datenbank gehören – kein offener Proxy für beliebige Adressen.
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { leseClient } from "@/lib/supabase-server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
@@ -11,6 +11,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Original-Bildadresse eines Events (1 Tag gecached; nach Fehlern nur kurz). */
 async function bildQuelle(id: string): Promise<string | null> {
   "use cache";
+  // Admin-Bereich leert den Tag, wenn sich bild_url ändert (Plan Admin-Dashboard 4.4)
+  cacheTag(`event-bild-${id}`);
   const client = leseClient(); // ein Client pro Prozess – nicht pro Bild (Speicherleck, siehe supabase-server.ts)
   if (!client) {
     cacheLife({ stale: 30, revalidate: 60, expire: 120 });

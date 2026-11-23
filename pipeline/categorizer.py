@@ -181,7 +181,7 @@ def kategorisieren(limit: int = 10) -> int:
     try:
         ergebnis = (
             db.table("events")
-            .select("id, titel, ort, datum, datum_bis, preis, kategorie")
+            .select("id, titel, ort, datum, datum_bis, preis, kategorie, redaktion_felder")
             .eq("status", "neu")
             .is_("beschreibung", "null")
             # Nächste Events zuerst, vergangene nicht mehr kategorisieren
@@ -244,7 +244,10 @@ def kategorisieren(limit: int = 10) -> int:
             }
 
             # Kategorie nur aktualisieren wenn KI eine bessere vorschlägt
-            if kategorie and kategorie != event.get("kategorie"):
+            # Feldschutz (Plan Admin-Dashboard 4.4 Teil A, Cursor-Prüfung 4): eine von der Redaktion gesetzte Kategorie
+            # bleibt; Beschreibung und ist_wiederkehrend kommen trotzdem.
+            geschuetzt = "kategorie" in (event.get("redaktion_felder") or [])
+            if kategorie and kategorie != event.get("kategorie") and not geschuetzt:
                 aktualisierung["kategorie"] = kategorie
                 logger.info(
                     "Kategorie korrigiert: '%s' → '%s' für Event '%s'",
