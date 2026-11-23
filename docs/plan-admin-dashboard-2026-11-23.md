@@ -1,6 +1,6 @@
 # Plan: Admin-Dashboard neu (admin.diesdas.events) – dritte Fassung, 23.11.2026
 
-**Status:** ENTWURF, dritte Fassung. Die Entscheidungen E1–E9 und Q5–Q8 sind am 23.11.2026 wie vorgeschlagen bestätigt. Eingearbeitet sind die Befunde der Cursor-Prüfungen 1 (15 Befunde, Anhang B) und 2 (6 Befunde und ein eigener Fund, Anhang C). Cursor-Prüfung 3 steht aus. Nicht freigegeben, nichts gebaut.
+**Status:** ENTWURF, dritte Fassung mit Nachtrag. Die Entscheidungen E1–E9 und Q5–Q8 sind am 23.11.2026 wie vorgeschlagen bestätigt. Cursor-Prüfung 3 urteilt **freigabefähig**. Ihre 4 Hinweise sind eingearbeitet (Anhang D), die Befunde der Prüfungen 1 und 2 stehen in Anhang B und C. **Die Freigabe durch den Auftraggeber steht aus.** Nichts gebaut.
 **Grundlage:** Entscheidungen des Auftraggebers vom 23.11.2026 (Abschnitt 2) und Bestand am Stand `79c7459` (Abschnitt 1).
 **Gebaut wird erst nach Freigabe**, und zwar stufenweise. Jede Stufe hat eigene SQL, einen eigenen Deploy und eine eigene Abnahme.
 
@@ -115,7 +115,7 @@ Regeln aus dem Betrieb:
    - **Beide** Websites setzen einen festen Kopf, der einen vom Browser mitgeschickten Wert überschreibt:
      - diesdas.events: `proxy_set_header X-DDD-Bereich web;`
      - admin.diesdas.events: `proxy_set_header X-DDD-Bereich admin;`
-   - **Reihenfolge (Cursor-Prüfung 2, Befund 1):** Der Eintrag auf **diesdas.events** kommt **vor** dem ersten Deploy mit Admin-Code (Schritt 1a-0 in Abschnitt 7). Er ändert für die Website nichts, solange der Code ihn nicht liest. Ohne ihn käme jeder, der `X-DDD-Bereich: admin` selbst mitschickt, auf der öffentlichen Website an die Admin-Routen. Dort fängt ihn zwar noch die Anmeldung ab, aber die Trennung wäre weg. Nach dem Eintrag prüft Claude mit `curl -H "X-DDD-Bereich: admin" https://diesdas.events/admin`, dass weiter 404 kommt.
+   - **Reihenfolge (Cursor-Prüfung 2, Befund 1):** Der Eintrag auf **diesdas.events** kommt **vor** dem ersten Deploy mit Admin-Code (Schritt 1a-0 in Abschnitt 7). Er ändert für die Website nichts, solange der Code ihn nicht liest. Ohne ihn käme jeder, der `X-DDD-Bereich: admin` selbst mitschickt, auf der öffentlichen Website an die Admin-Routen. Dort fängt ihn zwar noch die Anmeldung ab, aber die Trennung wäre weg. Ob nginx den Kopf wirklich überschreibt, zeigt erst die Prüfung **nach dem Deploy von Schritt 1a**: `curl -H "X-DDD-Bereich: admin" https://diesdas.events/admin` muss 404 liefern (Abschnitt 7 und 8). Direkt nach 1a-0 sagt diese Prüfung nichts, weil `/admin` dann noch nicht existiert (Cursor-Prüfung 3, Befund 4).
    - admin.diesdas.events leitet an `127.0.0.1:3847` (Next) statt an 8502, **aber nur diese Pfade:** `/admin`, `/api/admin`, `/_next` (dort liegen auch die Schriften unter `/_next/static/media`), `/bild`, `/fallback`, `/magazin-bild`, `/magazin-autoren`, `/ort-foto`, `/ort-bilder`, `/icon.svg`.
    - `location = /` → `return 308 /admin;` (relative Adresse, kein localhost in `Location`).
    - Alle anderen Pfade → `return 404;`.
@@ -217,11 +217,19 @@ Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprun
   - `_anreicherungs_update_bauen` (`database/client.py:75–135`) prüft sie an **allen drei Stellen**: in der Schleife über `_ANREICHERBARE_FELDER` (inklusive `bild_url` und `kategorie`), im Uhrzeit-Block (`:120–124`) und beim Quellenwechsel (`:127–133`, Felder aus `_QUELL_FELDER + _VORRANG_FELDER`). Ein Feld in `redaktion_felder` wird nie ins `update` geschrieben. Das gilt auch für `quelle_name`/`quelle_url`, falls die Redaktion sie gesetzt hat, und für `ort_id`.
   - **`abgesagt`:** `false` gilt in der Schleife heute als leer und würde von der Quelle wieder auf `true` gesetzt. Steht `abgesagt` in `redaktion_felder`, bleibt es so, wie die Redaktion es gesetzt hat.
   - `titel`, `datum`, `ort`, `datum_bis`, `abgelehnt` und `nicht_empfehlen` schreibt weder der Builder noch ein anderer Schritt im Lauf. Für sie reicht Teil B.
-  - **Weitere Schreiber im selben Lauf** (Cursor-Prüfung 2, Befund 2, plus eigener Fund): Sie lassen Felder aus `redaktion_felder` ebenfalls stehen. Umgesetzt wird das als Filter in ihrer Abfrage, `not.redaktion_felder.cs.{feld}`, oder als Prüfung vor dem `update`.
-    - `pipeline/unterkategorien.py` **`vereinheitlichen()`** (`:208–244`): setzt `unterkategorie` neu, auch wenn sie gefüllt ist → `unterkategorie`. (`nachtragen()` füllt nur leere, braucht nichts.)
+  - **Weitere Schreiber im selben Lauf** (Cursor-Prüfung 2, Befund 2, plus eigener Fund; Cursor-Prüfung 3, Befund 2): Sie lassen Felder aus `redaktion_felder` ebenfalls stehen. Umgesetzt wird das **als Filter in ihrer Abfrage**: `not.redaktion_felder.cs.{feld}`. Eine Prüfung erst vor dem `update` reicht bei den Beschreibungs-Skripten nicht. Sonst bekämen die Events nie `beschreibung_gesucht_am` und würden in jedem Lauf neu gesucht.
+    - `pipeline/unterkategorien.py` **`vereinheitlichen()`** (`:208–244`): setzt `unterkategorie` neu, auch wenn sie gefüllt ist → `unterkategorie`.
+    - `pipeline/unterkategorien.py` **`nachtragen()`** (`:115–166`): sucht `unterkategorie IS NULL` und würde eine von der Redaktion geleerte Unterkategorie wieder füllen → `unterkategorie`.
+    - `pipeline/categorizer.py` **`kategorisieren()`** (`:180–254`): schreibt bei `status = 'neu'` und leerer Beschreibung auch eine schon gesetzte `kategorie` neu → `kategorie`.
     - `pipeline/beschreibung_quellen.py` **`veranstalter_nachziehen()`** (`:669–741`): ersetzt `beschreibung`, wenn der alte Text kürzer als 200 Zeichen ist oder der neue länger (`ersetzen_erlaubt`, `:584–587`) → `beschreibung`.
     - `pipeline/beschreibung_quellen.py` **`beschreibungen_nachziehen()`** (`:471–511`): ersetzt bei Rausgegangen-Events ohne `beschreibung_gesucht_am` die Beschreibung ohne Längenprüfung → `beschreibung`. (Eigener Fund, nicht im Cursor-Befund.)
-    - Nur leere Felder füllen und brauchen deshalb nichts (laut Cursor-Prüfung 2 geprüft): `adressen_ergaenzen`, `stadtteil_mapper`, `categorizer.kategorisieren`, `reihen_zuordnen`, `ort_zuordnung` im Lauf. `konten_aufraeumen` schreibt keine Events.
+    - Brauchen nichts (Cursor-Prüfungen 2 und 3):
+      - `adressen_ergaenzen` und `stadtteil_mapper` füllen nur leere Felder im Speicher, danach schützt `client.py`;
+      - `reihen_zuordnen` setzt nur ein leeres `reihe_id`;
+      - `ort_zuordnung.zuordnen_alle` setzt `ort_id` nur an neuen Events im Speicher, und `bestand_pruefen` ändert nichts;
+      - Captions und Publisher schreiben nur `instagram_caption` und `status`;
+      - `konten_aufraeumen` schreibt keine Events;
+      - der `ort_id`-Nachtrag läuft nicht in `main.py`.
     - **Stufe 3:** Die Annahme von Ortsnamen- und `ort_id`-Vorschlägen schreibt `ort` bzw. `ort_id` nur, wenn das Feld nicht in `redaktion_felder` steht. `abgleich_ort` bleibt dabei unverändert.
   - Button „Redaktionsänderungen zurücksetzen“: leert `redaktion_felder` und `abgleich_*` für ein Event.
 - **Schutz vor Überschreiben (E7), Teil B: Wiederfinden** (Cursor-Befund 2):
@@ -257,7 +265,7 @@ Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprun
     - `heute` und `jetzt` aus dem Pool für `stufenKontext`, `highlightGilt` und `topGilt`. Der gewählte Tag geht nur als `fokusTag` ein (`null`, sobald von ≠ bis);
     - `startPlaetze(filtern(…, { von, bis, mitLanglaeufern: true }), stufen, fokusTag)`;
     - `beliebtAuswahl` mit Tag und Woche ohne Langläufer und `schonGezeigt` aus Tipp und Picks;
-    - `wochenendProgramm(pool, vergangeneWochenendEvents(pool.heute))`. Die Box hängt an `pool.heute`, nicht am gewählten Tag. Das zeigt die Vorschau so an.
+    - `wochenendProgramm(pool, vergangene)`. `vergangene` lädt der Aufrufer vorher mit `vergangeneWochenendEvents(pool.heute)`. Die Box hängt an `pool.heute`, nicht am gewählten Tag. Das zeigt die Vorschau so an.
   - Ein Test sichert für denselben Pool, dass die vier Blöcke (Tipp, Picks, Beliebt, Wochenende) gleich der bisherigen Rechnung in `page.tsx` sind.
   - **„Warum“:** Einen fertigen Grund-Text gibt es nicht. Neu ist `stufeErklaeren(e, k)` in `ableitungen.ts`. Sie liefert dieselben Schritte wie `stufeRechnen` als Liste: Stamm oder Sprachhinweis (`istStamm`), Grundstufe (`grundstufe`, `ZUGPFERD_ORTE`), Serie (`serienErkennen`), Langläufer (`istLanglaeufer`), Flagge. Dazu kommen „nicht empfehlen“ und der Fokustag. Ein Test sichert, dass die erklärte Stufe gleich `breite()` ist.
 - Darunter alle weiteren Kandidaten des Tages, sortiert nach `nachEmpfehlung`, je mit den Buttons **Tipp des Tages**, **Highlight der Woche**, **Top-Event des Monats**, **nicht empfehlen**. Nach dem Klick rechnet die Vorschau neu.
@@ -271,7 +279,7 @@ Quellen-Status (`scraper_ergebnisse.status`): `ok | leer | saisonal | uebersprun
   - Liste nach Status.
   - Vorschau im Admin-Bereich mit denselben Bausteinen wie `/magazin/vorschau/[id]`. Der Vorschau-Schlüssel ist dort nicht nötig, weil die Admin-Sitzung reicht.
     - Die öffentliche Vorschau-Seite lädt über `vorschauLaden` (Service-Schlüssel, `web/lib/magazin-daten.ts:204–221`) und prüft den Hash. Das bleibt unverändert (Cursor-Prüfung 2, Befund 4).
-    - Die Admin-Vorschau holt den Beitrag über `admin_magazin_beitrag`. Daraus baut `beitragAus` (`magazin-daten.ts:14–18`) einen `MagazinBeitrag`. Das Artikel-Markup aus `web/app/magazin/vorschau/[id]/page.tsx:38–56` wandert dafür in eine gemeinsame Komponente `MagazinArtikel` (Autor, `heroFuer`, `parsen`, `MagazinText`). Beide Seiten nutzen sie.
+    - Die Admin-Vorschau holt den Beitrag über `admin_magazin_beitrag`. Daraus baut `beitragAus` (`magazin-daten.ts:14–18`) einen `MagazinBeitrag`. Das Artikel-Markup aus `web/app/magazin/vorschau/[id]/page.tsx:38–56` wandert dafür in eine gemeinsame Komponente `MagazinArtikel` (Kopf mit Autor, Hero über `heroFuer`, Kurzfassung, `parsen` + `MagazinText`, Entstehungshinweis). Vorschau, Admin-Vorschau und Beitragsseite nutzen sie. **Lesezeit, Inhaltsverzeichnis, FAQ, Quellen, Korrekturhinweis und „Weiterlesen“ bleiben außerhalb der Komponente** in der Beitragsseite (`web/app/magazin/[slug]/page.tsx:86–175`). Die Bildunterschrift bekommt einen Schalter für den Ersatzbild-Hinweis, den heute nur die Vorschau zeigt. So ändert sich die öffentliche Seite nicht (Cursor-Prüfung 3, Befund 3).
     - Daneben ruft die Admin-Vorschau `eventsFuerIds`, `orteFuerSlugs` und `autorenLaden` auf, wie die öffentliche Seite.
   - Ergebnis der automatischen Prüfung (`pruefung` jsonb) als Liste (a)–(i) mit grün/rot.
   - KI-Angaben aus `ki_entwurf` (Modell, Kosten).
@@ -361,7 +369,12 @@ Alle `SECURITY DEFINER`-Funktionen folgen demselben Muster (3.3): Eigentümer `p
 | S6 | 5 | `database/admin_rest_<datum>.sql` | `admin_konten_kennzahlen()`, `quellen_einstellungen`. |
 | S7 | später | eigener Instagram-Plan | `instagram_posts`. |
 
-Python-Änderungen: `database/client.py` (E7: Feldschutz an drei Stellen, Schritt 0), `pipeline/dubletten_sql.py` und `pipeline/gebiet.py` (Vorschläge statt SQL), `main.py` (Warn-Mail E8, später Quellen an/aus), in Stufe 3 `pipeline/ortsnamen.py`, `pipeline/ort_zuordnung.py`, `pipeline/adressen_ergaenzen.py`.
+Python-Änderungen:
+- **Stufe 1d:**
+  - `database/client.py` (E7: Feldschutz an drei Stellen, Schritt 0);
+  - **`pipeline/unterkategorien.py`** (`vereinheitlichen`, `nachtragen`), **`pipeline/beschreibung_quellen.py`** (`veranstalter_nachziehen`, `beschreibungen_nachziehen`) und **`pipeline/categorizer.py`** (`kategorisieren`): Filter auf `redaktion_felder` in der Abfrage (4.4 Teil A, Cursor-Prüfung 3, Befunde 1 und 2);
+  - `pipeline/dubletten_sql.py` und `pipeline/gebiet.py` (Vorschläge statt SQL).
+- Weitere: `main.py` (Warn-Mail E8, später Quellen an/aus), in Stufe 3 `pipeline/ortsnamen.py`, `pipeline/ort_zuordnung.py`, `pipeline/adressen_ergaenzen.py`.
 
 ---
 
@@ -383,7 +396,7 @@ Python-Änderungen: `database/client.py` (E7: Feldschutz an drei Stellen, Schrit
 - **Python** (`tests/`):
   - Feldschutz an allen drei Stellen: Schleife inklusive `bild_url`, `kategorie` und `abgesagt = false`; Uhrzeit-Block; Quellenwechsel.
   - Schritt 0 findet das Event wieder bei geändertem Titel, Ort, Uhrzeit, Datum und bei Datum plus Uhrzeit zusammen. Ohne `abgleich_*` laufen die Schritte 1–3 unverändert. Ohne eingehende Uhrzeit und mit zwei bearbeiteten Vorstellungen trifft Schritt 0 nicht, dann greifen die Schritte 1–3.
-  - `vereinheitlichen()`, `veranstalter_nachziehen()` und `beschreibungen_nachziehen()` lassen Felder aus `redaktion_felder` stehen.
+  - `vereinheitlichen()`, `nachtragen()`, `kategorisieren()`, `veranstalter_nachziehen()` und `beschreibungen_nachziehen()` wählen Events mit dem jeweiligen Feld in `redaktion_felder` gar nicht erst aus.
   - Warnregeln gleich wie in TypeScript (gemeinsame Fixture).
   - Vorschläge statt SQL in Dubletten und Gebiet; die Feldliste der Dubletten wie in `dubletten_sql.py`.
 - **SQL:** Kontrollabfragen am Ende jeder Datei, wie bisher. Dazu je Funktion: Aufruf als Nicht-Admin wirft, Aufruf als `anon` ist nicht erlaubt.
@@ -528,9 +541,23 @@ Alle 6 Befunde sind am Code nachgeprüft und stimmen (`pipeline/unterkategorien.
 | 5 | gering | `startseitenAuswahl` lädt oder rechnet? | 4.5 |
 | 6 | gering | Tabellenköpfe in Abschnitt 5, `schluessel` fehlt | 5 |
 
+## Anhang D: Cursor-Prüfung 3 vom 23.11.2026 – Einarbeitung
+
+Gesamturteil Cursor: **freigabefähig**. Alle 4 Hinweise sind am Code nachgeprüft und stimmen (`pipeline/unterkategorien.py:115–166`, `pipeline/categorizer.py:180–254`). Cursor bestätigt außerdem: Im Lauf von `main.py` gibt es keine weiteren Schreiber. `(art, schluessel)` hält abgelehnte Vorschläge fest und schlägt ein anderes Ziel-Event neu vor. `cacheTag("magazin")` erneuert Beitragsseite, Rubrik, Autor, Magazin-Start, Startseiten-Verweise, Sitemap und Feed. Der Feed behält über `Cache-Control: public, max-age=300` bis zu 5 Minuten in Zwischenspeichern, das ist hingenommen.
+
+| Nr. | Schwere | Befund (kurz) | Eingearbeitet in |
+|---|---|---|---|
+| 1 | mittel | Python-Liste in Abschnitt 5 ohne `unterkategorien.py` und `beschreibung_quellen.py` | 5 (Liste Stufe 1d) |
+| 2 | gering | `nachtragen()` und `kategorisieren()` als Randfälle; Filter in der Abfrage statt vor dem Update | 4.4 Teil A, 5, 6 |
+| 3 | gering | `MagazinArtikel`: was in der Beitragsseite bleibt | 4.6 „Entwürfe“ |
+| 4 | gering | `curl`-Prüfung direkt nach 1a-0 sagt nichts | 3.2 Punkt 1 |
+
+Außerdem: Satz in 4.5 zu `vergangeneWochenendEvents` an „rechnet nur“ angepasst.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
 - 23.11.2026: Auftraggeber bestätigt E1–E9 und Q5–Q8 wie vorgeschlagen.
 - 23.11.2026: Cursor-Prüfung 1: nicht freigabefähig, 15 Befunde (4 kritisch). Alle nachgeprüft und eingearbeitet → zweite Fassung.
 - 23.11.2026: Cursor-Prüfung 2: nicht freigabefähig, 6 Befunde (1 kritisch) plus ein eigener Fund. Alle nachgeprüft und eingearbeitet → dritte Fassung.
+- 23.11.2026: Cursor-Prüfung 3: freigabefähig, 4 Hinweise (1 mittel, 3 gering), nachgeprüft und eingearbeitet.
