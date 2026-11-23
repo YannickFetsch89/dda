@@ -15,7 +15,9 @@ export interface ProtokollEintrag {
   nachher: unknown;
 }
 
-type Plan = { ok: true; tabelle: "events" | "orte"; id: string; felder: Record<string, unknown> } | { ok: false; fehler: string };
+type Plan =
+  | { ok: true; tabelle: "events" | "orte"; id: string; felder: Record<string, unknown>; erwartet: [string, unknown][] }
+  | { ok: false; fehler: string };
 
 function gleich(feld: string, a: unknown, b: unknown): boolean {
   const norm = (w: unknown) => {
@@ -44,5 +46,11 @@ export function rueckgaengigPlan(e: ProtokollEintrag, aktuell: Record<string, un
   const geaendert = Object.keys(vorher).filter((f) => !gleich(f, aktuell[f], nachher[f]));
   if (geaendert.length) return { ok: false, fehler: `Inzwischen wieder geändert: ${geaendert.join(", ")}. Bitte von Hand anpassen.` };
   const felder = Object.fromEntries(Object.entries(vorher).map(([f, w]) => [f, alsEingabe(f, w)]));
-  return { ok: true, tabelle: e.aktion === "event_bearbeiten" ? "events" : "orte", id: e.ziel_id, felder };
+  // Cursor-Prüfung 5a, Befund 4: dieselbe Bedingung noch einmal im UPDATE (kein zweiter Schreibvorgang dazwischen)
+  const erwartet: [string, unknown][] = Object.keys(vorher).map((f) => {
+    const w = nachher[f];
+    if (w === undefined || w === null || w === "") return [f, null];
+    return [f, f === "uhrzeit" && typeof w === "string" ? w.slice(0, 5) : w];
+  });
+  return { ok: true, tabelle: e.aktion === "event_bearbeiten" ? "events" : "orte", id: e.ziel_id, felder, erwartet };
 }

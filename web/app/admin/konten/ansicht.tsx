@@ -10,7 +10,8 @@ interface Zahlen {
   unter16_gesperrt: number;
   neu_je_woche: { woche: string; anzahl: number }[];
   einwilligungen: { personalisierung: number; sensible_events: number; analyse: number; geburtstagsmail: number };
-  interessen: { wert: string; anzahl: number | null }[];
+  interessen: { wert: string; anzahl: number }[];
+  interessen_ausgeblendet: number;
   merkliste: { konten_mit_eintraegen: number; eintraege: number };
   geburtstagsmails_dieses_jahr: number;
 }
@@ -111,9 +112,8 @@ export function KontenAnsicht() {
             <p>{z.neu_je_woche.length ? z.neu_je_woche.map((w) => `ab ${datum(w.woche)}: ${w.anzahl}`).join(" · ") : "keine in den letzten 8 Wochen"}</p>
             <h2>Interessen (Kategorien)</h2>
             <p>
-              {z.interessen.length
-                ? z.interessen.map((i) => `${i.wert}: ${i.anzahl ?? "weniger als 3"}`).join(" · ")
-                : "noch keine"}
+              {z.interessen.length ? z.interessen.map((i) => `${i.wert}: ${i.anzahl}`).join(" · ") : "noch keine mit mindestens 3 Konten"}
+              {z.interessen_ausgeblendet > 0 && ` · ${z.interessen_ausgeblendet} weitere mit weniger als 3 Konten ausgeblendet`}
             </p>
           </section>
         </>

@@ -8,7 +8,12 @@
 -- Der Admin-Token bekommt KEINE Tabellenrechte auf profiles, merkliste, event_sensibel. Alles über SECURITY-DEFINER-
 -- Funktionen (Eigentümer postgres, zuerst admin_pflicht(), fester search_path, EXECUTE nur für authenticated).
 -- Konten: bewusst nur Zahlen, nie Personen und keine Suche (Plan 4.10, Datenschutz). Löschung und Auskunft bleiben im
--- Supabase-Dashboard. Interessen werden erst ab 3 Konten je Wert gezeigt (kleinere Gruppen als „weniger als 3“).
+-- Supabase-Dashboard. Interessen: nur Werte mit mindestens 3 Konten; kleinere Gruppen fehlen ganz, gezählt wird nur,
+-- wie viele Werte weggelassen sind (Cursor-Prüfung 5a, Befund 1).
+-- Cursor-Prüfung 5a, Befund 2: Die Policies „Eigenes Profil lesen/ändern“ (auth_rollen.sql) ließen ein Admin-JWT ALLE
+-- Profile lesen (Geburtsdatum, Interessen, Name). Sie gelten jetzt nur für die eigene Zeile. Wer sonst profiles liest:
+-- die Rollenprüfung (eigene Zeile: web/lib/admin/sitzung.ts, dashboard/auth.py) und die Pipeline-Jobs (Service-Schlüssel,
+-- umgeht RLS). ist_admin() ist SECURITY DEFINER und hängt nicht an dieser Policy.
 
 BEGIN;
 
@@ -44,14 +49,19 @@ BEGIN
             'geburtstagsmail', (SELECT count(*) FROM public.profiles WHERE geburtstagsmail)
         ),
         'interessen', coalesce((
-            SELECT jsonb_agg(jsonb_build_object('wert', i.wert, 'anzahl', CASE WHEN i.anzahl >= 3 THEN i.anzahl ELSE NULL END)
-                             ORDER BY i.anzahl DESC, i.wert)
+            SELECT jsonb_agg(jsonb_build_object('wert', i.wert, 'anzahl', i.anzahl) ORDER BY i.anzahl DESC, i.wert)
             FROM (
                 SELECT k AS wert, count(*) AS anzahl
                 FROM public.profiles p, jsonb_array_elements_text(coalesce(p.praeferenzen->'kategorien', '[]'::jsonb)) k
                 WHERE p.personalisierung
                 GROUP BY k
+                HAVING count(*) >= 3
             ) i), '[]'::jsonb),
+        'interessen_ausgeblendet', (
+            SELECT count(*) FROM (
+                SELECT k FROM public.profiles p, jsonb_array_elements_text(coalesce(p.praeferenzen->'kategorien', '[]'::jsonb)) k
+                WHERE p.personalisierung GROUP BY k HAVING count(*) < 3
+            ) x),
         'merkliste', jsonb_build_object(
             'konten_mit_eintraegen', (SELECT count(DISTINCT nutzer_id) FROM public.merkliste),
             'eintraege', (SELECT count(*) FROM public.merkliste)
@@ -148,7 +158,20 @@ END;
 $$;
 
 
--- ── 3. Rechte ────────────────────────────────────────────────────────────────
+-- ── 3. profiles: Lesen und Ändern nur die eigene Zeile (Cursor-Prüfung 5a, Befund 2) ──
+DROP POLICY IF EXISTS "Eigenes Profil lesen" ON public.profiles;
+CREATE POLICY "Eigenes Profil lesen" ON public.profiles
+    FOR SELECT TO authenticated
+    USING (id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS "Eigenes Profil ändern" ON public.profiles;
+CREATE POLICY "Eigenes Profil ändern" ON public.profiles
+    FOR UPDATE TO authenticated
+    USING (id = (SELECT auth.uid()))
+    WITH CHECK (id = (SELECT auth.uid()));
+
+
+-- ── 4. Rechte ────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
     f TEXT;
@@ -168,7 +191,7 @@ END $$;
 COMMIT;
 
 
--- ── Kontrolle (erwartet: 4 Zeilen, alle definer, anon_darf = false, authenticated_darf = true) ──
+-- ── Kontrolle 1 (erwartet: 4 Zeilen, alle definer, anon_darf = false, authenticated_darf = true) ──
 SELECT p.proname AS funktion,
        CASE WHEN p.prosecdef THEN 'definer' ELSE 'invoker' END AS sicherheit,
        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_darf,
@@ -176,4 +199,9 @@ SELECT p.proname AS funktion,
 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
   AND p.proname IN ('admin_konten_kennzahlen', 'admin_sensibel_liste', 'admin_sensibel_ausnahme', 'admin_sensibel_ausnahme_aufheben')
+ORDER BY 1;
+
+-- ── Kontrolle 2 (erwartet: beide Policies nur mit „id = auth.uid()“, ohne ist_admin) ──
+SELECT policyname, cmd, qual, with_check FROM pg_policies
+WHERE schemaname = 'public' AND tablename = 'profiles' AND policyname IN ('Eigenes Profil lesen', 'Eigenes Profil ändern')
 ORDER BY 1;

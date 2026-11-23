@@ -674,6 +674,11 @@ Stufe 5a – Konten, Sensibel, Technik, Schalter, Protokoll (23.11.2026):
 - **Technik:** `fs.statfs` auf dem Web-Ordner, Größe von `logs/` und `web/.next` (abgebrochen nach 200.000 Dateien oder 4 s, dann „mindestens“), KI-Kosten Magazin dieses Jahr. Gesamtkosten Anthropic/Google: keine Quelle (Q8), nur Hinweis.
 - **Schalter (E4):** `KONTEN_AKTIV`, `MAGAZIN_AKTIV`, `GEBURTSTAG_AKTIV`, `NEWSLETTER_AKTIV`, `ORTSSEITEN_MELDEN` über die GitHub-API (Token mit Variables: read), nur anzeigen, Link zu den Repository-Variablen.
 - **Protokoll:** Liste mit Filter (Aktion beginnt mit, Tabelle). „Rückgängig“ nur für `event_bearbeiten` und `ort_bearbeiten` und nur, wenn die Felder seitdem nicht noch einmal geändert wurden; läuft durch dieselben Prüfungen wie das Bearbeiten (bei Events bleibt das Feld danach geschützt, „Redaktionsänderungen zurücksetzen“ gibt es weiter).
+- **Cursor-Prüfung Stufe 5a (deploybar, SQL ausgeführt):**
+  - Befund 1 (mittel) behoben: Interessen mit weniger als 3 Konten fehlen ganz (`HAVING count(*) >= 3`); gezeigt wird nur, wie viele Werte ausgeblendet sind.
+  - Befund 2 (mittel) behoben: Die Policies „Eigenes Profil lesen/ändern“ (`auth_rollen.sql`) ließen ein Admin-JWT alle Profile lesen und ändern. Sie gelten jetzt nur für die eigene Zeile (Teil von `admin_rest_2026-11-23.sql`). Die Rollenprüfung liest nur die eigene Zeile, die Jobs nutzen den Service-Schlüssel, `ist_admin()` ist SECURITY DEFINER.
+  - Befund 3 (mittel) behoben: Ordnergröße mit `opendir` gestreamt, Grenze (200.000 Dateien, 4 s) je Eintrag geprüft.
+  - Befund 4 (gering) behoben: „Rückgängig“ prüft die erwarteten Werte auch im UPDATE; trifft es keine Zeile, kommt 409. Bewusst hingenommen: Eine spätere Änderung, die wieder genau auf demselben Wert landet (A → B → A), fällt nicht auf.
 
 ## Prüfhistorie
 
@@ -694,5 +699,5 @@ Stufe 5a – Konten, Sensibel, Technik, Schalter, Protokoll (23.11.2026):
 - 23.11.2026: SQL Stufe 3c ausgeführt, Cursor-Prüfung 3c deploybar, 2 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
 - 23.11.2026: Stufe 3c LIVE (d3b0bf3). Stufe 4 Newsletter-Double-Opt-in gebaut (lokal), SQL `newsletter_doi_2026-11-23.sql`, Anwaltsvorlage; Notizen in Anhang F.
 - 23.11.2026: Anwalt hat Stufe 4 freigegeben (Texte übernommen), Cursor-Prüfung 4 deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
-
 - 23.11.2026: Stufe 4 LIVE (220c612). Stufe 5a gebaut (lokal), SQL `admin_rest_2026-11-23.sql`; Notizen in Anhang F.
+- 23.11.2026: SQL Stufe 5a ausgeführt, Cursor-Prüfung 5a deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).

@@ -16,7 +16,14 @@ const eintrag = (x: Partial<ProtokollEintrag>): ProtokollEintrag => ({
 describe("Rückgängig", () => {
   it("alte Werte als Formular-Eingabe, wenn seitdem nichts geändert wurde", () => {
     const p = rueckgaengigPlan(eintrag({}), { titel: "Neu", kategorie: "musik", uhrzeit: "20:00:00", adresse: "Hauptstraße 1" });
-    expect(p).toEqual({ ok: true, tabelle: "events", id: ID, felder: { titel: "Alt", kategorie: "familie", uhrzeit: "19:00", adresse: "" } });
+    expect(p).toEqual({
+      ok: true,
+      tabelle: "events",
+      id: ID,
+      felder: { titel: "Alt", kategorie: "familie", uhrzeit: "19:00", adresse: "" },
+      // Cursor-Prüfung 5a, Befund 4: dieselbe Bedingung im UPDATE
+      erwartet: [["titel", "Neu"], ["kategorie", "musik"], ["uhrzeit", "20:00"], ["adresse", "Hauptstraße 1"]],
+    });
   });
   it("inzwischen wieder geändert → nein", () => {
     const p = rueckgaengigPlan(eintrag({}), { titel: "Noch neuer", kategorie: "musik", uhrzeit: "20:00:00", adresse: "Hauptstraße 1" });
@@ -29,6 +36,6 @@ describe("Rückgängig", () => {
   });
   it("Orte: Stammdaten zurück", () => {
     const p = rueckgaengigPlan(eintrag({ aktion: "ort_bearbeiten", tabelle: "orte", vorher: { adresse: "A 1" }, nachher: { adresse: "B 2" } }), { adresse: "B 2" });
-    expect(p).toEqual({ ok: true, tabelle: "orte", id: ID, felder: { adresse: "A 1" } });
+    expect(p).toEqual({ ok: true, tabelle: "orte", id: ID, felder: { adresse: "A 1" }, erwartet: [["adresse", "B 2"]] });
   });
 });

@@ -57,8 +57,11 @@ export async function POST(request: Request) {
       if (!pruefung.ok) return adminAntwort(400, { fehler: pruefung.fehler }, setCookies);
       const { update, geaendert } = updateBauen(aktuell as unknown as EventZeile, pruefung.felder);
       if (!geaendert.length) return adminAntwort(200, { ok: true, geaendert: [] }, setCookies);
-      const { error: f2 } = await db.from("events").update(update).eq("id", ziel);
+      let q = db.from("events").update(update).eq("id", ziel);
+      for (const [f, w] of plan.erwartet) q = w === null ? q.is(f, null) : q.eq(f, w as string | number | boolean);
+      const { data: getroffen, error: f2 } = await q.select("id");
       if (f2) return adminAntwort(f2.code === "23505" ? 409 : 500, { fehler: f2.code === "23505" ? "Rückgängig ergäbe eine Dublette (gleicher Titel, Tag, Ort, Uhrzeit)." : f2.message }, setCookies);
+      if (!getroffen?.length) return adminAntwort(409, { fehler: "Gerade eben anders geändert – bitte neu laden und von Hand prüfen." }, setCookies);
       await protokollieren(db, { aktion: "event_rueckgaengig", tabelle: "events", ziel_id: ziel, vorher: eintrag.nachher, nachher: { ...update, protokoll: id } });
       revalidateTag(EVENTS_CACHE_TAG, { expire: 0 });
       if (geaendert.includes("bild_url")) revalidateTag(`event-bild-${ziel}`, { expire: 0 });
@@ -74,9 +77,11 @@ export async function POST(request: Request) {
       if (!pruefung.ok) return adminAntwort(400, { fehler: `Rückgängig nicht möglich: ${pruefung.fehler}` }, setCookies);
       const update = aenderungen(aktuell as unknown as Record<string, unknown>, pruefung.felder);
       if (!Object.keys(update).length) return adminAntwort(200, { ok: true, geaendert: [] }, setCookies);
-      const { data: neu, error: f2 } = await db.from("orte").update(update).eq("id", ziel).select("id");
+      let q = db.from("orte").update(update).eq("id", ziel);
+      for (const [f, w] of plan.erwartet) q = w === null ? q.is(f, null) : q.eq(f, w as string | number | boolean);
+      const { data: neu, error: f2 } = await q.select("id");
       if (f2) return adminAntwort(400, { fehler: f2.message }, setCookies);
-      if (!neu?.length) return adminAntwort(403, { fehler: "Keine Schreibrechte auf Orte." }, setCookies);
+      if (!neu?.length) return adminAntwort(409, { fehler: "Gerade eben anders geändert oder keine Schreibrechte – bitte neu laden." }, setCookies);
       await protokollieren(db, { aktion: "ort_rueckgaengig", tabelle: "orte", ziel_id: ziel, vorher: eintrag.nachher, nachher: { ...update, protokoll: id } });
       revalidateTag(ORTE_CACHE_TAG, { expire: 0 });
       orteZwischenspeicherVerwerfen();
