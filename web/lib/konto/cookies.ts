@@ -49,22 +49,49 @@ export function istLokal(headers: Headers): boolean {
   return !headers.has("x-forwarded-proto") && !headers.has("x-forwarded-for") && !headers.has("x-real-ip");
 }
 
+/**
+ * Art des Sitzungs-Cookies. Die Konto-Sitzung ist der Standard; der Admin-Bereich (Plan Admin-Dashboard 3.3) hat ein
+ * eigenes Cookie mit Path=/, SameSite=Strict und kürzerer Laufzeit (web/lib/admin/konfig.ts).
+ */
+export interface SitzungsCookieArt {
+  name: string;
+  pfad: string;
+  sameSite: "Lax" | "Strict";
+  maxAge: number;
+  /** Laufzeit einer Reset-Sitzung (nur_passwort); ohne Angabe gilt maxAge */
+  resetMaxAge?: number;
+}
+
+/** Konto-Sitzung der Website: ddd_sitzung, nur an /api/konto, 30 Tage (Plan Nutzerkonten 3.2) */
+export const KONTO_COOKIE_ART: SitzungsCookieArt = {
+  name: SITZUNG_COOKIE,
+  pfad: "/api/konto",
+  sameSite: "Lax",
+  maxAge: SITZUNG_SEKUNDEN,
+  resetMaxAge: RESET_SITZUNG_SEKUNDEN,
+};
+
 /** Set-Cookie für die Sitzung. Reset-Sitzung: 1 Stunde und Merker nur_passwort. */
-export function sitzungsCookie(wert: SitzungsWert, lokal: boolean): string {
-  const maxAge = wert.nur_passwort ? RESET_SITZUNG_SEKUNDEN : SITZUNG_SEKUNDEN;
+export function sitzungsCookie(wert: SitzungsWert, lokal: boolean, art: SitzungsCookieArt = KONTO_COOKIE_ART): string {
+  const maxAge = wert.nur_passwort ? (art.resetMaxAge ?? art.maxAge) : art.maxAge;
   const kodiert = sitzungKodieren(wert);
   if (kodiert.length > 3500) {
     // Plan 3.2: bei mehr als 3,5 KB auf zwei Cookies verteilen. Bisher nicht nötig (etwa 1,5 KB), daher nur melden.
     console.error(`Sitzungs-Cookie ist ${kodiert.length} Zeichen lang – Aufteilen nötig (Plan 3.2)`);
   }
   return [
-    `${SITZUNG_COOKIE}=${kodiert}`,
-    "Path=/api/konto",
+    `${art.name}=${kodiert}`,
+    `Path=${art.pfad}`,
     `Max-Age=${maxAge}`,
     "HttpOnly",
-    "SameSite=Lax",
+    `SameSite=${art.sameSite}`,
     ...(lokal ? [] : ["Secure"]),
   ].join("; ");
+}
+
+/** Nur das Sitzungs-Cookie einer Art löschen (Admin-Bereich; die Konto-Sitzung nutzt cookiesLoeschen). */
+export function sitzungsCookieLoeschen(lokal: boolean, art: SitzungsCookieArt): string {
+  return [`${art.name}=`, `Path=${art.pfad}`, "Max-Age=0", "HttpOnly", `SameSite=${art.sameSite}`, ...(lokal ? [] : ["Secure"])].join("; ");
 }
 
 /** Set-Cookie für den Anzeige-Hinweis: „1“ = angemeldet mit Alters-Häkchen, „0“ = angemeldet ohne. */

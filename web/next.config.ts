@@ -19,6 +19,23 @@ const nextConfig: NextConfig = {
         source: "/konto/:pfad*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      // Admin-Bereich (Plan Admin-Dashboard 3.2): nie in den Index, nie zwischenspeichern, keinen Referrer weitergeben.
+      // Zusätzlich zu den Köpfen aus proxy.ts (zweite Sicherung).
+      {
+        source: "/admin/:pfad*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+      {
+        source: "/api/admin/:pfad*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
       // Eigene Fotos (web/public/ort-bilder): eine Woche cachen statt max-age=0 (Cursor-Prüfung 19.11.2026).
       // Getauschte Weihnachtsmarkt-Fotos bekommen über foto_version eine neue URL (?v=), alte Kopien stören also nicht.
       {

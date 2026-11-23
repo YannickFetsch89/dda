@@ -8,7 +8,9 @@ LOG=$DIR/logs/dashboard.log
 PIDDATEI=$DIR/logs/dashboard.pid
 export LD_LIBRARY_PATH="/home/dies_das_duesseldorfadmin/.local/lib:$LD_LIBRARY_PATH"
 
-laeuft() { curl -s -o /dev/null -m 5 "http://127.0.0.1:$PORT/_stcore/health"; }
+# Seit dem neuen Admin-Bereich (Plan Admin-Dashboard 4.1) liegt Streamlit unter admin.diesdas.events/alt/
+BASIS=alt
+laeuft() { curl -s -o /dev/null -m 5 "http://127.0.0.1:$PORT/$BASIS/_stcore/health"; }
 
 if [ "$1" = "neustart" ]; then
   if [ -f "$PIDDATEI" ] && kill "$(cat "$PIDDATEI")" 2>/dev/null; then
@@ -25,6 +27,7 @@ echo "$(date "+%F %T") Dashboard wird gestartet" >> "$LOG"
   --server.port $PORT \
   --server.address 127.0.0.1 \
   --server.headless true \
+  --server.baseUrlPath "$BASIS" \
   --browser.gatherUsageStats false \
   --client.toolbarMode minimal \
   >> "$LOG" 2>&1 < /dev/null &
