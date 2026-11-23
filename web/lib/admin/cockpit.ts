@@ -148,7 +148,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       titel: "Magazin-Entwürfe zur Prüfung",
       anzahl: zahlen?.magazin_in_pruefung ?? null,
       farbe: !zahlen ? "grau" : zahlen.magazin_in_pruefung === 0 ? "gruen" : zahlen.magazin_naechste && zahlen.magazin_naechste <= zweiTage ? "rot" : "gelb",
-      link: null,
+      link: "/admin/magazin",
       hinweis: zahlen?.magazin_naechste ? `nächste Ausgabe ab ${zahlen.magazin_naechste}` : undefined,
     },
     { schluessel: "vorschlaege", titel: "Offene Vorschläge", anzahl: vorschlaege, farbe: vorschlaege ? "gelb" : "gruen", link: "/admin/vorschlaege" },

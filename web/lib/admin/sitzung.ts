@@ -3,7 +3,9 @@
 // Rolle kommt aus profiles (RLS: eigene Zeile), die Zwei-Faktor-Stufe (aal) aus dem geprüften Access-Token.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { nutzerClient } from "../konto/clients";
+import { nutzerClient, tokenPruefen } from "../konto/clients";
+import { cookieLesen, sitzungDekodieren } from "../konto/cookies";
+import { tokenLaeuftAb } from "../konto/pruefungen";
 import { sitzungAusAnfrage, type Sitzung } from "../konto/sitzung";
 import { ADMIN_COOKIE_ART } from "./konfig";
 
@@ -43,6 +45,23 @@ export async function istAdminKonto(db: SupabaseClient, nutzerId: string): Promi
   } catch {
     return false;
   }
+}
+
+/**
+ * Für Server-Komponenten (z. B. die Magazin-Vorschau), die keine Cookies setzen können: prüft das Token im Cookie,
+ * erneuert es aber NICHT. Ein Erneuern hier würde den Refresh-Token verbrauchen, ohne das Cookie zu aktualisieren –
+ * der nächste API-Aufruf wäre dann abgemeldet. Läuft das Token gleich ab, gilt die Sitzung als abgelaufen; die
+ * Client-Seiten erneuern sie beim nächsten Aufruf von /api/admin.
+ */
+export async function adminSitzungLesen(kopf: Headers): Promise<SupabaseClient | null> {
+  const roh = cookieLesen(kopf, ADMIN_COOKIE_ART.name);
+  const wert = sitzungDekodieren(roh);
+  if (!wert || tokenLaeuftAb(wert.access, Date.now()) !== "gueltig") return null;
+  const id = await tokenPruefen(wert.access);
+  if (!id || aalAusToken(wert.access) !== "aal2") return null;
+  const db = nutzerClient(wert.access);
+  if (!db || !(await istAdminKonto(db, id.sub))) return null;
+  return db;
 }
 
 /**

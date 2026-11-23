@@ -37,7 +37,10 @@ function token(): string | null {
 export const ZWEIG = "claude/setup-project-structure-5QNOf";
 
 /** Startet einen Workflow per workflow_dispatch (braucht Actions: write). GitHub antwortet mit 204 ohne Lauf-ID. */
-export async function workflowStarten(name: WorkflowName): Promise<{ ok: true } | { ok: false; meldung: string }> {
+export async function workflowStarten(
+  name: WorkflowName,
+  inputs?: Record<string, string>,
+): Promise<{ ok: true } | { ok: false; meldung: string }> {
   const t = token();
   if (!t) return { ok: false, meldung: "GitHub nicht verbunden (Token fehlt)." };
   try {
@@ -49,7 +52,7 @@ export async function workflowStarten(name: WorkflowName): Promise<{ ok: true } 
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ ref: ZWEIG }),
+      body: JSON.stringify(inputs ? { ref: ZWEIG, inputs } : { ref: ZWEIG }),
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });

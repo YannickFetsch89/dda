@@ -1,7 +1,7 @@
 // Magazin: Daten laden (Plan 3.1, T10). Öffentliche Seiten lesen mit dem anon-Schlüssel über die View
 // magazin_oeffentlich (nur veröffentlichte Beiträge, nur öffentliche Spalten). Nur die Entwurfs-Vorschau liest mit dem
 // Service-Schlüssel (vorschauLaden, ohne Cache).
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { heuteBerlin } from "./datum";
 import { mitSpalten, normalisieren, type Zeile } from "./daten";
 import { istRubrik, type MagazinAutor, type MagazinBeitrag, type Rubrik } from "./magazin";
@@ -12,6 +12,9 @@ import type { DddEvent } from "./typen";
 
 /** T10: normal bis 5 min nach Veröffentlichung sichtbar, spätestens nach 10 min (auch beim Zurückziehen). */
 const MAGAZIN_CACHE = { stale: 60, revalidate: 300, expire: 600 };
+
+/** Cache-Tag aller Magazin-Loader */
+export const MAGAZIN_CACHE_TAG = "magazin";
 
 const BEITRAG_SPALTEN =
   "id, slug, rubrik, autor_slug, titel, seo_titel, teaser, inhalt_md, kurzfassung, faq, hero_bild, hero_alt, hero_nachweis, " +
@@ -62,6 +65,7 @@ export function beitragAus(z: Zeile): MagazinBeitrag | null {
 export async function magazinHeute(): Promise<string> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
+  cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
   return heuteBerlin(new Date());
 }
 
@@ -69,6 +73,7 @@ export async function magazinHeute(): Promise<string> {
 export async function beitraegeLaden(): Promise<MagazinBeitrag[]> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
+  cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
   const client = leseClient();
   if (!client) return [];
   const { data, error } = await client
@@ -87,6 +92,7 @@ export async function beitraegeLaden(): Promise<MagazinBeitrag[]> {
 export async function beitragLaden(slug: string): Promise<MagazinBeitrag | null> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
+  cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
   const client = leseClient();
   if (!client) return null;
   const { data, error } = await client.from("magazin_oeffentlich").select(BEITRAG_SPALTEN).eq("slug", slug).maybeSingle();
@@ -101,6 +107,7 @@ export async function beitragLaden(slug: string): Promise<MagazinBeitrag | null>
 export async function autorenLaden(): Promise<MagazinAutor[]> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
+  cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
   const client = leseClient();
   if (!client) return [];
   const { data, error } = await client
@@ -126,6 +133,7 @@ export async function autorenLaden(): Promise<MagazinAutor[]> {
 export async function eventsFuerIds(ids: string[]): Promise<{ heute: string; events: DddEvent[] }> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
+  cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
   const heute = heuteBerlin(new Date());
   const client = leseClient();
   if (!client || !ids.length) return { heute, events: [] };
@@ -177,6 +185,7 @@ export function ortZiel(slug: string, kopf: OrtKopf): string | null {
 export async function orteFuerSlugs(slugs: string[]): Promise<MagazinOrt[]> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
+  cacheTag(MAGAZIN_CACHE_TAG); // Admin-Bereich leert ihn nach Veröffentlichen/Zurückziehen/Korrektur (Plan Admin-Dashboard 4.6)
   const client = leseClient();
   if (!client || !slugs.length) return [];
   const { data, error } = await client

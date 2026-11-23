@@ -596,6 +596,16 @@ Stufe 1e (23.11.2026):
 - `stufeErklaeren` in `ableitungen.ts`. Ein Test sichert, dass ihre Stufe gleich `breite()` ist.
 - `/` → `/admin` greift nur mit dem echten Kopf `X-DDD-Bereich: admin` (`hatAdminKopf`), nicht mit `ADMIN_LOKAL`. So bleibt die Startseite beim Entwickeln erreichbar.
 
+Stufe 2 (23.11.2026):
+- **Prüfung nach Bearbeitung:** `web/lib/admin/magazin-pruefung.ts` überträgt die festen Regeln (a)–(i) aus `pipeline/magazin.py` auf das fertige Markdown. (g) entfällt, die gilt nur vor dem Modellaufruf.
+  - Zusätzlich: Alt-Text Pflicht, `/event/`-Links erlaubt.
+  - Gegen die drei veröffentlichten Beiträge geprüft: alle grün, wie in der Pipeline.
+  - Das Ergebnis übergibt die Route an `admin_magazin_speichern`. Grün → `in_pruefung`, rot → `entwurf`.
+- **Events tauschen:** `event_ids` folgt beim Speichern den Einbettungen `{{event:<id>}}` im Text. Getauscht wird also im Text, die Liste geht automatisch mit.
+- **`MagazinArtikel`:** Die gemeinsame Komponente nutzen die öffentliche Entwurfs-Vorschau und die Admin-Vorschau. Die öffentliche Beitragsseite bleibt unverändert (geringeres Risiko). Das weicht vom Wortlaut in 4.6 ab.
+- **Admin-Vorschau:** Sie ist eine Server-Komponente. Sie liest die Sitzung, erneuert sie aber nicht (`adminSitzungLesen`): Ein Erneuern würde den Refresh-Token verbrauchen, ohne das Cookie zu setzen.
+- **SQL S3:** `database/admin_magazin_2026-11-23.sql`, 11 Funktionen inklusive `admin_pflicht()` und `admin_magazin_autoren()`.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -606,3 +616,4 @@ Stufe 1e (23.11.2026):
 - 23.11.2026: Cursor-Prüfung 4: freigabefähig nach Trennung des Filter-Satzes, 4 Hinweise eingearbeitet → vierte Fassung. **Vom Auftraggeber freigegeben.**
 - 23.11.2026: Stufe 1a gebaut (09b56cb, lokal), Umsetzungsnotizen in Anhang F.
 - 23.11.2026: Stufen 1b und 1c LIVE (5246581, 11d3945), Stufe 1d LIVE (c16f017, Cursor: deploybar, 5 Hinweise behoben), Stufe 1e gebaut (lokal); Notizen in Anhang F.
+- 23.11.2026: Stufe 1 komplett LIVE (eeb93fd), Stufe 2 Magazin gebaut (lokal); Notizen in Anhang F.
