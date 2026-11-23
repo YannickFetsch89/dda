@@ -68,6 +68,27 @@ jobs:
       - name: Chromium für Playwright installieren
         run: python -m playwright install --with-deps chromium
 
+      # Kom(m)ödchen: Die Website (Sucuri-Firewall) weist GitHub-Server mit 503 ab, unser Server darf (geprüft 23.11.2026).
+      # Die Spielplanseite wird deshalb über unseren Server geholt; scraper/tier2/kommoedchen.py liest die Datei.
+      # Schlägt das fehl, ruft der Scraper wie bisher direkt ab – der Lauf bricht nicht ab.
+      - name: Kom(m)ödchen-Spielplan über unseren Server holen
+        continue-on-error: true
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh data/kommoedchen
+          schluessel="$RUNNER_TEMP/server_key"
+          trap 'rm -f "$schluessel"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" > "$schluessel"
+          chmod 600 "$schluessel"
+          ssh -i "$schluessel" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "$SERVER_USER@$SERVER_HOST" \
+            "curl -sf -m 60 -A 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' https://www.kommoedchen.de/spielplan/" \
+            > data/kommoedchen/spielplan.html
+          echo "Kom(m)ödchen-Spielplan: $(wc -c < data/kommoedchen/spielplan.html) Bytes"
+
       - name: Pipeline ausführen
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
