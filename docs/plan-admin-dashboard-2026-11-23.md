@@ -572,6 +572,15 @@ Gesamturteil Cursor: **freigabefähig**, sobald der Filter-Satz für `kategorisi
 
 Bewusst offen (Cursor bestätigt, kein Befund): Magazin-Prüfung als Job oder Route (4.6), Slug bei Meldungen (4.10), führende CSV je Guide (Q6). Ob die Host-Ampel aus dem Jail prüfen kann, zeigt der Betrieb (4.2).
 
+## Anhang F: Umsetzungsnotizen Stufe 1a (23.11.2026)
+
+Abweichungen vom Wortlaut, beim Bau gemessen:
+- **Weiterleitungen im Proxy (3.2):** Eine von Hand relative `Location: /admin` lehnt der Next-Proxy mit 500 ab (`TypeError: Invalid URL`, lokal gemessen). Umgesetzt wie die bestehenden Zweige mit `NextResponse.redirect(new URL("/admin", request.url), 308)`. Next macht eine Location mit eigenem Ursprung beim Ausliefern selbst relativ. Live gemessen an `/entdecken?kategorie=musik` → `location: /kategorie/musik`, lokal an `/` mit Admin-Kopf → `location: /admin`.
+- **`ADMIN_LOKAL` (3.2 Punkt 3):** Next setzt im Proxy selbst `X-Forwarded-*`-Köpfe, `istLokal` ist dort also auch ohne nginx falsch. Der Schalter wirkt deshalb nur unter `next dev` (`NODE_ENV=development`). Live läuft immer `next start`, dort greift er nie.
+- **Seiten-Schutz (3.3):** Die Admin-Seiten sind statische Hüllen. Ohne Cookie `ddd_admin` leitet der Proxy auf `/admin/anmelden`. Daten gibt es nur über `/api/admin/*`, das Sitzung, Rolle und `aal2` voll prüft. Die Hülle fragt `/api/admin/ich` und leitet je nach Antwort zur Anmeldung oder zum Code.
+- **Website-Rahmen:** Der Wurzel-Layout rendert Kopf, Fuß und Tab-Leiste auch unter `/admin`. Statt alle Seiten in eine Routengruppe zu verschieben, blendet `app/admin/admin.css` sie per `body:has(.admin-rahmen)` aus.
+- **Streamlit unter `/alt`:** Mit dem Deploy von 1a startet Streamlit mit `--server.baseUrlPath alt`. Bis nginx für admin.diesdas.events umgestellt ist (`docs/admin-nginx-anleitung.md`, Teil B), ist das alte Dashboard kurz nicht erreichbar.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -580,3 +589,4 @@ Bewusst offen (Cursor bestätigt, kein Befund): Magazin-Prüfung als Job oder Ro
 - 23.11.2026: Cursor-Prüfung 2: nicht freigabefähig, 6 Befunde (1 kritisch) plus ein eigener Fund. Alle nachgeprüft und eingearbeitet → dritte Fassung.
 - 23.11.2026: Cursor-Prüfung 3: freigabefähig, 4 Hinweise (1 mittel, 3 gering), nachgeprüft und eingearbeitet.
 - 23.11.2026: Cursor-Prüfung 4: freigabefähig nach Trennung des Filter-Satzes, 4 Hinweise eingearbeitet → vierte Fassung. **Vom Auftraggeber freigegeben.**
+- 23.11.2026: Stufe 1a gebaut (09b56cb, lokal), Umsetzungsnotizen in Anhang F.
