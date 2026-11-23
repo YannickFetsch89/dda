@@ -9,7 +9,9 @@ gegründet 1947. Kabarett, politische Satire, Stand-up-Comedy.
 Erstellt: 2026-04-02
 """
 import logging
+import time
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -161,6 +163,29 @@ def _seite_mit_playwright(url: str) -> Optional[str]:
         return None
 
 
+# Die Website steht hinter einer Sucuri-Firewall, die GitHub-Server mit 503 abweist (seit 20.11.2026); unser Server
+# darf. Der Scraper-Workflow (.github/workflows/scrape.yml) holt die Spielplanseite deshalb vorab über unseren Server
+# und legt sie hier ab. Fehlt die Datei oder ist sie alt/leer, wird wie bisher direkt abgerufen.
+VORAB_DATEI = Path("data/kommoedchen/spielplan.html")
+VORAB_HOECHSTALTER_S = 6 * 3600
+
+
+def _vorab_html(datei: Path = VORAB_DATEI) -> Optional[str]:
+    """Über unseren Server geholte Spielplanseite, wenn frisch und vollständig (sonst None)."""
+    try:
+        if not datei.is_file() or time.time() - datei.stat().st_mtime > VORAB_HOECHSTALTER_S:
+            return None
+        html = datei.read_text(encoding="utf-8", errors="replace")
+    except OSError as fehler:
+        logger.warning("Kom(m)ödchen: vorab geholte Seite nicht lesbar: %s", fehler)
+        return None
+    if "day-event-wrapper" not in html:
+        logger.warning("Kom(m)ödchen: vorab geholte Seite ohne Spielplan (%d Zeichen) – rufe direkt ab", len(html))
+        return None
+    logger.info("Kom(m)ödchen: Spielplan über unseren Server geholt (%d Zeichen)", len(html))
+    return html
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Events vom Kom(m)ödchen Düsseldorf.
@@ -176,7 +201,7 @@ def scrape() -> list[dict]:
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     try:
-        html = seite_abrufen(SPIELPLAN_URL, logger)
+        html = _vorab_html() or seite_abrufen(SPIELPLAN_URL, logger)
         if html is None:
             logger.warning("httpx fehlgeschlagen – versuche Playwright")
             html = _seite_mit_playwright(SPIELPLAN_URL)

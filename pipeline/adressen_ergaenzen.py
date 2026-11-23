@@ -15,6 +15,8 @@ den Ortsnamen. Die Adresse kommt deshalb aus Daten, die wir schon haben – ohne
      wenn alle solchen Namen dieselbe Adresse haben („Areal Böhler“ → „Weihnachtszauber Areal Böhler“).
   2. Dasselbe Event bei einer anderen Quelle: gleiches Datum, fast gleicher Titel (wie die Dubletten-Erkennung),
      Adresse eindeutig.
+  3. OpenStreetMap (Nominatim) für Orte, die in unseren Daten nicht vorkommen – höchstens OSM_JE_LAUF Orte je Lauf,
+     nur eindeutige Treffer mit passendem Namen und PLZ im Gebiet (Auftraggeber 20.11.2026, statt Google Places).
 
 Allgemeine Ortsangaben („Düsseldorf“, „Altstadt“, Stadtteilnamen, „Online“) bekommen nie eine Adresse.
 Bestehende Adressen werden nie überschrieben.
@@ -24,6 +26,7 @@ Im Lauf: adressen_schritt(events) nach der Deduplizierung, vor der Stadtteil-Zuo
 Aufruf:
     python -m pipeline.adressen_ergaenzen                 # Probelauf: künftige Rausgegangen-Events ohne Adresse
     python -m pipeline.adressen_ergaenzen --sql           # UPDATE-Datei für den Bestand (führt der Auftraggeber aus)
+    python -m pipeline.adressen_ergaenzen --osm --sql     # dazu OpenStreetMap für die übrigen Orte (2 s je Ort)
 """
 import argparse
 import logging
@@ -216,6 +219,125 @@ def adressen_ergaenzen(
     return zaehler
 
 
+# ── OpenStreetMap (Nominatim) für Orte, die in unseren Daten nicht vorkommen ────────────────────────────────────────
+# Entscheidung des Auftraggebers 20.11.2026: OpenStreetMap statt Google Places (Google-EEA-Bedingungen verbieten das
+# Speichern von Adressen). OSM-Daten dürfen gespeichert werden (ODbL, Quellenangabe „© OpenStreetMap-Mitwirkende“).
+# Nominatim-Regeln: erkennbarer User-Agent, höchstens 1 Anfrage/s (wir: 2 s, Projektregel), kein Massenabruf –
+# deshalb je Lauf höchstens OSM_JE_LAUF Orte; gefundene Adressen landen in den Events und dienen danach als
+# Adressbuch (kein zweiter Abruf für denselben Ort).
+NOMINATIM = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_UA = "DiesDasDuesseldorf-Adressen/1.0 (+https://diesdas.events)"
+OSM_PAUSE_S = 2.0
+OSM_JE_LAUF = 60
+# Düsseldorf, Neuss, Ratingen (lon_links, lat_oben, lon_rechts, lat_unten)
+OSM_VIEWBOX = "6.60,51.37,6.95,51.10"
+# Wörter, die allein keinen Ort ausmachen (für den Namensabgleich mit dem OSM-Treffer)
+_NAMENS_FUELLWOERTER = {
+    "düsseldorf", "duesseldorf", "dusseldorf", "neuss", "ratingen", "the", "und", "and", "der", "die", "das", "im",
+    "am", "an", "in", "bei", "zum", "zur", "von", "bar", "cafe", "café", "club", "restaurant", "studio", "haus",
+    "halle", "raum", "hof", "platz", "straße", "strasse", "str", "gmbh", "ev", "e.v",
+}
+
+
+def _namens_woerter(text: str) -> set[str]:
+    woerter = re.findall(r"[a-zäöüß0-9]+", (text or "").lower())
+    return {w for w in woerter if len(w) >= 3 and w not in _NAMENS_FUELLWOERTER}
+
+
+def _plz_im_gebiet(plz: Optional[str]) -> bool:
+    from pipeline.gebiet import PLZ_BEREICHE
+    return bool(plz and plz.isdigit() and any(a <= int(plz) <= b for a, b in PLZ_BEREICHE))
+
+
+def osm_adresse_aus_treffer(ort: str, treffer: list[dict]) -> Optional[str]:
+    """
+    Adresse aus Nominatim-Treffern (jsonv2, addressdetails=1): nur Treffer, deren Name ein kennzeichnendes Wort des
+    Ortsnamens enthält (bei Ein-Wort-Namen: genau gleicher Name), mit Straße und PLZ im Gebiet. Zeigen mehrere
+    passende Treffer auf verschiedene Straßen, bleibt es leer (mehrdeutig, z. B. mehrere Kirchen „St. Joseph“).
+    """
+    kern = _namens_woerter(ort)
+    if not kern:
+        return None
+    kandidaten = []
+    for t in treffer or []:
+        name = t.get("name") or (t.get("display_name") or "").split(",")[0]
+        treffer_woerter = _namens_woerter(name)
+        if not kern & treffer_woerter:
+            continue
+        # Ein-Wort-Namen („Cuvée“, „St. Joseph“) nur bei genau gleichem Namen – sonst zu viele Zufallstreffer
+        if len(kern) == 1 and treffer_woerter != kern:
+            continue
+        a = t.get("address") or {}
+        strasse = a.get("road") or a.get("pedestrian") or a.get("square") or a.get("footway")
+        plz = a.get("postcode")
+        if not strasse or not _plz_im_gebiet(plz):
+            continue
+        stadt = a.get("city") or a.get("town") or "Düsseldorf"
+        nr = a.get("house_number")
+        kandidaten.append(f"{strasse}{' ' + nr if nr else ''}, {plz} {stadt}")
+    if not kandidaten:
+        return None
+    return _beste_adresse(Counter(kandidaten))
+
+
+def osm_suchen(ort: str) -> list[dict]:
+    """Nominatim-Suche nach dem Ortsnamen im Gebiet (ein Abruf, Backoff bei 429). Fehler → leere Liste."""
+    import time
+
+    import httpx
+
+    warte = OSM_PAUSE_S
+    for _ in range(4):
+        try:
+            antwort = httpx.get(
+                NOMINATIM,
+                params={"q": ort, "format": "jsonv2", "addressdetails": 1, "limit": 5, "countrycodes": "de",
+                        "viewbox": OSM_VIEWBOX, "bounded": 1},
+                headers={"User-Agent": NOMINATIM_UA}, timeout=30,
+            )
+            if antwort.status_code == 429:
+                time.sleep(warte)
+                warte *= 2
+                continue
+            antwort.raise_for_status()
+            return antwort.json() or []
+        except Exception as e:
+            logger.error("OpenStreetMap-Suche für „%s“ fehlgeschlagen: %s", ort, e)
+            return []
+    return []
+
+
+def osm_ergaenzen(events: list[dict], max_orte: int = OSM_JE_LAUF) -> Counter:
+    """
+    Rausgegangen-Events ohne Adresse: je Ortsname eine OSM-Suche (höchstens max_orte), Adresse setzen, wenn eindeutig.
+    Allgemeine Ortsangaben und Orte, die schon wie eine Adresse aussehen, werden nicht gesucht.
+    """
+    import time
+
+    offen: dict[str, list[dict]] = defaultdict(list)
+    for e in events:
+        if not ist_rausgegangen(e) or e.get("adresse"):
+            continue
+        k = _ort_schluessel(e.get("ort"))
+        if k in _ALLGEMEINE_ORTE or ist_adresse(e.get("ort")):
+            continue
+        offen[k].append(e)
+    zaehler: Counter = Counter()
+    for i, (k, gruppe) in enumerate(list(offen.items())[:max_orte]):
+        if i:
+            time.sleep(OSM_PAUSE_S)
+        ort = gruppe[0].get("ort") or ""
+        adresse = osm_adresse_aus_treffer(ort, osm_suchen(ort))
+        zaehler["gesucht"] += 1
+        if adresse:
+            zaehler["gefunden"] += 1
+            for e in gruppe:
+                e["adresse"] = adresse
+                zaehler["events"] += 1
+    zaehler["uebrig"] = max(0, len(offen) - max_orte)
+    return zaehler
+
+
 def _alle(abfrage) -> list[dict]:
     """Seitenweise laden (Supabase liefert höchstens 1.000 Zeilen pro Abfrage)."""
     zeilen: list[dict] = []
@@ -252,10 +374,14 @@ def adressen_schritt(events: list[dict]) -> list[dict]:
     from pipeline.ort_zuordnung import aktueller_index
     zaehler = adressen_ergaenzen(events, adressbuch, titel_index_bauen(bestand + events),
                                  ort_adressen_bauen(aktueller_index()))
+    osm = osm_ergaenzen(events)
+    if osm["gesucht"]:
+        logger.info("Adressen aus OpenStreetMap: %d von %d Orten gefunden (%d Events), %d Orte auf den nächsten Lauf "
+                    "verschoben", osm["gefunden"], osm["gesucht"], osm["events"], osm["uebrig"])
     logger.info(
         "Adressen ergänzt (Rausgegangen): %d über den zugeordneten Ort, %d über den Ortsnamen, %d über Titel+Datum, "
         "%d weiter ohne Adresse",
-        zaehler["ort_id"], zaehler["ort"], zaehler["titel"], zaehler["ohne"],
+        zaehler["ort_id"], zaehler["ort"], zaehler["titel"], max(0, zaehler["ohne"] - osm["events"]),
     )
     return events
 
@@ -269,6 +395,8 @@ def main():
     parser = argparse.ArgumentParser(description="Adressen für Rausgegangen-Events aus eigenen Daten")
     parser.add_argument("--sql", nargs="?", const=f"database/adressen_rausgegangen_{date.today().isoformat()}.sql",
                         help="UPDATE-Datei für künftige Rausgegangen-Events ohne Adresse schreiben (ändert die DB nicht)")
+    parser.add_argument("--osm", action="store_true",
+                        help="übrige Orte zusätzlich bei OpenStreetMap suchen (2 s je Ort)")
     args = parser.parse_args()
 
     from database.client import get_supabase_client
@@ -285,6 +413,10 @@ def main():
     adressbuch = adressbuch_bauen(orte, bestand)
     from pipeline.ort_zuordnung import index_laden
     zaehler = adressen_ergaenzen(offen, adressbuch, titel_index_bauen(bestand), ort_adressen_bauen(index_laden(db)))
+    if args.osm:
+        osm = osm_ergaenzen(offen, max_orte=500)
+        zaehler["osm"] = osm["events"]
+        print(f"OpenStreetMap: {osm['gefunden']} von {osm['gesucht']} Orten gefunden ({osm['events']} Events)")
     gefunden = [e for e in offen if e.get("adresse")]
     print(f"Künftige Rausgegangen-Events ohne Adresse: {len(offen)}")
     print(f"  Adresse gefunden: {len(gefunden)} (zugeordneter Ort {zaehler['ort_id']}, Ortsname {zaehler['ort']}, "
@@ -298,7 +430,8 @@ def main():
 
     if args.sql:
         zeilen = [
-            f"-- Adressen für Rausgegangen-Events aus eigenen Daten – erzeugt am {heute} von pipeline/adressen_ergaenzen.py",
+            f"-- Adressen für Rausgegangen-Events aus eigenen Daten – erzeugt am {heute} von pipeline/adressen_ergaenzen.py"
+            + (" (mit OpenStreetMap, © OpenStreetMap-Mitwirkende, ODbL)" if args.osm else ""),
             "-- Setzt nur leere Felder (adresse IS NULL, stadtteil IS NULL). Keine Rausgegangen-Abrufe.",
             "BEGIN;",
         ]

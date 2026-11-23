@@ -123,6 +123,8 @@ export function buendeln(events: DddEvent[]): DddEvent[] {
       top_event_des_monats: gruppe.some((e) => e.top_event_des_monats),
       highlight_gesetzt_am: spaetester(gruppe.filter((e) => e.highlight_der_woche).map((e) => e.highlight_gesetzt_am)),
       top_gesetzt_am: spaetester(gruppe.filter((e) => e.top_event_des_monats).map((e) => e.top_gesetzt_am)),
+      // Ein Termin mit „nicht empfehlen“ sperrt den gebündelten Eintrag (sonst rutschte er über einen Schwester-Termin rein)
+      nicht_empfehlen: gruppe.some((e) => e.nicht_empfehlen),
     });
   }
   // Reihenfolge wie geladen (nach Datum), damit nachfolgende Sortierungen stabil bleiben

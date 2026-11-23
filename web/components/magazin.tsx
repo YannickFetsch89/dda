@@ -20,6 +20,8 @@ function InlineText({ teile }: { teile: Inline[] }) {
       {teile.map((t, i) => {
         if (t.art === "text") return <span key={i}>{t.text}</span>;
         if (t.art === "fett") return <strong key={i}><InlineText teile={t.kinder} /></strong>;
+        // mailto nur auf Adressen von diesdas.events (linkZiel) – normales <a>, kein next/link
+        if (t.href.startsWith("mailto:")) return <a key={i} href={t.href}><InlineText teile={t.kinder} /></a>;
         return t.extern ? (
           <a key={i} href={t.href} rel="noopener" target="_blank">
             <InlineText teile={t.kinder} />
@@ -82,14 +84,40 @@ function TagKasten({ tag }: { tag: string }) {
   );
 }
 
+/** Aufeinanderfolgende Event-Einbettungen als eine Gruppe – sie stehen im Raster nebeneinander (Auftraggeber, 23.11.2026). */
+export type TextTeil = Block | { art: "events"; ids: string[] };
+
+export function eventsGruppieren(bloecke: Block[]): TextTeil[] {
+  const teile: TextTeil[] = [];
+  for (const b of bloecke) {
+    const letzte = teile[teile.length - 1];
+    if (b.art === "einbettung" && b.typ === "event") {
+      if (letzte?.art === "events") letzte.ids.push(b.id);
+      else teile.push({ art: "events", ids: [b.id] });
+    } else {
+      teile.push(b);
+    }
+  }
+  return teile;
+}
+
 /** Beitragstext mit Einbettungen. Events und Orte kommen live aus der Datenbank (Plan T3). */
 export function MagazinText({ bloecke, events, orte, heute }: { bloecke: Block[]; events: DddEvent[]; orte: MagazinOrt[]; heute: string }) {
   const eventNach = new Map(events.map((e) => [e.id, e]));
   const ortNach = new Map(orte.map((o) => [o.slug, o]));
   return (
     <div className="mz-text">
-      {bloecke.map((b, i) => {
+      {eventsGruppieren(bloecke).map((b, i) => {
         switch (b.art) {
+          case "events": {
+            // Gelöschte oder nicht mehr geladene Events fallen still heraus (wie bisher die einzelne Karte)
+            const karten = b.ids.map((id) => eventNach.get(id)).filter((e): e is DddEvent => !!e);
+            return karten.length ? (
+              <div key={i} className="mz-einbettungen" role="list">
+                {karten.map((e) => <EventKarte key={e.id} e={e} heute={heute} />)}
+              </div>
+            ) : null;
+          }
           case "h2":
             return <h2 key={i} id={b.id} className="d">{b.text}</h2>;
           case "h3":
@@ -101,14 +129,6 @@ export function MagazinText({ bloecke, events, orte, heute }: { bloecke: Block[]
             return b.nummeriert ? <ol key={i}>{punkte}</ol> : <ul key={i}>{punkte}</ul>;
           }
           case "einbettung": {
-            if (b.typ === "event") {
-              const e = eventNach.get(b.id);
-              return e ? (
-                <div key={i} className="mz-einbettung" role="list">
-                  <EventKarte e={e} heute={heute} />
-                </div>
-              ) : null;
-            }
             if (b.typ === "ort") {
               const o = ortNach.get(b.id);
               return o ? <MagazinOrtKarte key={i} ort={o} /> : null;
@@ -150,7 +170,10 @@ export function BeitragKarte({ b, gross = false }: { b: MagazinBeitrag; gross?: 
   );
 }
 
-/** Autorenzeile (Plan 2.3 Punkt 6): „von [Pseudonym] (redaktionelles Pseudonym) · Redaktion dies.das.düsseldorf“. */
+/**
+ * Autorenzeile im Beitrag: „von [Autorenname]“ mit Link aufs Autorenprofil. Seit 20.11.2026 (Auftraggeber) ohne den
+ * Zusatz „(redaktionelles Pseudonym)“ und ohne Link auf die Redaktionsseite – beides steht im Autorenprofil.
+ */
 export function AutorZeile({ autor }: { autor: MagazinAutor | null }) {
   return (
     <span className="mz-autor">
@@ -161,10 +184,11 @@ export function AutorZeile({ autor }: { autor: MagazinAutor | null }) {
       <span>
         {autor ? (
           <>
-            von <Link href={autorPfad(autor)}>{autor.name}</Link> (redaktionelles Pseudonym) ·{" "}
+            von <Link href={autorPfad(autor)}>{autor.name}</Link>
           </>
-        ) : null}
-        <Link href="/magazin/redaktion">Redaktion dies.das.düsseldorf</Link>
+        ) : (
+          "von der Redaktion dies.das.düsseldorf"
+        )}
       </span>
     </span>
   );

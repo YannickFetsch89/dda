@@ -15,6 +15,7 @@ import { Icon } from "@/components/karten";
 import { KneipenKarte } from "@/components/kneipen-karte";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
+import { MagazinLesetipp } from "@/components/magazin-verweise";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { SEITE, SORTIERUNGEN, sortieren, stadtteileText, zaehlen, zahl } from "@/lib/guide-filter";
 import {
@@ -274,6 +275,7 @@ export default async function KneipenBars(props: { searchParams: Promise<SP> }) 
       <Hero orte={alle} />
       <div className="container">
         <GuideEinleitung seite="kneipen-bars" werte={{ anzahl: zahl(alle.length) }} />
+        <MagazinLesetipp guide="kneipen-bars" />
       </div>
       <Suspense fallback={<Ansicht alle={alle} f={STANDARD} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />

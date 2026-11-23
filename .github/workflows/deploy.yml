@@ -24,11 +24,18 @@ jobs:
           KONTEN_AKTIV: ${{ vars.KONTEN_AKTIV }}
           # Schlüssel der internen Magazin-Auswahl-Route (Plan Redaktion T11); derselbe Wert als Secret der Magazin-Action
           MAGAZIN_JOB_SCHLUESSEL: ${{ secrets.MAGAZIN_JOB_SCHLUESSEL }}
+          # Geburtstagsmail (Plan Geburtstagsmail G2/G4): Abmelde-Token und interne Tipps-Route; dieselben Werte als
+          # Secrets der Action geburtstag.yml
+          GEBURTSTAG_TOKEN_SCHLUESSEL: ${{ secrets.GEBURTSTAG_TOKEN_SCHLUESSEL }}
+          GEBURTSTAG_JOB_SCHLUESSEL: ${{ secrets.GEBURTSTAG_JOB_SCHLUESSEL }}
+          # Admin-Bereich (Plan Admin-Dashboard 3.4, E3): Fine-grained Token nur für dieses Repo,
+          # Actions: read and write, Variables: read. Ohne Secret zeigt das Cockpit „GitHub nicht verbunden“.
+          ADMIN_GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY,KONTEN_AKTIV,MAGAZIN_JOB_SCHLUESSEL
+          envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY,KONTEN_AKTIV,MAGAZIN_JOB_SCHLUESSEL,GEBURTSTAG_TOKEN_SCHLUESSEL,GEBURTSTAG_JOB_SCHLUESSEL,ADMIN_GITHUB_TOKEN
           script: |
             cd /home/dies_das_duesseldorfadmin/dda
 
@@ -107,6 +114,39 @@ jobs:
               echo "Magazin-Schlüssel in web/.env.local gesetzt"
             fi
 
+            # Geburtstagsmail (Plan Geburtstagsmail G2/G4): Token-Schlüssel der Abmelde-Routen und Schlüssel der internen
+            # Tipps-Route in web/.env.local. Ohne Secret: Abmelde-Links ungültig bzw. Tipps-Route geschlossen (404).
+            if [ -n "$GEBURTSTAG_TOKEN_SCHLUESSEL" ]; then
+              touch web/.env.local
+              if grep -q "^GEBURTSTAG_TOKEN_SCHLUESSEL=" web/.env.local; then
+                sed -i "s|^GEBURTSTAG_TOKEN_SCHLUESSEL=.*|GEBURTSTAG_TOKEN_SCHLUESSEL=$GEBURTSTAG_TOKEN_SCHLUESSEL|" web/.env.local
+              else
+                echo "GEBURTSTAG_TOKEN_SCHLUESSEL=$GEBURTSTAG_TOKEN_SCHLUESSEL" >> web/.env.local
+              fi
+              echo "Geburtstag-Token-Schlüssel in web/.env.local gesetzt"
+            fi
+            if [ -n "$GEBURTSTAG_JOB_SCHLUESSEL" ]; then
+              touch web/.env.local
+              if grep -q "^GEBURTSTAG_JOB_SCHLUESSEL=" web/.env.local; then
+                sed -i "s|^GEBURTSTAG_JOB_SCHLUESSEL=.*|GEBURTSTAG_JOB_SCHLUESSEL=$GEBURTSTAG_JOB_SCHLUESSEL|" web/.env.local
+              else
+                echo "GEBURTSTAG_JOB_SCHLUESSEL=$GEBURTSTAG_JOB_SCHLUESSEL" >> web/.env.local
+              fi
+              echo "Geburtstag-Job-Schlüssel in web/.env.local gesetzt"
+            fi
+
+            # GitHub-Token des Admin-Bereichs (Plan Admin-Dashboard 3.4): nur Zeichen [A-Za-z0-9_], sed-sicher.
+            # Ohne Secret zeigt das Cockpit „GitHub nicht verbunden“.
+            if [ -n "$ADMIN_GITHUB_TOKEN" ]; then
+              touch web/.env.local
+              if grep -q "^ADMIN_GITHUB_TOKEN=" web/.env.local; then
+                sed -i "s|^ADMIN_GITHUB_TOKEN=.*|ADMIN_GITHUB_TOKEN=$ADMIN_GITHUB_TOKEN|" web/.env.local
+              else
+                echo "ADMIN_GITHUB_TOKEN=$ADMIN_GITHUB_TOKEN" >> web/.env.local
+              fi
+              echo "Admin-GitHub-Token in web/.env.local gesetzt"
+            fi
+
             # Umgebungsvariablen für uv/Python
             export LD_LIBRARY_PATH="/home/dies_das_duesseldorfadmin/.local/lib:$LD_LIBRARY_PATH"
             export PATH="/home/dies_das_duesseldorfadmin/.local/bin:$PATH"
@@ -124,7 +164,7 @@ jobs:
             chmod +x /home/dies_das_duesseldorfadmin/bin/dashboard.sh
             /home/dies_das_duesseldorfadmin/bin/dashboard.sh neustart
             sleep 5
-            curl -sf -o /dev/null -m 10 http://127.0.0.1:8502/_stcore/health || { echo "Dashboard antwortet nicht"; tail -20 /home/dies_das_duesseldorfadmin/dda/logs/dashboard.log; exit 1; }
+            curl -sf -o /dev/null -m 10 http://127.0.0.1:8502/alt/_stcore/health || { echo "Dashboard antwortet nicht"; tail -20 /home/dies_das_duesseldorfadmin/dda/logs/dashboard.log; exit 1; }
 
             # Website (Next.js) bauen und neu starten
             # Start-Skript und /proc-Shim liegen im Repo, Cron ruft ~/bin/website.sh auf

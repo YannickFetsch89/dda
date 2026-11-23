@@ -9,12 +9,14 @@ import { KalenderToggle } from "@/components/datum-waehler";
 import { Datumsleiste } from "@/components/datumsleiste";
 import { WochenendTag } from "@/components/wochenend-tag";
 import { WmStartBox } from "@/components/wm-startbox";
+import { MagazinStartBox } from "@/components/magazin-verweise";
 import { StartPersoenlich, VorschauLinks, VorschauLinksMit } from "@/components/start-persoenlich";
 import { kontenAktiv } from "@/lib/konto/konfig";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
 import { eventPoolLaden, vergangeneWochenendEvents } from "@/lib/daten";
-import { beliebtAuswahl, jeEventEinmal, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startPlaetze, startrasterKlasse, stufenKontext, themenZaehlen, tippGilt, uhrzeitenVon, wochenendProgramm } from "@/lib/ableitungen";
-import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumAuflösen, zeitraumImSatz, metaZeile } from "@/lib/datum";
+import { jeEventEinmal, filtern, istKostenlos, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, neuSeit, stadtteileZaehlen, startrasterKlasse, themenZaehlen, uhrzeitenVon } from "@/lib/ableitungen";
+import { startseitenAuswahl } from "@/lib/startseite";
+import { MONATE, WT_KURZ, kostenlosKennzahl, plusTage, tagesleistenLaenge, tagKurz, tagMonat, wochentag, zeitraumImSatz, metaZeile } from "@/lib/datum";
 import { kategorie, katStil } from "@/lib/kategorien";
 import { stadtteilName } from "@/lib/stadtteile";
 import type { DddEvent } from "@/lib/typen";
@@ -59,14 +61,12 @@ export default async function Startseite(props: PageProps<"/">) {
 async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const sp = await searchParams;
   const geladen = await eventPoolLaden();
-  // Abgesagte Events erscheinen nicht auf der Startseite (in Kalender/Entdecken bleiben sie markiert sichtbar)
-  const pool = { ...geladen, events: geladen.events.filter((e) => !e.abgesagt) };
+  // Tipp, Picks, „Beliebt“, Wochenende: gemeinsame Rechnung mit der Admin-Tagesvorschau (web/lib/startseite.ts).
+  // Der Pool darin ist ohne abgesagte Events (in Kalender/Entdecken bleiben sie markiert sichtbar).
+  const auswahl = startseitenAuswahl(geladen, await vergangeneWochenendEvents(geladen.heute), typeof sp.datum === "string" ? sp.datum : undefined);
+  const { pool, z, imZeitraum, woche, tipp, picks, vonRedaktion, beliebt, wochenende } = auswahl;
   const { heute } = pool;
-  const z = zeitraumAuflösen(typeof sp.datum === "string" ? sp.datum : undefined, heute);
   const istHeute = z.von === heute && z.bis === heute;
-
-  const imZeitraum = filtern(pool.events, { von: z.von, bis: z.bis });
-  const woche = filtern(pool.events, { von: z.von, bis: plusTage(z.von, 6) });
 
   // Hero
   const neu = neuSeit(pool.events, pool.jetzt).sort(nachNeu);
@@ -94,18 +94,6 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
     };
   });
 
-  // Tipp + Picks: fünf Plätze nach Stufe und Sortierschlüssel (docs/plan-empfehlungen-2026-11-13.md, Abschnitt 9).
-  // Kandidaten mit Langläufern; in der Tagesansicht gilt der Fokustag, im Zeitraum nicht.
-  const fokusTag = z.von === z.bis ? z.von : null;
-  const stufen = stufenKontext(pool.events, heute);
-  const { tipp, picks } = startPlaetze(filtern(pool.events, { von: z.von, bis: z.bis, mitLanglaeufern: true }), stufen, fokusTag);
-  // „Von der Redaktion“ nur, wenn der gezeigte Tipp die Tipp-Flagge trägt und sie an diesem Tag gilt
-  const vonRedaktion = !!tipp && tippGilt(tipp, fokusTag);
-  // „Beliebt“: bisherige Menge, Stamm draußen, mehrtägige Events in der Tagesansicht nur am Fokustag (auch beim Auffüllen)
-  // Ohne die Events aus Tipp und Picks – sonst zeigt die Startseite dieselben Events zweimal
-  const schonGezeigt = new Set([tipp, ...picks].filter((e): e is DddEvent => !!e).map((e) => e.id));
-  const beliebt = beliebtAuswahl(imZeitraum, woche, stufen, fokusTag, 5, schonGezeigt);
-
   // Infoboxen
   const abend = imZeitraum.filter((e) => uhrzeitenVon(e).some((z) => z >= "17:00")).sort(nachZeit).slice(0, 8);
   // Jedes Event nur einmal – mehrere Termine derselben Reihe/desselben Titels am Ort zählen als ein Eintrag
@@ -115,9 +103,6 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
   // Kostenlos + Themen (Woche ab gewähltem Tag)
   const gratisWoche = woche.filter(istKostenlos);
   const themen = themenZaehlen(woche).slice(0, 14);
-
-  // Bis einschließlich Sonntag auch die schon vergangenen Tage des Wochenendes (Fr/Sa) zeigen
-  const wochenende = wochenendProgramm(pool, await vergangeneWochenendEvents(heute));
 
   return (
     <>
@@ -373,6 +358,11 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             Ganzes Wochenende ansehen
           </Link>
         </section>
+
+        {/* Magazin (Plan Redaktion 5.9, E9): die drei neuesten Beiträge; ohne Beitrag oder bei Schalter aus nichts */}
+        <Suspense fallback={null}>
+          <MagazinStartBox />
+        </Suspense>
 
         <section id="newsletter" className="newsletter" style={{ marginTop: 24 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>

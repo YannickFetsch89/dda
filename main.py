@@ -290,9 +290,12 @@ async def _schritte_ausfuehren(report: LaufReport):
     try:
         from pipeline.beschreibung_quellen import beschreibungen_nachziehen, veranstalter_nachziehen
         # Nur ins Log – Kennzahlen sind Spalten in scraper_laeufe, eine neue bräuchte erst eine DB-Spalte
-        beschreibungen_nachziehen(limit=40)
-        # Veranstalter-Events: Text aus der eigenen Event-Seite, ein Text pro Stück (Zeitbudget 10 Minuten)
-        veranstalter_nachziehen(max_stuecke=300, max_sekunden=600)
+        # Alle offenen Termine je Lauf (Auftraggeber 20.11.2026: „Beschreibungen sollen immer mitgenommen werden“);
+        # vorher 40 Rausgegangen-Events und 10 Minuten für Veranstalter – der Rückstand wuchs. Die Grenzen hier sind
+        # nur Schutz gegen Hänger, das Zeitlimit des Workflows (.github/workflows/scrape.yml) ist darauf abgestimmt.
+        beschreibungen_nachziehen(limit=1000)
+        # Veranstalter-Events: Text aus der eigenen Event-Seite, ein Text pro Stück (Zeitbudget 90 Minuten)
+        veranstalter_nachziehen(max_stuecke=2000, max_sekunden=5400)
     except Exception as e:
         logger.error("Beschreibungen aus Veranstalter-Quellen fehlgeschlagen: %s", e)
 
@@ -312,6 +315,15 @@ async def _schritte_ausfuehren(report: LaufReport):
         nach_lauf_melden(lauf_start)
     except Exception as e:
         logger.error("IndexNow fehlgeschlagen: %s", e)
+
+    # Schritt 3e: Dubletten und Events außerhalb des Gebiets als Vorschläge für den Admin-Bereich
+    # (Plan docs/plan-admin-dashboard-2026-11-23.md, 3.5) – ändert selbst nichts, wirft nicht
+    logger.info("--- Schritt 3e: Vorschläge für den Admin-Bereich ---")
+    try:
+        from pipeline.vorschlaege import vorschlaege_erzeugen
+        vorschlaege_erzeugen(report.lauf_id)
+    except Exception as e:
+        logger.error("Vorschläge fehlgeschlagen: %s", e)
 
     # Schritt 4: Caption-Generierung
     logger.info("--- Schritt 4: Caption-Generierung ---")

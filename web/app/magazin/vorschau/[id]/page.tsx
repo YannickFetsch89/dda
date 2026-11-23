@@ -5,11 +5,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AutorZeile, MagazinText } from "@/components/magazin";
-import { RUBRIK_NAME, entstehungsHinweis } from "@/lib/magazin";
-import { heroFuer } from "@/lib/magazin-bilder";
+import { MagazinArtikel } from "@/components/magazin-artikel";
 import { autorenLaden, eventsFuerIds, orteFuerSlugs, vorschauLaden } from "@/lib/magazin-daten";
-import { parsen } from "@/lib/magazin-markdown";
 import { gleichZeitkonstant, sha256Hex } from "@/lib/pfad-pruefung";
 
 export const metadata: Metadata = { title: "Vorschau", robots: { index: false, follow: false } };
@@ -53,33 +50,11 @@ async function VorschauInhalt({ params, searchParams }: Props) {
   const b = v.beitrag;
   const [autoren, { events, heute }, orte] = await Promise.all([autorenLaden(), eventsFuerIds(b.event_ids), orteFuerSlugs(b.ort_slugs)]);
   const autor = autoren.find((a) => a.slug === b.autor_slug) ?? null;
-  const hero = heroFuer(b);
   return (
     <article className="container sektion mz-beitrag">
       <p className="mz-hinweis" role="status">Entwurfs-Vorschau – nicht öffentlich.</p>
       <PruefListe pruefung={v.pruefung} />
-      <header className="mz-kopf">
-        <span className="mz-rubrik-label">{RUBRIK_NAME[b.rubrik]}</span>
-        <h1 className="d">{b.titel}</h1>
-        {b.teaser && <p className="mz-teaser">{b.teaser}</p>}
-        <p className="mz-zeile"><AutorZeile autor={autor} /></p>
-      </header>
-      <figure className="mz-hero">
-        {/* eslint-disable-next-line @next/next/no-img-element -- statische Datei aus public/ */}
-        <img src={hero.pfad} alt={hero.alt} width={1200} height={675} />
-        <figcaption>
-          {hero.ki ? "Symbolbild (KI-generiert)" : hero.nachweis}
-          {hero.ersatz ? " · Rubrik-Ersatzbild (gespeichertes Bild fehlt oder ist nicht erlaubt)" : ""}
-        </figcaption>
-      </figure>
-      {b.kurzfassung?.length ? (
-        <aside className="mz-blick">
-          <h2 className="mz-blick__titel">Auf einen Blick</h2>
-          <ul>{b.kurzfassung.map((k, i) => <li key={i}>{k}</li>)}</ul>
-        </aside>
-      ) : null}
-      <MagazinText bloecke={parsen(b.inhalt_md)} events={events} orte={orte} heute={heute} />
-      <p className="mz-entstehung">{entstehungsHinweis(b)}</p>
+      <MagazinArtikel b={b} autor={autor} events={events} orte={orte} heute={heute} ersatzHinweis />
     </article>
   );
 }

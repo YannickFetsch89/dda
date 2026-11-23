@@ -11,6 +11,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { entdeckenZiel, pfadPruefen } from "@/lib/pfad-pruefung";
 import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidungen";
+import { ADMIN_OFFENE_SEITEN, hatAdminKopf, istAdminBereich, istAdminPfad } from "@/lib/admin/bereich";
+import { ADMIN_COOKIE } from "@/lib/admin/konfig";
+import { cookieLesen } from "@/lib/konto/cookies";
 
 const GONE_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Event nicht mehr verfügbar · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><h1>Dieses Event ist nicht mehr verfügbar.</h1><p>Die Seite wurde entfernt, weil das Event schon lange vorbei ist.</p><p><a href="/entdecken" style="color:#457b9d">Aktuelle Events in Düsseldorf entdecken</a></p></body></html>`;
 
@@ -21,6 +24,42 @@ const NICHT_GEFUNDEN_HTML = `<!doctype html><html lang="de"><head><meta charset=
 
 export async function proxy(request: NextRequest) {
   const pfad = request.nextUrl.pathname;
+
+  // Admin-Bereich (Plan docs/plan-admin-dashboard-2026-11-23.md, 3.2) – VOR allen anderen Zweigen.
+  // Den Bereich erkennt nur der Kopf X-DDD-Bereich, den nginx je Website fest setzt (Host ist immer localhost:3847).
+  // Startseite: Auf admin.diesdas.events → 308 auf /admin. Weiterleitung wie die übrigen Zweige über
+  // NextResponse.redirect(new URL(…, request.url)): Next macht eine Location mit eigenem Ursprung selbst relativ
+  // (live gemessen 23.11.2026: /entdecken?kategorie=musik → „location: /kategorie/musik“). Eine von Hand relative
+  // Location lehnt der Proxy dagegen mit 500 ab („Invalid URL“, lokal gemessen 23.11.2026).
+  // Auf der Website läuft „/“ unverändert weiter, ohne die übrigen Zweige.
+  if (pfad === "/") {
+    if (hatAdminKopf(request.headers)) {
+      const antwort = NextResponse.redirect(new URL("/admin", request.url), 308);
+      antwort.headers.set("Cache-Control", "no-store");
+      return antwort;
+    }
+    return NextResponse.next();
+  }
+  if (istAdminPfad(pfad)) {
+    // Ohne den Admin-Kopf gibt es den Bereich nicht: echte 404, auch auf der öffentlichen Website
+    if (!istAdminBereich(request.headers)) {
+      return new NextResponse(NICHT_GEFUNDEN_HTML, {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+      });
+    }
+    // Seiten ohne Admin-Cookie gleich zur Anmeldung (Bequemlichkeit; die Daten schützt erst /api/admin)
+    if (!pfad.startsWith("/api/") && !ADMIN_OFFENE_SEITEN.has(pfad) && !cookieLesen(request.headers, ADMIN_COOKIE)) {
+      const antwort = NextResponse.redirect(new URL("/admin/anmelden", request.url), 307);
+      antwort.headers.set("Cache-Control", "no-store");
+      return antwort;
+    }
+    const antwort = NextResponse.next();
+    antwort.headers.set("Cache-Control", "private, no-store");
+    antwort.headers.set("Referrer-Policy", "no-referrer");
+    antwort.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return antwort;
+  }
 
   // Ein einzelner Kategorie- oder Stadtteil-Filter ist die Landingpage → 301 (Filter mit mehr Parametern bleiben noindex)
   if (pfad === "/entdecken") {
@@ -75,5 +114,8 @@ export const config = {
     // Ortsseiten (Plan Locations 3.10): aktive Spielstätte 200, Guide-Slug 308 auf die kanonische Guide-URL,
     // alter Slug 308 über ort_weiterleitungen, sonst echte 404. /orte selbst ist die Übersicht (immer 200).
     "/orte/:path+",
+    // Admin-Bereich (Plan Admin-Dashboard 3.2): Startseite (308 nur mit Admin-Kopf), Seiten und API.
+    // /_next und Bildpfade bleiben bewusst außerhalb, damit die Website nicht langsamer wird.
+    "/", "/admin/:path*", "/api/admin/:path*",
   ],
 };

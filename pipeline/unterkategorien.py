@@ -126,6 +126,8 @@ def nachtragen(limit: int | None = 600, dry_run: bool = False) -> int:
                 db.table("events")
                 .select("id,titel,ort,beschreibung,kategorie")
                 .is_("unterkategorie", "null")
+                # Feldschutz (Plan Admin-Dashboard 4.4 Teil A): von der Redaktion geleerte Unterkategorie nicht wieder füllen
+                .not_.contains("redaktion_felder", ["unterkategorie"])
                 .eq("abgelehnt", False)
                 .gte("datum", date.today().isoformat())
                 .order("datum")
@@ -219,7 +221,7 @@ def vereinheitlichen(dry_run: bool = False) -> int:
         try:
             antwort = (
                 db.table("events")
-                .select("id,titel,ort,kategorie,unterkategorie")
+                .select("id,titel,ort,kategorie,unterkategorie,redaktion_felder")
                 .not_.is_("unterkategorie", "null")
                 .eq("abgelehnt", False)
                 .gte("datum", date.today().isoformat())
@@ -235,7 +237,10 @@ def vereinheitlichen(dry_run: bool = False) -> int:
         if len(daten) < 1000:
             break
 
-    aenderungen = angleichungen(zeilen)
+    # Feldschutz (Plan Admin-Dashboard 4.4 Teil A, Cursor-Prüfung 4): Geschützte Zeilen zählen bei der Mehrheit mit,
+    # werden aber nicht geändert.
+    geschuetzt = {z["id"] for z in zeilen if "unterkategorie" in (z.get("redaktion_felder") or [])}
+    aenderungen = [(i, s) for i, s in angleichungen(zeilen) if i not in geschuetzt]
     logger.info("Unterkategorien vereinheitlichen: %d Termine angeglichen", len(aenderungen))
     if dry_run:
         return 0

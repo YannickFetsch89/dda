@@ -76,7 +76,7 @@ def events_laden(
                 "id, titel, datum, uhrzeit, ort, kategorie, beschreibung, "
                 "preis, quelle_name, quelle_url, bild_url, instagram_caption, "
                 "status, abgelehnt, tipp_des_tages, highlight_der_woche, "
-                "top_event_des_monats, stadtteil, erstellt_am"
+                "top_event_des_monats, nicht_empfehlen, stadtteil, erstellt_am"
             )
             .gte("datum", von.isoformat())
             .lte("datum", bis.isoformat())
@@ -99,7 +99,7 @@ def events_laden(
                     "id, titel, datum, uhrzeit, ort, kategorie, beschreibung, "
                     "preis, quelle_name, quelle_url, bild_url, instagram_caption, "
                     "status, abgelehnt, tipp_des_tages, highlight_der_woche, "
-                    "top_event_des_monats, stadtteil, erstellt_am"
+                    "top_event_des_monats, nicht_empfehlen, stadtteil, erstellt_am"
                 )
                 .or_("tipp_des_tages.eq.true,highlight_der_woche.eq.true,top_event_des_monats.eq.true")
                 .order("datum", desc=False)
@@ -244,6 +244,8 @@ def event_karte(event: dict, key_prefix: str):
                 st.markdown(f"**{badge}**")
             if abgelehnt:
                 st.warning("🚫 Abgelehnt – wird nicht gepostet")
+            if event.get("nicht_empfehlen"):
+                st.info("🙈 Nicht empfehlen – nie Tipp, Pick, Beliebt, Highlight oder Top; bleibt im Kalender sichtbar")
             if beschreibung:
                 st.markdown(f"_{beschreibung[:200]}_")
 
@@ -258,7 +260,7 @@ def event_karte(event: dict, key_prefix: str):
 
         # Aktionsbuttons
         st.divider()
-        btn_cols = st.columns(5)
+        btn_cols = st.columns(6)
 
         # Ablehnen / Freigeben
         with btn_cols[0]:
@@ -305,8 +307,18 @@ def event_karte(event: dict, key_prefix: str):
                     st.cache_data.clear()
                     st.rerun()
 
-        # Quelle-Link
+        # Nicht empfehlen (Redaktions-Schalter, database/nicht_empfehlen_2026-11-23.sql): schlägt alle Flaggen
         with btn_cols[4]:
+            gesperrt = event.get("nicht_empfehlen", False)
+            label = "🙈 Nicht empfehlen ✓" if gesperrt else "🙈 Nicht empfehlen"
+            btn_type = "primary" if gesperrt else "secondary"
+            if st.button(label, key=f"{key_prefix}_nichtempf_{eid}", use_container_width=True, type=btn_type):
+                if feld_toggeln(eid, "nicht_empfehlen", not gesperrt):
+                    st.cache_data.clear()
+                    st.rerun()
+
+        # Quelle-Link
+        with btn_cols[5]:
             quelle_url = event.get("quelle_url", "")
             if quelle_url:
                 st.link_button("🔗 Original", quelle_url, use_container_width=True)

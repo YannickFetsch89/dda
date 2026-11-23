@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import { BildImg } from "@/components/client";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { GuideEinleitung, GuideSeoText } from "@/components/guide-text";
+import { MagazinLesetipp } from "@/components/magazin-verweise";
 import { Icon } from "@/components/karten";
 import { OrtLinkListe } from "@/components/ort-karten";
 import { ScrollReihe } from "@/components/scroll-reihe";
@@ -250,6 +251,7 @@ export default async function Spielplaetze(props: { searchParams: Promise<SP> })
       <Hero anzahl={alle.length} />
       <div className="container">
         <GuideEinleitung seite="spielplaetze" werte={{ anzahl: zahl(alle.length) }} />
+        <MagazinLesetipp guide="spielplaetze" />
       </div>
       <Suspense fallback={<Ansicht alle={alle} f={STANDARD} />}>
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />

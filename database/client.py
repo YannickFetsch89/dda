@@ -56,7 +56,9 @@ _VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
 # pipeline/beschreibung_quellen.py – Spalte muss in der DB existieren)
 # ort_id: Ortszuordnung (Plan docs/plan-locations-2026-11-18.md, 3.4) – für die Dubletten-Regel nach Häusern und
 # zum Ergänzen einer fehlenden Zuordnung. Spalte muss in der DB existieren (database/orte_spielstaetten_2026-11-19.sql).
-_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + ["beschreibung_quelle", "ort_id"] + _ANREICHERBARE_FELDER)
+# redaktion_felder: im Admin-Bereich geänderte Felder, die die Pipeline nie überschreibt (Plan Admin-Dashboard 4.4,
+# database/admin_events_2026-11-23.sql – Spalte muss in der DB existieren).
+_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + ["beschreibung_quelle", "ort_id", "redaktion_felder"] + _ANREICHERBARE_FELDER)
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
@@ -132,7 +134,39 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
             if neu_wert and neu_wert != bestehendes.get(feld):
                 update[feld] = neu_wert
 
+    # Feldschutz (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.4 Teil A, E7): Felder, die die Redaktion im
+    # Admin-Bereich geändert hat, schreibt die Pipeline nie – an keiner der vier Stellen oben (ort_id-Nachtrag,
+    # Schleife inkl. bild_url/kategorie/abgesagt, Uhrzeit-Block, Quellenwechsel).
+    geschuetzt = set(bestehendes.get("redaktion_felder") or [])
+    if geschuetzt:
+        update = {k: v for k, v in update.items() if k not in geschuetzt}
     return update
+
+
+def _abgleich_redaktion(db: Client, titel: str, datum: str, ort: str, uhrzeit: Optional[str]) -> Optional[dict]:
+    """
+    Schritt 0 (Plan Admin-Dashboard 4.4 Teil B): Findet ein Event wieder, dessen Titel, Datum, Uhrzeit oder Ort die
+    Redaktion geändert hat. Dafür stehen die Werte der Quelle in abgleich_titel/_datum/_uhrzeit/_ort. Getroffen wird
+    nur bei genau EINER passenden Zeile (Uhrzeit wie in Schritt 1: gleich, oder eine fehlt); sonst laufen die
+    Schritte 1–3 wie bisher (Cursor-Prüfung 2, Befund 3).
+    """
+    treffer = (
+        db.table("events")
+        .select("id,abgleich_uhrzeit," + _ABGLEICH_SPALTEN)
+        .eq("abgleich_titel", titel)
+        .eq("abgleich_datum", datum)
+        .eq("abgleich_ort", ort)
+        .execute()
+    )
+    neue_zeit = _uhrzeit_hhmm(uhrzeit)
+    passend = [
+        z for z in (treffer.data or [])
+        if neue_zeit is None or _uhrzeit_hhmm(z.get("abgleich_uhrzeit")) in (None, neue_zeit)
+    ]
+    if len(passend) == 1:
+        logger.info("Abgleich über Redaktionsänderung (Schritt 0): '%s' (%s)", titel[:40], datum)
+        return passend[0]
+    return None
 
 
 def _tagesbestand(db: Client, datum: str, cache: dict[str, list[dict]]) -> list[dict]:
@@ -293,24 +327,28 @@ def events_speichern(events: list[dict]) -> dict:
         ort = event.get("ort", "?")
 
         try:
+            # Schritt 0: Event, das die Redaktion umbenannt oder verschoben hat (abgleich_* = Werte der Quelle)
+            bestehendes = _abgleich_redaktion(db, titel, datum, ort, event.get("uhrzeit"))
+
             # Schritt 1: Prüfen ob Event bereits in DB vorhanden – gleicher Titel + Datum + Ort und
             # gleiche Uhrzeit (oder bei einem fehlt sie). Andere Uhrzeit = weiterer Termin am selben Tag.
-            treffer = (
-                db.table("events")
-                .select("id," + _ABGLEICH_SPALTEN)
-                .eq("titel", titel)
-                .eq("datum", datum)
-                .eq("ort", ort)
-                .execute()
-            )
-            neue_zeit = _uhrzeit_hhmm(event.get("uhrzeit"))
-            bestehendes = next(
-                (
-                    z for z in (treffer.data or [])
-                    if neue_zeit is None or _uhrzeit_hhmm(z.get("uhrzeit")) in (None, neue_zeit)
-                ),
-                None,
-            )
+            if bestehendes is None:
+                treffer = (
+                    db.table("events")
+                    .select("id," + _ABGLEICH_SPALTEN)
+                    .eq("titel", titel)
+                    .eq("datum", datum)
+                    .eq("ort", ort)
+                    .execute()
+                )
+                neue_zeit = _uhrzeit_hhmm(event.get("uhrzeit"))
+                bestehendes = next(
+                    (
+                        z for z in (treffer.data or [])
+                        if neue_zeit is None or _uhrzeit_hhmm(z.get("uhrzeit")) in (None, neue_zeit)
+                    ),
+                    None,
+                )
 
             if bestehendes is None:
                 # Slug generieren falls nicht vorhanden

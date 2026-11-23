@@ -1,6 +1,6 @@
 // Datenzugriff: lädt alle relevanten Events einmal aus Supabase und cached sie 10 Minuten.
 // Alle Ansichten leiten ihre Listen aus diesem Pool ab (siehe lib/ableitungen.ts).
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { leseClient } from "./supabase-server";
 import beispiel from "./beispiel-events.json";
 import { kategorieAusDb } from "./kategorien";
@@ -8,10 +8,15 @@ import { heuteBerlin, plusTage, tageZwischen, wochenende } from "./datum";
 import { buendeln } from "./termine";
 import type { DddEvent, EventPool } from "./typen";
 
+/** Cache-Tag aller Event-Loader (Plan Admin-Dashboard 4.4) */
+export const EVENTS_CACHE_TAG = "events";
+
 const SPALTEN_BASIS =
   "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
 // Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
 const SPALTEN_VARIANTEN = [
+  // Redaktions-Schalter „nicht empfehlen“ (database/nicht_empfehlen_2026-11-23.sql)
+  `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, nicht_empfehlen, reihe:reihen(slug, titel)`,
   // Zeitpunkte der Highlight-/Top-Flaggen (database/flaggen_zeitpunkt_2026-11-13.sql); ohne sie gelten die Flaggen nicht
   `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, reihe:reihen(slug, titel)`,
   `${SPALTEN_BASIS}, abgesagt, unterkategorie, reihe:reihen(slug, titel)`,
@@ -72,6 +77,7 @@ export function normalisieren(z: Zeile): DddEvent {
     top_event_des_monats: z.top_event_des_monats === true,
     highlight_gesetzt_am: text(z.highlight_gesetzt_am),
     top_gesetzt_am: text(z.top_gesetzt_am),
+    nicht_empfehlen: z.nicht_empfehlen === true,
     abgesagt: z.abgesagt === true || ABSAGE.test(titel) || (ortUngueltig && ABSAGE.test(ortRoh ?? "")),
     reihe: reiheAus(z.reihe),
     unterkategorie: typeof z.unterkategorie === "string" ? z.unterkategorie : null,
@@ -86,7 +92,7 @@ function reiheAus(wert: unknown): DddEvent["reihe"] {
 
 /** Supabase meldet eine unbekannte Spalte/Beziehung (Migration noch nicht ausgeführt). */
 function spaltenFehlt(meldung: string | undefined): boolean {
-  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am/.test(meldung);
+  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen/.test(meldung);
 }
 
 /** Events laden mit der neuesten Spaltenvariante, die die DB schon kennt. */
@@ -153,6 +159,8 @@ async function ausSupabaseLaden(heute: string, ende?: string): Promise<DddEvent[
 export async function vergangeneWochenendEvents(heute: string): Promise<DddEvent[]> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
+  // Admin-Bereich leert diesen Tag nach jeder Event-Änderung (Plan Admin-Dashboard 4.4, revalidateTag mit expire: 0)
+  cacheTag(EVENTS_CACHE_TAG);
 
   const { fr } = wochenende(heute);
   if (fr >= heute) return [];
@@ -227,6 +235,8 @@ function beispielEvents(heute: string, jetzt: Date): DddEvent[] {
 export async function eventPoolLaden(): Promise<EventPool> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
+  // Admin-Bereich leert diesen Tag nach jeder Event-Änderung (Plan Admin-Dashboard 4.4, revalidateTag mit expire: 0)
+  cacheTag(EVENTS_CACHE_TAG);
 
   const jetzt = new Date();
   const heute = heuteBerlin(jetzt);
@@ -256,6 +266,8 @@ export async function magazinPoolLaden(von: string, bis: string): Promise<EventP
 export async function eventLaden(kennung: string): Promise<DddEvent | null> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
+  // Admin-Bereich leert diesen Tag nach jeder Event-Änderung (Plan Admin-Dashboard 4.4, revalidateTag mit expire: 0)
+  cacheTag(EVENTS_CACHE_TAG);
 
   const pool = await eventPoolLaden();
   const istUuid = /^[0-9a-f-]{36}$/i.test(kennung);

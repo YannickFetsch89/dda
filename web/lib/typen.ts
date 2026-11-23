@@ -42,6 +42,11 @@ export interface DddEvent {
   slug: string | null;
   /** Bleibt im Kalender sichtbar (markiert), fällt aber aus allen Hervorhebungen und der Startseite */
   abgesagt: boolean;
+  /**
+   * Redaktion: nie empfehlen (Tipp, Picks, Beliebt, Wochenende, Highlight/Top, Für dich, Magazin-Auswahl).
+   * Bleibt in Kalender, Suche, Kategorie- und Eventseiten sichtbar. Fehlt vor der Migration (dann undefined).
+   */
+  nicht_empfehlen?: boolean;
   /** Reihe (wiederkehrendes Event) mit dauerhafter Seite /reihe/<slug>, sonst null */
   reihe: { slug: string; titel: string } | null;
   /** Nur bei gebündelten Listeneinträgen (lib/termine.ts): alle Uhrzeiten des Tages, sonst null */

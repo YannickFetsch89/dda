@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 # Priorität 0: Scraper-Quelle → Stadtteil (Tier-2-Scraper = Venue bekannt)
 QUELLE_STADTTEIL: dict[str, str] = {
     "FFT Düsseldorf": "Stadtmitte",  # KAP1, Konrad-Adenauer-Platz 1 (40210)
-    "Deutsche Oper am Rhein": "Pempelfort",
+    "Deutsche Oper am Rhein": "Stadtmitte",  # Auftraggeber 20.11.2026: Oper und Schauspielhaus = Stadtmitte
     "Tonhalle Düsseldorf": "Pempelfort",
-    "Düsseldorfer Schauspielhaus": "Pempelfort",
+    "Düsseldorfer Schauspielhaus": "Stadtmitte",
     "Kunstpalast": "Pempelfort",
     "NRW-Forum Düsseldorf": "Pempelfort",
     "zakk": "Flingern",
@@ -44,13 +44,13 @@ VENUE_STADTTEIL: dict[str, str] = {
     # --- Pempelfort ---
     "Tonhalle Düsseldorf": "Pempelfort",
     "Tonhalle": "Pempelfort",
-    "Deutsche Oper am Rhein": "Pempelfort",
-    "Oper am Rhein": "Pempelfort",
-    "Düsseldorfer Schauspielhaus": "Pempelfort",
-    "Schauspielhaus": "Pempelfort",
-    "D'haus": "Pempelfort",
+    "Deutsche Oper am Rhein": "Stadtmitte",
+    "Oper am Rhein": "Stadtmitte",
+    "Düsseldorfer Schauspielhaus": "Stadtmitte",
+    "Schauspielhaus": "Stadtmitte",
+    "D'haus": "Stadtmitte",
     "Junges Schauspiel": "Pempelfort",
-    "Central — D'haus": "Pempelfort",
+    "Central — D'haus": "Stadtmitte",
     "Kunstpalast": "Pempelfort",
     "NRW-Forum": "Pempelfort",
     "FFT Düsseldorf": "Stadtmitte",

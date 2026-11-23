@@ -169,7 +169,9 @@ def _heimspiele_aus_spielplan(html: str, heute: date, enddatum: date) -> list[di
         Liste von Roh-Dicts (datum, uhrzeit, gast_kuerzel, spieltag, url)
     """
     soup = BeautifulSoup(html, "html.parser")
-    karten = soup.select("a.scoreboard-item")
+    # Seit etwa 18.11.2026 sind die Spielkarten <div>-Elemente (vorher <a>); der Link steckt in der Karte oder ergibt
+    # sich aus data-game-id. Beide Formen werden gelesen.
+    karten = soup.select(".scoreboard-item")
     logger.debug("Spielplan: %d Spielkarten gefunden", len(karten))
 
     spiele = []
@@ -194,8 +196,15 @@ def _heimspiele_aus_spielplan(html: str, heute: date, enddatum: date) -> list[di
             if datum_obj < heute or datum_obj > enddatum:
                 continue
 
-            href = karte.get("href") or ""
-            url = urljoin(BASE_URL, href) if href else LISTE_URL
+            spiel_id = karte.get("data-game-id")
+            gc_link = karte.select_one('a[href*="/gamecenter/"]')
+            href = karte.get("href") or (gc_link.get("href") if gc_link else "")
+            if href:
+                url = urljoin(BASE_URL, href)
+            elif spiel_id:
+                url = f"{BASE_URL}/gamecenter/{spiel_id}/"
+            else:
+                url = LISTE_URL
             if url in gesehen:
                 continue
             gesehen.add(url)

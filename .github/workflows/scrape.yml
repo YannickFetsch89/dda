@@ -38,8 +38,10 @@ jobs:
     # 22.04: Playwright 1.44 unterstützt neuere Ubuntu-Versionen noch nicht offiziell
     runs-on: ubuntu-22.04
     # 45 Minuten reichten seit dem 12.11.2026 nicht mehr: Die Läufe brachen in Schritt 3b ab, Club-Scores (3c) und
-    # IndexNow (3d) liefen nie. Scraper + Datenbank + KI-Schritte brauchen rund 45–50 Minuten (19.11.2026).
-    timeout-minutes: 75
+    # IndexNow (3d) liefen nie. Seit 20.11.2026 holt Schritt 3b alle offenen Beschreibungen (main.py, bis 90 Minuten
+    # für Veranstalter-Events plus etwa 25 s je Rausgegangen-Event). Der erste Lauf baut den Rückstand ab und kann
+    # über zwei Stunden dauern; danach rund 60–90 Minuten. GitHub erlaubt bis zu 360 Minuten je Job.
+    timeout-minutes: 240
     steps:
       - name: Code auschecken
         uses: actions/checkout@v4
@@ -66,6 +68,27 @@ jobs:
       - name: Chromium für Playwright installieren
         run: python -m playwright install --with-deps chromium
 
+      # Kom(m)ödchen: Die Website (Sucuri-Firewall) weist GitHub-Server mit 503 ab, unser Server darf (geprüft 23.11.2026).
+      # Die Spielplanseite wird deshalb über unseren Server geholt; scraper/tier2/kommoedchen.py liest die Datei.
+      # Schlägt das fehl, ruft der Scraper wie bisher direkt ab – der Lauf bricht nicht ab.
+      - name: Kom(m)ödchen-Spielplan über unseren Server holen
+        continue-on-error: true
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh data/kommoedchen
+          schluessel="$RUNNER_TEMP/server_key"
+          trap 'rm -f "$schluessel"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" > "$schluessel"
+          chmod 600 "$schluessel"
+          ssh -i "$schluessel" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "$SERVER_USER@$SERVER_HOST" \
+            "curl -sf -m 60 -A 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' https://www.kommoedchen.de/spielplan/" \
+            > data/kommoedchen/spielplan.html
+          echo "Kom(m)ödchen-Spielplan: $(wc -c < data/kommoedchen/spielplan.html) Bytes"
+
       - name: Pipeline ausführen
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -75,6 +98,11 @@ jobs:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           # Ortsseiten (Plan Locations 3.11): 1 = neue/geänderte /orte-URLs nach dem Lauf an IndexNow melden
           ORTSSEITEN_MELDEN: ${{ vars.ORTSSEITEN_MELDEN }}
+          # Warn-Mail nach dem Lauf (Plan Admin-Dashboard 4.3, E8): dieselben SMTP-Secrets wie geburtstag.yml
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_BENUTZER: ${{ secrets.SMTP_BENUTZER }}
+          SMTP_PASSWORT: ${{ secrets.SMTP_PASSWORT }}
           TZ: Europe/Berlin
         run: |
           mkdir -p logs

@@ -1,7 +1,16 @@
 // Nutzerkonten – Sitzung aus der Anfrage lesen, prüfen und bei Bedarf erneuern (Plan 3.2, 3.3).
 import "server-only";
-import { SITZUNG_COOKIE } from "./konfig";
-import { cookieLesen, cookiesLoeschen, istLokal, sitzungDekodieren, sitzungsCookie, type SitzungsWert } from "./cookies";
+import {
+  cookieLesen,
+  cookiesLoeschen,
+  istLokal,
+  KONTO_COOKIE_ART,
+  sitzungDekodieren,
+  sitzungsCookie,
+  sitzungsCookieLoeschen,
+  type SitzungsCookieArt,
+  type SitzungsWert,
+} from "./cookies";
 import { authClientAnfrage, tokenPruefen } from "./clients";
 import { tokenLaeuftAb } from "./pruefungen";
 
@@ -25,10 +34,17 @@ export type SitzungsErgebnis =
  * Cookie wird neu gesetzt. Widerrufene Token-Familie, kaputtes Cookie oder ungültige Signatur → abgemeldet,
  * beide Cookies werden gelöscht (Antwort 401).
  */
-export async function sitzungAusAnfrage(request: Request, jetztMs = Date.now()): Promise<SitzungsErgebnis> {
+export async function sitzungAusAnfrage(
+  request: Request,
+  jetztMs = Date.now(),
+  art: SitzungsCookieArt = KONTO_COOKIE_ART,
+): Promise<SitzungsErgebnis> {
   const lokal = istLokal(request.headers);
-  const bearer = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
-  const roh = cookieLesen(request.headers, SITZUNG_COOKIE);
+  // Bearer (spätere App) nur für die Konto-Sitzung; der Admin-Bereich kennt nur sein Cookie (Plan Admin-Dashboard 3.3)
+  const konto = art === KONTO_COOKIE_ART;
+  const loeschen = () => (konto ? cookiesLoeschen(lokal) : [sitzungsCookieLoeschen(lokal, art)]);
+  const bearer = konto ? /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1] : undefined;
+  const roh = cookieLesen(request.headers, art.name);
 
   if (!roh && bearer) {
     const id = await tokenPruefen(bearer);
@@ -42,29 +58,29 @@ export async function sitzungAusAnfrage(request: Request, jetztMs = Date.now()):
 
   if (!roh) return { ok: false, setCookies: [] };
   let wert: SitzungsWert | null = sitzungDekodieren(roh);
-  if (!wert) return { ok: false, setCookies: cookiesLoeschen(lokal) };
+  if (!wert) return { ok: false, setCookies: loeschen() };
 
   const setCookies: string[] = [];
   const zustand = tokenLaeuftAb(wert.access, jetztMs);
-  if (zustand === "kaputt") return { ok: false, setCookies: cookiesLoeschen(lokal) };
+  if (zustand === "kaputt") return { ok: false, setCookies: loeschen() };
   if (zustand === "erneuern") {
     const client = authClientAnfrage();
     if (!client) return { ok: false, setCookies: [] };
     const { data, error } = await client.auth.refreshSession({ refresh_token: wert.refresh });
     if (error || !data.session) {
       // z. B. Refresh-Token schon eingelöst (Token-Familie widerrufen, Plan 3.2) → lokal abmelden
-      return { ok: false, setCookies: cookiesLoeschen(lokal) };
+      return { ok: false, setCookies: loeschen() };
     }
     wert = {
       access: data.session.access_token,
       refresh: data.session.refresh_token,
       ...(wert.nur_passwort ? { nur_passwort: true as const } : {}),
     };
-    setCookies.push(sitzungsCookie(wert, lokal));
+    setCookies.push(sitzungsCookie(wert, lokal, art));
   }
 
   const id = await tokenPruefen(wert.access);
-  if (!id) return { ok: false, setCookies: cookiesLoeschen(lokal) };
+  if (!id) return { ok: false, setCookies: loeschen() };
   return {
     ok: true,
     sitzung: {

@@ -1,6 +1,6 @@
 // Autorenseite eines redaktionellen Pseudonyms (Plan 2.3 Punkt 4, überarbeitet 20.11.2026 nach rechtlicher Prüfung):
 // dezente Unterzeile „Schwerpunkt · Redaktionelles Pseudonym“ statt Hinweiskasten, kleiner Prüf- und
-// Verantwortungshinweis mit Link aufs Impressum, Kennzeichnung „KI-generierte Illustration“ am Profilbild.
+// Verantwortungshinweis (§ 5 DDG und § 18 Abs. 2 MStV, Auftraggeber 20.11.2026) mit Links auf Redaktion und Impressum, „KI-generierte Illustration von …“.
 // Unbekannte oder inaktive Autoren: 404 aus proxy.ts.
 export const instant = false;
 import type { Metadata } from "next";
@@ -56,7 +56,7 @@ async function AutorInhalt({ params }: Props) {
           <figure className="mz-autorkopf__bild">
             {/* eslint-disable-next-line @next/next/no-img-element -- statisches Profilbild aus public/ */}
             <img src={autor.bild} alt={`Illustration zu ${autor.name}`} width={160} height={160} />
-            {autor.bild_ki && <figcaption>KI-generierte Illustration</figcaption>}
+            {autor.bild_ki && <figcaption>KI-generierte Illustration von {autor.name}</figcaption>}
           </figure>
         )}
         <div className="mz-autorkopf__text">
@@ -64,7 +64,8 @@ async function AutorInhalt({ params }: Props) {
           <p className="mz-autorkopf__fach">{autor.schwerpunkt} · Redaktionelles Pseudonym</p>
           <p className="mz-teaser">{autor.kurzbeschreibung}</p>
           <p className="mz-autorkopf__hinweis">
-            Alle Beiträge werden vor Veröffentlichung redaktionell geprüft. Verantwortlich: {VERANTWORTLICH}. Siehe{" "}
+            Alle Beiträge werden vor Veröffentlichung redaktionell geprüft. Verantwortlich für den Inhalt nach § 5 DDG und
+            § 18 Abs. 2 MStV: {VERANTWORTLICH}. Weitere Informationen siehe <Link href="/magazin/redaktion">Redaktion</Link> und{" "}
             <Link href="/impressum">Impressum</Link>.
           </p>
         </div>

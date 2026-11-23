@@ -589,7 +589,7 @@ function setzTag(zeitpunkt: string): string | null {
 
 /** Highlight-Flagge gilt sieben Tage ab dem Setz-Tag (Europe/Berlin); ohne Zeitpunkt nie. */
 export function highlightGilt(e: DddEvent, heute: string): boolean {
-  if (!e.highlight_der_woche || !e.highlight_gesetzt_am) return false;
+  if (!e.highlight_der_woche || !e.highlight_gesetzt_am || e.nicht_empfehlen) return false;
   const tag = setzTag(e.highlight_gesetzt_am);
   if (!tag) return false;
   const alter = tageZwischen(tag, heute);
@@ -598,14 +598,17 @@ export function highlightGilt(e: DddEvent, heute: string): boolean {
 
 /** Top-Flagge gilt bis zum Ende des Monats, in dem sie gesetzt wurde (Europe/Berlin); ohne Zeitpunkt nie. */
 export function topGilt(e: DddEvent, heute: string): boolean {
-  if (!e.top_event_des_monats || !e.top_gesetzt_am) return false;
+  if (!e.top_event_des_monats || !e.top_gesetzt_am || e.nicht_empfehlen) return false;
   const tag = setzTag(e.top_gesetzt_am);
   return !!tag && tag <= heute && tag.slice(0, 7) === heute.slice(0, 7);
 }
 
-/** Stufe 0–3 für die Empfehlungen; abgesagte Events haben keine Stufe (null). */
+/**
+ * Stufe 0–3 für die Empfehlungen; abgesagte Events und solche mit dem Redaktions-Schalter „nicht empfehlen“
+ * haben keine Stufe (null) und fallen damit aus allen Plätzen, die Stufe ≥ 1 verlangen.
+ */
 export function breite(e: DddEvent, k: StufenKontext): Stufe | null {
-  if (e.abgesagt) return null;
+  if (e.abgesagt || e.nicht_empfehlen) return null;
   const gemerkt = k.stufen.get(e.id);
   if (gemerkt !== undefined) return gemerkt;
   const s = stufeRechnen(e, k);
@@ -625,6 +628,45 @@ function stufeRechnen(e: DddEvent, k: StufenKontext): Stufe {
   // 5. Geltende Highlight- oder Top-Flagge → +1, höchstens 3 (die Tipp-Flagge ändert die Stufe nicht)
   if (highlightGilt(e, k.heute) || topGilt(e, k.heute)) s = Math.min(s + 1, 3);
   return s as Stufe;
+}
+
+export interface StufenErklaerung {
+  stufe: Stufe | null;
+  /** Lesbare Schritte in der Reihenfolge von stufeRechnen */
+  gruende: string[];
+}
+
+/**
+ * Warum hat ein Event diese Stufe? Dieselben Schritte wie breite()/stufeRechnen als Text, für die Tagesvorschau im
+ * Admin-Bereich (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.5). Ein Test sichert stufe === breite().
+ */
+export function stufeErklaeren(e: DddEvent, k: StufenKontext): StufenErklaerung {
+  if (e.abgesagt) return { stufe: null, gruende: ["abgesagt"] };
+  if (e.nicht_empfehlen) return { stufe: null, gruende: ["Redaktion: nicht empfehlen"] };
+  if (istStamm(e)) return { stufe: 0, gruende: ["Stamm oder Sprachhinweis – nie Pick"] };
+  const gruende: string[] = [];
+  const g = grundstufe(e);
+  if (g === 3) {
+    gruende.push(ZUGPFERD_TITEL.test(e.titel) ? "Zugpferd-Titel → 3" : istHeimspiel(e) ? "Heimspiel → 3" : "Zugpferd-Ort → 3");
+  } else if (g === 1) {
+    gruende.push("Szene (Jam, Open Stage, Open Mic, Karaoke) → 1");
+  } else {
+    gruende.push(istZugpferdOrt(e.ort) ? "Zugpferd-Ort, aber kleines Format → 2" : "normal → 2");
+  }
+  let s: number = g;
+  if (k.serien.has(e.id)) {
+    gruende.push(s > 1 ? "Serie → höchstens 1" : "Serie");
+    s = Math.min(s, 1);
+  }
+  if (istLanglaeufer(e) && !ZUGPFERD_TITEL.test(e.titel)) {
+    if (s > 2) gruende.push("läuft lange → höchstens 2");
+    s = Math.min(s, 2);
+  }
+  if (highlightGilt(e, k.heute) || topGilt(e, k.heute)) {
+    gruende.push("Highlight- oder Top-Flagge → +1");
+    s = Math.min(s + 1, 3);
+  }
+  return { stufe: s as Stufe, gruende };
 }
 
 // ---------- Empfehlungen: Fokustag und Tipp-Flagge (Abschnitt 7 und 8) ----------
@@ -651,7 +693,8 @@ export function amFokustag(e: DddEvent, tag: string): boolean {
  * Bis 7 Tage Laufzeit (einschließlich gezählt) an jedem Tag, ab 8 Tagen nur am Fokustag.
  */
 export function tippGilt(e: DddEvent, tag: string | null): boolean {
-  if (!e.tipp_des_tages || e.abgesagt) return false;
+  // „nicht empfehlen“ schlägt die Tipp-Flagge (beide gesetzt = kein Tipp)
+  if (!e.tipp_des_tages || e.abgesagt || e.nicht_empfehlen) return false;
   // Laufzeit einschließlich gezählt (wie beim Fokustag): 1.–7. gilt jeden Tag, 1.–8. nur am Fokustag (Auftraggeber 13.11.2026)
   if (tag === null || !istMehrtaegig(e) || tageZwischen(e.datum, e.datum_bis!) + 1 <= 7) return true;
   return fokustag(e) === tag;
