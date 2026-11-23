@@ -36,4 +36,26 @@ export function gebremst(adresse: string, jetzt: number = Date.now(), max: numbe
 /** Nur für Tests */
 export function bremseZuruecksetzen(): void {
   zaehler.clear();
+  sammel.clear();
 }
+
+// Gemeinsame Grenze je Pfad über alle Adressen (Ausfall 23.11.2026: Die Abrufe kamen von über 1.300 Adressen mit
+// demselben User-Agent – die Grenze je Adresse greift dort kaum). Gilt nur für die teuren Guide-Übersichten, die
+// bei jedem Aufruf alle Orte mit den Filtern aus der Adresse neu rechnen.
+export const SAMMEL_MAX = 60;
+const sammel = new Map<string, { start: number; anzahl: number }>();
+
+/** true = für diesen Pfad sind im laufenden Fenster schon zu viele Aufrufe gekommen (von allen Adressen zusammen). */
+export function sammelGebremst(schluessel: string, jetzt: number = Date.now(), max: number = SAMMEL_MAX, fensterMs: number = BREMSE_FENSTER_MS): boolean {
+  const z = sammel.get(schluessel);
+  if (!z || jetzt - z.start > fensterMs) {
+    if (sammel.size > 1000) sammel.clear();
+    sammel.set(schluessel, { start: jetzt, anzahl: 1 });
+    return false;
+  }
+  z.anzahl += 1;
+  return z.anzahl > max;
+}
+
+/** Guide-Übersicht (/guides/<hub>, ohne Unterseite) – dort rechnet jede Anfrage alle Orte neu */
+export const istGuideUebersicht = (pfad: string) => /^\/guides\/[^/]+$/.test(pfad);

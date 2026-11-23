@@ -1,9 +1,9 @@
 // Bremse gegen Massenabrufe der Guides (Ausfall 23.11.2026)
 import { describe, expect, it } from "vitest";
-import { bremsAdresse, bremseZuruecksetzen, gebremst } from "@/lib/bremse";
+import { bremsAdresse, bremseZuruecksetzen, gebremst, istGuideUebersicht, sammelGebremst } from "@/lib/bremse";
 import { config as proxyConfig } from "@/proxy";
 
-describe("Bremse", () => {
+describe("Bremse je Adresse", () => {
   it("ab dem 41. Aufruf je Minute und Adresse, danach neues Fenster", () => {
     bremseZuruecksetzen();
     const t0 = 1_000_000;
@@ -18,5 +18,19 @@ describe("Bremse", () => {
   });
   it("Proxy läuft für alle Guide-Pfade, auch die Hub-Seiten", () => {
     expect(proxyConfig.matcher).toEqual(expect.arrayContaining(["/guides", "/guides/:path*"]));
+  });
+});
+
+describe("Gemeinsame Grenze der Guide-Übersichten", () => {
+  it("ab dem 61. Aufruf je Minute über alle Adressen, nur für /guides/<hub>", () => {
+    bremseZuruecksetzen();
+    const t0 = 2_000_000;
+    for (let i = 0; i < 60; i++) expect(sammelGebremst("/guides/restaurants-cafes", t0 + i)).toBe(false);
+    expect(sammelGebremst("/guides/restaurants-cafes", t0 + 70)).toBe(true);
+    expect(sammelGebremst("/guides/clubs", t0 + 70)).toBe(false);
+    expect(sammelGebremst("/guides/restaurants-cafes", t0 + 61_000)).toBe(false);
+    expect(istGuideUebersicht("/guides/restaurants-cafes")).toBe(true);
+    expect(istGuideUebersicht("/guides/restaurants-cafes/zum-schiffchen")).toBe(false);
+    expect(istGuideUebersicht("/guides")).toBe(false);
   });
 });
