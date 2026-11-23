@@ -667,6 +667,14 @@ Stufe 4 – Newsletter mit Double-Opt-in (23.11.2026):
   - Befund 3 (gering) behoben: Anspruch (`bestaetigung_gesendet_am`) und Zustellung (`bestaetigung_zugestellt_am`, `newsletter_bestaetigung_versandt`) getrennt; ein Anspruch ohne Zustellung wird nach 30 Minuten wieder aufgenommen; gezählt und gelöscht wird nach der Zustellung. SQL geändert, erneut auszuführen.
   - Befund 4 (gering) behoben: Bremslimit der One-Click-Route nur für ungültige Tokens.
 
+Stufe 5a – Konten, Sensibel, Technik, Schalter, Protokoll (23.11.2026):
+- **Teilung:** 5a = Konten in Zahlen, Sensibel-Treffer, Technik und Kosten, Schalter, Protokoll (lesend bzw. kleine Schreibwege). 5b = Meldungen und SEO-Aufräumen aus Streamlit, Quellen an/aus (`main.py`).
+- **SQL:** `database/admin_rest_2026-11-23.sql`: `admin_konten_kennzahlen` (nur Zahlen: Konten, Profil fertig, aktiv 30 Tage, neu je Woche, Einwilligungen, Interessen ab 3 Konten je Wert, Merkliste, Geburtstagsmails dieses Jahr, unter 16 gesperrt), `admin_sensibel_liste`, `admin_sensibel_ausnahme` (Ausnahme + Kennzeichnung entfernen), `admin_sensibel_ausnahme_aufheben` (Regeln neu anwenden). Keine Tabellenrechte für den Admin-Token auf `profiles`, `merkliste`, `event_sensibel`.
+- **Konten:** bewusst keine Suche nach Personen; Löschung und Auskunft bleiben im Supabase-Dashboard.
+- **Technik:** `fs.statfs` auf dem Web-Ordner, Größe von `logs/` und `web/.next` (abgebrochen nach 200.000 Dateien oder 4 s, dann „mindestens“), KI-Kosten Magazin dieses Jahr. Gesamtkosten Anthropic/Google: keine Quelle (Q8), nur Hinweis.
+- **Schalter (E4):** `KONTEN_AKTIV`, `MAGAZIN_AKTIV`, `GEBURTSTAG_AKTIV`, `NEWSLETTER_AKTIV`, `ORTSSEITEN_MELDEN` über die GitHub-API (Token mit Variables: read), nur anzeigen, Link zu den Repository-Variablen.
+- **Protokoll:** Liste mit Filter (Aktion beginnt mit, Tabelle). „Rückgängig“ nur für `event_bearbeiten` und `ort_bearbeiten` und nur, wenn die Felder seitdem nicht noch einmal geändert wurden; läuft durch dieselben Prüfungen wie das Bearbeiten (bei Events bleibt das Feld danach geschützt, „Redaktionsänderungen zurücksetzen“ gibt es weiter).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -686,3 +694,5 @@ Stufe 4 – Newsletter mit Double-Opt-in (23.11.2026):
 - 23.11.2026: SQL Stufe 3c ausgeführt, Cursor-Prüfung 3c deploybar, 2 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
 - 23.11.2026: Stufe 3c LIVE (d3b0bf3). Stufe 4 Newsletter-Double-Opt-in gebaut (lokal), SQL `newsletter_doi_2026-11-23.sql`, Anwaltsvorlage; Notizen in Anhang F.
 - 23.11.2026: Anwalt hat Stufe 4 freigegeben (Texte übernommen), Cursor-Prüfung 4 deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
+
+- 23.11.2026: Stufe 4 LIVE (220c612). Stufe 5a gebaut (lokal), SQL `admin_rest_2026-11-23.sql`; Notizen in Anhang F.

@@ -87,3 +87,34 @@ export async function letzterLauf(name: WorkflowName): Promise<GithubErgebnis> {
     return { art: "fehler", meldung: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Schalter, die das Technik-Panel zeigt (Plan Admin-Dashboard 4.10, E4) – gesetzt werden sie nur auf GitHub. */
+export const SCHALTER = ["KONTEN_AKTIV", "MAGAZIN_AKTIV", "GEBURTSTAG_AKTIV", "NEWSLETTER_AKTIV", "ORTSSEITEN_MELDEN"] as const;
+
+export type VariablenErgebnis =
+  | { art: "ok"; werte: Record<string, string | null>; link: string }
+  | { art: "kein_token" }
+  | { art: "fehler"; meldung: string };
+
+/** Werte der Repository-Variablen aus SCHALTER (braucht Variables: read). Fehlende Variable → null. */
+export async function schalterLesen(): Promise<VariablenErgebnis> {
+  const t = token();
+  if (!t) return { art: "kein_token" };
+  try {
+    const antwort = await fetch(`https://api.github.com/repos/${repo()}/actions/variables?per_page=30`, {
+      headers: { Authorization: `Bearer ${t}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!antwort.ok) return { art: "fehler", meldung: `GitHub antwortet mit ${antwort.status}` };
+    const daten = (await antwort.json()) as { variables?: { name: string; value: string }[] };
+    const alle = new Map((daten.variables ?? []).map((v) => [v.name, v.value]));
+    return {
+      art: "ok",
+      werte: Object.fromEntries(SCHALTER.map((s) => [s, alle.get(s) ?? null])),
+      link: `https://github.com/${repo()}/settings/variables/actions`,
+    };
+  } catch (e) {
+    return { art: "fehler", meldung: e instanceof Error ? e.message : String(e) };
+  }
+}

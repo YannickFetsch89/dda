@@ -17,9 +17,9 @@ const NAVIGATION: { titel: string; href?: string; stufe?: string }[] = [
   { titel: "Instagram", stufe: "eigener Plan" },
   { titel: "Newsletter", href: "/admin/newsletter" },
   { titel: "Meldungen", stufe: "5" },
-  { titel: "Konten", stufe: "5" },
-  { titel: "Technik", stufe: "5" },
-  { titel: "Protokoll", stufe: "5" },
+  { titel: "Konten", href: "/admin/konten" },
+  { titel: "Technik", href: "/admin/technik" },
+  { titel: "Protokoll", href: "/admin/protokoll" },
 ];
 
 /** Seiten ohne Rahmen und ohne Prüfung (sie führen erst zur Sitzung) */
