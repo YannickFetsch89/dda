@@ -7,6 +7,12 @@
 // POST { aktion: "zusammenlegen", nach, grund }        → admin_ort_zusammenlegen (dieser Ort geht in „nach“ auf)
 // POST { aktion: "zuordnung_loesen", event }           → admin_ort_zuordnung_loesen
 // GET ?vergangene=1 → statt der kommenden die letzten 100 Events (auch alte Zuordnungen lösen, Cursor 3a Befund 4)
+// Stufe 3b (database/admin_guides_2026-11-23.sql):
+// POST { aktion: "bild", bild: {art, google_foto?, bild_url?, bild_attribution?, bild_link?} } → admin_ort_bild_setzen
+// POST { aktion: "bild_fokus", fokus }                → admin_ort_bild_fokus
+// POST { aktion: "club", club, grund? }               → admin_club_setzen (freigeben, freigabe_entziehen, aus_hub, in_hub)
+// POST { aktion: "wm", wm, wert? }                    → admin_wm_setzen (rang, ausschliessen, einschliessen, freischalten)
+// POST { aktion: "spielplatz", spielplatz, wert? }    → admin_spielplatz_setzen (bestaetigen, …, freischalten)
 import { revalidateTag } from "next/cache";
 import { aenderungen, oeffentlicherPfad, ortKopf, stammdatenPruefen, STAMMDATEN_FELDER, textPruefen } from "@/lib/admin/orte";
 import { protokollieren } from "@/lib/admin/protokoll";
@@ -23,7 +29,14 @@ const SPALTEN =
   "qualitaets_score, sortierung, aktiv, parent_id, erstellt_am, aktualisiert_am, " +
   "spielstaette:extras->spielstaette, club:extras->club, club_score:extras->club_score, " +
   "club_freigegeben:extras->club_freigegeben, auch_club:extras->auch_club, kein_club:extras->kein_club, " +
-  "score_manuell:extras->score_manuell, google_foto:extras->google_foto, bild_fokus:extras->bild_fokus";
+  "score_manuell:extras->score_manuell, google_foto:extras->google_foto, bild_fokus:extras->bild_fokus, " +
+  "bild_link:extras->bild_link, foto_manuell:extras->foto_manuell, foto_version:extras->foto_version, " +
+  "unterart:extras->unterart, vorher_typ:extras->vorher_typ, weihnachtsmarkt:extras->weihnachtsmarkt, " +
+  "spielplatz:extras->spielplatz";
+
+const CLUB_AKTIONEN = ["freigeben", "freigabe_entziehen", "aus_hub", "in_hub"];
+const WM_AKTIONEN = ["rang", "ausschliessen", "einschliessen", "freischalten"];
+const SPIELPLATZ_AKTIONEN = ["bestaetigen", "bestaetigung_entziehen", "ausschliessen", "einschliessen", "freischalten"];
 
 type OrtZeile = Record<string, unknown> & { id: string; slug: string; typ: string; aktiv: boolean | null; qualitaets_score: number | null; stadtteil: string | null };
 
@@ -150,6 +163,35 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/orte/
       if (error) return fehler(error);
       cacheLeeren(true);
       return adminAntwort(200, { ok: true }, setCookies);
+    }
+
+    // ---------- Stufe 3b: Bilder ----------
+    if (body.aktion === "bild" || body.aktion === "bild_fokus") {
+      const { error } =
+        body.aktion === "bild"
+          ? await db.rpc("admin_ort_bild_setzen", { p_id: id, p_bild: body.bild && typeof body.bild === "object" ? body.bild : {} })
+          : await db.rpc("admin_ort_bild_fokus", { p_id: id, p_fokus: typeof body.fokus === "string" ? body.fokus : null });
+      if (error) return fehler(error);
+      cacheLeeren(false);
+      // /ort-foto/<slug> merkt sich die Google-Bildadresse 30 Tage (app/ort-foto/[slug]/route.ts, fotoTag)
+      if (body.aktion === "bild") revalidateTag(`ort-foto:${bisher.slug}`.slice(0, 256), { expire: 0 });
+      return adminAntwort(200, { ok: true }, setCookies);
+    }
+
+    // ---------- Stufe 3b: Guide-Pflege ----------
+    if (body.aktion === "club" || body.aktion === "wm" || body.aktion === "spielplatz") {
+      const art = body.aktion;
+      const schritt = String(body[art] ?? "");
+      const erlaubt = art === "club" ? CLUB_AKTIONEN : art === "wm" ? WM_AKTIONEN : SPIELPLATZ_AKTIONEN;
+      if (!erlaubt.includes(schritt)) return adminAntwort(400, { fehler: "Unbekannte Aktion." }, setCookies);
+      const wert = typeof body.wert === "string" || typeof body.wert === "number" ? String(body.wert) : null;
+      const { data, error } =
+        art === "club"
+          ? await db.rpc("admin_club_setzen", { p_id: id, p_aktion: schritt, p_grund: grund || null })
+          : await db.rpc(art === "wm" ? "admin_wm_setzen" : "admin_spielplatz_setzen", { p_id: id, p_aktion: schritt, p_wert: wert });
+      if (error) return fehler(error);
+      cacheLeeren(false);
+      return adminAntwort(200, { ok: true, ergebnis: data }, setCookies);
     }
 
     if (body.aktion !== undefined) return adminAntwort(400, { fehler: "Unbekannte Aktion." }, setCookies);

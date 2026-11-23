@@ -67,6 +67,22 @@ const LAENGE: [number, number] = [6.55, 7.05];
 export type Eingabe = { ok: true; felder: Record<string, unknown> } | { ok: false; fehler: string };
 
 /**
+ * Spalten, die ein Import bei jedem Lauf aus seiner CSV neu schreibt – im Dashboard geändert, wären sie beim nächsten
+ * Lauf wieder weg (Stufe 3b, Q6). Weihnachtsmärkte: scraper/weihnachtsmaerkte/import_maerkte.py (maerkte.csv);
+ * Spielplätze: scraper/spielplaetze/stadt_import.py und abenteuer_import.py (Stadtdaten, korrekturen.csv, abenteuer.csv).
+ */
+export const CSV_FELDER: Record<string, { felder: string[]; quelle: string }> = {
+  weihnachtsmarkt: {
+    felder: ["name", "stadtteil", "adresse", "latitude", "longitude", "webseite", "beschreibung"],
+    quelle: "data/weihnachtsmaerkte/maerkte.csv",
+  },
+  spielplatz: {
+    felder: ["name", "stadtteil", "adresse", "latitude", "longitude", "oeffnungszeiten"],
+    quelle: "data/spielplaetze/korrekturen.csv bzw. abenteuer.csv",
+  },
+};
+
+/**
  * Prüft die Stammdaten aus dem Formular. Leere Texte werden NULL. `aktiv` nur true (Abschalten läuft über
  * „Schließen“ mit Weiterleitung). Bei Spielstätten ist die Beschreibung gesperrt: Sie ändert sich nur über die
  * Text-Freigabe (mit Quellen).
@@ -75,6 +91,8 @@ export function stammdatenPruefen(eingabe: Record<string, unknown>, typ: string)
   const felder: Record<string, unknown> = {};
   for (const [k, w] of Object.entries(eingabe)) {
     if (!(STAMMDATEN_FELDER as readonly string[]).includes(k)) return { ok: false, fehler: `Feld „${k}“ ist hier nicht bearbeitbar.` };
+    const csv = CSV_FELDER[typ];
+    if (csv?.felder.includes(k)) return { ok: false, fehler: `„${k}“ kommt aus ${csv.quelle} – der Import würde die Änderung überschreiben.` };
     if (k === "aktiv") {
       if (w !== true) return { ok: false, fehler: "Abschalten bitte über „Schließen“ (mit Weiterleitung)." };
       // Spielplätze und Weihnachtsmärkte brauchen beim Freischalten freigeschaltet_am, sonst endet die Guide-URL nach

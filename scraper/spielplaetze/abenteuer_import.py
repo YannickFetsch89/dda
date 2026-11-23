@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from pipeline.slug_generator import slug_mit_suffix  # noqa: E402
+from scraper.spielplaetze.redaktion import redaktion_behalten  # noqa: E402
 from scraper.orte.google_places import _slug_erzeugen  # noqa: E402
 from scraper.spielplaetze.stadt_import import (  # noqa: E402
     KATALOG, LAT_MAX, LAT_MIN, LON_MAX, LON_MIN, OSM_CODES, pruef_csv_schreiben,
@@ -183,7 +184,8 @@ def schreiben(db, plan: dict) -> dict:
     for a in plan["aenderungen"]:
         try:
             aktuell = (db.table("orte").select("extras").eq("id", a["zeile"]["id"]).execute().data or [{}])[0].get("extras") or {}
-            sp = {**(aktuell.get("spielplatz") or {}), **a["felder"]}
+            # Im Admin-Bereich gepflegte Felder (bestätigt, ausgeschlossen) bleiben stehen (Plan Admin-Dashboard 3b)
+            sp = redaktion_behalten({**(aktuell.get("spielplatz") or {}), **a["felder"]}, aktuell.get("spielplatz"))
             db.table("orte").update({"extras": {**aktuell, "spielplatz": sp}, **a["spalten"]}).eq("id", a["zeile"]["id"]).execute()
             zaehler["aktualisiert"] += 1
         except Exception as e:  # noqa: BLE001 – jede Zeile einzeln

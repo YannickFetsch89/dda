@@ -32,6 +32,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from pipeline.slug_generator import slug_mit_suffix  # noqa: E402
+from scraper.spielplaetze.redaktion import redaktion_behalten  # noqa: E402
 from scraper.orte.google_places import _slug_erzeugen  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -786,6 +787,8 @@ def _extras_schreiben(db, zeile_id: str, stadtfelder: dict, spalten: dict, entfe
     """Nur die Stadtfelder in extras.spielplatz ändern – extras direkt vorher frisch lesen."""
     aktuell = (db.table("orte").select("extras").eq("id", zeile_id).execute().data or [{}])[0].get("extras") or {}
     sp = {k: v for k, v in {**(aktuell.get("spielplatz") or {}), **stadtfelder}.items() if k not in entfernen}
+    # Im Admin-Bereich gepflegte Felder (bestätigt, ausgeschlossen) bleiben stehen (Plan Admin-Dashboard 3b)
+    sp = redaktion_behalten(sp, aktuell.get("spielplatz"))
     db.table("orte").update({"extras": {**aktuell, "spielplatz": sp}, **spalten}).eq("id", zeile_id).execute()
 
 

@@ -1,12 +1,15 @@
 "use client";
 // Ort bearbeiten: Stammdaten, Score, Text (Spielstätten, mit Quellen und Freigabe), kommende Events mit „Zuordnung
 // lösen“, Zusammenlegen und Schließen – beides immer mit Weiterleitung (Trigger orte_schutz, Plan 4.7).
+// Stufe 3b: Bild, Club-Hub, Weihnachtsmarkt, Spielplatz (guide-abschnitte.tsx).
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ORT_TYPEN, STADTTEILE } from "@/lib/admin/orte";
+import { CLUB_TYPEN } from "@/lib/admin/guides";
+import { CSV_FELDER, ORT_TYPEN, STADTTEILE } from "@/lib/admin/orte";
+import { BildAbschnitt, ClubAbschnitt, SpielplatzAbschnitt, WmAbschnitt, type GuideOrt } from "./guide-abschnitte";
 
-interface Ort {
+interface Ort extends Omit<GuideOrt, "club"> {
   id: string;
   name: string;
   slug: string;
@@ -38,7 +41,6 @@ interface Ort {
   } | null;
   club: { event_orte?: string[] } | null;
   score_manuell: unknown;
-  google_foto: unknown;
 }
 
 interface Kurz {
@@ -195,6 +197,7 @@ export function OrtBearbeiten() {
     const felder: Record<string, unknown> = {};
     for (const t of FELDER) {
       if (t.feld === "beschreibung" && o.typ === "spielstaette") continue;
+      if (CSV_FELDER[o.typ]?.felder.includes(t.feld)) continue; // kommt aus der CSV des Imports (gesperrt)
       const neu = String(f.get(t.feld) ?? "");
       if (norm(neu) !== norm(o[t.feld])) felder[t.feld] = neu;
     }
@@ -311,18 +314,19 @@ export function OrtBearbeiten() {
       <form className="admin-karte admin-formular" onSubmit={stammdatenSpeichern} key={`s-${o.aktualisiert_am}`}>
         <h2 className="admin-feld--breit">Stammdaten</h2>
         {FELDER.map((t) => {
-          const gesperrt = t.feld === "beschreibung" && istSpielstaette;
+          const csv = CSV_FELDER[o.typ]?.felder.includes(t.feld) ? CSV_FELDER[o.typ].quelle : null;
+          const gesperrt = (t.feld === "beschreibung" && istSpielstaette) || !!csv;
           const wert = o[t.feld] === null || o[t.feld] === undefined ? "" : String(o[t.feld]);
           return (
             <label key={t.feld} className={`admin-feld${t.lang ? " admin-feld--breit" : ""}`}>
               <span>
                 {t.text}
-                {gesperrt && <small> · nur über „Text“ unten</small>}
+                {gesperrt && <small> · {csv ? `aus ${csv}` : "nur über „Text“ unten"}</small>}
               </span>
               {t.lang ? (
                 <textarea name={t.feld} defaultValue={wert} rows={t.feld === "beschreibung" ? 8 : 3} disabled={gesperrt} />
               ) : (
-                <input name={t.feld} defaultValue={wert} list={t.liste} />
+                <input name={t.feld} defaultValue={wert} list={t.liste} disabled={gesperrt} />
               )}
             </label>
           );
@@ -339,7 +343,7 @@ export function OrtBearbeiten() {
             </label>
           </fieldset>
         )}
-        {!o.aktiv && guideTyp && <p className="admin-feld--breit">Freischalten kommt mit der Guide-Pflege (Stufe 3b).</p>}
+        {!o.aktiv && guideTyp && <p className="admin-feld--breit">Freischalten im Abschnitt „{o.typ === "spielplatz" ? "Spielplatz" : "Weihnachtsmarkt"}“ unten.</p>}
         <div className="admin-feld--breit">
           <button className="admin-knopf" type="submit" disabled={laeuft}>
             {laeuft ? "Speichert …" : "Stammdaten speichern"}
@@ -401,6 +405,11 @@ export function OrtBearbeiten() {
           </div>
         </form>
       )}
+
+      <BildAbschnitt o={o} ausfuehren={ausfuehren} laeuft={laeuft} />
+      {CLUB_TYPEN.includes(o.typ) && <ClubAbschnitt o={o} ausfuehren={ausfuehren} laeuft={laeuft} />}
+      {o.typ === "weihnachtsmarkt" && <WmAbschnitt o={o} ausfuehren={ausfuehren} laeuft={laeuft} />}
+      {o.typ === "spielplatz" && <SpielplatzAbschnitt o={o} ausfuehren={ausfuehren} laeuft={laeuft} />}
 
       <section className="admin-karte">
         <h2>

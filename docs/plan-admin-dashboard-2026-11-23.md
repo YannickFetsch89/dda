@@ -626,6 +626,16 @@ Stufe 3a – Orte (23.11.2026):
   - Befund 3 (gering): Schreibweisen ordnet die Pipeline nur bei Clubs und Spielstätten zu; die Oberfläche sagt das jetzt so. Die Funktion bleibt unverändert.
   - Befund 4 (gering) behoben: „auch vergangene zeigen“ listet die letzten 100 zugeordneten Events, auch alte Zuordnungen lassen sich lösen.
 
+Stufe 3b – Bilder und Guide-Pflege (23.11.2026):
+- **Q6 entschieden (Auftraggeber 23.11.2026):** Weihnachtsmärkte – Top-5-Rang, Ausschließen und Freischalten im Dashboard; `import_maerkte.py` übernimmt `top5_rang`, `ausgeschlossen` und `freigeschaltet_am` bei vorhandenen Zeilen aus der Datenbank (`dashboard_felder_behalten`, Warnung im Log bei abweichender CSV); Saisonzeiten und Ruhetage bleiben CSV. Spielplätze – Prüf-Codes bestätigen, Ausschließen, Freischalten im Dashboard; jede Änderung trägt das Feld in `extras.spielplatz.redaktion` ein, `stadt_import.py` und `abenteuer_import.py` lassen es stehen (`scraper/spielplaetze/redaktion.py`). Bilder – Google-Fotos auf Knopfdruck.
+- **Gesperrte Stammdaten:** Spalten, die ein Import bei jedem Lauf neu schreibt (Weihnachtsmarkt: Name, Stadtteil, Adresse, Geo, Website, Beschreibung; Spielplatz: Name, Stadtteil, Adresse, Geo, Öffnungszeiten), sind im Formular gesperrt (`CSV_FELDER`), sonst wären Änderungen beim nächsten Lauf weg.
+- **SQL:** `database/admin_guides_2026-11-23.sql`, fünf DEFINER-Funktionen: `admin_ort_bild_setzen`, `admin_ort_bild_fokus`, `admin_club_setzen`, `admin_wm_setzen`, `admin_spielplatz_setzen`.
+- **Bilder:** Kandidaten von Google über die Places API (`X-Goog-FieldMask: photos`), Vorschau über `/api/admin/orte/foto` (nur durchgereicht, nicht gespeichert). Spielstätten nie mit Google-Fotos. Eigene Dateien aus `web/public/ort-bilder` (Auswahl, kein Upload, Q5). Jede Auswahl setzt `foto_manuell` und erhöht `foto_version`; die Route leert zusätzlich `ort-foto:<slug>`. Bildausschnitt per Klick in 5-%-Schritten.
+- **Clubs:** Top-Empfehlung (`club_freigegeben`) setzen/entziehen ersetzt `clubs_profil.py freigeben`. „Aus dem Club-Hub“: `kein_club` mit Grund; eine Zeile vom Typ `club` wird zur Bar (`typ kneipe`, `vorher_typ club`, `unterart bar`). „In den Club-Hub“: `auch_club`, sichtbar erst mit Profil und Score aus `clubs_profil.py`.
+- **Weihnachtsmärkte:** Rang 1–5 ist eindeutig (ein anderer Markt mit dem Rang verliert ihn). Freischalten mit derselben Bedingung wie `weihnachtsmaerkte_freischalten.sql`.
+- **Spielplätze:** `name_unklar` und `kein_stadtteil` lassen sich nicht bestätigen (sperren immer, Korrektur über `korrekturen.csv`). Freischalten mit derselben Bedingung wie `spielplaetze_freischalten.sql`.
+- **Offen für 3c:** Vorschläge (Ortsnamen, `ort_id`-Nachtrag, Adressen/Geo, Import aus Kandidaten).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -639,3 +649,4 @@ Stufe 3a – Orte (23.11.2026):
 - 23.11.2026: Stufe 1 komplett LIVE (eeb93fd), Stufe 2 Magazin gebaut (lokal); Notizen in Anhang F.
 - 23.11.2026: Stufe 2 LIVE (cf82caf). Stufe 3a Orte gebaut (lokal), SQL S4 `admin_orte_2026-11-23.sql`; Notizen in Anhang F.
 - 23.11.2026: SQL S4 ausgeführt, Cursor-Prüfung 3a deploybar, 4 Befunde eingearbeitet (Anhang F).
+- 23.11.2026: Stufe 3a LIVE (38899b9). Stufe 3b Bilder und Guide-Pflege gebaut (lokal), SQL `admin_guides_2026-11-23.sql`, Q6 entschieden; Notizen in Anhang F.

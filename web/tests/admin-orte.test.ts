@@ -81,7 +81,7 @@ describe("Nachträge Cursor-Prüfung Stufe 3a", () => {
   it("Spielplatz und Weihnachtsmarkt nicht über das Aktiv-Häkchen freischalten (Befund 2)", () => {
     expect(stammdatenPruefen({ aktiv: true }, "spielplatz").ok).toBe(false);
     expect(stammdatenPruefen({ aktiv: true }, "weihnachtsmarkt").ok).toBe(false);
-    expect(stammdatenPruefen({ adresse: "Am Markt 1" }, "weihnachtsmarkt").ok).toBe(true);
+    expect(stammdatenPruefen({ telefon: "0211 1234" }, "weihnachtsmarkt").ok).toBe(true);
   });
 
   it("Proxy vergisst gemerkte Orte nach einer Änderung im Admin-Bereich (Befund 1)", async () => {

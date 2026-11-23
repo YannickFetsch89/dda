@@ -302,6 +302,23 @@ def extras_bauen(e: dict, alt: dict | None) -> dict:
     return wm
 
 
+# Felder, die seit dem Admin-Dashboard (Plan Admin-Dashboard 4.7, Stufe 3b, Entscheidung Q6 vom 23.11.2026) in der
+# Datenbank gepflegt werden: Bei vorhandenen Zeilen übernimmt der Import sie aus der Datenbank, nie aus maerkte.csv.
+# Für NEUE Zeilen gilt die CSV als Startwert. freigeschaltet_am kam schon immer nur aus der Datenbank.
+DASHBOARD_FELDER = ("top5_rang", "ausgeschlossen", "freigeschaltet_am")
+
+
+def dashboard_felder_behalten(wm: dict, alt: dict | None) -> tuple[dict, list[str]]:
+    """
+    extras.weihnachtsmarkt für eine VORHANDENE Zeile: DASHBOARD_FELDER aus der Datenbank (alt). Rückgabe: neues wm und
+    Hinweise, wo die CSV etwas anderes sagt (sie wird dann ignoriert – Pflege im Admin-Bereich).
+    """
+    alt = alt or {}
+    hinweise = [f"{f}: CSV „{wm.get(f)}“ ignoriert, Datenbank „{alt.get(f)}“ gilt (Admin-Bereich)"
+                for f in ("top5_rang", "ausgeschlossen") if (wm.get(f) or None) != (alt.get(f) or None)]
+    return {**wm, **{f: alt.get(f) for f in DASHBOARD_FELDER}}, hinweise
+
+
 def planen(eintraege: dict, bestehend: list[dict], andere_slugs: set[str]) -> dict:
     """Wie abenteuer_import.planen: neue Zeilen, Änderungen, Slugs (fest ab Freischaltung, Kollisionen gegen alle orte)."""
     nach_schluessel = {((z.get("extras") or {}).get(TYP) or {}).get("schluessel"): z for z in bestehend}
@@ -374,7 +391,9 @@ def schreiben(db, plan: dict) -> dict:
         try:
             aktuell = (db.table("orte").select("extras").eq("id", a["zeile"]["id"]).execute().data or [{}])[0].get("extras") or {}
             alt = aktuell.get(TYP) or {}
-            wm = {**a["wm"], "freigeschaltet_am": alt.get("freigeschaltet_am")}  # nie überschreiben
+            wm, hinweise = dashboard_felder_behalten(a["wm"], alt)  # Rang, Ausschluss, Freischaltung: Admin-Bereich
+            for h in hinweise:
+                logger.warning("%s: %s", a["schluessel"], h)
             db.table("orte").update({"extras": {**aktuell, TYP: wm}, **a["spalten"]}).eq("id", a["zeile"]["id"]).execute()
             zaehler["aktualisiert"] += 1
         except Exception as e:  # noqa: BLE001 – jede Zeile einzeln
