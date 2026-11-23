@@ -7,7 +7,13 @@ Redaktion sie an oder lehnt sie ab; erst die Annahme ändert Daten (SECURITY-DEF
 database/admin_events_2026-11-23.sql). Doppelte Vorschläge verhindert der Schlüssel (art, schluessel): Die Pipeline
 schreibt mit ON CONFLICT DO NOTHING, abgelehnte bleiben so liegen und kommen nicht wieder.
 
-Aufruf von Hand:   python -m pipeline.vorschlaege            (Dubletten und Gebiet, ab heute)
+Stufe 3c (Orte): drei weitere Arten statt der SQL-Dateien von pipeline/ortsnamen.py --sql, pipeline/ort_zuordnung.py
+--sql und pipeline/adressen_ergaenzen.py --sql: „ortsname“ (Schreibweise vereinheitlichen, je alter → neuer Name),
+„ort_id“ (Zuordnung Event → Ort, je Event), „adresse“ (Adresse aus eigenen Daten, je Event). Events mit dem Feld in
+redaktion_felder bekommen keinen Vorschlag (Plan 4.4, Stufe 3); die Annahme prüft das noch einmal
+(database/admin_vorschlaege_orte_2026-11-23.sql).
+
+Aufruf von Hand:   python -m pipeline.vorschlaege            (alle Arten)
 Im Lauf:           main.py, Schritt 3e (vorschlaege_erzeugen)
 """
 import logging
@@ -89,6 +95,156 @@ def gebiet_vorschlaege(events: list[dict], lauf_id: Optional[str] = None) -> lis
     return zeilen
 
 
+def _geschuetzt(e: dict, feld: str) -> bool:
+    return feld in (e.get("redaktion_felder") or [])
+
+
+def ortsname_vorschlaege(events: list[dict], reihen: list[dict], lauf_id: Optional[str] = None) -> list[dict]:
+    """
+    Ein Vorschlag je alter → neuer Ortsname (Regeln wie pipeline/ortsnamen.py sql_erzeugen): Events mit Eintrag „ort“
+    in redaktion_felder bleiben, ebenso solche, die sonst mit einem anderen Termin zusammenfielen. Reihen-Schlüssel
+    (titel|ort) ziehen mit; wäre ein neuer Schlüssel schon vergeben, entfällt der Vorschlag für diesen Namen (Log).
+    """
+    from pipeline.ortsnamen import umbenennungen
+    from pipeline.reihen_zuordnen import reihen_schluessel
+
+    zuweisung, _ = umbenennungen(events)
+    nach_id = {e["id"]: e for e in events}
+    gruppen: dict[tuple[str, str], list[str]] = {}
+    for eid, neu in zuweisung.items():
+        e = nach_id[eid]
+        if _geschuetzt(e, "ort"):
+            continue
+        gruppen.setdefault((e["ort"], neu), []).append(eid)
+    vorhanden = {r["schluessel"] for r in reihen}
+    zeilen = []
+    for (alt, neu), ids in sorted(gruppen.items()):
+        reihen_neu: dict[str, str] = {}
+        for eid in ids:
+            e = nach_id[eid]
+            alt_k, neu_k = reihen_schluessel(e.get("titel") or "", alt), reihen_schluessel(e.get("titel") or "", neu)
+            if e.get("reihe_id") and alt_k and neu_k and alt_k != neu_k:
+                reihen_neu[e["reihe_id"]] = neu_k
+        if any(k in vorhanden for k in reihen_neu.values()) or len(set(reihen_neu.values())) < len(reihen_neu):
+            logger.warning("Ortsname „%s“ → „%s“: Reihen-Schlüssel schon vergeben – kein Vorschlag, bitte klären", alt, neu)
+            continue
+        zeilen.append({
+            "art": "ortsname",
+            "ziel_tabelle": "events",
+            "ziel_id": None,
+            "schluessel": f"{alt}→{neu}"[:300],
+            "vorschlag": {"alt": alt, "neu": neu, "events": sorted(ids), "reihen_schluessel": reihen_neu},
+            "begruendung": f"Schreibweise vereinheitlichen: „{alt[:80]}“ → „{neu[:80]}“ ({len(ids)} Events, Liste in "
+                           f"pipeline/ortsnamen.py).",
+            "quelle_lauf": lauf_id,
+        })
+    return zeilen
+
+
+def ort_id_vorschlaege(events: list[dict], index, lauf_id: Optional[str] = None) -> list[dict]:
+    """Ein Vorschlag je Event, dessen berechnete Ortszuordnung vom gespeicherten Wert abweicht (nie NULL)."""
+    from pipeline.ort_zuordnung import ort_zuordnen
+
+    zeilen = []
+    for e in events:
+        if _geschuetzt(e, "ort_id"):
+            continue
+        oid, _ = ort_zuordnen(e, index)
+        if not oid or oid == e.get("ort_id"):
+            continue
+        z = index.zeilen.get(oid) or {}
+        zeilen.append({
+            "art": "ort_id",
+            "ziel_tabelle": "events",
+            "ziel_id": e["id"],
+            "schluessel": f"{e['id']}:{oid}",
+            "vorschlag": {"event": e["id"], "ort_id": oid, "ort_name": z.get("name"), "ort_slug": z.get("slug"),
+                          "ort_typ": z.get("typ"), "bisher": e.get("ort_id"), "titel": e.get("titel"),
+                          "datum": e.get("datum"), "ort": e.get("ort")},
+            "begruendung": f"„{(e.get('ort') or '')[:80]}“ gehört zu {z.get('name')} ({z.get('typ')})"
+                           + (" – ersetzt eine andere Zuordnung" if e.get("ort_id") else "") + ".",
+            "quelle_lauf": lauf_id,
+        })
+    return zeilen
+
+
+def adresse_vorschlaege(events: list[dict], lauf_id: Optional[str] = None) -> list[dict]:
+    """Ein Vorschlag je Event, das in adressen_ergaenzen eine Adresse bekommen hat (events sind schon ergänzt)."""
+    from pipeline.stadtteil_mapper import stadtteil_ermitteln
+
+    zeilen = []
+    for e in events:
+        if not e.get("adresse") or _geschuetzt(e, "adresse"):
+            continue
+        stadtteil = None
+        if not e.get("stadtteil") and not _geschuetzt(e, "stadtteil"):
+            stadtteil = stadtteil_ermitteln(e.get("ort") or "", e["adresse"], e.get("quelle_name"))
+        zeilen.append({
+            "art": "adresse",
+            "ziel_tabelle": "events",
+            "ziel_id": e["id"],
+            "schluessel": e["id"],
+            "vorschlag": {"event": e["id"], "adresse": e["adresse"], "stadtteil": stadtteil, "titel": e.get("titel"),
+                          "datum": e.get("datum"), "ort": e.get("ort")},
+            "begruendung": f"Adresse aus eigenen Daten für „{(e.get('ort') or '')[:80]}“"
+                           + (f", Stadtteil {stadtteil}" if stadtteil else "") + ".",
+            "quelle_lauf": lauf_id,
+        })
+    return zeilen
+
+
+def _seiten(db, tabelle: str, spalten: str, filter_fn=None) -> list[dict]:
+    """Seitenweise laden (Supabase liefert höchstens 1.000 Zeilen pro Abfrage)."""
+    zeilen, start = [], 0
+    while True:
+        q = db.table(tabelle).select(spalten)
+        if filter_fn:
+            q = filter_fn(q)
+        teil = q.order("id").range(start, start + 999).execute().data or []
+        zeilen.extend(teil)
+        if len(teil) < 1000:
+            return zeilen
+        start += 1000
+
+
+def _orte_vorschlaege(db, lauf_id: Optional[str]) -> dict[str, int]:
+    """Stufe 3c: Ortsnamen, Ortszuordnung, Adressen – jede Art für sich, ein Fehler bricht die anderen nicht ab."""
+    ergebnis = {"ortsname": 0, "ort_id": 0, "adresse": 0}
+    heute = date.today().isoformat()
+    try:
+        events = _seiten(db, "events", "id,titel,datum,uhrzeit,ort,reihe_id,abgelehnt,redaktion_felder")
+        reihen = _seiten(db, "reihen", "id,schluessel,ort")
+        ergebnis["ortsname"] = vorschlaege_schreiben(db, ortsname_vorschlaege(events, reihen, lauf_id))
+    except Exception as e:
+        logger.error("Ortsnamen-Vorschläge nicht erzeugt: %s", e)
+    try:
+        from pipeline.ort_zuordnung import index_laden
+
+        index = index_laden(db)
+        events = _seiten(db, "events", "id,titel,datum,ort,adresse,ort_id,redaktion_felder",
+                         lambda q: q.gte("datum", heute).eq("abgelehnt", False))
+        ergebnis["ort_id"] = vorschlaege_schreiben(db, ort_id_vorschlaege(events, index, lauf_id))
+    except Exception as e:
+        logger.error("Ortszuordnungs-Vorschläge nicht erzeugt: %s", e)
+    try:
+        from pipeline.adressen_ergaenzen import (adressbuch_bauen, adressen_ergaenzen, daten_laden,
+                                                 ort_adressen_bauen, titel_index_bauen)
+        from pipeline.deduplication import ist_rausgegangen
+        from pipeline.ort_zuordnung import index_laden
+
+        orte, bestand = daten_laden(db)
+        offen = [e for e in _seiten(db, "events", "id,titel,datum,ort,ort_id,adresse,stadtteil,quelle_name,quelle_url,"
+                                                   "redaktion_felder",
+                                    lambda q: q.gte("datum", heute).is_("adresse", "null").eq("abgelehnt", False))
+                 if ist_rausgegangen(e) and not _geschuetzt(e, "adresse")]
+        adressen_ergaenzen(offen, adressbuch_bauen(orte, bestand), titel_index_bauen(bestand),
+                           ort_adressen_bauen(index_laden(db)))
+        ergebnis["adresse"] = vorschlaege_schreiben(db, adresse_vorschlaege(offen, lauf_id))
+    except Exception as e:
+        logger.error("Adress-Vorschläge nicht erzeugt: %s", e)
+    return ergebnis
+
+
 def vorschlaege_schreiben(db, zeilen: list[dict]) -> int:
     """Schreibt neue Vorschläge; bestehende (auch abgelehnte) bleiben unverändert."""
     for i in range(0, len(zeilen), STAPEL):
@@ -111,7 +267,7 @@ def _alle_sichtbaren(db) -> list[dict]:
 
 def vorschlaege_erzeugen(lauf_id: Optional[str] = None) -> dict[str, int]:
     """Dubletten (ab heute) und Gebiet (ganzer sichtbarer Bestand). Wirft nie, auch nicht beim Import; meldet ins Log."""
-    ergebnis = {"dublette": 0, "gebiet": 0}
+    ergebnis = {"dublette": 0, "gebiet": 0, "ortsname": 0, "ort_id": 0, "adresse": 0}
     try:
         from database.client import get_supabase_client
         from pipeline.deduplication import titel_status_bereinigen
@@ -124,8 +280,10 @@ def vorschlaege_erzeugen(lauf_id: Optional[str] = None) -> dict[str, int]:
             titel_status_bereinigen(e)
         ergebnis["dublette"] = vorschlaege_schreiben(db, dubletten_vorschlaege(events, original, lauf_id))
         ergebnis["gebiet"] = vorschlaege_schreiben(db, gebiet_vorschlaege(_alle_sichtbaren(db), lauf_id))
-        logger.info("Vorschläge geprüft: %d Dubletten-Paare, %d außerhalb des Gebiets (neue und schon bekannte)",
-                    ergebnis["dublette"], ergebnis["gebiet"])
+        ergebnis.update(_orte_vorschlaege(db, lauf_id))
+        logger.info("Vorschläge geprüft: %d Dubletten-Paare, %d außerhalb des Gebiets, %d Ortsnamen, %d Ortszuordnungen, "
+                    "%d Adressen (neue und schon bekannte)", ergebnis["dublette"], ergebnis["gebiet"],
+                    ergebnis["ortsname"], ergebnis["ort_id"], ergebnis["adresse"])
     except Exception as e:
         logger.error("Vorschläge konnten nicht erzeugt werden (admin_grundlagen_2026-11-23.sql ausgeführt?): %s", e)
     return ergebnis

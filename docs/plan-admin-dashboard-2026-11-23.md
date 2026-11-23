@@ -639,6 +639,16 @@ Stufe 3b – Bilder und Guide-Pflege (23.11.2026):
   - Befund 1 (mittel) behoben: Ein aktiver Club wird nur zur Bar, wenn sein Score mindestens 7 ist (Route). Nur dann leitet die alte Club-URL auf die Bar-Seite; darunter wäre sie eine 404 geworden. Bar-Seiten unter 7 auszuliefern hätte die Score-Regel der Guides aufgeweicht.
   - Befund 2 (gering) behoben: `?v=` hängt ab `foto_version` 1 an der Bildadresse (`ortBildUrl`, Ortsseiten-Kopfbild), damit auch die erste Bildwahl im Admin eine neue Adresse ergibt.
 
+Stufe 3c – Vorschläge zu Orten (23.11.2026):
+- **Drei neue Arten** in `pipeline/vorschlaege.py`, erzeugt im Lauf (Schritt 3e) statt der SQL-Dateien:
+  - `ortsname` (je alter → neuer Name, Regeln von `ortsnamen.py umbenennungen`, Reihen-Ort und -Schlüssel ziehen mit; ist ein neuer Reihen-Schlüssel schon vergeben, entfällt der Vorschlag mit Warnung im Log);
+  - `ort_id` (je Event ab heute, Regeln von `ort_zuordnung.ort_zuordnen`, nie NULL);
+  - `adresse` (je künftigem Rausgegangen-Event ohne Adresse, Regeln von `adressen_ergaenzen` ohne OpenStreetMap; Stadtteil nur, wenn leer).
+  - Events mit dem Feld in `redaktion_felder` bekommen keinen Vorschlag; die Annahme prüft es noch einmal (Plan 4.4). `abgleich_ort` bleibt unverändert.
+- **SQL:** `database/admin_vorschlaege_orte_2026-11-23.sql` legt `admin_vorschlag_annehmen` vollständig neu an (Dublette und Gebiet unverändert) und dazu `admin_ortsname_anwenden` (nur intern aufrufbar). Ein Event, das beim Umbenennen mit einem anderen Termin zusammenfiele, bleibt beim alten Namen (unique_violation je Event abgefangen). Ein `ort_id`-Vorschlag auf einen inzwischen inaktiven oder gelöschten Ort wird abgewiesen.
+- **Gesammelt:** `/api/admin/vorschlaege/sammel` nimmt bis zu 200 angezeigte Vorschläge an oder lehnt sie ab – nur für die drei Orte-Arten (setzen nur leere bzw. ungeschützte Felder). Dubletten und Gebiet bleiben Einzelentscheidungen.
+- **Bewusst nicht in 3c (bleiben Skripte):** Geo der Ortsseiten (`spielstaetten_geo.py`: Google-Suche, Bestätigung der Adresse von Hand, dann OpenStreetMap) und der Import neuer Ortsseiten aus `data/spielstaetten/kandidaten.csv` (Entscheidungen je Haus, Säle, Arten). Beides läuft selten und braucht die Sichtung in der CSV; bei Bedarf eigener Teilbereich.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -654,3 +664,4 @@ Stufe 3b – Bilder und Guide-Pflege (23.11.2026):
 - 23.11.2026: SQL S4 ausgeführt, Cursor-Prüfung 3a deploybar, 4 Befunde eingearbeitet (Anhang F).
 - 23.11.2026: Stufe 3a LIVE (38899b9). Stufe 3b Bilder und Guide-Pflege gebaut (lokal), SQL `admin_guides_2026-11-23.sql`, Q6 entschieden; Notizen in Anhang F.
 - 23.11.2026: SQL `admin_guides_2026-11-23.sql` ausgeführt, Cursor-Prüfung 3b deploybar, 2 Befunde eingearbeitet (Anhang F).
+- 23.11.2026: Stufe 3b LIVE (81bb408). Stufe 3c Vorschläge zu Orten gebaut (lokal), SQL `admin_vorschlaege_orte_2026-11-23.sql`; Notizen in Anhang F.
