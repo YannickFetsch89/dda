@@ -66,13 +66,12 @@ export default function DatenschutzSeite() {
         erhoben. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse). Die Logfiles werden
         nach 30 Tagen automatisch gelöscht.
       </p>
-      {konten && (
-        <p>
-          Über den Mailserver unseres Hosting-Anbieters versenden wir außerdem die E-Mails zum Nutzerkonto
-          (Abschnitt 13). Dabei verarbeitet der Anbieter Ihre E-Mail-Adresse und den Inhalt der jeweiligen E-Mail in
-          unserem Auftrag.
-        </p>
-      )}
+      {/* Newsletter-Double-Opt-in (Plan Admin-Dashboard 4.9, vom Anwalt freigegeben 23.11.2026): Satz gilt immer */}
+      <p>
+        Über den Mailserver unseres Hosting-Anbieters versenden wir außerdem{" "}
+        {konten ? "die E-Mails zum Nutzerkonto (Abschnitt 13) und " : ""}die E-Mails zum Newsletter (Abschnitt 11).
+        Dabei verarbeitet der Anbieter Ihre E-Mail-Adresse und den Inhalt der jeweiligen E-Mail in unserem Auftrag.
+      </p>
 
       <h2>4. SSL-Verschlüsselung</h2>
       <p>
@@ -289,15 +288,21 @@ export default function DatenschutzSeite() {
       </p>
 
       <h2 id="newsletter">11. Newsletter</h2>
+      {/* Text vom Anwalt freigegeben 23.11.2026 (docs/anwalt-newsletter-doi-2026-11-23.md) */}
       <p>
         Wenn Sie unseren Newsletter abonnieren, speichern wir Ihre E-Mail-Adresse und den Zeitpunkt der
-        Anmeldung für den künftigen Versand (Supabase, siehe Abschnitt 9). Derzeit verschicken wir noch keine
-        Newsletter. Bevor die erste Ausgabe verschickt wird, bitten wir Sie per E-Mail, Ihre Anmeldung zu
-        bestätigen; ohne Bestätigung erhalten Sie keinen Newsletter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a
-        DSGVO (Einwilligung). Sie können Ihre Anmeldung jederzeit per E-Mail an{" "}
-        <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a> widerrufen – dann löschen wir Ihre
-        E-Mail-Adresse unverzüglich. Sobald der Versand startet, enthält zusätzlich jede Ausgabe einen
-        Abmeldelink.
+        Anmeldung (Supabase, siehe Abschnitt 9). Anschließend schicken wir Ihnen eine E-Mail mit einem
+        Bestätigungslink (Double-Opt-in). Erst wenn Sie den Link aufrufen und die Anmeldung bestätigen, erhalten
+        Sie den Newsletter; wir speichern dann zusätzlich den Zeitpunkt der Bestätigung als Nachweis Ihrer
+        Einwilligung. Bestätigen Sie die Anmeldung nicht, löschen wir Ihre E-Mail-Adresse 30 Tage nach der
+        Bestätigungs-E-Mail. Die E-Mails versenden wir über den Mailserver unseres Hosting-Anbieters, der dabei
+        Ihre E-Mail-Adresse und den Inhalt der E-Mail in unserem Auftrag verarbeitet.
+      </p>
+      <p>
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Sie können Ihre Einwilligung jederzeit
+        widerrufen – über den Abmeldelink in jeder E-Mail oder per E-Mail an{" "}
+        <a href="mailto:hallo@diesdas.events">hallo@diesdas.events</a>. Mit der Abmeldung löschen wir Ihre
+        E-Mail-Adresse sofort.
       </p>
 
       <h2 id="event-melden">12. Event melden</h2>

@@ -10,6 +10,7 @@ interface Anmeldung {
   erstellt_am: string;
   bestaetigt_am: string | null;
   bestaetigung_gesendet_am: string | null;
+  bestaetigung_zugestellt_am: string | null;
   mails_gesendet: number | null;
 }
 
@@ -47,11 +48,13 @@ export function NewsletterListe() {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const laden = useCallback(async () => {
-    const p = new URLSearchParams();
-    if (status) p.set("status", status);
-    if (suche) p.set("q", suche);
-    if (seite) p.set("seite", String(seite));
-    const r = await fetch(`/api/admin/newsletter?${p.toString()}`, { cache: "no-store" });
+    // POST: Eine gesuchte Adresse steht so weder in der Adresszeile noch im Access-Log (Cursor-Prüfung 4, Befund 2)
+    const r = await fetch("/api/admin/newsletter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aktion: "liste", status, q: suche, seite }),
+      cache: "no-store",
+    });
     if (r.status === 401) return window.location.assign("/admin/anmelden");
     const x = (await r.json().catch(() => ({}))) as Antwort & { fehler?: string };
     if (!r.ok) return setFehler(x.fehler ?? "Liste nicht ladbar.");
@@ -156,7 +159,7 @@ export function NewsletterListe() {
                   <td>{a.email}</td>
                   <td>{zeit(a.erstellt_am)}</td>
                   <td>
-                    {zeit(a.bestaetigung_gesendet_am)}
+                    {zeit(a.bestaetigung_zugestellt_am)}
                     {(a.mails_gesendet ?? 0) > 1 && <small> ({a.mails_gesendet}×)</small>}
                   </td>
                   <td>{zeit(a.bestaetigt_am)}</td>

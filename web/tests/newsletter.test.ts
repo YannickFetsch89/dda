@@ -1,6 +1,6 @@
 // Tests zu Stufe 4 (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.9): Newsletter-Tokens und Anmelde-Regeln
 import { describe, expect, it } from "vitest";
-import { anmeldungPlanen, MAX_MAILS, newsletterToken, newsletterTokenPruefen } from "@/lib/newsletter";
+import { anmeldungPlanen, istOneClick, MAX_MAILS, newsletterToken, newsletterTokenPruefen } from "@/lib/newsletter";
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const S = "testschluessel";
@@ -26,10 +26,11 @@ describe("Tokens", () => {
 
 describe("Anmeldung planen", () => {
   const jetzt = Date.parse("2026-11-23T12:00:00Z");
-  const b = (x: Partial<{ bestaetigt_am: string | null; bestaetigung_gesendet_am: string | null; mails_gesendet: number }>) => ({
+  const b = (x: Partial<{ bestaetigt_am: string | null; bestaetigung_zugestellt_am: string | null; mails_gesendet: number }>) => ({
     id: ID,
     bestaetigt_am: null,
     bestaetigung_gesendet_am: null,
+    bestaetigung_zugestellt_am: null,
     mails_gesendet: 0,
     ...x,
   });
@@ -39,8 +40,20 @@ describe("Anmeldung planen", () => {
     expect(anmeldungPlanen(b({}), jetzt)).toBe("nichts");
   });
   it("erneut nur nach 24 Stunden und höchstens dreimal", () => {
-    expect(anmeldungPlanen(b({ bestaetigung_gesendet_am: "2026-11-23T01:00:00Z", mails_gesendet: 1 }), jetzt)).toBe("nichts");
-    expect(anmeldungPlanen(b({ bestaetigung_gesendet_am: "2026-11-22T01:00:00Z", mails_gesendet: 1 }), jetzt)).toBe("erneut_senden");
-    expect(anmeldungPlanen(b({ bestaetigung_gesendet_am: "2026-11-01T01:00:00Z", mails_gesendet: MAX_MAILS }), jetzt)).toBe("nichts");
+    expect(anmeldungPlanen(b({ bestaetigung_zugestellt_am: "2026-11-23T01:00:00Z", mails_gesendet: 1 }), jetzt)).toBe("nichts");
+    expect(anmeldungPlanen(b({ bestaetigung_zugestellt_am: "2026-11-22T01:00:00Z", mails_gesendet: 1 }), jetzt)).toBe("erneut_senden");
+    expect(anmeldungPlanen(b({ bestaetigung_zugestellt_am: "2026-11-01T01:00:00Z", mails_gesendet: MAX_MAILS }), jetzt)).toBe("nichts");
+  });
+});
+
+describe("Nachträge Cursor-Prüfung Stufe 4", () => {
+  it("One-Click nur mit Formular-Body „List-Unsubscribe=One-Click“ (RFC 8058, Befund 1)", () => {
+    const form = "application/x-www-form-urlencoded";
+    expect(istOneClick(form, "List-Unsubscribe=One-Click")).toBe(true);
+    expect(istOneClick(`${form}; charset=utf-8`, "List-Unsubscribe=One-Click\r\n")).toBe(true);
+    expect(istOneClick(form, "")).toBe(false);
+    expect(istOneClick(form, "List-Unsubscribe=One-Click&x=1")).toBe(false);
+    expect(istOneClick("application/json", "List-Unsubscribe=One-Click")).toBe(false);
+    expect(istOneClick(null, "List-Unsubscribe=One-Click")).toBe(false);
   });
 });

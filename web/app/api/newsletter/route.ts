@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const fehlgeschlagen = () => antwort(500, { fehler: "Das hat leider nicht geklappt. Bitte versuch es später noch einmal." });
   const { data: bestand, error: f1 } = await db
     .from("newsletter_anmeldungen")
-    .select("id, bestaetigt_am, bestaetigung_gesendet_am, mails_gesendet")
+    .select("id, bestaetigt_am, bestaetigung_gesendet_am, bestaetigung_zugestellt_am, mails_gesendet")
     .ilike("email", email.replace(/[\\%_]/g, (z) => `\\${z}`))
     .maybeSingle();
   if (f1) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       return fehlgeschlagen();
     }
   } else if (plan === "erneut_senden" && bestand) {
-    const { error } = await db.from("newsletter_anmeldungen").update({ bestaetigung_gesendet_am: null }).eq("id", bestand.id).is("bestaetigt_am", null);
+    const { error } = await db.from("newsletter_anmeldungen").update({ bestaetigung_gesendet_am: null, bestaetigung_zugestellt_am: null }).eq("id", bestand.id).is("bestaetigt_am", null);
     if (error) {
       console.error(`Newsletter-Anmeldung: erneuter Versand nicht vorgemerkt (${error.code ?? "fehler"})`);
       return fehlgeschlagen();

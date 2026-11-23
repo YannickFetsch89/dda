@@ -30,10 +30,22 @@ export function newsletterTokenPruefen(token: unknown, zweck: TokenZweck, schlue
   return a.length === b.length && timingSafeEqual(a, b) ? id.toLowerCase() : null;
 }
 
+/**
+ * RFC 8058: Eine One-Click-Abmeldung ist ein POST mit Content-Type application/x-www-form-urlencoded und genau dem
+ * Body „List-Unsubscribe=One-Click“ (Cursor-Prüfung 4, Befund 1). Alles andere meldet nicht ab.
+ */
+export function istOneClick(contentType: string | null, body: string): boolean {
+  const art = (contentType ?? "").split(";")[0].trim().toLowerCase();
+  if (art !== "application/x-www-form-urlencoded") return false;
+  const felder = new URLSearchParams(body.trim());
+  return [...felder.keys()].length === 1 && felder.get("List-Unsubscribe") === "One-Click";
+}
+
 export interface Bestand {
   id: string;
   bestaetigt_am: string | null;
   bestaetigung_gesendet_am: string | null;
+  bestaetigung_zugestellt_am?: string | null;
   mails_gesendet: number | null;
 }
 
@@ -49,7 +61,8 @@ const ERNEUT_NACH_MS = 24 * 3600 * 1000;
 export function anmeldungPlanen(bestand: Bestand | null, jetzt: number = Date.now()): "anlegen" | "erneut_senden" | "nichts" {
   if (!bestand) return "anlegen";
   if (bestand.bestaetigt_am) return "nichts";
-  if (!bestand.bestaetigung_gesendet_am) return "nichts"; // Mail steht ohnehin aus
+  // Noch nicht zugestellt: Der Job schickt sie ohnehin (auch einen hängengebliebenen Anspruch nach 30 Minuten)
+  if (!bestand.bestaetigung_zugestellt_am) return "nichts";
   if ((bestand.mails_gesendet ?? 0) >= MAX_MAILS) return "nichts";
-  return jetzt - Date.parse(bestand.bestaetigung_gesendet_am) > ERNEUT_NACH_MS ? "erneut_senden" : "nichts";
+  return jetzt - Date.parse(bestand.bestaetigung_zugestellt_am) > ERNEUT_NACH_MS ? "erneut_senden" : "nichts";
 }

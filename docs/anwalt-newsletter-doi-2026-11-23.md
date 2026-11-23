@@ -1,5 +1,7 @@
 # Für den Anwalt: Newsletter mit Double-Opt-in
 
+**Vom Anwalt freigegeben am 23.11.2026** (Mitteilung des Auftraggebers); Texte wörtlich übernommen.
+
 Stand 23.11.2026. Erstellt von Claude für die schriftliche Freigabe, die der Auftraggeber einholt. Kein Rechtsrat. Gehört zu Stufe 4 des Plans `docs/plan-admin-dashboard-2026-11-23.md` (Abschnitt 4.9).
 
 **Stand der Technik:** Die Website und der Versandjob sind gebaut. Der Versand der Bestätigungsmails ist aber **ausgeschaltet**, bis diese Freigabe vorliegt (GitHub-Variable `NEWSLETTER_AKTIV`). Bis dahin nimmt die Website Anmeldungen an, verschickt aber nichts. Der Versand des eigentlichen Newsletters („Zehn Tipps“ am Donnerstag) ist **nicht** Teil dieser Freigabe; er kommt mit einem eigenen Plan.

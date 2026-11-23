@@ -660,6 +660,12 @@ Stufe 4 – Newsletter mit Double-Opt-in (23.11.2026):
 - **Bestehende Anmeldungen** bekommen nach dem Einschalten einmal die Bestätigungsmail – angekündigt in der heutigen Datenschutzerklärung.
 - **Admin:** `/admin/newsletter` mit Zahlen, Liste, CSV-Export nur der Bestätigten (BOM, Formel-Schutz), Löschen auf Anfrage; Protokoll ohne Adressen.
 - **Rechtliches:** `docs/anwalt-newsletter-doi-2026-11-23.md` (Ablauf, vier Fragen, Entwurf Abschnitt 11 und Hinweis unter dem Formular). Die Datenschutzerklärung bleibt bis zur Freigabe unverändert; ebenso bleibt `NEWSLETTER_AKTIV` aus.
+- **Anwalt hat freigegeben (23.11.2026):** Abschnitt 11 der Datenschutzerklärung und der Hinweis unter dem Anmeldefeld wörtlich übernommen; der Satz zum Mailserver gilt jetzt immer (Konto-Mails nur mit Schalter). `NEWSLETTER_AKTIV` setzt der Auftraggeber nach dem Deploy.
+- **Cursor-Prüfung Stufe 4 (deploybar, SQL ausgeführt, Secret gesetzt):**
+  - Befund 1 (mittel) behoben: One-Click löscht nur bei `application/x-www-form-urlencoded` mit genau `List-Unsubscribe=One-Click` (RFC 8058, `istOneClick`), sonst 400.
+  - Befund 2 (gering) behoben: Die Admin-Liste lädt per POST, eine gesuchte Adresse steht nicht mehr in URL und Access-Log.
+  - Befund 3 (gering) behoben: Anspruch (`bestaetigung_gesendet_am`) und Zustellung (`bestaetigung_zugestellt_am`, `newsletter_bestaetigung_versandt`) getrennt; ein Anspruch ohne Zustellung wird nach 30 Minuten wieder aufgenommen; gezählt und gelöscht wird nach der Zustellung. SQL geändert, erneut auszuführen.
+  - Befund 4 (gering) behoben: Bremslimit der One-Click-Route nur für ungültige Tokens.
 
 ## Prüfhistorie
 
@@ -679,3 +685,4 @@ Stufe 4 – Newsletter mit Double-Opt-in (23.11.2026):
 - 23.11.2026: Stufe 3b LIVE (81bb408). Stufe 3c Vorschläge zu Orten gebaut (lokal), SQL `admin_vorschlaege_orte_2026-11-23.sql`; Notizen in Anhang F.
 - 23.11.2026: SQL Stufe 3c ausgeführt, Cursor-Prüfung 3c deploybar, 2 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
 - 23.11.2026: Stufe 3c LIVE (d3b0bf3). Stufe 4 Newsletter-Double-Opt-in gebaut (lokal), SQL `newsletter_doi_2026-11-23.sql`, Anwaltsvorlage; Notizen in Anhang F.
+- 23.11.2026: Anwalt hat Stufe 4 freigegeben (Texte übernommen), Cursor-Prüfung 4 deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).

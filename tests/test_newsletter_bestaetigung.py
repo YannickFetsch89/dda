@@ -43,7 +43,7 @@ class FakeAntwort:
 
 class FakeDb:
     def __init__(self, zeilen):
-        self.zeilen, self.freigegeben = zeilen, []
+        self.zeilen, self.freigegeben, self.versandt = zeilen, [], []
 
     def rpc(self, name, args):
         db = self
@@ -54,6 +54,8 @@ class FakeDb:
                     return FakeAntwort(db.zeilen)
                 if name == "newsletter_bestaetigung_freigeben":
                     db.freigegeben.append(args["p_id"])
+                if name == "newsletter_bestaetigung_versandt":
+                    db.versandt.append(args["p_id"])
                 return FakeAntwort(None)
         return Aufruf()
 
@@ -85,12 +87,14 @@ class Versand(unittest.TestCase):
         f = self.fabrik(fehler_bei=("b@x.de",))
         self.assertEqual(nb.versenden(db, f, S), {"beansprucht": 2, "gesendet": 1, "fehlgeschlagen": 1})
         self.assertEqual(db.freigegeben, ["b"])
+        self.assertEqual(db.versandt, ["a"])  # nur die zugestellte zählt (Cursor-Prüfung 4, Befund 3)
         self.assertEqual(f.gesendet, ["a@x.de"])
 
     def test_verbindung_scheitert_alle_frei(self):
         db = FakeDb([{"id": "a", "email": "a@x.de"}, {"id": "b", "email": "b@x.de"}])
         self.assertEqual(nb.versenden(db, self.fabrik(verbindung_scheitert=True), S)["fehlgeschlagen"], 2)
         self.assertEqual(db.freigegeben, ["a", "b"])
+        self.assertEqual(db.versandt, [])
 
 
 if __name__ == "__main__":

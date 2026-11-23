@@ -587,6 +587,8 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .newsletter .btn--navy { background: var(--ddd-navy); color: #f7f8fa; }
 .newsletter__form { display: flex; flex-direction: column; gap: 8px; }
 .newsletter__fehler { font-size: 14px; font-weight: 600; margin: 0; }
+.newsletter__hinweis { font-size: 13px; line-height: 1.45; margin: 0; }
+.newsletter__hinweis a { color: inherit; text-decoration: underline; }
 /* Honeypot-Feld gegen Bots (Formulare): für Menschen unsichtbar, nicht per display:none */
 .honigtopf { position: absolute !important; left: -10000px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 @media (min-width: 1200px) {

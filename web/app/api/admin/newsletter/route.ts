@@ -1,8 +1,9 @@
 // Admin-Bereich – Newsletter (Plan Admin-Dashboard 4.9, Stufe 4). Liest mit dem Admin-Token (Policies „Admins lesen/
 // löschen Newsletter“ aus meldungen_newsletter_2026-11-05.sql).
-// GET ?status=bestaetigt|offen&q=&seite=   → Zahlen (admin_newsletter_zahlen) und Liste, 100 je Seite
-// GET ?export=1                            → CSV nur der bestätigten Adressen (Protokoll mit Anzahl, ohne Adressen)
-// POST { aktion: "loeschen", id }          → Adresse löschen (auf Anfrage); das Protokoll enthält keine Adresse
+// GET ?export=1                                    → CSV nur der bestätigten Adressen (Protokoll mit Anzahl, ohne Adressen)
+// POST { aktion: "liste", status?, q?, seite? }     → Zahlen (admin_newsletter_zahlen) und Liste, 100 je Seite.
+//      Als POST, damit eine gesuchte Adresse nicht in der Adresse und im Access-Log steht (Cursor-Prüfung 4, Befund 2).
+// POST { aktion: "loeschen", id }                  → Adresse löschen (auf Anfrage); das Protokoll enthält keine Adresse
 import { protokollieren } from "@/lib/admin/protokoll";
 import { adminAntwort, adminRoute } from "@/lib/admin/route";
 
@@ -48,25 +49,29 @@ export async function GET(request: Request) {
       return antwort;
     }
 
-    const seite = Math.max(0, Math.min(500, Number(p.get("seite")) || 0));
-    let q = db
-      .from("newsletter_anmeldungen")
-      .select("id, email, quelle, erstellt_am, bestaetigt_am, bestaetigung_gesendet_am, mails_gesendet", { count: "exact" });
-    if (p.get("status") === "bestaetigt") q = q.not("bestaetigt_am", "is", null);
-    if (p.get("status") === "offen") q = q.is("bestaetigt_am", null);
-    const suche = p.get("q")?.trim().replace(/[%_,()*\\]/g, " ").slice(0, 80);
-    if (suche) q = q.ilike("email", `%${suche}%`);
-    const [liste, zahlen] = await Promise.all([
-      q.order("erstellt_am", { ascending: false }).range(seite * SEITE, seite * SEITE + SEITE - 1),
-      db.rpc("admin_newsletter_zahlen"),
-    ]);
-    if (liste.error) return adminAntwort(500, { fehler: liste.error.message, code: "db" }, setCookies);
-    return adminAntwort(200, { seite, proSeite: SEITE, gesamt: liste.count ?? 0, anmeldungen: liste.data ?? [], zahlen: zahlen.data ?? null }, setCookies);
+    return adminAntwort(400, { fehler: "Liste bitte per POST laden." }, setCookies);
   });
 }
 
 export async function POST(request: Request) {
   return adminRoute(request, {}, async ({ admin, body, setCookies }) => {
+    if (body.aktion === "liste") {
+      const db = admin!.db;
+      const seite = Math.max(0, Math.min(500, Number(body.seite) || 0));
+      let q = db
+        .from("newsletter_anmeldungen")
+        .select("id, email, quelle, erstellt_am, bestaetigt_am, bestaetigung_gesendet_am, bestaetigung_zugestellt_am, mails_gesendet", { count: "exact" });
+      if (body.status === "bestaetigt") q = q.not("bestaetigt_am", "is", null);
+      if (body.status === "offen") q = q.is("bestaetigt_am", null);
+      const suche = typeof body.q === "string" ? body.q.trim().replace(/[%_,()*\\]/g, " ").slice(0, 80) : "";
+      if (suche) q = q.ilike("email", `%${suche}%`);
+      const [liste, zahlen] = await Promise.all([
+        q.order("erstellt_am", { ascending: false }).range(seite * SEITE, seite * SEITE + SEITE - 1),
+        db.rpc("admin_newsletter_zahlen"),
+      ]);
+      if (liste.error) return adminAntwort(500, { fehler: liste.error.message, code: "db" }, setCookies);
+      return adminAntwort(200, { seite, proSeite: SEITE, gesamt: liste.count ?? 0, anmeldungen: liste.data ?? [], zahlen: zahlen.data ?? null }, setCookies);
+    }
     if (body.aktion !== "loeschen") return adminAntwort(400, { fehler: "Unbekannte Aktion." }, setCookies);
     const id = typeof body.id === "string" ? body.id : "";
     if (!UUID.test(id)) return adminAntwort(400, { fehler: "Ungültige ID." }, setCookies);

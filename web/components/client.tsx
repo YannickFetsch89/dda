@@ -504,6 +504,12 @@ export function NewsletterForm() {
       </button>
     </form>
     {fehler && <p className="newsletter__fehler" role="alert">{fehler}</p>}
+    {/* Hinweis vom Anwalt freigegeben 23.11.2026 (docs/anwalt-newsletter-doi-2026-11-23.md) */}
+    <p className="newsletter__hinweis">
+      Mit der Anmeldung bekommst du eine Mail mit Bestätigungslink. Erst danach schicken wir dir donnerstags unseren
+      Newsletter. Abmelden kannst du dich jederzeit über den Link in jeder Mail. Mehr in der{" "}
+      <Link href="/datenschutz#newsletter">Datenschutzerklärung</Link>.
+    </p>
     </div>
   );
 }

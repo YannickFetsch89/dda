@@ -4,7 +4,9 @@ Bestätigungsmail (Double-Opt-in) für Newsletter-Anmeldungen (Plan docs/plan-ad
 Stufe 4; Entscheidung E9: die Website legt die Anmeldung an, dieser Job schickt die Mail).
 
 Ablauf je Lauf (alle 15 Minuten über .github/workflows/newsletter.yml, Versand nur mit NEWSLETTER_AKTIV=1):
-  1. Offene Anmeldungen beanspruchen (newsletter_bestaetigung_beanspruchen, höchstens JE_LAUF, gegen Doppelversand).
+  1. Offene Anmeldungen beanspruchen (newsletter_bestaetigung_beanspruchen, höchstens JE_LAUF, gegen Doppelversand;
+     ein Anspruch ohne Zustellung, älter als 30 Minuten, wird wieder aufgenommen). Nach dem Versand
+     newsletter_bestaetigung_versandt (Zustellung, zählt für die Höchstzahl von 3 Mails).
   2. Je Anmeldung: Mail mit Bestätigungslink und Link „Anmeldung verwerfen“ (Text + HTML, List-Unsubscribe nach
      RFC 8058) über SMTP. Scheitert der Versand, gibt newsletter_bestaetigung_freigeben die Anmeldung wieder frei.
   3. Unbestätigte Anmeldungen 30 Tage nach der Bestätigungsmail löschen (newsletter_aufraeumen).
@@ -129,6 +131,7 @@ def versenden(db, versender_fabrik, schluessel: str, je_lauf: int = JE_LAUF) -> 
                 try:
                     v.senden(mail_bauen(z["email"], links(str(z["id"]), schluessel)))
                     zahlen["gesendet"] += 1
+                    _versandt(db, z)
                 except Exception as e:  # noqa: BLE001 – jede Mail einzeln
                     zahlen["fehlgeschlagen"] += 1
                     logger.error(f"Newsletter-Bestätigung: Versand gescheitert ({type(e).__name__})")
@@ -139,6 +142,15 @@ def versenden(db, versender_fabrik, schluessel: str, je_lauf: int = JE_LAUF) -> 
         for z in offen:
             _freigeben(db, z)
     return zahlen
+
+
+def _versandt(db, z: dict) -> None:
+    """Zustellung merken (zählt für die Höchstzahl; ohne diesen Eintrag nähme ein späterer Lauf die Zeile nach 30 Minuten
+    wieder auf – lieber eine Mail zu viel als keine)."""
+    try:
+        db.rpc("newsletter_bestaetigung_versandt", {"p_id": z["id"]}).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Newsletter-Bestätigung: Zustellung nicht gespeichert ({type(e).__name__})")
 
 
 def _freigeben(db, z: dict) -> None:
@@ -182,7 +194,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     db = get_supabase_client()
     if a.aufgabe == "probe":
         offen = (db.table("newsletter_anmeldungen").select("id", count="exact")
-                 .is_("bestaetigt_am", "null").is_("bestaetigung_gesendet_am", "null").lt("mails_gesendet", 3)
+                 .is_("bestaetigt_am", "null").is_("bestaetigung_zugestellt_am", "null").lt("mails_gesendet", 3)
                  .limit(1).execute().count) or 0
         logger.info(f"Newsletter-Bestätigung Probelauf: {offen} Anmeldungen warten auf die Mail, nichts gesendet")
         return 0
