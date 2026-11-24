@@ -205,13 +205,11 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
         # Theater am Marientor, Duisburg). Nur Orte in Düsseldorf, Neuss und Ratingen – an der Stadt des Veranstaltungsorts.
         stadt = ((venue.get("city") or {}).get("name") or "").strip()
         plz = (venue.get("postalCode") or "").strip()
-        if stadt and not _im_gebiet(stadt):
+        # Eine PLZ im Gebiet genügt; sonst muss die Stadt passen. Ohne beides bleibt das Event draußen
+        # (Cursor-Prüfungen 24.11.2026 – auch „Düsseldorf-Benrath“ mit PLZ 40597 bleibt)
+        from pipeline.gebiet import plz_im_gebiet
+        if not plz_im_gebiet(plz) and not (stadt and _im_gebiet(stadt)):
             return None
-        # Ohne Stadt entscheidet die PLZ; fehlt auch die, bleibt das Event draußen (Cursor-Prüfung 24.11.2026)
-        if not stadt:
-            from pipeline.gebiet import plz_im_gebiet
-            if not plz_im_gebiet(plz):
-                return None
 
         # Adresse (optional): Straße, PLZ Stadt – mit PLZ/Stadt greift auch der Gebietsfilter der Pipeline
         strasse = ((venue.get("address") or {}).get("line1") or "").strip()

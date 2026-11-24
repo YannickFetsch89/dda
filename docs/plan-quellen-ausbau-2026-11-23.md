@@ -997,6 +997,12 @@ Cursor: 776 Tests grün, nicht abnahmefähig wegen zwei mittlerer Befunde; dazu 
 
 Tests: `tests/test_cursor_scraper_2026_11_24.py` (9), Python gesamt 785 ok.
 
+Nachprüfung durch Cursor (24.11.2026): alle fünf Befunde geschlossen, deploybar. Ein neuer geringer Befund – Stadtteile
+mit Bindestrich („Düsseldorf-Benrath“, „Neuss-Holzheim“) fielen heraus, und jede fünfstellige Zahl galt als PLZ –
+behoben: `stadt_im_gebiet` lässt einen Bindestrich nach dem Stadtnamen zu, `adresse_im_gebiet` wertet nur „PLZ Stadt“
+am Anfang eines Adressabschnitts als PLZ, Ticketmaster behält ein Event mit PLZ im Gebiet unabhängig von der
+Schreibweise der Stadt. Zwei Tests dazu, Python gesamt 787 ok.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

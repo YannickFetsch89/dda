@@ -85,6 +85,25 @@ class GebietTest(unittest.TestCase):
         self.assertTrue(adresse_im_gebiet("Kölner Str. 1, 40211 Düsseldorf"))
         self.assertTrue(adresse_im_gebiet("Am Hafen 1, Neuss"))
 
+    def test_bindestrich_und_plz_als_adressteil(self):
+        for stadt in ("Düsseldorf-Benrath", "Neuss-Holzheim", "Ratingen-Lintorf"):
+            self.assertTrue(stadt_im_gebiet(stadt), stadt)
+        self.assertFalse(stadt_im_gebiet("Neusser Straße"))
+        self.assertFalse(stadt_im_gebiet("Grevenbroich-Neusser Land"))
+        self.assertFalse(adresse_im_gebiet("Neusser Str. 40210, Köln"))       # Zahl in der Straße ist keine PLZ
+        self.assertTrue(adresse_im_gebiet("Maxstraße 12345, Düsseldorf"))
+        self.assertTrue(adresse_im_gebiet("Urdenbacher Allee 6, 40593 Düsseldorf-Benrath"))
+        self.assertFalse(adresse_im_gebiet("Plessingstraße 20, 47051 Duisburg"))
+
+    def test_ticketmaster_bindestrich_mit_plz(self):
+        e = {"name": "Konzert", "url": "https://www.ticketmaster.de/event/2",
+             "dates": {"start": {"localDate": (date.today() + timedelta(days=5)).isoformat(), "localTime": "20:00:00"}},
+             "_embedded": {"venues": [{"name": "Schloss", "city": {"name": "Düsseldorf-Benrath"}, "postalCode": "40597"}]},
+             "classifications": [], "images": []}
+        self.assertIsNotNone(tm._event_parsen(e, date.today()))
+        e["_embedded"]["venues"][0] = {"name": "Halle", "city": {"name": "Duisburg"}, "postalCode": "47051"}
+        self.assertIsNone(tm._event_parsen(e, date.today()))
+
     def test_stagedates(self):
         self.assertFalse(stagedates.ist_im_gebiet({"adresse": "Neusser Straße 5", "ort": "Bar"}))
         self.assertTrue(stagedates.ist_im_gebiet({"adresse": "Ronsdorfer Str. 143, 40233 Düsseldorf", "ort": "Rudas"}))

@@ -107,8 +107,10 @@ _ABSCHNITT = re.compile(
 )
 
 
-# Stadtname als ganzes Wort: „Neuss“ ja, „Neusser Straße“ nein (Cursor-Prüfung 24.11.2026)
-_GEBIET_WORT = re.compile(r"(?<![\w-])(D(?:ü|ue|u)sseldorf|Neuss|Ratingen)(?![\w-])", re.I)
+# Stadtname als ganzes Wort: „Neuss“ und „Neuss-Holzheim“ ja, „Neusser Straße“ nein (Cursor-Prüfungen 24.11.2026)
+_GEBIET_WORT = re.compile(r"(?<![\w-])(D(?:ü|ue|u)sseldorf|Neuss|Ratingen)(?!\w)", re.I)
+# PLZ nur als eigener Adressteil „PLZ Stadt“ am Anfang eines Abschnitts – nicht eine Hausnummer oder Zahl in der Straße
+_PLZ_TEIL = re.compile(r"(?:^|,)\s*(\d{5})\s+\S")
 
 
 def plz_im_gebiet(plz: str) -> bool:
@@ -123,10 +125,11 @@ def stadt_im_gebiet(text: str) -> bool:
 
 def adresse_im_gebiet(adresse: str, ort: str = "") -> bool:
     """
-    Für Quellen aus einem größeren Umkreis (Stagedates, Ticketmaster): Steht eine PLZ in der Adresse, entscheidet sie.
-    Sonst muss die Stadt (letzter Abschnitt der Adresse, dann der Ortsname) als ganzes Wort im Gebiet liegen.
+    Für Quellen aus einem größeren Umkreis (Stagedates, Ticketmaster): Steht eine PLZ als eigener Adressteil („…,
+    40215 Düsseldorf“), entscheidet sie. Sonst muss die Stadt (letzter Abschnitt der Adresse, dann der Ortsname) als
+    ganzes Wort im Gebiet liegen.
     """
-    plzs = _PLZ.findall(adresse or "")
+    plzs = _PLZ_TEIL.findall(adresse or "")
     if plzs:
         return plz_im_gebiet(plzs[-1])
     letzter = (adresse or "").split(",")[-1]
