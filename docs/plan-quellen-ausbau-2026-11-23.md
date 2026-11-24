@@ -1,4 +1,4 @@
-# Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – erste Fassung, 23.11.2026
+# Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – zweite Fassung, 24.11.2026
 
 Status: **Entwurf zur Abstimmung**. Gebaut wird erst nach Freigabe, schrittweise und jeweils mit OK des Auftraggebers.
 Jeder Push ist ein Live-Deploy; SQL führt der Auftraggeber im Supabase-SQL-Editor aus.
@@ -96,15 +96,17 @@ Website:
 | Q6 | Ticketing | Ticketmaster ja (T1), Songkick nein, Stagedates ja, Eventim/Reservix nur über Partner-Feed (T2) | 5.1 |
 | Q7 | Zeitraum je Quelle | große Häuser + Ticketing 365, kleine Häuser 120, VisitDüsseldorf 120, Aggregatoren/Rausgegangen 60 | 5.2 |
 | Q8 | 60-Tage-Pool der Website | bleibt; zweiter Fernpool für Tag 61–365 | 6.1 |
-| Q9 | Neue Liste für spätere Events | eigene Seite, Arbeitstitel „Später im Jahr“ unter `/vorverkauf` | 6.1 |
-| Q10 | Startseiten-Box „Große Events später im Jahr“ | ja, 6 Einträge | 6.1 |
-| Q11 | Label für Events > 60 Tage | „Vorverkauf“ | 6.2 |
-| Q12 | Affiliate-Links | nicht in diesem Plan | 6.3 |
+| Q9 | Neue Liste für spätere Events | eigene Seite **„Ausblick“ unter `/ausblick`** (zweite Runde, 24.11.; erste Vorschläge abgelehnt) | 6.4 |
+| Q10 | Startseiten-Box mit großen Events der nächsten Monate | ja, 6 Einträge, verlinkt auf den Ausblick | 6.1 |
+| Q11 | Label für Events > 60 Tage | Monat und Jahr groß („MÄRZ 2027“) statt „Vorverkauf“ | 6.2, 6.4 |
+| Q12 | Affiliate-Links | Ticket-Button so bauen, dass ein Partner-Link später nur eine Einstellung ist; Partner-Links erst nach Anmeldung beim Programm und Anwalts-Freigabe | 5.4, 6.3 |
 | Q13 | Kategorisierungs-Limit beim Start | zwei Wochen 1.500 statt 300 (≈ 2–3 € einmalig) | 5.3 |
 | Q14 | Beschreibungen für ferne Events | nur bis Tag 60, plus 100 Fern-Events (Rang 1–2) je Lauf | 5.3 |
 | Q15 | Welle A der Venues | siehe 3.2 | 3.2 |
 | Q16 | Workshops/Kurse mit festen Terminen (Keramik-, Kreativstudios) | ja, als `community`, aber erst Welle B | 3.2 |
 | Q17 | Normales Kinoprogramm (Filmkunstkinos, UFA) | nein, nur Sonderveranstaltungen | 3.2 |
+| Q18 | Monatsseiten des Ausblicks (`/ausblick/2027-03`) | später, wenn genug Fern-Events da sind | 6.4 |
+| Q19 | Awin-Anmeldung (Eventim, Reservix/ADticket) wegen Daten + Provision | Entscheidung beim Auftraggeber; ohne sie ruht T2 | 5.4 |
 
 ---
 
@@ -317,12 +319,39 @@ def vorschau_ende(quelle: str, heute: date) -> date: ...
 ### 5.3 Folgen für die Pipeline
 
 - **Speichern:** heute 8 min für 1.829 Events (bis zu 3 Abfragen je Event). Mit +2.000–4.000 Fern-Terminen etwa +10–20 min. Vertretbar; Optimierung (Tagesbestand vorab laden) nur, wenn der Lauf über 4 h kommt.
-- **Kategorisierung** (`categorizer.kategorisieren(limit=300)`, nach Datum sortiert): Ferne Events kommen erst dran, wenn die nahen fertig sind. Beim ersten Lauf mit 12 Monaten entsteht ein Rückstand von 2.000+ Events → **Q13:** Limit für zwei Wochen auf 1.500 anheben (Haiku, ≈ 0,1–0,2 Cent je Event, also ≈ 2–3 € einmalig), danach zurück auf 300. Der Fernpool (6.1) lädt deshalb nur Events mit Kategorie (`kategorie is not null`), damit unfertige Einträge nicht auf „Später im Jahr“ landen.
+- **Kategorisierung** (`categorizer.kategorisieren(limit=300)`, nach Datum sortiert): Ferne Events kommen erst dran, wenn die nahen fertig sind. Beim ersten Lauf mit 12 Monaten entsteht ein Rückstand von 2.000+ Events → **Q13:** Limit für zwei Wochen auf 1.500 anheben (Haiku, ≈ 0,1–0,2 Cent je Event, also ≈ 2–3 € einmalig), danach zurück auf 300. Der Fernpool (6.1) lädt deshalb nur Events mit Kategorie (`kategorie is not null`), damit unfertige Einträge nicht im Ausblick landen.
 - **Unterkategorien** (limit 600): gleiche Logik, unkritisch.
-- **Beschreibungen (Schritt 3b, heute 2,5 h):** Hier liegt das eigentliche Risiko (Job-Grenze 6 h, Workflow-Timeout 240 min). **Q14, Vorschlag:** Beschreibungen nur für Events bis Tag 60 wie bisher; Fern-Events bekommen ihre Beschreibung, sobald sie ins 60-Tage-Fenster rutschen. Ausnahme: höchstens 100 Fern-Events je Lauf mit Rang 1–2 (für die Seite „Später im Jahr“ und die Sitemap), nach Datum. Umsetzung: zusätzlicher Datumsfilter `datum <= heute + 60` in den Abfragen von `beschreibungen_nachziehen()` und `veranstalter_nachziehen()` (`pipeline/beschreibung_quellen.py:461`, `:604`, `:631`) plus der kleine Fern-Block.
+- **Beschreibungen (Schritt 3b, heute 2,5 h):** Hier liegt das eigentliche Risiko (Job-Grenze 6 h, Workflow-Timeout 240 min). **Q14, Vorschlag:** Beschreibungen nur für Events bis Tag 60 wie bisher; Fern-Events bekommen ihre Beschreibung, sobald sie ins 60-Tage-Fenster rutschen. Ausnahme: höchstens 100 Fern-Events je Lauf mit Rang 1–2 (für den Ausblick und die Sitemap), nach Datum. Umsetzung: zusätzlicher Datumsfilter `datum <= heute + 60` in den Abfragen von `beschreibungen_nachziehen()` und `veranstalter_nachziehen()` (`pipeline/beschreibung_quellen.py:461`, `:604`, `:631`) plus der kleine Fern-Block.
 - **IndexNow, Reihen, Club-Scores:** laufen über alle künftigen Events; mehr Events, aber ohne KI. Club-Scores nutzen nur die nahen Termine (Programm-Wert) – prüfen, dass ein Club mit vielen Fern-Terminen nicht künstlich steigt (`scraper/orte/clubs_profil.py`, Fenster festschreiben auf 60 Tage).
 - **Instagram/Captions:** unverändert (nur nahe Events).
 - **Gebietsfilter:** Ticketing liefert Region (Köln, Essen …) – `pipeline/gebiet.py` filtert schon nach Düsseldorf/Neuss/Ratingen; Ticketmaster-Abfrage zusätzlich per Ort/Radius eingrenzen.
+
+### 5.4 Provision: Partnerprogramme mit Eventdaten (Recherche 24.11.2026, Rückfrage des Auftraggebers)
+
+Recherche in Programmseiten, Awin-Profilen und Entwickler-Dokumentation; kein Konto angelegt. Die tatsächlichen Sätze für Deutschland stehen bei mehreren Anbietern erst nach der Anmeldung im jeweiligen Netzwerk fest.
+
+| Anbieter | Eventdaten | Provision (soweit öffentlich) | Netzwerk | Haken | Einschätzung |
+|---|---|---|---|---|---|
+| **Ticketmaster** | Discovery API (frei); Discovery Feed (JSON/CSV) für freigegebene Partner | DE-Satz nicht öffentlich (Dritte: ≈ 0,8–1,6 %) | Impact, ein Programm für 25 Märkte **inkl. Deutschland**, Bewerbung mit Prüfung | Keine Provision im Presale und in den ersten 24 h nach Vorverkaufsstart. API-Bedingungen verbieten Einnahmen aus der API-Nutzung; die FAQ verweist auf genau dieses Affiliate-Programm, und die Impact-ID lässt sich im Entwicklerkonto eintragen → gewollt, aber **schriftlich bestätigen lassen** (affiliatepartners@ticketmaster.com) | einzige belegte Kombination API + Provision |
+| **Eventim** | Partnerseite nennt „Zugriff auf Events der Datenbank“ + Deeplink-Generator; Feed/API **nicht belegt** | 20 % der Netto-Vorverkaufsgebühr ≈ 1,6–2 % vom Ticketpreis (Ø 1,55 € je Bestellung) | Awin (11388) | **Cookie nur 1 Tag**; kein Preisvergleich, keine Suchmaschinen-Anzeigen; einzelne Events ausgeschlossen | größte Abdeckung in DE; Daten nur auf Anfrage |
+| **Reservix / ADticket** | Reservix nennt „Integration über API-Schnittstelle“ | Reservix ≈ 25 % der Vorverkaufsgebühr + 2,5 % vom Warenkorb (≈ 5 %); ADticket 2,5 %; Cookie 30 Tage | Awin (31293, 18490) oder direkt | verlangt „reichweitenstarke Website“ | **beste Rate**, stark bei Kleinkunst und NRW-Veranstaltern (Philara, viele Kleinkunstbühnen verkaufen dort) |
+| ticket.io | kein Feed genannt | ≈ 10 % vom Netto-Ticketumsatz, Cookie 30 Tage | Awin | Angebot in Düsseldorf unbekannt (Tor 3, Nachtresidenz verlinken ticket.io) | nur als Link |
+| Fever (Candlelight) | Feed/API nur für Partner mit viel Traffic | nicht öffentlich (US: 8–10 %) | wohl Impact | ohne Daten nur Links | später |
+| **Tiqets** | **Partner-API für Affiliates offen** (Inhalte, Preise, Verfügbarkeit) | nicht öffentlich (Dritte: ≈ 8 %), Cookie 30 Tage | eigenes Portal, Awin | Bilder nur auf Antrag | passt zu Museen/Attraktionen |
+| **GetYourGuide** | Partner-API (Token von GYG, Kriterien unbekannt) | ≈ 7–8 %, Cookie 30 Tage | eigenes Portal, Awin | Rate-Limit, Abrufe im Verhältnis zu Buchungen überwacht | passt zu Stadtführungen |
+| Viator | Basis-Zugang sofort | Satz nicht genannt | eigenes Portal | überschneidet sich mit GYG | optional |
+| myticket.de | unbekannt | ≈ 1 % | Daisycon | – | nein |
+| Eventfrog | öffentliche API | keine Provision | – | – | nur als Datenquelle (Schweiz-lastig) |
+| Ticketino, Eventbrite, Stagedates, Tixforgigs, Dice | – | kein Käufer-Affiliate gefunden | – | – | nein |
+
+**Rechtliches (allgemein, Anwalt vor Livegang):** Affiliate-Links sind Werbung und müssen direkt am Button erkennbar sein (§ 6 DDG, § 5a Abs. 4 UWG); „Empfehlung“ oder nur ein Warenkorb-Symbol reichten Gerichten nicht. Üblich: „Tickets*“ mit Hinweis „*Affiliate-Link – bei einem Kauf erhalten wir eine Provision, der Preis bleibt gleich“ plus Erklärseite. Tracking-Cookies setzt erst der Anbieter nach dem Klick; trotzdem Datenschutzerklärung ergänzen (Art. 26 DSGVO wird diskutiert).
+
+**Folgerungen für diesen Plan (Q12 neu, Q19):**
+- Der **Ticket-Button aus 6.3** ist genau die Stelle, an der Provision entstehen kann. Er wird so gebaut, dass ein Partner-Link später nur eine Einstellung ist (Link-Vorlage je Anbieter in `web/lib/tickets.ts`, standardmäßig aus).
+- **Ticketmaster:** Antrag im Impact-Programm parallel zum API-Schlüssel stellen und die Freigabe für API + Affiliate schriftlich bestätigen lassen (Auftraggeber).
+- **Eventim/Reservix:** ruhen laut Antwort vom 24.11. Wegen der Provision (Reservix ≈ 5 %, Eventim größte Abdeckung) wäre eine Awin-Anmeldung aber der Weg, an deren Eventdaten **und** Provision zu kommen – Entscheidung beim Auftraggeber (Q19).
+- **Führungen/Freizeit:** Tiqets bzw. GetYourGuide als späterer eigener Kurzplan (Kategorie `stadtfuehrung`, Museen); nicht Teil der Schritte in Abschnitt 7.
+- Affiliate-Links gehen erst live nach Anwalts-Freigabe von Kennzeichnung und Datenschutztext.
 
 ---
 
@@ -337,20 +366,20 @@ Der bestehende Pool `eventPoolLaden()` bleibt bei **60 Tagen**. Alles, was „wa
 | Startseite, Tagesleiste, Wochenende, Kostenlos, Kategorie-/Stadtteilseiten, Tagesplaner | **60 Tage** | keine |
 | Empfehlungen (Admin, Fokustag, Top/Highlight) | **60 Tage** | keine (`admin/empfehlungen.ts:51` bleibt) |
 | Magazin-Pool | wie heute | keine |
-| **Eventseite** | **unbegrenzt** | funktioniert schon (`eventLaden()` lädt einzeln nach); neu: Hinweis „Vorverkauf“ bei Events > 60 Tage, Ticket-Link (6.3) |
-| **Ortsseiten** (`/orte/…`, Clubs, Kneipen) | **unbegrenzt** | lädt schon über `ort_id`; neu: Liste nach Monat gruppiert, ab Tag 61 eingeklappt „Später im Jahr (n)“ |
-| **/entdecken – Suche** (`?q=`) | **12 Monate** | Treffer aus dem Fernpool als eigener Block „Später im Jahr“ unter den normalen Treffern |
+| **Eventseite** | **unbegrenzt** | funktioniert schon (`eventLaden()` lädt einzeln nach); neu: Monats-Label („MÄRZ 2027“) bei Events > 60 Tage, Ticket-Link (6.3) |
+| **Ortsseiten** (`/orte/…`, Clubs, Kneipen) | **unbegrenzt** | lädt schon über `ort_id`; neu: Liste nach Monat gruppiert, ab Tag 61 eingeklappt „Ausblick (n)“ |
+| **/entdecken – Suche** (`?q=`) | **12 Monate** | Treffer aus dem Fernpool als eigener Block „Ausblick“ unter den normalen Treffern |
 | **/entdecken – eigener Zeitraum** | **12 Monate** | `MAX_ZEITRAUM_TAGE` 60 → 366; liegt der Zeitraum ganz oder teilweise hinter Tag 60, kommen die Events aus dem Fernpool dazu |
-| **Neue Seite „Später im Jahr“** (Q9, Arbeitstitel `/vorverkauf`) | **Tag 61–365** | Liste nach Monaten, Filter Kategorie; nur Quellen Rang 1–2 und Orte mit Ortsseite (keine Kleinst-Events) |
+| **Neue Seite „Ausblick“** (Q9, `/ausblick`) | **Tag 61–365** | Liste nach Monaten, Filter Kategorie; nur Quellen Rang 1–2 und Orte mit Ortsseite (keine Kleinst-Events) |
 | Startseite – neue Box | Teaser | Q10: kleine Box „Große Events später im Jahr“ (6 Einträge, Rang 1–2, nach Datum) mit Link auf die neue Seite |
-| **Sitemap** | **12 Monate** | Eventseiten aus dem Fernpool aufnehmen (sonst findet Google die Vorverkaufs-Events nicht); Tagesseiten bleiben bei 60 |
+| **Sitemap** | **12 Monate** | Eventseiten aus dem Fernpool aufnehmen (sonst findet Google die fernen Events nicht); Tagesseiten bleiben bei 60 |
 | `/api/events`, Konto (Merkliste, „Für dich“), Geburtstags-Tipps | 60 Tage | keine; die Merkliste lädt gemerkte Events schon einzeln |
 
 Nicht geändert wird die Tagesleiste: Sie springt heute schon bis 366 Tage, wenn ein ferner Tag gewählt ist (`datum.ts:39`) – die Tagesseite `/tag/<datum>` hinter Tag 60 bleibt aber leer, solange sie den 60-Tage-Pool nutzt. Vorschlag: `/tag/<datum>` > Tag 60 nutzt den Fernpool; in der Sitemap stehen Tagesseiten weiter nur bis Tag 60 (heute ist eine ferne Tagesseite indexierbar, aber leer – `app/tag/[datum]/page.tsx:17` setzt `noindex` nur für vergangene Tage).
 
 ### 6.2 Kennzeichnung
 
-Events > 60 Tage zeigen auf Karten und Eventseite ein kleines Label **„Vorverkauf“** (Q11, Alternative: „Später im Jahr“), damit niemand sie für morgen hält.
+Events > 60 Tage zeigen auf Karten und Eventseite ein kleines Label mit Monat und Jahr (**„MÄRZ 2027“**, Q11), damit niemand sie für morgen hält.
 
 ### 6.3 Quell-Link auf der Eventseite (`web/app/event/[kategorie]/[slug]/page.tsx:282–300`)
 
@@ -359,6 +388,23 @@ Events > 60 Tage zeigen auf Karten und Eventseite ein kleines Label **„Vorverk
 - Rausgegangen-Events: siehe 4.4.
 - „Quelle: …“ bleibt wie heute die Hauptquelle.
 - Affiliate-Links (Eventim-Partnerprogramm, Ticketmaster-Affiliate) sind **nicht** Teil dieses Plans (Q12), wären aber über denselben Knopf möglich. Werbekennzeichnung und Datenschutzerklärung müssten dann angepasst werden (Anwalt).
+
+### 6.4 Name der neuen Seite (Q9, zweite Runde)
+
+Die bestehenden Adressen sind kurze deutsche Zeitwörter: `/heute`, `/morgen`, `/wochenende`, `/kostenlos`. Die neue Seite sollte in diese Reihe passen und nicht mit vorhandenen Begriffen kollidieren („Merkliste“, Magazin-„Wochenvorschau“, Admin-„Vorschau“). Alle folgenden Adressen sind frei.
+
+| Vorschlag | Adresse | Seitentitel (SEO) | Für | Gegen |
+|---|---|---|---|---|
+| **Ausblick** (Empfehlung) | `/ausblick` | „Ausblick: Große Events in Düsseldorf bis <Monat Jahr>“ | kurz, neutral, passt zu heute/morgen/wochenende; sagt „weiter weg“ ohne Kaufdruck | etwas nüchtern |
+| Vormerken | `/vormerken` | „Jetzt vormerken: Konzerte, Shows und Highlights in Düsseldorf“ | Handlungsaufforderung, passt zum Merken-Button | Verwechslung mit der Merkliste möglich |
+| Demnächst | `/demnaechst` | „Demnächst in Düsseldorf“ | geläufig (Kino-Sprache) | klingt nach „bald“, gemeint sind Monate |
+| Jahresvorschau | `/jahresvorschau` | „Jahresvorschau Düsseldorf: die großen Events der nächsten 12 Monate“ | eindeutig, gute Suchbegriffe | lang; „Vorschau“ gibt es schon im Magazin |
+| Save the Date | `/save-the-date` | „Save the Date: Düsseldorfs große Events“ | bekannt, locker | englisch, die übrigen Adressen sind deutsch |
+| Highlights | `/highlights` | „Highlights in Düsseldorf: was die nächsten Monate bringen“ | griffig | Highlight ist schon eine Empfehlungsstufe auf der Startseite |
+
+Ergänzend für Google (unabhängig vom Namen): Unterseiten je Monat (`/ausblick/2027-03`, Titel „Events in Düsseldorf im März 2027“) – danach wird viel gesucht. Vorschlag: erst die Hauptseite, Monatsseiten nach einigen Wochen, wenn genug Fern-Events da sind (Q18).
+
+Label auf Karten (Q11) passt sich an: bei „Ausblick“ statt „Vorverkauf“ einfach das Monatskürzel groß („MÄRZ 2027“) – das erklärt sich selbst.
 
 ---
 
@@ -372,12 +418,12 @@ Jeder Schritt: lokal bauen und testen → Zusammenfassung → OK des Auftraggebe
 | **R2** | Spalte `events.quellen`, Kennzahlen „nur Rausgegangen“ und „Lücken je Ort“ im Lauf-Report (4.3, 4.5) | `quellen_spalte_<datum>.sql` | Kennzahlen im Report plausibel |
 | **Z1** | Zeitraum je Quelle (`vorschau_ende`), Seiten-Grenzen der Langzeit-Scraper, Beschreibungen auf Tag ≤ 60 + Fern-Block 100, Kategorisierungs-Limit befristet 1.500 (5.2, 5.3) | – | Laufzeit je Schritt, Events > 60 Tage je Quelle, keine Zeitüberschreitung |
 | **T1** | Ticketing (5.1): Ticketmaster (Secret vom Auftraggeber, Workflow-`env`, Monatsfenster bis 12 Monate), Songkick aus `QUELLEN` nehmen, Stagedates über Sitemap + JSON-LD | – | Events je Quelle, Gebietsfilter, Dubletten zu d.live/Mitsubishi/Capitol |
-| **T2** | Eventim/Reservix – nur wenn die Anfrage beim Partnerprogramm einen Feed ergibt (Q6-b); eigener Kurzplan | offen | – |
-| **W1** | Website: Fernpool, Suche und eigener Zeitraum bis 12 Monate, Ortsseiten nach Monaten, Label „Vorverkauf“, Sitemap, `/tag` > 60 (6.1, 6.2) | – | Seiten im Browser, Sitemap-Größe, Ladezeit Startseite unverändert |
+| **T2** | Eventim/Reservix – **ruht** (Auftraggeber 24.11.: vorerst keine Anfrage beim Partnerprogramm) | – | – |
+| **W1** | Website: Fernpool, Suche und eigener Zeitraum bis 12 Monate, Ortsseiten nach Monaten, Monats-Label, Sitemap, `/tag` > 60 (6.1, 6.2) | – | Seiten im Browser, Sitemap-Größe, Ladezeit Startseite unverändert |
 | **V0** | Bestehende Quellen mit großer Wirkung reparieren/erweitern: Kunstsammlung (Führungen/Veranstaltungen), VisitDüsseldorf komplett über Sitemap/Toubiz (3.4) | – | Events je Quelle vorher/nachher |
 | **V1** | Bausteine (3.3) + Welle A der Venues (3.2) | – | je Haus Eventzahl > 0, Ortszuordnung trifft |
 | **N1** | `quellen_nachziehen.py`: Bestand auf Rang umhängen – Probelauf, dann `--schreiben` | – (Sicherung im Skript) | Bericht |
-| **W2** | Seite „Später im Jahr“, Startseiten-Box, Ticket-Knopf, Link „Website von <Ort>“ (6.1, 6.3, 4.4) | – | Seiten im Browser |
+| **W2** | Seite „Ausblick“ (`/ausblick`), Startseiten-Box, Ticket-Button (Partner-Link vorbereitet, aus), Link „Website von <Ort>“ (6.1, 6.3, 4.4) | – | Seiten im Browser |
 | **V2** | Welle B (Düsseldorf, Neuss, Ratingen; 3.2) | – | wie V1 |
 
 Cursor-Prüfungen: Plan (Anhang A) vor der Freigabe; Umsetzung nach R1+R2 (Pipeline-Kern) und nach W1+W2 (Website).
@@ -398,7 +444,7 @@ Python mit `unittest` (wie bisher; pytest kommt nicht dazu), Website mit dem bes
 - **Zeitraum (Z1):** `vorschau_ende` je Gruppe; Struktur-Test: kein Scraper rechnet mehr selbst mit `SCRAPER_VORSCHAU_TAGE`.
 - **Bausteine (V1):** JSON-LD mit `@graph`, `subEvent`, fehlender Uhrzeit, Zeitzone; Tribe-API-Antwort mit zwei Seiten; iCal mit Ganztags-Termin und wöchentlicher RRULE. Beispieldateien unter `tests/fixtures/`.
 - Bestehende Tests, die angepasst werden: `tests/test_rausgegangen_vorrang.py`, `test_dedup_aehnlich.py`, `test_dedup_toleranz.py`, `test_redaktion_feldschutz.py`, `test_lauf_report_kennzahlen.py`.
-- **Website (W1/W2):** Zeitraum > 60 Tage wird nicht mehr auf 60 gekürzt, aber auf 366; Suche findet ein Fern-Event im eigenen Block; Startseite enthält kein Event > 60 Tage außer in der neuen Box; Label „Vorverkauf“ ab Tag 61.
+- **Website (W1/W2):** Zeitraum > 60 Tage wird nicht mehr auf 60 gekürzt, aber auf 366; Suche findet ein Fern-Event im eigenen Block; Startseite enthält kein Event > 60 Tage außer in der neuen Box; Monats-Label ab Tag 61.
 
 ---
 
@@ -415,14 +461,13 @@ Python mit `unittest` (wie bisher; pytest kommt nicht dazu), Website mit dem bes
 
 ## 10. Offene Fragen an den Auftraggeber
 
-Neben den Ja/Nein-Entscheidungen Q1–Q15 braucht es vom Auftraggeber:
+Antworten des Auftraggebers vom 24.11.2026:
 
-1. **Ticketmaster-Bedingungen (Q6-a):** Die Nutzungsbedingungen schließen Einnahmen „aus der Nutzung der API“ aus. Hat diesdas.events Einnahmen (Werbung, Affiliate, bezahlte Platzierungen) oder sind welche geplant? Wenn ja: vorher beim Anwalt bzw. bei Ticketmaster klären; wenn nein: unkritisch.
-2. **Ticketmaster-Schlüssel:** Registrierung auf developer.ticketmaster.com (Konto des Auftraggebers) und Secret `TICKETMASTER_API_KEY` in GitHub anlegen. Claude legt keine Konten an.
-3. **Eventim/Reservix (Q6-b):** Möchtest du beim Eventim-Partnerprogramm (Awin) und bei Reservix nach einem Event-Datenfeed fragen? Claude kann die Anfrage formulieren; senden müsstest du.
-4. **Name und Adresse der neuen Seite (Q9):** „Später im Jahr“ (`/spaeter`), „Vorverkauf“ (`/vorverkauf`) oder anders?
-5. **Welle A (Q15):** Passt die Auswahl in 3.2, oder sind dir bestimmte Häuser wichtiger (z. B. weil sie zur Zielgruppe passen)?
-6. **Neuss/Ratingen:** Welche Häuser dort sind dir wichtig? Geprüft wurden Rheinisches Landestheater, TaS, Globe/Shakespeare-Festival, Gare du Neuss, Insel Hombroich, Stadttheater Ratingen, Oberschlesisches Landesmuseum, LVR-Industriemuseum Cromford, Museum Ratingen.
+1. **Einnahmen / Provision (Q6-a):** Rückfrage des Auftraggebers – bei welchen Anbietern lassen sich über ein Partnerprogramm Provisionen erzielen? → Recherche in 5.4.
+2. **Ticketmaster-Schlüssel:** reicht der Auftraggeber nach. Bis dahin bleibt T1 für Ticketmaster offen; Stagedates und die Songkick-Abschaltung gehen ohne Schlüssel.
+3. **Eventim/Reservix-Anfrage (Q6-b):** vorerst nicht. T2 ruht.
+4. **Name der neuen Seite (Q9):** „Später im Jahr“ und „Vorverkauf“ gefallen nicht → neue Vorschläge in 6.4.
+5. **Prioritäten bei den Häusern (Q15, Neuss/Ratingen):** keine besonderen Wünsche; Auswahl und Reihenfolge wie in 3.2 vorgeschlagen.
 
 ---
 
@@ -461,10 +506,11 @@ Prüfe bitte:
    Konflikte mit dem laufenden Admin-Plan docs/plan-admin-dashboard-2026-11-23.md, der dieselben Dateien ändert).
 
 Ausgabe je Befund: Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile) · Befund ·
-Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen Q1–Q15
+Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen Q1–Q19
 trifft der Auftraggeber; sie sind nicht Gegenstand der Prüfung, wohl aber ihre technische Umsetzbarkeit.
 ```
 
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
+- 24.11.2026: Antworten des Auftraggebers eingearbeitet (10), Provisions-Recherche (5.4), Namensvorschläge (6.4), Q18–Q19 neu
