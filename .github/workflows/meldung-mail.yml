@@ -1,0 +1,63 @@
+# Bestätigungsmail an Melder nach der Veröffentlichung (pipeline/meldung_mail.py, database/meldung_mail_2026-11-24.sql)
+# Startet sofort nach einer Freigabe im Dashboard (workflow_dispatch, aufgabe=senden) und stündlich als Sicherheitsnetz.
+# Echter Versand nur mit der Variable MELDUNG_MAIL_AKTIV=1 (Zeitplan läuft sonst gar nicht).
+# Manuell: „probe“ (zählt nur), „test“ (Beispielmail an eine Adresse, schreibt nichts), „senden“.
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, SMTP_HOST, SMTP_PORT, SMTP_BENUTZER, SMTP_PASSWORT.
+name: Meldungs-Mail
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      aufgabe:
+        description: "probe (nur zählen), test (Beispielmail) oder senden"
+        type: choice
+        options: [probe, test, senden]
+        default: probe
+      an:
+        description: "nur bei test: Empfängeradresse der Beispielmail"
+        type: string
+        required: false
+
+concurrency:
+  group: meldung-mail
+  cancel-in-progress: false
+
+jobs:
+  meldung-mail:
+    # Zeitplan nur mit Schalter; manuell immer (der Job selbst verweigert „senden“ ohne Schalter)
+    if: github.event_name == 'workflow_dispatch' || vars.MELDUNG_MAIL_AKTIV == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python-Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Mails an Melder
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_BENUTZER: ${{ secrets.SMTP_BENUTZER }}
+          SMTP_PASSWORT: ${{ secrets.SMTP_PASSWORT }}
+          MELDUNG_MAIL_AKTIV: ${{ vars.MELDUNG_MAIL_AKTIV }}
+          AUFGABE: ${{ github.event_name == 'workflow_dispatch' && inputs.aufgabe || 'senden' }}
+          TEST_AN: ${{ inputs.an }}
+          TZ: Europe/Berlin
+        run: |
+          if [ "$AUFGABE" = "test" ]; then
+            python -m pipeline.meldung_mail test --an "$TEST_AN"
+          else
+            python -m pipeline.meldung_mail "$AUFGABE"
+          fi

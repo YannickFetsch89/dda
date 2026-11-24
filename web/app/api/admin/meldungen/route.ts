@@ -3,9 +3,11 @@
 // database/meldungen_newsletter_2026-11-05.sql: Meldungen lesen/ändern, Events anlegen, Bilder lesen/kopieren/löschen).
 // GET                                         → offene Meldungen (älteste zuerst, mit Bild-Link für 1 h) und zuletzt bearbeitete
 // POST { aktion: "freigeben", id, werte }     → reservieren → Bild veröffentlichen → Event anlegen → abschließen
+//                                               (mail_status „offen“) → Mail-Job starten (database/meldung_mail_2026-11-24.sql)
 // POST { aktion: "ablehnen", id, grund }      → reservieren → abschließen → privates Bild löschen
 import { revalidateTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { workflowStarten } from "@/lib/admin/github";
 import { freigabePruefen, kuerzen, slugErzeugen, slugMitSuffix, stadtteilAusAdresse, type FreigabeWerte } from "@/lib/admin/meldungen";
 import { protokollieren } from "@/lib/admin/protokoll";
 import { adminAntwort, adminRoute } from "@/lib/admin/route";
@@ -106,7 +108,7 @@ async function freigeben(db: SupabaseClient, m: Meldung, w: FreigabeWerte, admin
       post_typ: "feed",
       status: "neu",
     });
-    if (!(await abschliessen(db, m.id, token, adminId, { status: "freigegeben", event_id: eventId }))) {
+    if (!(await abschliessen(db, m.id, token, adminId, { status: "freigegeben", event_id: eventId, mail_status: "offen" }))) {
       throw new FreigabeFehler("Die Reservierung ist abgelaufen oder die Meldung wurde inzwischen anders bearbeitet – Freigabe zurückgenommen.");
     }
   } catch (e) {
@@ -133,7 +135,7 @@ export async function GET(request: Request) {
     const db = admin!.db;
     const [offen, erledigt] = await Promise.all([
       db.from("event_meldungen").select("*").eq("status", "neu").order("erstellt_am").limit(100),
-      db.from("event_meldungen").select("id, titel, datum, status, bearbeitet_am, ablehngrund, event_id").neq("status", "neu").order("bearbeitet_am", { ascending: false }).limit(30),
+      db.from("event_meldungen").select("id, titel, datum, status, bearbeitet_am, ablehngrund, event_id, mail_status, mail_gesendet_am").neq("status", "neu").order("bearbeitet_am", { ascending: false }).limit(30),
     ]);
     if (offen.error) return adminAntwort(500, { fehler: offen.error.message, code: "db" }, setCookies);
     const liste = await Promise.all(
@@ -166,7 +168,11 @@ export async function POST(request: Request) {
         const eventId = await freigeben(db, m as Meldung, p.werte, adminId);
         await protokollieren(db, { aktion: "meldung_freigeben", tabelle: "event_meldungen", ziel_id: id, nachher: { event_id: eventId } });
         revalidateTag(EVENTS_CACHE_TAG, { expire: 0 });
-        return adminAntwort(200, { ok: true, event_id: eventId }, setCookies);
+        // Bestätigungsmail an den Melder sofort anstoßen (sonst nimmt der stündliche Lauf sie mit). Der Job prüft den
+        // Schalter MELDUNG_MAIL_AKTIV selbst; ein Fehler hier hält die Freigabe nicht auf.
+        const start = await workflowStarten("meldung-mail", { aufgabe: "senden" });
+        if (!start.ok) console.error(`Meldung: Mail-Job nicht gestartet (${start.meldung}) – der stündliche Lauf holt sie nach`);
+        return adminAntwort(200, { ok: true, event_id: eventId, mail_job: start.ok }, setCookies);
       }
       if (body.aktion === "ablehnen") {
         const grund = typeof body.grund === "string" ? body.grund.trim().slice(0, 300) : "";

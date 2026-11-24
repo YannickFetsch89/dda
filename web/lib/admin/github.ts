@@ -9,6 +9,7 @@ export const WORKFLOWS = {
   waechter: "waechter.yml",
   geburtstag: "geburtstag.yml",
   magazin: "magazin.yml",
+  "meldung-mail": "meldung-mail.yml",
 } as const;
 export type WorkflowName = keyof typeof WORKFLOWS;
 
@@ -89,7 +90,7 @@ export async function letzterLauf(name: WorkflowName): Promise<GithubErgebnis> {
 }
 
 /** Schalter, die das Technik-Panel zeigt (Plan Admin-Dashboard 4.10, E4) – gesetzt werden sie nur auf GitHub. */
-export const SCHALTER = ["KONTEN_AKTIV", "MAGAZIN_AKTIV", "GEBURTSTAG_AKTIV", "NEWSLETTER_AKTIV", "ORTSSEITEN_MELDEN"] as const;
+export const SCHALTER = ["KONTEN_AKTIV", "MAGAZIN_AKTIV", "GEBURTSTAG_AKTIV", "NEWSLETTER_AKTIV", "MELDUNG_MAIL_AKTIV", "ORTSSEITEN_MELDEN"] as const;
 
 export type VariablenErgebnis =
   | { art: "ok"; werte: Record<string, string | null>; link: string }

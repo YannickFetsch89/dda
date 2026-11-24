@@ -69,8 +69,8 @@ export default function DatenschutzSeite() {
       {/* Newsletter-Double-Opt-in (Plan Admin-Dashboard 4.9, vom Anwalt freigegeben 23.11.2026): Satz gilt immer */}
       <p>
         Über den Mailserver unseres Hosting-Anbieters versenden wir außerdem{" "}
-        {konten ? "die E-Mails zum Nutzerkonto (Abschnitt 13) und " : ""}die E-Mails zum Newsletter (Abschnitt 11).
-        Dabei verarbeitet der Anbieter Ihre E-Mail-Adresse und den Inhalt der jeweiligen E-Mail in unserem Auftrag.
+        {konten ? "die E-Mails zum Nutzerkonto (Abschnitt 13) und " : ""}die E-Mails zum Newsletter (Abschnitt 11)
+        sowie die Mitteilung, dass ein von Ihnen gemeldetes Event veröffentlicht ist (Abschnitt 12). Dabei verarbeitet der Anbieter Ihre E-Mail-Adresse und den Inhalt der jeweiligen E-Mail in unserem Auftrag.
       </p>
 
       <h2>4. SSL-Verschlüsselung</h2>
@@ -309,8 +309,10 @@ export default function DatenschutzSeite() {
       <p>
         Über das Formular „Event melden“ können Sie uns Veranstaltungen vorschlagen. Wir speichern dazu die
         Angaben zum Event, ein optional hochgeladenes Bild sowie Ihre Kontaktdaten (E-Mail-Adresse, optional
-        Name) und eine eventuelle Anmerkung (Supabase, siehe Abschnitt 9). Die Kontaktdaten nutzen wir nur für
-        Rückfragen zu Ihrer Meldung; sie werden nicht veröffentlicht. Veröffentlicht werden nach unserer
+        Name) und eine eventuelle Anmerkung (Supabase, siehe Abschnitt 9). Die Kontaktdaten nutzen wir für
+        Rückfragen zu Ihrer Meldung und für eine einmalige E-Mail, sobald das Event veröffentlicht ist (mit dem Link
+        zum Event und einem Hinweis auf unser kostenloses Nutzerkonto); sie werden nicht veröffentlicht. Diese E-Mail
+        versenden wir über den Mailserver unseres Hosting-Anbieters (Abschnitt 3). Veröffentlicht werden nach unserer
         Prüfung nur die Angaben zum Event und – wenn Sie die Rechte daran bestätigt haben – das Bild.
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) bzw. lit. f (berechtigtes Interesse an
         einem vollständigen Veranstaltungskalender). Ein hochgeladenes Bild wird auf unserem Server neu

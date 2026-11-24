@@ -37,6 +37,16 @@ interface Erledigt {
   bearbeitet_am: string | null;
   ablehngrund: string | null;
   event_id: string | null;
+  mail_status: "offen" | "gesendet" | "fehler" | null;
+  mail_gesendet_am: string | null;
+}
+
+/** Stand der Bestätigungsmail an den Melder (pipeline/meldung_mail.py); ältere Freigaben haben keinen */
+function mailText(e: Erledigt): string {
+  if (e.mail_status === "gesendet") return ` · Mail gesendet ${zeit(e.mail_gesendet_am)}`;
+  if (e.mail_status === "offen") return " · Mail ausstehend";
+  if (e.mail_status === "fehler") return " · Mail fehlgeschlagen";
+  return "";
 }
 
 function zeit(iso: string | null): string {
@@ -52,7 +62,7 @@ function Karte({ m, nachher }: { m: Meldung; nachher: (text: string, art: "ok" |
     const d = (await r.json().catch(() => ({}))) as { fehler?: string; warnung?: string; event_id?: string };
     setLaeuft(false);
     if (!r.ok) return nachher(d.fehler ?? "Hat nicht geklappt.", "fehler");
-    nachher(d.warnung ?? (body.aktion === "freigeben" ? `Freigegeben – Event angelegt.` : "Meldung abgelehnt."), d.warnung ? "fehler" : "ok");
+    nachher(d.warnung ?? (body.aktion === "freigeben" ? `Freigegeben – Event angelegt, die Mail an den Melder ist unterwegs.` : "Meldung abgelehnt."), d.warnung ? "fehler" : "ok");
   }
 
   function freigeben(ev: FormEvent<HTMLFormElement>) {
@@ -203,6 +213,7 @@ export function MeldungenListe() {
                 <span>
                   {e.datum} · {e.status} · {zeit(e.bearbeitet_am)}
                   {e.ablehngrund ? ` · ${e.ablehngrund}` : ""}
+                  {mailText(e)}
                 </span>
                 {e.event_id && <Link href={`/admin/events/${e.event_id}`}>Event</Link>}
               </li>

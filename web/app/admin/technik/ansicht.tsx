@@ -21,6 +21,7 @@ const SCHALTER_TEXT: Record<string, string> = {
   MAGAZIN_AKTIV: "Magazin-Job",
   GEBURTSTAG_AKTIV: "Geburtstagsmail",
   NEWSLETTER_AKTIV: "Newsletter-Bestätigung",
+  MELDUNG_MAIL_AKTIV: "Mail an Melder nach Freigabe",
   ORTSSEITEN_MELDEN: "Ortsseiten an IndexNow melden",
 };
 

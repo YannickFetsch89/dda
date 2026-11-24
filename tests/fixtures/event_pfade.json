@@ -1,0 +1,9 @@
+{
+  "_hinweis": "Event-URLs für die Bestätigungsmail an Melder (pipeline/meldung_mail.py) – müssen dieselben sein wie auf der Website (web/lib/admin/seo.ts eventPfadSeo, web/lib/pfade.ts eventPfad). Geprüft in tests/test_meldung_mail.py und web/tests/event-pfade.test.ts.",
+  "faelle": [
+    {"kategorie": "kultur", "slug": "japanese-christmas-market-2026-12-05", "id": "11111111-1111-4111-8111-111111111111", "pfad": "/event/kultur/japanese-christmas-market-2026-12-05"},
+    {"kategorie": "family", "slug": "kasperle-2026-12-06", "id": "22222222-2222-4222-8222-222222222222", "pfad": "/event/familie/kasperle-2026-12-06"},
+    {"kategorie": " Musik ", "slug": "jazz-im-hof-2026-12-07", "id": "33333333-3333-4333-8333-333333333333", "pfad": "/event/musik/jazz-im-hof-2026-12-07"},
+    {"kategorie": "community", "slug": null, "id": "44444444-4444-4444-8444-444444444444", "pfad": "/event/44444444-4444-4444-8444-444444444444"}
+  ]
+}
