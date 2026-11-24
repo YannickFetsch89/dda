@@ -975,10 +975,6 @@ Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
   `TIQETS_PARTNER_ID`, `GYG_PARTNER_ID` bei jedem Deploy ausdrücklich in `web/.env.local` (ohne sed). Admin → Technik
   zeigt `PARTNERLINKS_AKTIV` und `TICKETMASTER_PARTNER_OK`.
 - Reihenfolge zum Einschalten: Anwalt gibt die Texte frei → Kennungen setzen → `PARTNERLINKS_AKTIV=1` → Deploy.
-- **25.11.2026:** Texte für /ueber und Datenschutz vom Anwalt freigegeben (Mitteilung des Auftraggebers). Kennzeichnung
-  am Button auf Wunsch des Auftraggebers geändert (er trägt das Risiko): kein Sternchen mehr, darunter nur
-  „Partnerlink“ mit „i“-Tooltip (`PartnerHinweis` in `web/components/partner-links.tsx`, `<details>` ohne JavaScript,
-  auf Geräten mit Maus auch beim Darüberfahren). Im Browser geprüft (lokal mit Testkennung).
 
 ### Cursor-Prüfung der Scraper-Neubauten (24.11.2026, nach T1-Fixes) – Einarbeitung
 
@@ -1026,28 +1022,24 @@ Schreibweise der Stadt. Zwei Tests dazu, Python gesamt 787 ok.
 - Tests `web/tests/ausblick-tickets.test.ts`. Browser-Prüfung zusammen mit W1 nach dem Lauf am 27.11. (Turbopack läuft
   im Worktree nicht mit dem verlinkten node_modules; außerdem fehlen bis dahin die fernen Events).
 
-### Welle C – Auswertung und Bau (25.11.2026, lokal gebaut)
+### P2 – Partner-Links (24.11.2026, lokal gebaut, Schalter aus)
 
-- **Lücken nach N1:** nur noch 110 von 1.529 künftigen Events ausschließlich bei Rausgegangen (7 %), verteilt auf viele
-  kleine Orte (höchstens 6 je Ort: hi sunny, UFA-Palast, Maxhaus, BrauArt, Cuvée …). Daraus lohnt keine eigene Welle.
-- **Spielstätten ohne kommende Termine:** 109 von 241 (viele Welle-A/B-Häuser darunter, deren erster Lauf erst am 27.11.
-  kommt). 15 Kandidaten nur lesend geprüft (je ≤ 4 Abrufe, robots beachtet). Lohnend:
-  1. **Bürgerhaus Reisholz** – `duesseldorf.de/buergerhaeuser/reisholz/veranstaltungen`, ~10 Termine/4 Wochen, HTML, S;
-     vermutlich gleiche Vorlage für die anderen städtischen Bürgerhäuser (ungeprüft).
-  2. **Comedy für Freunde** – wöchentliche Profi-Testbühne (Mo 20 Uhr, Lupin Gin Bar), JSON-LD, S; nur der nächste
-     Termin sichtbar.
-  3. **Heine Haus Literaturhaus** – Startseite HTML, ~3–5 Termine/Monat, S (iCal unvollständig, nicht nutzen).
-  4. optional **NRW-Akademie der Wissenschaften und der Künste** – S, aber nur ~3–4 öffentliche Termine.
-- **Nein:** Niemandsland, Leica Galerie, ZERO foundation, reinraum, b41 (zu wenig/Freitext – eher von Hand);
-  Storage Museum (robots.txt HTTP 500 = gesperrt); Einstein Boulderhalle (Kalender bei vertical-life, robots sperrt);
-  Das Dazwischen, Sponk, ausARTen, Studio Brick (keine datierten Termine/nur JS); ASG-Bildungsforum (Kursprogramm);
-  Berger Kirche, Henkel-Saal (keine eigene Programmseite).
-
-**Welle C gebaut (25.11.2026, Freigabe Auftraggeber):** `scraper/tier2/buergerhaeuser.py` („Bürgerhäuser Düsseldorf“, drei
-Vorlagen der Stadt-Seiten: Reisholz, Bilk, Salzmannbau, Kulturhaus Süd/Garath; Benrath, Eller, Gerresheim, Wersten ohne
-Veranstaltungsseite), `comedy_fuer_freunde.py` (JSON-LD + sichtbare Liste – das JSON-LD nennt eine Stunde zu spät, Uhrzeit
-aus der Liste; Weezevent-Link nur aus dem HTML, Widget nie abgerufen), `heine_haus.py` (Startseite, „Außer Haus“
-weggelassen). Live-Probe mit 120 Tagen: 46 + 1 + 2 Termine, 0,5 Minuten. Alle Rang 1, Fenster 120. Tests 910 ok.
+- `web/lib/tickets.ts`: Anbieter nur an den Hauptdomains (eventim.de, reservix.de, adticket.de, ticketmaster.de,
+  tiqets.com, getyourguide.de/.com). Shops auf Subdomains, Eventim Light und Webshops der Häuser bleiben normale Links.
+  Awin-Deeplink mit den Programmen 11388/31293/18490 und `AWIN_PUBLISHER_ID`. Ticketmaster nur mit
+  `TICKETMASTER_PARTNER_OK=1` **und** einer Impact-Vorlage `TICKETMASTER_PARTNER_VORLAGE` (mit `{url}`). Tiqets
+  `partner=`, GetYourGuide `partner_id=`. Fremde Kennungen des Hauses (`affiliate`, `utm_*`, `ref` …) werden vor dem
+  Partner-Link entfernt. Ohne `PARTNERLINKS_AKTIV=1` oder ohne Kennung: normaler Link.
+- Eventseite: Ticket-Button und – wenn die Hauptquelle selbst Rang 2 ist – der Haupt-Button laufen über
+  `partnerLink`. Partner-Link → Text mit „*“, `rel="sponsored noopener"`, darunter der Hinweis mit Link auf
+  `/ueber#partner-links`. JSON-LD bleibt die echte URL.
+- `/ueber` (Abschnitt „Partner-Links“, du) und Datenschutzerklärung (Punkt in Abschnitt 9, Sie, ohne Umnummerierung)
+  erscheinen nur, wenn ein Programm wirklich Links umbaut, und nennen nur diese Programme
+  (`web/components/partner-links.tsx`). Texte zur Freigabe: `docs/partner-links-texte-2026-11-24.md`.
+- Deploy schreibt `PARTNERLINKS_AKTIV`, `TICKETMASTER_PARTNER_OK`, `AWIN_PUBLISHER_ID`, `TICKETMASTER_PARTNER_VORLAGE`,
+  `TIQETS_PARTNER_ID`, `GYG_PARTNER_ID` bei jedem Deploy ausdrücklich in `web/.env.local` (ohne sed). Admin → Technik
+  zeigt `PARTNERLINKS_AKTIV` und `TICKETMASTER_PARTNER_OK`.
+- Reihenfolge zum Einschalten: Anwalt gibt die Texte frei → Kennungen setzen → `PARTNERLINKS_AKTIV=1` → Deploy.
 
 ## Prüfhistorie
 

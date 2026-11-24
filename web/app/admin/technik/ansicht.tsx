@@ -25,6 +25,8 @@ const SCHALTER_TEXT: Record<string, string> = {
   ORTSSEITEN_MELDEN: "Ortsseiten an IndexNow melden",
   VORSCHAU_NOTAUS: "Notaus Zeitraum je Quelle (1 = alle Quellen nur 60 Tage, ab dem nächsten Scraper-Lauf)",
   TICKETMASTER_BILDER_OK: "Ticketmaster-Bilder zeigen (erst nach schriftlicher Bestätigung durch Ticketmaster)",
+  PARTNERLINKS_AKTIV: "Partner-Links an Ticket-Buttons (erst nach Freigabe der Texte durch den Anwalt; wirkt mit dem nächsten Deploy)",
+  TICKETMASTER_PARTNER_OK: "Ticketmaster-Links als Partner-Link (erst nach schriftlicher Bestätigung durch Ticketmaster)",
 };
 
 function groesse(b: number): string {

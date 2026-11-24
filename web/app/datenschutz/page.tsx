@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { kontenAktiv } from "@/lib/konto/konfig";
 import { KontoAbschnitt } from "./konto-abschnitt";
+import { PartnerLinksDatenschutz } from "@/components/partner-links";
 
 /**
  * Stand mit Nutzerkonten (Plan Nutzerkonten Schritt 8): auf den Monat setzen, in dem KONTEN_AKTIV eingeschaltet wird.
@@ -264,6 +265,8 @@ export default function DatenschutzSeite() {
           Ihres Browsers widerrufen. Der Link „In der Nähe“ auf einer Spielplatz-Seite springt nur zu den schon geladenen
           Angaben weiter unten und fragt den Standort nicht ab.
         </li>
+        {/* Partner-Links (Plan Quellen-Ausbau 5.5.5, P2): nur, wenn ein Partnerprogramm aktiv ist */}
+        <PartnerLinksDatenschutz />
         <li>
           <b>Supabase:</b> Wir nutzen Supabase als Datenbank-Backend für die Speicherung von Event-Daten.
           Supabase wird von Supabase, Inc., 970 Toa Payoh North #07-04, Singapore 318992 betrieben.

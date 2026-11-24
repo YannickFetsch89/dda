@@ -29,7 +29,8 @@ import { clubProfil } from "@/lib/clubs";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { eventOrtLink, ortZeileLaden } from "@/lib/spielstaetten-daten";
 import { eventQuellenLaden, ortWebsite, ticketZiel } from "@/lib/ticket-button";
-import { RAUSGEGANGEN, rangGespeichert } from "@/lib/quellen-rang";
+import { RAUSGEGANGEN, TICKETVERKAUF, rangGespeichert } from "@/lib/quellen-rang";
+import { partnerLink } from "@/lib/tickets";
 import { ortPfad } from "@/components/ort-karten";
 import { Krumen } from "@/components/landing";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
@@ -122,7 +123,12 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   const ortLink = await eventOrtLink(e.id);
   // Ticket-Button (Plan Quellen-Ausbau 5.5.3/6.3): Ticket-Link des Hauses, sonst Ticketverkaufs-Quelle aus der Liste.
   // Nur für kommende, nicht abgesagte Events. Partner-Links kommen erst mit P2 (dann rel="sponsored").
-  const tickets = !abgelaufen && !e.abgesagt ? ticketZiel(e, e.ticket_url ? [] : await eventQuellenLaden(e.id)) : null;
+  const ticketUrl = !abgelaufen && !e.abgesagt ? ticketZiel(e, e.ticket_url ? [] : await eventQuellenLaden(e.id)) : null;
+  // Partner-Links (P2, 5.5.5): der Ticket-Button und – wenn die Hauptquelle selbst ein Ticketanbieter ist – der
+  // Haupt-Button. Ohne Schalter/Kennung bleibt alles ein normaler Link (lib/tickets.ts).
+  const tickets = ticketUrl ? partnerLink(ticketUrl) : null;
+  const haupt = e.quelle_url && rangGespeichert(e) === TICKETVERKAUF && !e.abgesagt ? partnerLink(e.quelle_url) : e.quelle_url ? { url: e.quelle_url, partner: false } : null;
+  const mitPartner = !abgelaufen && (!!tickets?.partner || !!haupt?.partner);
   // „Website von <Ort>“ (4.4): nur bei Events, die nur Rausgegangen kennt, über die Ortszuordnung (ort_id)
   const ortSeite = rangGespeichert(e) === RAUSGEGANGEN && e.ort_id ? ortWebsite(e, await ortZeileLaden(e.ort_id)) : null;
   const club = ortLink ? null : clubTreffer;
@@ -289,17 +295,24 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
           </div>
 
           <aside className="detail-seite" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {e.quelle_url && !abgelaufen && (
-              <a className="btn btn--gold btn--gross btn--block" href={e.quelle_url} target="_blank" rel="noopener">
+            {haupt && !abgelaufen && (
+              <a className="btn btn--gold btn--gross btn--block" href={haupt.url} target="_blank" rel={haupt.partner ? "sponsored noopener" : "noopener"}>
                 {eigenerTerminLink && e.uhrzeit ? `Zum Termin um ${e.uhrzeit} Uhr` : "Zur Veranstalter-Seite"}
+                {haupt.partner ? "*" : ""}
                 <Icon name="open_in_new" />
               </a>
             )}
             {tickets && (
-              <a className="btn btn--outline btn--gross btn--block" href={tickets} target="_blank" rel="noopener">
-                Tickets
+              <a className="btn btn--outline btn--gross btn--block" href={tickets.url} target="_blank" rel={tickets.partner ? "sponsored noopener" : "noopener"}>
+                {tickets.partner ? "Tickets*" : "Tickets"}
                 <Icon name="confirmation_number" />
               </a>
+            )}
+            {mitPartner && (
+              <p className="partner-hinweis">
+                *Partner-Link: Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich.{" "}
+                <Link href="/ueber#partner-links">Mehr dazu</Link>
+              </p>
             )}
             {/* Abgelaufen: kein Ticket-Button mehr, nur ein schlichter Verweis auf den Original-Eintrag */}
             {e.quelle_url && abgelaufen && (

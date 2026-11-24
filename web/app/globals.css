@@ -780,6 +780,9 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .teilen a, .teilen button { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: var(--r-md); background: var(--ddd-surface); border: 1px solid var(--ddd-border); font-size: 13px; font-weight: 600; }
 .teilen .icon { font-size: 18px; }
 .quelle { font-size: 12px; color: var(--ddd-text-muted); }
+/* Kennzeichnung der Partner-Links direkt am Button (Plan Quellen-Ausbau 5.5.5, P2) */
+.partner-hinweis { font-size: 12px; line-height: 1.4; color: var(--ddd-text-muted); margin: -8px 0 0; }
+.partner-hinweis a { color: var(--ddd-link); }
 @media (min-width: 768px) { .detail-hero { height: clamp(330px, 38vw, 520px); } }
 @media (min-width: 1200px) {
   .detail-raster { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 48px; align-items: start; }

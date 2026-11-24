@@ -34,11 +34,19 @@ jobs:
           # Newsletter Double-Opt-in (Plan Admin-Dashboard 4.9): Token der Bestätigen- und Abmelde-Links; derselbe Wert
           # als Secret der Action newsletter.yml. Ohne Secret sind alle Links ungültig.
           NEWSLETTER_TOKEN_SCHLUESSEL: ${{ secrets.NEWSLETTER_TOKEN_SCHLUESSEL }}
+          # Partner-Links (Plan Quellen-Ausbau 5.5.5, P2): Schalter und öffentliche Kennungen als Variables (keine Secrets –
+          # sie stehen in jedem Link). Ohne PARTNERLINKS_AKTIV=1 bleiben alle Ticket-Links normale Links.
+          PARTNERLINKS_AKTIV: ${{ vars.PARTNERLINKS_AKTIV }}
+          TICKETMASTER_PARTNER_OK: ${{ vars.TICKETMASTER_PARTNER_OK }}
+          AWIN_PUBLISHER_ID: ${{ vars.AWIN_PUBLISHER_ID }}
+          TICKETMASTER_PARTNER_VORLAGE: ${{ vars.TICKETMASTER_PARTNER_VORLAGE }}
+          TIQETS_PARTNER_ID: ${{ vars.TIQETS_PARTNER_ID }}
+          GYG_PARTNER_ID: ${{ vars.GYG_PARTNER_ID }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY,KONTEN_AKTIV,MAGAZIN_JOB_SCHLUESSEL,GEBURTSTAG_TOKEN_SCHLUESSEL,GEBURTSTAG_JOB_SCHLUESSEL,ADMIN_GITHUB_TOKEN,NEWSLETTER_TOKEN_SCHLUESSEL
+          envs: SUPABASE_SERVICE_KEY,GOOGLE_PLACES_API_KEY,KONTEN_AKTIV,MAGAZIN_JOB_SCHLUESSEL,GEBURTSTAG_TOKEN_SCHLUESSEL,GEBURTSTAG_JOB_SCHLUESSEL,ADMIN_GITHUB_TOKEN,NEWSLETTER_TOKEN_SCHLUESSEL,PARTNERLINKS_AKTIV,TICKETMASTER_PARTNER_OK,AWIN_PUBLISHER_ID,TICKETMASTER_PARTNER_VORLAGE,TIQETS_PARTNER_ID,GYG_PARTNER_ID
           script: |
             cd /home/dies_das_duesseldorfadmin/dda
 
@@ -115,6 +123,17 @@ jobs:
               echo "KONTEN_AKTIV=$KONTEN_WERT" >> web/.env.local
             fi
             echo "Nutzerkonten-Schalter: KONTEN_AKTIV=$KONTEN_WERT"
+
+            # Partner-Links (Plan Quellen-Ausbau 5.5.5, P2) in web/.env.local – immer ausdrücklich gesetzt (auch leer), damit
+            # kein alter Wert stehen bleibt. Ohne sed: die Ticketmaster-Vorlage enthält „&“ und „/“.
+            for NAME in PARTNERLINKS_AKTIV TICKETMASTER_PARTNER_OK AWIN_PUBLISHER_ID TICKETMASTER_PARTNER_VORLAGE TIQETS_PARTNER_ID GYG_PARTNER_ID; do
+              WERT=$(printenv "$NAME" | tr -d ' \r\n\t')
+              touch web/.env.local
+              grep -v "^$NAME=" web/.env.local > web/.env.local.neu || true
+              printf '%s=%s\n' "$NAME" "$WERT" >> web/.env.local.neu
+              mv web/.env.local.neu web/.env.local
+              if [ -n "$WERT" ]; then echo "Partner-Variable $NAME gesetzt"; else echo "Partner-Variable $NAME leer"; fi
+            done
 
             # Schlüssel der Magazin-Auswahl-Route (Plan Redaktion T11) in web/.env.local – vor „npm run build“; nur „envs“
             # reicht nicht, weil web/deploy/website.sh Next ohne die Variablen dieser SSH-Sitzung startet.
@@ -205,6 +224,7 @@ jobs:
             # So startet Next nach dem Deploy genauso wie nach einem Neustart durch den Wächter (Cron, ohne diese Sitzung).
             unset SUPABASE_SERVICE_KEY GOOGLE_PLACES_API_KEY KONTEN_AKTIV MAGAZIN_JOB_SCHLUESSEL GEBURTSTAG_TOKEN_SCHLUESSEL
             unset GEBURTSTAG_JOB_SCHLUESSEL ADMIN_GITHUB_TOKEN NEWSLETTER_TOKEN_SCHLUESSEL NL_SCHLUESSEL WERT
+            unset PARTNERLINKS_AKTIV TICKETMASTER_PARTNER_OK AWIN_PUBLISHER_ID TICKETMASTER_PARTNER_VORLAGE TIQETS_PARTNER_ID GYG_PARTNER_ID NAME
             npm ci --no-audit --no-fund
             npm run build
             /home/dies_das_duesseldorfadmin/bin/website.sh neustart

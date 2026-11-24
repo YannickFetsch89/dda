@@ -13,6 +13,7 @@ import { hubOrte } from "@/lib/guide-stadtteile";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { MARKE_SATZ, seitenMetadaten } from "@/lib/seo";
 import { MAGAZIN_VERLINKT } from "@/lib/schalter";
+import { PartnerLinksUeber } from "@/components/partner-links";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -178,6 +179,9 @@ export default async function Ueber() {
           ))}
         </div>
       </section>
+
+      {/* Partner-Links (Plan Quellen-Ausbau 5.5.5, P2): nur, wenn ein Partnerprogramm aktiv ist */}
+      <PartnerLinksUeber />
 
       <Laufband richtung="rechts" fotos={[F.kultur3, F.party3, F.food3, F.kultur4, F.feier1, F.freunde3, F.indie]} />
 
