@@ -17,7 +17,7 @@ Erstellt: 2026-03-05
 import json
 import logging
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -31,6 +31,17 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.kunstsammlung.de"
 PROGRAMM_URL = "https://www.kunstsammlung.de/de/exhibitions/"
+# Veranstaltungskalender (Führungen, Workshops, Aktionen, Talks …) – Quellen-Ausbau V0: bis 24.11.2026 las der Scraper
+# nur die Ausstellungen, Rausgegangen lieferte für K20/K21 in 120 Tagen 94 Termine, die uns fehlten.
+# Die Seite ist serverseitig gerendert: je Termin ein <div class="card" data-date="25.11.2026" data-location="K21"
+# data-cat="Führung" data-visitors="Familie" data-free-entry="1">. robots.txt ist leer (alles erlaubt).
+KALENDER_URL = "https://www.kunstsammlung.de/de/calendar/"
+# Ortsnamen wie in der Ortstabelle (Ortszuordnung über event_orte) und Adressen der beiden Häuser
+HAUS = {
+    "K20": ("K20 Grabbeplatz", "Grabbeplatz 5, 40213 Düsseldorf"),
+    "K21": ("K21 Ständehaus", "Ständehausstraße 1, 40217 Düsseldorf"),
+}
+KALENDER_KATEGORIE = {"workshop": "community", "aktionen": "community"}
 QUELLE_NAME = "Kunstsammlung NRW (K20/K21)"
 ORT_STANDARD = "Kunstsammlung NRW"
 KATEGORIE_STANDARD = "kultur"
@@ -434,6 +445,57 @@ def _events_aus_next_data(soup: BeautifulSoup, heute: date) -> list[dict]:
     return events
 
 
+def _uhrzeit_aus(text: str) -> Optional[str]:
+    """„13.30 – 14.30 Uhr“ → "13:30", „15 – 18 Uhr“ → "15:00"; sonst None."""
+    treffer = re.match(r"\s*(\d{1,2})(?:[.:](\d{2}))?", text or "")
+    if not treffer or int(treffer.group(1)) > 23:
+        return None
+    return f"{int(treffer.group(1)):02d}:{treffer.group(2) or '00'}"
+
+
+def _kalender_events(html: str, heute: date, enddatum: date) -> list[dict]:
+    """Termine aus dem Veranstaltungskalender (/de/calendar/) zwischen heute und enddatum."""
+    soup = BeautifulSoup(html, "html.parser")
+    events, gesehen = [], set()
+    for karte in soup.select("div.card[data-date]"):
+        try:
+            tag = datetime.strptime(karte.get("data-date", ""), "%d.%m.%Y").date()
+        except ValueError:
+            continue
+        if not heute <= tag <= enddatum:
+            continue
+        link = karte.select_one(".event a[href]")
+        if not link:
+            continue
+        titel = re.sub(r"^K2[01]\s+", "", link.get_text(" ", strip=True)).strip()
+        zeit_el = karte.select_one(".time")
+        uhrzeit = _uhrzeit_aus(zeit_el.get_text(" ", strip=True) if zeit_el else "")
+        schluessel = (titel.lower(), tag, uhrzeit)
+        if not titel or schluessel in gesehen:
+            continue
+        gesehen.add(schluessel)
+        ort, adresse = HAUS.get((karte.get("data-location") or "").strip(), (ORT_STANDARD, None))
+        art = (karte.get("data-cat") or "").strip().lower()
+        besucher = (karte.get("data-visitors") or "").lower()
+        kategorie = "family" if ("familie" in besucher or "kinder" in besucher) else KALENDER_KATEGORIE.get(art, KATEGORIE_STANDARD)
+        events.append({
+            "titel": titel,
+            "datum": tag.isoformat(),
+            "uhrzeit": uhrzeit,
+            "ort": ort,
+            "adresse": adresse,
+            "kategorie": kategorie,
+            "beschreibung": None,  # Text schreibt Schritt 3b aus der Eventseite in eigenen Worten
+            "preis": "kostenlos" if karte.get("data-free-entry") == "1" else None,
+            "quelle_name": QUELLE_NAME,
+            "quelle_url": urljoin(BASE_URL, link["href"]),
+            "bild_url": None,
+            "bild_generiert": False,
+            "status": "neu",
+        })
+    return events
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Veranstaltungen der Kunstsammlung NRW (K20 & K21).
@@ -471,6 +533,18 @@ def scrape() -> list[dict]:
             logger.info("Next.js: %d Events gefunden", len(events))
 
         events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
+
+        # Veranstaltungskalender – ein Fehler hier kostet nur die Termine, nicht die Ausstellungen
+        try:
+            kalender_html = seite_abrufen(KALENDER_URL, logger)
+            termine = _kalender_events(kalender_html, heute, enddatum) if kalender_html else []
+            logger.info("Veranstaltungskalender: %d Termine", len(termine))
+            if kalender_html and not termine:
+                logger.warning("Veranstaltungskalender ohne Termine – Seitenstruktur geändert?")
+            events.extend(termine)
+        except Exception as fehler:
+            logger.error("Veranstaltungskalender fehlgeschlagen: %s", fehler)
+
         logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
         return events
 

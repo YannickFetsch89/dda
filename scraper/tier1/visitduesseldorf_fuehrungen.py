@@ -273,35 +273,41 @@ async def _abrufen(client: httpx.AsyncClient, url: str) -> Optional[str]:
     return None
 
 
-def _kandidaten(sitemap: str) -> dict[str, str]:
-    """/event/-URLs mit passendem Slug → neuestes lastmod."""
+def _kandidaten(sitemap: str, alle: bool = True) -> dict[str, str]:
+    """/event/-URLs → neuestes lastmod. Seit dem Quellen-Ausbau (V0) alle Eventseiten (der Kalender-Scraper
+    visitduesseldorf.py nutzt denselben Zwischenspeicher); alle=False filtert wie früher nach Führungs-Slugs."""
     ergebnis: dict[str, str] = {}
     for eintrag in re.findall(r"<url>(.*?)</url>", sitemap, flags=re.S):
         loc = re.search(r"<loc>([^<]+)</loc>", eintrag)
         if not loc or "/event/" not in loc.group(1):
             continue
         url = html.unescape(loc.group(1).strip())
-        if not KANDIDAT_MUSTER.search(url.rsplit("/event/", 1)[-1]):
+        if not alle and not KANDIDAT_MUSTER.search(url.rsplit("/event/", 1)[-1]):
             continue
         lastmod = (re.search(r"<lastmod>([^<]+)</lastmod>", eintrag) or [None, ""])[1]
         ergebnis[url] = max(ergebnis.get(url, ""), lastmod)
     return ergebnis
 
 
-async def scrape() -> list[dict]:
-    """
-    Scrapt öffentliche Führungstermine von Visit Düsseldorf.
+# Höchstens so viele Seiten je Lauf neu laden (je ≈ 1,5 MB, 2 s Pause): Beim ersten Lauf mit allen ≈ 780 Eventseiten
+# verteilt sich das Nachladen auf zwei, drei Läufe statt den Lauf um 40 Minuten zu verlängern (Plan Quellen-Ausbau 5.3)
+MAX_NEU_JE_LAUF = 200
 
-    Returns:
-        Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
-    """
-    heute = date.today()
-    enddatum = vorschau_ende(QUELLE_NAME, heute)
-    logger.info("Starte Scraper: %s Führungen", QUELLE_NAME)
+# Ein Lauf lädt die Seiten nur einmal, auch wenn Kalender- und Führungs-Scraper sie beide brauchen
+_GELADEN: dict = {"cache": None}
 
+
+async def seiten_laden() -> dict:
+    """
+    Aktualisiert den Zwischenspeicher aller /event/-Seiten (nur geänderte, neueste zuerst, höchstens MAX_NEU_JE_LAUF)
+    und gibt ihn zurück: {url: {"lastmod", "roh"}}. Wird je Prozess nur einmal ausgeführt.
+    """
+    if _GELADEN["cache"] is not None:
+        return _GELADEN["cache"]
     cache = _cache_laden()
     neu_geladen = 0
     sitemap_ok = False
+    kandidaten: dict[str, str] = {}
     try:
         async with httpx.AsyncClient(headers=STANDARD_HEADERS, timeout=60, follow_redirects=True) as client:
             sitemap = await _abrufen(client, SITEMAP_URL)
@@ -312,14 +318,18 @@ async def scrape() -> list[dict]:
             if not sitemap_ok:
                 logger.error("%s: Sitemap fehlt oder ist unvollständig – nutze den Zwischenspeicher", QUELLE_NAME)
                 kandidaten = {**{url: e.get("lastmod", "") for url, e in cache.items()}, **kandidaten}
-            logger.info("%s: %d Kandidaten in der Sitemap", QUELLE_NAME, len(kandidaten))
+            logger.info("%s: %d Eventseiten in der Sitemap", QUELLE_NAME, len(kandidaten))
 
-            for url, lastmod in kandidaten.items():
+            offen = 0
+            for url, lastmod in sorted(kandidaten.items(), key=lambda kv: kv[1], reverse=True):
                 alt = cache.get(url)
                 if alt and alt.get("lastmod") == lastmod:
                     continue  # unverändert
                 if alt and alt.get("fehl_lastmod") == lastmod and alt.get("fehlversuche", 0) >= MAX_FEHLVERSUCHE:
                     continue  # dieser Seitenstand war mehrfach unlesbar → erst bei neuem lastmod wieder
+                if neu_geladen >= MAX_NEU_JE_LAUF:
+                    offen += 1
+                    continue
                 seite = await _abrufen(client, url)
                 if seite is None:
                     continue  # Netzfehler: alten Stand behalten, nächster Lauf versucht erneut
@@ -339,6 +349,9 @@ async def scrape() -> list[dict]:
                 neu_geladen += 1
                 if neu_geladen % 10 == 0:
                     _cache_speichern(cache)
+            if offen:
+                logger.info("%s: %d geänderte Seiten warten auf den nächsten Lauf (Grenze %d je Lauf)",
+                            QUELLE_NAME, offen, MAX_NEU_JE_LAUF)
     except Exception as fehler:
         logger.error("%s: Abruf abgebrochen (%s) – nutze Zwischenspeicher", QUELLE_NAME, fehler)
         sitemap_ok = False
@@ -347,6 +360,22 @@ async def scrape() -> list[dict]:
     if sitemap_ok:
         cache = {url: eintrag for url, eintrag in cache.items() if url in kandidaten}
     _cache_speichern(cache)
+    logger.info("%s: %d Seiten neu geladen, %d im Zwischenspeicher", QUELLE_NAME, neu_geladen, len(cache))
+    _GELADEN["cache"] = cache
+    return cache
+
+
+async def scrape() -> list[dict]:
+    """
+    Scrapt öffentliche Führungstermine von Visit Düsseldorf.
+
+    Returns:
+        Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
+    """
+    heute = date.today()
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
+    logger.info("Starte Scraper: %s Führungen", QUELLE_NAME)
+    cache = await seiten_laden()
 
     # Termine im Zeitfenster sammeln
     roh: list[tuple[str, dict, dict]] = []
@@ -394,8 +423,8 @@ async def scrape() -> list[dict]:
         })
 
     logger.info(
-        "%s Führungen: %d Seiten neu geladen, %d Führungen bekannt, %d Termine bis %s",
-        QUELLE_NAME, neu_geladen, fuehrungen, len(events), enddatum.isoformat(),
+        "%s Führungen: %d Führungen bekannt, %d Termine bis %s",
+        QUELLE_NAME, fuehrungen, len(events), enddatum.isoformat(),
     )
     return events
 

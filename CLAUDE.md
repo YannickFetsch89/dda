@@ -77,7 +77,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Name | URL | Methode |
 |---|---|---|
 | Rausgegangen | rausgegangen.de/duesseldorf | Playwright Scraper |
-| visitduesseldorf.de | visitduesseldorf.de/erleben/veranstaltungen | Playwright Scraper |
+| visitduesseldorf.de | Eventseiten aus sitemap.xml (Toubiz-JSON, alle Kategorien außer Führungen/Schifffahrt) | httpx, gemeinsamer Zwischenspeicher mit dem Führungs-Scraper, höchstens 200 neue Seiten je Lauf |
 | visitduesseldorf.de – Führungen | Event-Seiten aus sitemap.xml (JSON im Attribut data-tb-detail-event), Kategorie stadtfuehrung | httpx, Zwischenspeicher data/visitduesseldorf/ |
 | Kulturportal Düsseldorf | kulturportal-duesseldorf.de | Playwright Scraper |
 | meinestadt.de | veranstaltungen.meinestadt.de/duesseldorf | Playwright Scraper |
@@ -125,7 +125,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Düsseldorfer Schauspielhaus | dhaus.de/spielplan |
 | FFT Düsseldorf | fft-duesseldorf.de/programm |
 | Kunstpalast | kunstpalast.de/de/programm |
-| Kunstsammlung NRW (K20/K21) | kunstsammlung.de/programm |
+| Kunstsammlung NRW (K20/K21) | kunstsammlung.de/de/exhibitions + /de/calendar (Führungen, Workshops, Aktionen) |
 | NRW-Forum | nrw-forum.de/veranstaltungen |
 | Kunsthalle Düsseldorf | kunsthalle-duesseldorf.de |
 | Filmmuseum / Black Box Kino | duesseldorf.de/filmmuseum |

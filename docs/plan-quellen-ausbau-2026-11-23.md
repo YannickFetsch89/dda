@@ -809,6 +809,24 @@ Urteil Cursor: R1 und R2 in Ordnung, Z1 und T1 nicht (je ein mittlerer Befund), 
 - **Z1, gering – Laufzeit des ersten Laufs:** wird beobachtet; Notaus statt höherem Zeitlimit.
 - Python gesamt 585 Tests ok (Website unverändert, 708 ok).
 
+### V0 – VisitDüsseldorf komplett und Kunstsammlung-Kalender (24.11.2026, lokal gebaut)
+
+- **VisitDüsseldorf:** `scraper/tier1/visitduesseldorf.py` neu – statt Playwright auf der ersten Kalenderseite
+  (≈ 10 Events je Lauf) alle ≈ 780 Eventseiten der Sitemap mit Toubiz-JSON. Abruf und Zwischenspeicher teilt es mit dem
+  Führungs-Scraper: `visitduesseldorf_fuehrungen.seiten_laden()` lädt je Lauf nur geänderte Seiten, neueste zuerst,
+  höchstens `MAX_NEU_JE_LAUF = 200` (je Seite ≈ 1,5 MB; der erste Vollbestand verteilt sich so auf mehrere Läufe), und
+  nur einmal je Prozess. Kategorie aus den Toubiz-Kategorien (`KATEGORIE_MAP`), Ort/Adresse wie bei den Führungen,
+  Beschreibung leer (Schritt 3b). Ausgelassen: Führungen (liefert der Führungs-Scraper bzw. die Museen; „Aufführung“
+  zählt nicht als Führung) und buchbare Tagesangebote (`AUSSCHLUSS`: Aktivität, Schifffahrt, Bustour – im Probelauf
+  82 Termine „Panoramafahrt auf dem Rhein“). Probelauf mit 12 Seiten: 241 Termine, davon 104 Schiffsfahrten → jetzt raus.
+- **Kunstsammlung NRW:** zusätzlich `/de/calendar/` (serverseitig, je Termin `div.card[data-date]` mit Haus, Art,
+  Zielgruppe, freiem Eintritt) – 133 Termine bis Juli 2027 (Führungen, Workshops, Aktionen, Talks). Ort „K20 Grabbeplatz“
+  bzw. „K21 Ständehaus“ wie in der Ortstabelle, Familie/Kinder → `family`, Workshop/Aktionen → `community`, sonst
+  `kultur`. Ein Fehler im Kalender kostet nur die Termine, nicht die Ausstellungen.
+- Tests: `tests/test_visitduesseldorf_kalender.py` (3), `tests/test_kunstsammlung_kalender.py` (3) mit Auszug
+  `tests/fixtures/kunstsammlung_kalender.html`; Python gesamt 592 ok.
+- CLAUDE.md-Tabellen angepasst. Rückweg: im Admin unter „Quellen an/aus“ abschalten oder Commit zurücknehmen.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
