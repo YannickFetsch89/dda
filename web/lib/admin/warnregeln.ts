@@ -88,6 +88,8 @@ export function warnungenBerechnen(laeufe: LaufZeile[], ergebnisse: ErgebnisZeil
     liste.sort((a, b) => position.get(a.lauf_id)! - position.get(b.lauf_id)!);
     const aktuell = liste[0];
     if (aktuell.lauf_id !== letzter.id) continue; // Quelle war im letzten Lauf nicht dabei
+    // Im letzten Lauf übersprungen (z. B. im Admin abgeschaltet): keine Regel, auch nicht W4 (Cursor-Prüfung 5b, Befund 2)
+    if (aktuell.status === "uebersprungen") continue;
     const frueher = liste.slice(1);
 
     // W1: Fehler im letzten Lauf

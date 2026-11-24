@@ -687,6 +687,9 @@ Stufe 5b – Meldungen, SEO-Aufräumen, Quellen an/aus (24.11.2026):
 - **SEO-Aufräumen** (`/admin/seo`, unverändert aus `dashboard/seo_aufraeumen.py`): Kennzahlen, älteste 500 (offene) Kandidaten, Auswahl, behalten/301/410, zurücknehmen, CSV. Die Website übernimmt Entscheidungen weiter innerhalb von 10 Minuten.
 - **Quellen an/aus:** `database/admin_quellen_2026-11-24.sql` (Tabelle `quellen_einstellungen`, nur Admins). `main.py` liest sie zu Beginn (`pipeline/quellen.py`) und überspringt abgeschaltete Quellen; im Report stehen sie als „uebersprungen“ mit Grund (keine Warnung W1–W4). Ist die Tabelle nicht lesbar, laufen alle. Schalter auf `/admin/scraper`.
 - **Mit im Paket:** Workflow `.github/workflows/zugriffe.yml` (Zugriffs-Muster eines Pfads aus dem nginx-Log, nur lesend, ohne Adressen) nach dem Ausfall vom 23.11.2026.
+- **Cursor-Prüfung Stufe 5b (deploybar, SQL ausgeführt):**
+  - Befund 1 (mittel) behoben: Die Suche nach belegten Slugs nutzt den PostgREST-Platzhalter `*` (wie das Streamlit-Dashboard); vorher hätte eine zweite Vorstellung am selben Tag denselben Slug bekommen und die Freigabe wäre mit einer falschen Dubletten-Meldung gescheitert.
+  - Befund 2 (mittel) behoben: Steht eine Quelle im letzten Lauf auf „uebersprungen“ (z. B. abgeschaltet), gilt für sie keine Warnregel, auch nicht W4 – in Python und TypeScript, neuer Fall in `tests/fixtures/lauf_warnungen.json`.
 
 ## Prüfhistorie
 
@@ -711,3 +714,4 @@ Stufe 5b – Meldungen, SEO-Aufräumen, Quellen an/aus (24.11.2026):
 - 23.11.2026: SQL Stufe 5a ausgeführt, Cursor-Prüfung 5a deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
 - 23.11.2026: Stufe 5a LIVE (311090f); Ausfall durch Bot auf /guides/restaurants-cafes, Bremse und Cache live (0466601, f3e58ad).
 - 24.11.2026: Stufe 5b gebaut (lokal), SQL `admin_quellen_2026-11-24.sql`; Notizen in Anhang F.
+- 24.11.2026: SQL Stufe 5b ausgeführt, Cursor-Prüfung 5b deploybar, 2 Befunde eingearbeitet.

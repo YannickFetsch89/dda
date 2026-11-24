@@ -67,7 +67,9 @@ async function bildVeroeffentlichen(db: SupabaseClient, m: Meldung): Promise<[st
 async function eventEinfuegen(db: SupabaseClient, event: Record<string, unknown>): Promise<string> {
   for (let versuch = 0; versuch < 2; versuch++) {
     const basis = slugErzeugen(String(event.titel), String(event.ort ?? ""), String(event.datum));
-    const { data: belegt } = await db.from("events").select("slug").like("slug", `${basis}%`);
+    // PostgREST-Platzhalter ist * (wie dashboard/meldungen.py); Slugs enthalten nur a-z, 0-9 und „-“ (Cursor-Prüfung 5b, Befund 1)
+    const { data: belegt, error: fBelegt } = await db.from("events").select("slug").like("slug", `${basis}*`);
+    if (fBelegt) throw new Error(fBelegt.message);
     event.slug = slugMitSuffix(basis, new Set((belegt ?? []).map((z) => String(z.slug))));
     const { data, error } = await db.from("events").insert(event).select("id");
     if (!error && data?.length) return String(data[0].id);

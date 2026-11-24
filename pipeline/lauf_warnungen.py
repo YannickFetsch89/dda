@@ -76,6 +76,9 @@ def warnungen_berechnen(laeufe: list[dict], ergebnisse: list[dict], jetzt: datet
         aktuell = liste[0]
         if aktuell["lauf_id"] != letzter["id"]:
             continue
+        # Im letzten Lauf übersprungen (z. B. im Admin abgeschaltet): keine Regel, auch nicht W4 (Cursor-Prüfung 5b)
+        if aktuell["status"] == "uebersprungen":
+            continue
         frueher = liste[1:]
 
         if aktuell["status"] == "fehler":  # W1

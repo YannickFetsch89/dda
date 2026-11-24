@@ -81,6 +81,23 @@
       "erwartet": [
         { "regel": "W5", "quelle": null }
       ]
+    },
+    {
+      "name": "abgeschaltete Quelle (uebersprungen) bekommt keine Warnung, auch nicht W4",
+      "jetzt": "2026-11-14T12:00:00Z",
+      "laeufe": [
+        { "id": "a1", "gestartet_am": "2026-11-11T05:00:00Z", "beendet_am": "2026-11-11T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "a2", "gestartet_am": "2026-11-12T05:00:00Z", "beendet_am": "2026-11-12T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "a3", "gestartet_am": "2026-11-13T05:00:00Z", "beendet_am": "2026-11-13T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 },
+        { "id": "a4", "gestartet_am": "2026-11-14T05:00:00Z", "beendet_am": "2026-11-14T06:00:00Z", "status": "erfolgreich", "speicher_fehler": 0 }
+      ],
+      "ergebnisse": [
+        { "lauf_id": "a4", "quelle": "abgeschaltet", "status": "uebersprungen", "anzahl": 0, "meldung": "Im Admin-Bereich abgeschaltet: Wartung" },
+        { "lauf_id": "a3", "quelle": "abgeschaltet", "status": "fehler", "anzahl": 0, "meldung": "HTTP 500" },
+        { "lauf_id": "a2", "quelle": "abgeschaltet", "status": "fehler", "anzahl": 0, "meldung": "HTTP 500" },
+        { "lauf_id": "a1", "quelle": "abgeschaltet", "status": "fehler", "anzahl": 0, "meldung": "HTTP 500" }
+      ],
+      "erwartet": []
     }
   ]
 }
