@@ -1,6 +1,6 @@
-# Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – dritte Fassung, 24.11.2026
+# Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – dritte Fassung, **freigegeben 24.11.2026**
 
-Status: **Entwurf zur Abstimmung**. Gebaut wird erst nach Freigabe, schrittweise und jeweils mit OK des Auftraggebers.
+Status: **Freigegeben vom Auftraggeber am 24.11.2026 (dritte Fassung).** Die Vorschläge Q1–Q22 gelten damit als entschieden. Gebaut wird erst nach Freigabe, schrittweise und jeweils mit OK des Auftraggebers.
 Jeder Push ist ein Live-Deploy; SQL führt der Auftraggeber im Supabase-SQL-Editor aus.
 
 Drei Ziele des Auftraggebers:
@@ -578,3 +578,4 @@ trifft der Auftraggeber; sie sind nicht Gegenstand der Prüfung, wohl aber ihre 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
 - 24.11.2026: Antworten des Auftraggebers eingearbeitet (10), Provisions-Recherche (5.4), Namensvorschläge (6.4), Q18–Q19 neu
 - 24.11.2026: dritte Fassung – Auftraggeber: alle Partner-Anbieter anbinden → 5.5, Q19–Q22, Schritte A1/P1/T2/T3/P2, Tests, Risiken
+- 24.11.2026: dritte Fassung vom Auftraggeber freigegeben. Cursor-Prüfung (Anhang A) steht noch aus; Empfehlung: vor Schritt R1.
