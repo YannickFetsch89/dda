@@ -787,6 +787,7 @@ Gebaut wie 4.1/4.2, Punkte 1–3 (Punkt 4 Nachziehen = N1, später):
   erkennbar. Für den Ort müsste man jede Eventseite laden (erster Lauf ≈ 28 min, danach nur neue URLs). Rudas Studios
   läuft schon über einen eigenen Scraper. Vorschlag: Stagedates erst mit V1 (JSON-LD-Baustein und Zwischenspeicher
   wie bei VisitDüsseldorf), nachdem jemand die Bedingungen im Browser gelesen hat.
+  **Auftraggeber 24.11.2026: einverstanden** – Stagedates kommt mit V1.
 - Tests: `tests/test_ticketmaster.py` (7); Python gesamt 581 ok, Website 708 ok.
 - Rückweg: Commit zurücknehmen; Ticketmaster ohne Secret ist ohnehin aus.
 
