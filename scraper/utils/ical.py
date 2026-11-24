@@ -84,8 +84,11 @@ def _wiederholungen(start: date, regel: str, exdates: set[date], bis: date) -> l
         except ValueError:
             pass
     anzahl = min(int(teile["COUNT"]) if teile.get("COUNT", "").isdigit() else MAX_WIEDERHOLUNGEN, MAX_WIEDERHOLUNGEN)
-    tage = []
-    for k in range(anzahl):
+    tage: list[date] = []
+    erzeugt = 0  # COUNT zählt nur Termine, die es gibt (auch Ausfalltage per EXDATE), nicht übersprungene Monate
+    for k in range(MAX_WIEDERHOLUNGEN * 2):
+        if erzeugt >= anzahl:
+            break
         if freq == "DAILY":
             tag: Optional[date] = start + timedelta(days=k * schritt)
         elif freq == "WEEKLY":
@@ -100,6 +103,7 @@ def _wiederholungen(start: date, regel: str, exdates: set[date], bis: date) -> l
             continue
         if tag > ende:
             break
+        erzeugt += 1
         if tag not in exdates:
             tage.append(tag)
     return tage
@@ -119,6 +123,9 @@ def termine_aus_ics(text: str, von: date, bis: date) -> list[dict]:
         exdates = {d for e in ev.get("_EXDATE", []) for w in e[1].split(",") if (d := _zeitpunkt(e[0], w)[0])}
         tage = _wiederholungen(tag, ev["RRULE"][1], exdates, bis) if "RRULE" in ev else [tag]
         ende = _zeitpunkt(*ev["DTEND"])[0] if "DTEND" in ev else None
+        # Ganztägig: DTEND ist der Tag NACH dem letzten Tag (RFC 5545) – als letzten Tag speichern
+        if ende and uhrzeit is None:
+            ende -= timedelta(days=1)
         for t in tage:
             if von <= t <= bis:
                 termine.append({

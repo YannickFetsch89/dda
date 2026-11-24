@@ -114,8 +114,10 @@ def _ortszeit(wert: Any) -> tuple[Optional[str], Optional[str]]:
             from zoneinfo import ZoneInfo
             zeit = datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(ZoneInfo("Europe/Berlin"))
             return zeit.date().isoformat(), zeit.strftime("%H:%M")
-        except (ValueError, KeyError):
+        except ValueError:
             pass
+        except Exception as fehler:  # z. B. fehlende Zeitzonen-Datenbank (tzdata) unter Windows
+            logger.warning("JSON-LD: Zeitzone nicht umrechenbar (%s) – Uhrzeit bleibt wie angegeben: %s", fehler, text)
     return treffer.group(1), (f"{treffer.group(2)}:{treffer.group(3)}" if treffer.group(2) else None)
 
 

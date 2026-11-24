@@ -34,6 +34,9 @@ SITEMAP_URL = "https://stagedates.com/sitemap-events.xml"
 CACHE_DATEI = Path(__file__).resolve().parents[2] / "data" / "stagedates" / "seiten.json"
 CACHE_VERSION = 1
 MAX_NEU_JE_LAUF = 150
+# Seite ohne lesbaren Termin (leere Hülle, Bot-Seite …): so oft versuchen, dann erst wieder, wenn sie aus der Sitemap
+# fällt (Cursor-Prüfung V1)
+MAX_FEHLVERSUCHE = 2
 STAEDTE = ("düsseldorf", "dusseldorf", "duesseldorf", "neuss", "ratingen")
 _SLUG_DATUM = re.compile(r"-(\d{8})-[A-Za-z0-9]+/?$")
 
@@ -110,18 +113,22 @@ def scrape() -> list[dict]:
             kandidaten = urls_im_fenster(sitemap, heute, enddatum)
         neu = 0
         for url, _tag in sorted(kandidaten.items(), key=lambda kv: kv[1]):
-            if url in cache:
+            alt = cache.get(url) or {}
+            if alt.get("termine") or alt.get("fehlversuche", 0) >= MAX_FEHLVERSUCHE:
                 continue
             if neu >= MAX_NEU_JE_LAUF:
                 break
             html = seite_abrufen(url, logger)
             if html is None:
                 continue
-            cache[url] = {"termine": events_aus_html(html, url)}
+            termine = events_aus_html(html, url)
+            # Nur eine Seite mit Termin gilt als gelesen; eine leere Antwort wird beim nächsten Lauf erneut versucht
+            cache[url] = {"termine": termine} if termine else {"termine": [], "fehlversuche": alt.get("fehlversuche", 0) + 1}
             neu += 1
             if neu % 20 == 0:
                 _cache_speichern(cache)
-        offen = sum(1 for u in kandidaten if u not in cache)
+        offen = sum(1 for u in kandidaten if not (cache.get(u) or {}).get("termine")
+                    and (cache.get(u) or {}).get("fehlversuche", 0) < MAX_FEHLVERSUCHE)
         logger.info("%s: %d Events im Zeitraum, %d neu geladen, %d warten auf den nächsten Lauf",
                     QUELLE_NAME, len(kandidaten), neu, offen)
         if kandidaten:  # Vergangenes und nicht mehr Gelistetes vergessen
@@ -143,6 +150,8 @@ def scrape() -> list[dict]:
             if heute <= tag <= enddatum and schluessel not in gesehen:
                 gesehen.add(schluessel)
                 events.append(event_aus_termin(t))
+    if not events:
+        logger.warning("%s: keine Events in Düsseldorf, Neuss und Ratingen – Seitenstruktur geändert?", QUELLE_NAME)
     logger.info("Scraper %s fertig: %d Events in Düsseldorf, Neuss und Ratingen", QUELLE_NAME, len(events))
     return events
 

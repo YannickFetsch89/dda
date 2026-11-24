@@ -194,9 +194,22 @@ class OhneQuellenSpalteTest(unittest.TestCase):
         import database.client as client
         db = self.Db()
         event = {**ev("zakk"), "kategorie": "musik"}
-        with mock.patch.object(client, "get_supabase_client", lambda: db):
-            ergebnis = client.events_speichern(deduplizieren([event]))
-        self.assertEqual(ergebnis["fehler"], 0)
-        self.assertEqual(ergebnis["gespeichert"], 1)
-        self.assertNotIn("quellen", db.inserts[0])
-        client._QUELLEN_SPALTE["da"] = True
+        try:
+            with mock.patch.object(client, "get_supabase_client", lambda: db):
+                ergebnis = client.events_speichern(deduplizieren([event]))
+            self.assertEqual(ergebnis["fehler"], 0)
+            self.assertEqual(ergebnis["gespeichert"], 1)
+            self.assertNotIn("quellen", db.inserts[0])
+        finally:
+            client._QUELLEN_SPALTE["da"] = True
+
+    def test_netzfehler_schaltet_quellenliste_nicht_ab(self):
+        import database.client as client
+
+        class Kaputt:
+            def table(self, _):
+                raise RuntimeError("Server disconnected without sending a response")
+        try:
+            self.assertTrue(client._quellen_spalte_pruefen(Kaputt()))
+        finally:
+            client._QUELLEN_SPALTE["da"] = True

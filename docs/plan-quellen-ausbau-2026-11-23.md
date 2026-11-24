@@ -854,6 +854,26 @@ Urteil Cursor: R1 und R2 in Ordnung, Z1 und T1 nicht (je ein mittlerer Befund), 
 - Tests: 116 neue in `tests/test_<haus>.py`; Python gesamt 716 ok, Website 712 ok.
 - Rückweg: einzelne Häuser im Admin unter „Quellen an/aus“ abschalten; sonst Commit zurücknehmen.
 
+### Cursor-Prüfung Fix/V0/V1 (24.11.2026) – Einarbeitung
+
+Cursor: V1 deploybar, ein mittlerer und sechs geringe Befunde. Alle sieben eingearbeitet:
+- **Stagedates (mittel):** Eine Seite ohne lesbaren Termin (leere Hülle, Bot-Seite) galt als gelesen und wurde nie
+  wieder geladen. Jetzt zählt nur eine Seite mit Termin als gelesen; leere Seiten werden bis `MAX_FEHLVERSUCHE = 2`
+  erneut versucht. Bei 0 Events im Gebiet steht eine Warnung im Log. Test `test_leere_seite_wird_nachgeholt`.
+- **iCal:** COUNT zählt nur echte Termine (ein ausgelassener 31. in kürzeren Monaten zählt nicht mit);
+  ganztägiges DTEND ist exklusiv (RFC 5545) und wird als letzter Tag minus eins gespeichert. Zwei Tests neu.
+- **JSON-LD:** Scheitert die Umrechnung der Zeitzone (z. B. fehlende tzdata), steht eine Warnung im Log statt still
+  die UTC-Uhrzeit zu übernehmen. Test für Sommerzeit.
+- **VisitDüsseldorf:** Führungen werden über ganze Wörter der Kategorienamen erkannt (Menge `FUEHRUNG`), nicht über
+  Teilstrings. Im Bestand stehen auch „Vorführung“ und „Filmvorführung“ – die wären sonst als Führung aussortiert
+  worden. Test erweitert.
+- **Spaltenprobe `events.quellen`:** Nur eine wirklich fehlende Spalte (42703, PGRST204, „does not exist“) schaltet
+  die Quellenliste ab; ein kurzer Netzfehler nicht mehr. Test `test_netzfehler_schaltet_quellenliste_nicht_ab`; der
+  bestehende Test setzt den Schalter im `finally` zurück.
+- **Admin Scraper-Seite:** Fehlen die Kennzahl-Spalten, lädt die Seite die Läufe ohne sie statt mit Fehler.
+
+Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

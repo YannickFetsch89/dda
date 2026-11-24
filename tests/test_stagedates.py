@@ -32,6 +32,24 @@ class StagedatesTest(unittest.TestCase):
         self.assertEqual(e["quelle_url"], URL)
         self.assertEqual(e["quelle_name"], "Stagedates")
 
+    def test_leere_seite_wird_nachgeholt(self):
+        from unittest import mock
+        heute = date.today()
+        url = f"https://stagedates.com/events/x-club-{heute.strftime('%Y%m%d')}-AB1"
+        sitemap = f"<urlset><url><loc>{url}</loc></url></urlset>"
+        abrufe, gespeichert = [], {}
+
+        def abrufen(u, _logger=None, wartezeit=2.0):
+            abrufe.append(u)
+            return sitemap if u == sd.SITEMAP_URL else "<html>leer</html>"
+
+        with mock.patch.object(sd, "seite_abrufen", abrufen), mock.patch.object(sd, "_cache_laden", lambda: dict(gespeichert)),                 mock.patch.object(sd, "_cache_speichern", lambda c: gespeichert.update(c)):
+            for _ in range(3):
+                sd.scrape()
+        # zwei Versuche für die leere Seite, danach nicht mehr
+        self.assertEqual(abrufe.count(url), sd.MAX_FEHLVERSUCHE)
+        self.assertEqual(gespeichert[url]["fehlversuche"], sd.MAX_FEHLVERSUCHE)
+
     def test_ausserhalb_des_gebiets(self):
         self.assertFalse(sd.ist_im_gebiet({"ort": "Weinerei Club", "adresse": "Hauptstr. 1, 97070 Würzburg"}))
 

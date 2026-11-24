@@ -50,6 +50,8 @@ class KalenderTest(unittest.TestCase):
         self.assertTrue(vd.ist_fuehrung(roh("x", ["Stadtführung"], [])))
         self.assertTrue(vd.ist_fuehrung(roh("x", ["Museumsführung"], [])))
         self.assertFalse(vd.ist_fuehrung(roh("x", ["Aufführung", "Uraufführung"], [])))
+        self.assertFalse(vd.ist_fuehrung(roh("x", ["Filmvorführung", "Vorführung", "Einführung"], [])))
+        self.assertTrue(vd.ist_fuehrung(roh("x", ["Kultur", "Führung"], [])))
 
 
 class SeitenLadenTest(unittest.TestCase):

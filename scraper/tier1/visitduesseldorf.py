@@ -16,6 +16,7 @@ robots.txt: /event/ und /sitemap.xml sind erlaubt (gesperrt sind nur /duesseldor
 Erstellt: 2026-02-24, neu gebaut 2026-11-24
 """
 import logging
+import re
 from datetime import date
 
 from config import vorschau_ende
@@ -43,7 +44,14 @@ KATEGORIE_MAP = [
     ("workshop", "community"), ("seminar", "community"), ("kurs", "community"), ("messe", "community"),
 ]
 # Diese Kategorien gehören zum Führungs-Scraper bzw. zu den Museen (siehe visitduesseldorf_fuehrungen.py)
-FUEHRUNG = ("führung", "stadtrundgang", "stadtrundfahrt", "rundfahrt")
+# Ganze Kategorienamen (Wörter), keine Teilstrings: „Aufführung“, „Vorführung“, „Filmvorführung“, „Einführung“ sind
+# keine Führungen (Cursor-Prüfung V1; Kategorien im Bestand 24.11.: Führung, Stadt-, Museums-, Themenführung)
+FUEHRUNG = frozenset({
+    "führung", "führungen", "stadtführung", "stadtführungen", "museumsführung", "museumsführungen",
+    "ausstellungsführung", "ausstellungsführungen", "themenführung", "themenführungen", "kinderführung",
+    "kinderführungen", "familienführung", "familienführungen", "rundgang", "rundgänge", "stadtrundgang",
+    "stadtrundgänge", "rundfahrt", "rundfahrten", "stadtrundfahrt", "stadtrundfahrten",
+})
 # Buchbare Angebote mit täglichen Terminen (Rhein-Schifffahrt, Hop-on-Hop-off …) sind keine Events – sie würden den
 # Kalender mit Dutzenden Terminen je Angebot füllen (Probelauf 24.11.: 82 Termine „Panoramafahrt auf dem Rhein“)
 AUSSCHLUSS = ("aktivität", "schifffahrt", "bustour")
@@ -65,8 +73,8 @@ def kategorie_zuordnen(event: dict) -> str:
 
 
 def ist_fuehrung(event: dict) -> bool:
-    """Führung, Stadt-/Museumsführung, Rundgang – aber nicht „Aufführung“/„Uraufführung“ (Theater)."""
-    return any(w in k and "aufführung" not in k for k in _kategorien(event) for w in FUEHRUNG)
+    """Führung, Stadt-/Museumsführung, Rundgang – aber nicht „Aufführung“, „Vorführung“ oder „Einführung“."""
+    return any(wort in FUEHRUNG for k in _kategorien(event) for wort in re.findall(r"\w+", k))
 
 
 def events_aus_cache(cache: dict, heute: date, enddatum: date) -> list[dict]:

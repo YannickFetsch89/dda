@@ -93,8 +93,18 @@ class IcalTest(unittest.TestCase):
         markt = [t for t in termine if t["titel"].startswith("Ganztags-Markt")]
         self.assertEqual(len(markt), 1)
         self.assertIn("zwei Zeilen", markt[0]["titel"])
-        self.assertEqual((markt[0]["uhrzeit"], markt[0]["ende"]), (None, "2026-12-14"))
+        self.assertEqual((markt[0]["uhrzeit"], markt[0]["ende"]), (None, "2026-12-13"))  # DTEND ist exklusiv
         self.assertFalse([t for t in termine if t["titel"] == "Abgesagt"])
+
+    def test_monatlich_am_31_zaehlt_nur_echte_termine(self):
+        text = "BEGIN:VEVENT\nSUMMARY:X\nDTSTART:20270131T100000\nRRULE:FREQ=MONTHLY;COUNT=3\nEND:VEVENT"
+        tage = [t["start"] for t in ical.termine_aus_ics(text, date(2027, 1, 1), date(2027, 12, 31))]
+        self.assertEqual(tage, ["2027-01-31", "2027-03-31", "2027-05-31"])
+
+    def test_sommerzeit(self):
+        daten = {"@type": "Event", "name": "Open Air", "startDate": "2027-07-02T22:30:00Z"}
+        t = jsonld_events.events_aus_html(f'<script type="application/ld+json">{json.dumps(daten)}</script>', "https://x")[0]
+        self.assertEqual((t["start"], t["uhrzeit"]), ("2027-07-03", "00:30"))
 
     def test_nicht_unterstuetzte_regel_nur_erster_termin(self):
         text = "BEGIN:VEVENT\nSUMMARY:X\nDTSTART:20261201T100000\nRRULE:FREQ=MONTHLY;BYDAY=1MO\nEND:VEVENT"

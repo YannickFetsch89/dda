@@ -82,9 +82,16 @@ def _quellen_spalte_pruefen(db) -> bool:
         db.table("events").select("quellen").limit(1).execute()
         _QUELLEN_SPALTE["da"] = True
     except Exception as fehler:
-        _QUELLEN_SPALTE["da"] = False
-        logger.error("Spalte events.quellen fehlt (%s) – speichere ohne Quellenliste. "
-                     "SQL database/quellen_spalte_2026-11-24.sql ausführen!", str(fehler)[:120])
+        text = str(fehler)
+        # Nur eine wirklich fehlende Spalte schaltet die Quellenliste ab; ein kurzer Netz-/Serverfehler nicht
+        # (sonst liefe der ganze Lauf ohne Quellenliste) – Cursor-Prüfung V1
+        if any(z in text for z in ("42703", "PGRST204", "does not exist", "Could not find")):
+            _QUELLEN_SPALTE["da"] = False
+            logger.error("Spalte events.quellen fehlt (%s) – speichere ohne Quellenliste. "
+                         "SQL database/quellen_spalte_2026-11-24.sql ausführen!", text[:120])
+        else:
+            _QUELLEN_SPALTE["da"] = True
+            logger.warning("Spaltenprobe events.quellen fehlgeschlagen (%s) – nehme an, dass die Spalte da ist", text[:120])
     return _QUELLEN_SPALTE["da"]
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
