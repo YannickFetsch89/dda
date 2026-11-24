@@ -16,7 +16,7 @@ const NAVIGATION: { titel: string; href?: string; stufe?: string }[] = [
   { titel: "Orte & Guides", href: "/admin/orte" },
   { titel: "Instagram", stufe: "eigener Plan" },
   { titel: "Newsletter", href: "/admin/newsletter" },
-  { titel: "Meldungen", href: "/admin/meldungen" },
+  { titel: "Event-Meldungen", href: "/admin/meldungen" },
   { titel: "SEO-Aufräumen", href: "/admin/seo" },
   { titel: "Konten", href: "/admin/konten" },
   { titel: "Technik", href: "/admin/technik" },

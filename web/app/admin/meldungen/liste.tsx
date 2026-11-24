@@ -188,7 +188,7 @@ export function MeldungenListe() {
 
   return (
     <>
-      <h1>Meldungen</h1>
+      <h1>Event-Meldungen</h1>
       <p className="admin-unterzeile">Über „Event melden“ eingereichte Events. Freigeben legt das Event an (Bild nur mit bestätigten Rechten), ablehnen löscht das Bild.</p>
       {meldung && <p className={meldung.art === "ok" ? "admin-karte" : "admin-fehler"} role="status">{meldung.text}</p>}
       <datalist id="admin-stadtteile-meldung">

@@ -88,8 +88,8 @@ export function NewsletterListe() {
     <>
       <h1>Newsletter</h1>
       <p className="admin-unterzeile">
-        Double-Opt-in: Die Bestätigungsmail schickt der Job alle 15 Minuten (nur mit NEWSLETTER_AKTIV=1). Unbestätigte Adressen werden 30 Tage nach der
-        Mail gelöscht, Abmelden löscht sofort. Der Versand des Newsletters selbst ist ein eigener Plan.
+        Double-Opt-in. Unbestätigte Adressen werden 30 Tage nach der Mail gelöscht, Abmelden löscht sofort. Der Versand des Newsletters selbst ist
+        ein eigener Plan.
       </p>
       {z && (
         <div className="admin-kacheln">

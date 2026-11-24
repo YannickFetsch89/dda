@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { MeldungenListe } from "./liste";
 
-export const metadata: Metadata = { title: "Meldungen" };
+export const metadata: Metadata = { title: "Event-Meldungen" };
 
 export default function AdminMeldungen() {
   return <MeldungenListe />;
