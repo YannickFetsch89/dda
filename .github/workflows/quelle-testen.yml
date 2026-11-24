@@ -52,7 +52,11 @@ jobs:
           _, tier, funktion = treffer[0]
           events = asyncio.run(funktion()) if inspect.iscoroutinefunction(funktion) else funktion()
           events = list(events or [])
-          print(f"\n=== {name} (Tier {tier}): {len(events)} Events ===")
+          roh = len(events)
+          # Wie im täglichen Lauf (main.py Schritt 1c): nur Düsseldorf, Neuss, Ratingen
+          from pipeline.gebiet import gebiet_filtern
+          events = gebiet_filtern(events)
+          print(f"\n=== {name} (Tier {tier}): {len(events)} Events (vor dem Gebietsfilter: {roh}) ===")
           if not events:
               sys.exit(1)
           daten = sorted(e["datum"] for e in events if e.get("datum"))

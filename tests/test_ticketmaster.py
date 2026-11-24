@@ -109,6 +109,20 @@ class ScrapeTest(unittest.TestCase):
 
 
 class QuellenTest(unittest.TestCase):
+    def test_nur_duesseldorf_neuss_ratingen(self):
+        """Der 25-km-Umkreis reicht bis Duisburg (Test 24.11.2026: Theater am Marientor) – solche Orte fallen weg."""
+        def mit_ort(name, stadt, plz, strasse):
+            e = roh(1)
+            e["_embedded"]["venues"] = [{"name": name, "city": {"name": stadt}, "postalCode": plz, "address": {"line1": strasse}}]
+            return tm._event_parsen(e, date.today())
+
+        self.assertIsNone(mit_ort("Theater am Marientor", "Duisburg", "47051", "Plessingstraße 20"))
+        self.assertIsNone(mit_ort("Scala", "Haan", "42781", "Hauptstr. 1"))
+        dome = mit_ort("PSD BANK DOME", "Düsseldorf", "40474", "Theodorstr. 281")
+        self.assertEqual(dome["adresse"], "Theodorstr. 281, 40474 Düsseldorf")
+        self.assertIsNotNone(mit_ort("Swiss Life Hall", "Neuss", "41460", "Am Hafen 1"))
+        self.assertIsNotNone(mit_ort("Stadthalle", "Ratingen", "40878", "Schützenstr. 1"))
+
     def test_songkick_nicht_mehr_in_quellen(self):
         text = (WURZEL / "main.py").read_text(encoding="utf-8")
         self.assertNotIn("songkick.scrape", text)

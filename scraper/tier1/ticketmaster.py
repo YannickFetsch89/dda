@@ -134,6 +134,14 @@ def _kategorie_erkennen(klassifizierungen: list[dict]) -> str:
         return "sonstiges"
 
 
+GEBIET = ("düsseldorf", "dusseldorf", "duesseldorf", "neuss", "ratingen")
+
+
+def _im_gebiet(stadt: str) -> bool:
+    """Liegt die Stadt des Veranstaltungsorts in Düsseldorf, Neuss oder Ratingen?"""
+    return any(g in stadt.lower() for g in GEBIET)
+
+
 def _event_parsen(event: dict, heute: date) -> Optional[dict]:
     """
     Wandelt ein Ticketmaster-API-Event in ein DiesDasDüsseldorf Event-Dict um.
@@ -184,10 +192,17 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
             logger.warning("Kein Ort für Event '%s' – wird übersprungen.", titel)
             return None
 
-        # Adresse (optional)
-        adresse = venue.get("address", {}).get("line1")
-        if adresse:
-            adresse = adresse.strip() or None
+        # Gebiet: Der Umkreis von 25 km reicht bis Duisburg, Krefeld, Haan … (Test 24.11.2026: 98 von 161 Events im
+        # Theater am Marientor, Duisburg). Nur Orte in Düsseldorf, Neuss und Ratingen – an der Stadt des Veranstaltungsorts.
+        stadt = ((venue.get("city") or {}).get("name") or "").strip()
+        if stadt and not _im_gebiet(stadt):
+            return None
+
+        # Adresse (optional): Straße, PLZ Stadt – mit PLZ/Stadt greift auch der Gebietsfilter der Pipeline
+        strasse = ((venue.get("address") or {}).get("line1") or "").strip()
+        plz = (venue.get("postalCode") or "").strip()
+        ort_teil = " ".join(x for x in (plz, stadt) if x)
+        adresse = ", ".join(x for x in (strasse, ort_teil) if x) or None
 
         # Kategorie
         klassifizierungen = event.get("classifications", [])
