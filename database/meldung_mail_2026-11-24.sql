@@ -6,6 +6,8 @@
 -- pipeline/meldung_mail.py beansprucht offene Meldungen über meldung_mail_beanspruchen, schickt die Mail und meldet
 -- das Ergebnis mit meldung_mail_versandt bzw. meldung_mail_freigeben zurück. Höchstens 3 Versuche je Meldung.
 -- Ältere Freigaben (vor diesem Skript) haben mail_status NULL und bekommen keine Mail (Entscheidung 24.11.2026).
+-- Endstatus: 'gesendet'; 'fehler' (3 Versuche ohne Zustellung); 'entfallen' (Event inzwischen ausgeblendet oder vorbei).
+-- Zweite Fassung nach Cursor-Prüfung (24.11.2026): Endstatus 'entfallen' und das Abschließen hängender Versuche.
 --
 -- REIHENFOLGE: Dieses Skript VOR dem Deploy ausführen (die Freigabe schreibt sonst in eine fehlende Spalte).
 -- Wiederholbar.
@@ -19,7 +21,7 @@ ALTER TABLE public.event_meldungen ADD COLUMN IF NOT EXISTS mail_gesendet_am TIM
 
 ALTER TABLE public.event_meldungen DROP CONSTRAINT IF EXISTS event_meldungen_mail_status_check;
 ALTER TABLE public.event_meldungen ADD CONSTRAINT event_meldungen_mail_status_check
-    CHECK (mail_status IS NULL OR mail_status IN ('offen', 'gesendet', 'fehler'));
+    CHECK (mail_status IS NULL OR mail_status IN ('offen', 'gesendet', 'fehler', 'entfallen'));
 
 CREATE INDEX IF NOT EXISTS idx_event_meldungen_mail_offen
     ON public.event_meldungen (bearbeitet_am) WHERE mail_status = 'offen';
@@ -27,6 +29,8 @@ CREATE INDEX IF NOT EXISTS idx_event_meldungen_mail_offen
 -- Offene Mails beanspruchen (gegen Doppelversand bei parallelen Läufen). Ein Anspruch ohne Rückmeldung, älter als
 -- 30 Minuten, wird wieder aufgenommen. Nur Events, die noch sichtbar sind und nicht vorbei.
 -- Liefert die Angaben des Events (nicht der Meldung): die Redaktion kann Titel, Ort usw. bei der Freigabe ändern.
+-- Vorher werden offene Zeilen abgeschlossen, die nie mehr dran kämen (Cursor-Prüfung 24.11.2026):
+--   'entfallen' – Event ausgeblendet, gelöscht oder vorbei; 'fehler' – dritter Versuch beansprucht, aber nie verbucht.
 CREATE OR REPLACE FUNCTION public.meldung_mail_beanspruchen(p_anzahl INTEGER)
 RETURNS TABLE (
     id UUID, kontakt_email TEXT, kontakt_name TEXT, kontakt_rolle TEXT,
@@ -36,6 +40,21 @@ LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+    UPDATE public.event_meldungen m
+    SET mail_status = 'entfallen', mail_beansprucht_am = NULL
+    WHERE m.mail_status = 'offen'
+      AND (m.mail_beansprucht_am IS NULL OR m.mail_beansprucht_am < now() - interval '30 minutes')
+      AND NOT EXISTS (
+          SELECT 1 FROM public.events e
+          WHERE e.id = m.event_id AND e.abgelehnt = false
+            AND coalesce(e.datum_bis, e.datum) >= (now() AT TIME ZONE 'Europe/Berlin')::date
+      );
+
+    UPDATE public.event_meldungen m
+    SET mail_status = 'fehler', mail_beansprucht_am = NULL
+    WHERE m.mail_status = 'offen' AND m.mail_versuche >= 3
+      AND m.mail_beansprucht_am < now() - interval '30 minutes';
+
     WITH gewaehlt AS (
         SELECT o.id
         FROM public.event_meldungen o
@@ -105,7 +124,7 @@ COMMIT;
 
 -- ── Kontrolle ────────────────────────────────────────────────────────────────
 -- Erwartet: 4 Spalten; 3 meldung_mail_*-Funktionen mit anon_darf = false und authenticated_darf = false;
--- mail_offen = 0 (ältere Freigaben bekommen keine Mail).
+-- mail_offen = Zahl der seit dem Deploy freigegebenen Meldungen (vor dem Deploy 0); pruefregel enthält 'entfallen'.
 SELECT 'spalte' AS art, column_name AS name, NULL::boolean AS anon_darf, NULL::boolean AS authenticated_darf
 FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = 'event_meldungen'
@@ -116,4 +135,7 @@ FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.proname IN ('meldung_mail_beanspruchen', 'meldung_mail_versandt', 'meldung_mail_freigeben')
 UNION ALL
 SELECT 'mail_offen', count(*)::text, NULL, NULL FROM public.event_meldungen WHERE mail_status = 'offen'
+UNION ALL
+SELECT 'pruefregel', pg_get_constraintdef(c.oid), NULL, NULL FROM pg_constraint c
+WHERE c.conname = 'event_meldungen_mail_status_check'
 ORDER BY 1, 2;

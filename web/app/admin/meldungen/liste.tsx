@@ -37,7 +37,7 @@ interface Erledigt {
   bearbeitet_am: string | null;
   ablehngrund: string | null;
   event_id: string | null;
-  mail_status: "offen" | "gesendet" | "fehler" | null;
+  mail_status: "offen" | "gesendet" | "fehler" | "entfallen" | null;
   mail_gesendet_am: string | null;
 }
 
@@ -46,6 +46,7 @@ function mailText(e: Erledigt): string {
   if (e.mail_status === "gesendet") return ` · Mail gesendet ${zeit(e.mail_gesendet_am)}`;
   if (e.mail_status === "offen") return " · Mail ausstehend";
   if (e.mail_status === "fehler") return " · Mail fehlgeschlagen";
+  if (e.mail_status === "entfallen") return " · keine Mail (Event vorbei oder ausgeblendet)";
   return "";
 }
 
@@ -59,10 +60,13 @@ function Karte({ m, nachher }: { m: Meldung; nachher: (text: string, art: "ok" |
   async function senden(body: Record<string, unknown>) {
     setLaeuft(true);
     const r = await fetch("/api/admin/meldungen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const d = (await r.json().catch(() => ({}))) as { fehler?: string; warnung?: string; event_id?: string };
+    const d = (await r.json().catch(() => ({}))) as { fehler?: string; warnung?: string; event_id?: string; mail_job?: boolean };
     setLaeuft(false);
     if (!r.ok) return nachher(d.fehler ?? "Hat nicht geklappt.", "fehler");
-    nachher(d.warnung ?? (body.aktion === "freigeben" ? `Freigegeben – Event angelegt, die Mail an den Melder ist unterwegs.` : "Meldung abgelehnt."), d.warnung ? "fehler" : "ok");
+    const mail = d.mail_job === false
+      ? "die Mail an den Melder kommt mit dem nächsten stündlichen Lauf (sofortiger Start hat nicht geklappt)."
+      : "die Mail an den Melder ist unterwegs (sofern der Versand eingeschaltet ist).";
+    nachher(d.warnung ?? (body.aktion === "freigeben" ? `Freigegeben – Event angelegt, ${mail}` : "Meldung abgelehnt."), d.warnung ? "fehler" : "ok");
   }
 
   function freigeben(ev: FormEvent<HTMLFormElement>) {

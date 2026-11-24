@@ -310,8 +310,8 @@ export default function DatenschutzSeite() {
         Über das Formular „Event melden“ können Sie uns Veranstaltungen vorschlagen. Wir speichern dazu die
         Angaben zum Event, ein optional hochgeladenes Bild sowie Ihre Kontaktdaten (E-Mail-Adresse, optional
         Name) und eine eventuelle Anmerkung (Supabase, siehe Abschnitt 9). Die Kontaktdaten nutzen wir für
-        Rückfragen zu Ihrer Meldung und für eine einmalige E-Mail, sobald das Event veröffentlicht ist (mit dem Link
-        zum Event und einem Hinweis auf unser kostenloses Nutzerkonto); sie werden nicht veröffentlicht. Diese E-Mail
+        Rückfragen zu Ihrer Meldung und für eine einmalige E-Mail, sobald das Event veröffentlicht ist und noch
+        bevorsteht (mit dem Link zum Event und einem Hinweis auf unser kostenloses Nutzerkonto); sie werden nicht veröffentlicht. Diese E-Mail
         versenden wir über den Mailserver unseres Hosting-Anbieters (Abschnitt 3). Veröffentlicht werden nach unserer
         Prüfung nur die Angaben zum Event und – wenn Sie die Rechte daran bestätigt haben – das Bild.
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) bzw. lit. f (berechtigtes Interesse an

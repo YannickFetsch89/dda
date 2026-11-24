@@ -172,6 +172,60 @@ class Versand(unittest.TestCase):
                          [("meldung_mail_freigeben", {"p_id": "a"}), ("meldung_mail_freigeben", {"p_id": "b"})])
 
 
+class Verbuchen(unittest.TestCase):
+    """Cursor-Prüfung 24.11.2026, gering 1: Scheitert das Verbuchen nach erfolgreichem Versand, wird nur der RPC
+    wiederholt – die Mail geht kein zweites Mal raus."""
+
+    def _db(self, fehler_bis: int):
+        db = FakeDb([{**FALL, "id": "a"}])
+        zaehler = {"versandt": 0}
+        rpc_alt = db.rpc
+
+        def rpc(name, args):
+            if name == "meldung_mail_versandt":
+                zaehler["versandt"] += 1
+                if zaehler["versandt"] <= fehler_bis:
+                    class Kaputt:
+                        def execute(self_):
+                            raise OSError("Datenbank kurz weg")
+                    return Kaputt()
+            return rpc_alt(name, args)
+
+        db.rpc = rpc
+        return db, zaehler
+
+    def test_wiederholt_nur_das_verbuchen(self):
+        db, zaehler = self._db(fehler_bis=2)
+        v = FakeVersender()
+
+        @contextmanager
+        def fabrik():
+            yield v
+
+        with mock.patch.object(mm.uhr, "sleep") as schlafen:
+            zahlen = mm.versenden(db, fabrik)
+        self.assertEqual(zahlen, {"beansprucht": 1, "gesendet": 1, "fehlgeschlagen": 0})
+        self.assertEqual(len(v.gesendet), 1)
+        self.assertEqual(zaehler["versandt"], 3)
+        self.assertEqual(schlafen.call_count, 2)
+        self.assertNotIn("meldung_mail_freigeben", [a[0] for a in db.aufrufe])
+
+    def test_gibt_nach_allen_versuchen_auf_ohne_freigeben(self):
+        db, zaehler = self._db(fehler_bis=99)
+        v = FakeVersender()
+
+        @contextmanager
+        def fabrik():
+            yield v
+
+        with mock.patch.object(mm.uhr, "sleep"):
+            zahlen = mm.versenden(db, fabrik)
+        self.assertEqual(zahlen["gesendet"], 1)
+        self.assertEqual(zaehler["versandt"], mm.VERBUCHEN_VERSUCHE)
+        self.assertEqual(len(v.gesendet), 1)
+        self.assertNotIn("meldung_mail_freigeben", [a[0] for a in db.aufrufe])
+
+
 class Schalter(unittest.TestCase):
     def test_ohne_schalter_kein_versand(self):
         with mock.patch.dict(os.environ, {"MELDUNG_MAIL_AKTIV": "0"}), \

@@ -24,6 +24,7 @@ import argparse
 import html
 import logging
 import os
+import time as uhr
 from datetime import date, datetime, time
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
@@ -35,6 +36,7 @@ from pipeline.geburtstag_mails import ABSENDER, ANTWORT_AN, SITE_URL, Versender
 logger = logging.getLogger(__name__)
 
 JE_LAUF = 50
+VERBUCHEN_VERSUCHE = 4
 SCHRIFT = "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 WOCHENTAGE = ["Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So."]
 MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November",
@@ -197,7 +199,8 @@ def versenden(db, versender_fabrik, je_lauf: int = JE_LAUF) -> dict[str, int]:
                 try:
                     v.senden(mail_bauen(str(z["kontakt_email"]), z))
                     zahlen["gesendet"] += 1
-                    _rpc(db, "meldung_mail_versandt", z)
+                    # Mail ist raus: nur das Verbuchen wiederholen, nie die Mail (Cursor-Prüfung, gering 1)
+                    _rpc(db, "meldung_mail_versandt", z, versuche=VERBUCHEN_VERSUCHE)
                 except Exception as e:  # noqa: BLE001 – jede Mail einzeln
                     zahlen["fehlgeschlagen"] += 1
                     logger.error(f"Meldungs-Mail: Versand gescheitert ({type(e).__name__})")
@@ -210,11 +213,16 @@ def versenden(db, versender_fabrik, je_lauf: int = JE_LAUF) -> dict[str, int]:
     return zahlen
 
 
-def _rpc(db, name: str, z: dict) -> None:
-    try:
-        db.rpc(name, {"p_id": z["id"]}).execute()
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Meldungs-Mail: {name} gescheitert ({type(e).__name__})")
+def _rpc(db, name: str, z: dict, versuche: int = 1, pause: float = 2.0) -> bool:
+    for versuch in range(1, versuche + 1):
+        try:
+            db.rpc(name, {"p_id": z["id"]}).execute()
+            return True
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Meldungs-Mail: {name} gescheitert, Versuch {versuch}/{versuche} ({type(e).__name__})")
+            if versuch < versuche:
+                uhr.sleep(pause * versuch)
+    return False
 
 
 def _umgebung(name: str) -> str:
