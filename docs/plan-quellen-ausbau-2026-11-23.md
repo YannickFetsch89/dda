@@ -1,4 +1,4 @@
-# Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – zweite Fassung, 24.11.2026
+# Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – dritte Fassung, 24.11.2026
 
 Status: **Entwurf zur Abstimmung**. Gebaut wird erst nach Freigabe, schrittweise und jeweils mit OK des Auftraggebers.
 Jeder Push ist ein Live-Deploy; SQL führt der Auftraggeber im Supabase-SQL-Editor aus.
@@ -93,20 +93,23 @@ Website:
 | Q3 | Events, die nur Rausgegangen kennt | behalten; Knopf weiter auf Rausgegangen, zusätzlich „Website von <Ort>“ (a) | 4.4 |
 | Q4 | Rausgegangen-Event an einem Ort mit eigenem Scraper, ohne Treffer | behalten und als Lücke melden (a) | 4.5 |
 | Q5 | Wann Rausgegangen abschalten? | nicht in diesem Plan; Kennzahl „nur Rausgegangen < 5 % über drei Läufe“ als Signal | 4.6 |
-| Q6 | Ticketing | Ticketmaster ja (T1), Songkick nein, Stagedates ja, Eventim/Reservix nur über Partner-Feed (T2) | 5.1 |
+| Q6 | Ticketing | Ticketmaster, Eventim, Reservix, ADticket, Stagedates ja; Songkick nein (**Auftraggeber 24.11.: alle Partner-Anbieter anbinden**) | 5.1, 5.5 |
 | Q7 | Zeitraum je Quelle | große Häuser + Ticketing 365, kleine Häuser 120, VisitDüsseldorf 120, Aggregatoren/Rausgegangen 60 | 5.2 |
 | Q8 | 60-Tage-Pool der Website | bleibt; zweiter Fernpool für Tag 61–365 | 6.1 |
 | Q9 | Neue Liste für spätere Events | eigene Seite **„Ausblick“ unter `/ausblick`** (zweite Runde, 24.11.; erste Vorschläge abgelehnt) | 6.4 |
 | Q10 | Startseiten-Box mit großen Events der nächsten Monate | ja, 6 Einträge, verlinkt auf den Ausblick | 6.1 |
 | Q11 | Label für Events > 60 Tage | Monat und Jahr groß („MÄRZ 2027“) statt „Vorverkauf“ | 6.2, 6.4 |
-| Q12 | Affiliate-Links | Ticket-Button so bauen, dass ein Partner-Link später nur eine Einstellung ist; Partner-Links erst nach Anmeldung beim Programm und Anwalts-Freigabe | 5.4, 6.3 |
+| Q12 | Partner-Links | **ja** (Auftraggeber 24.11.); Schalter `PARTNERLINKS_AKTIV`, live erst nach Anmeldung beim Programm und Anwalts-Freigabe von Kennzeichnung und Datenschutz | 5.5 |
 | Q13 | Kategorisierungs-Limit beim Start | zwei Wochen 1.500 statt 300 (≈ 2–3 € einmalig) | 5.3 |
 | Q14 | Beschreibungen für ferne Events | nur bis Tag 60, plus 100 Fern-Events (Rang 1–2) je Lauf | 5.3 |
 | Q15 | Welle A der Venues | siehe 3.2 | 3.2 |
 | Q16 | Workshops/Kurse mit festen Terminen (Keramik-, Kreativstudios) | ja, als `community`, aber erst Welle B | 3.2 |
 | Q17 | Normales Kinoprogramm (Filmkunstkinos, UFA) | nein, nur Sonderveranstaltungen | 3.2 |
 | Q18 | Monatsseiten des Ausblicks (`/ausblick/2027-03`) | später, wenn genug Fern-Events da sind | 6.4 |
-| Q19 | Awin-Anmeldung (Eventim, Reservix/ADticket) wegen Daten + Provision | Entscheidung beim Auftraggeber; ohne sie ruht T2 | 5.4 |
+| Q19 | Welche Partner? | **alle genannten:** Ticketmaster, Eventim, Reservix, ADticket, Tiqets, GetYourGuide (Auftraggeber 24.11.) | 5.5 |
+| Q20 | Welcher Ticket-Button bei mehreren Anbietern? | einer je Event, nach Offiziellkeit (Link des Hauses vor Rang-2-Quelle), nie nach Provision | 5.5.3 |
+| Q21 | Tiqets/GetYourGuide | als Angebote auf Ortsseiten und im Stadtführungs-Guide, nicht als Events | 5.5.4 |
+| Q22 | Partner-Links im Magazin | nein, nur Event- und Ortsseiten und Ausblick | 5.5.3 |
 
 ---
 
@@ -282,10 +285,10 @@ Recherche vom 23.11.2026 (Dokumentation und Bedingungen der Anbieter gelesen, ro
 | Anbieter | Stand bei uns | Zugang | Bedingungen / Haken | Vorschlag |
 |---|---|---|---|---|
 | **Ticketmaster** | Scraper fertig (`tier1/ticketmaster.py`), läuft leer: **kein Secret** im Workflow | Discovery API v2, Schlüssel sofort nach Registrierung; 5.000 Abfragen/Tag, mit 2/s planen; Blättern nur bis 1.000 Treffer → Abfrage in Monatsfenster teilen; `countryCode=DE`, `city`/`geoPoint`+`radius` | Kein Nachbau von Ticketmaster; Inhalte nur „angemessen lange“ zwischenspeichern; auf Verlangen binnen 24 h entfernen; Ticketmaster nicht als Bild-Host; Team-/Liga-Logos nicht frei. **Einnahmen „aus der Nutzung der API“ sind ausgeschlossen** (Ausnahme nicht auffindbar) → Q6-a | **Ja, zuerst** (T1): Auftraggeber registriert sich, Secret `TICKETMASTER_API_KEY`, Workflow-`env` ergänzen. Wie viele Düsseldorfer Events Ticketmaster DE liefert, zeigt erst der erste Lauf (Eventim dominiert in DE) |
-| **Eventim** | nichts | Keine öffentliche API. Partnerprogramm über Awin (Programm „eventim DE“) mit Deeplinks; ob es einen **Event-Datenfeed** gibt und ob man daraus Eventseiten bauen darf, ist nur im Awin-Konto bzw. auf Anfrage zu klären | eventim.de blockt automatisierte Abrufe technisch (Akamai; jede Anfrage lief in einen Timeout) – **kein Scraping** | **Später** (Q6-b): Auftraggeber fragt beim Eventim-Partnerteam/Awin nach einem Feed; Plan-Schritt T2 erst danach |
+| **Eventim** | nichts (Umsetzung: 5.5) | Keine öffentliche API. Partnerprogramm über Awin (Programm „eventim DE“) mit Deeplinks; ob es einen **Event-Datenfeed** gibt und ob man daraus Eventseiten bauen darf, ist nur im Awin-Konto bzw. auf Anfrage zu klären | eventim.de blockt automatisierte Abrufe technisch (Akamai; jede Anfrage lief in einen Timeout) – **kein Scraping** | **Ja** über Awin (5.5): Ticket-Links der Häuser als Partner-Links (P1/P2), Eventdaten nur, falls Awin einen Feed liefert (T2) |
 | **Songkick** | Scraper fertig, kein Secret | API nur noch als **bezahlte Lizenz** mit Partnervertrag, keine Hobby-/Kleinprojekte | Metro-Seite hätte JSON-LD (50 Konzerte/Seite), aber die Nutzungsbedingungen verbieten Scraper ohne schriftliche Zustimmung und kommerzielle Nutzung | **Nein.** Scraper bleibt im Code, aber aus `QUELLEN` raus (wie Bandsintown), CLAUDE.md-Tabelle anpassen |
 | **Stagedates** | nur indirekt (Rudas Studios) | `sitemap-events.xml` (≈ 830 URLs), Eventseiten mit JSON-LD `Event`/`Offer`; robots.txt erlaubt alles | Nutzungsbedingungen noch zu lesen | **Ja** (mit Welle A): Sitemap filtern auf Düsseldorf/Neuss/Ratingen, JSON-LD-Baustein (3.3) |
-| Reservix / ADticket | nichts | Affiliate über Awin; keine API/kein Feed gefunden; robots.txt antwortet 403 (Bot-Schutz) | – | Später, zusammen mit der Eventim-Anfrage |
+| Reservix / ADticket | nichts | Affiliate über Awin; Reservix nennt eine API für Partner; robots.txt antwortet 403 (Bot-Schutz) – kein Scraping | – | **Ja** über Awin + Reservix-API (5.5) |
 | Tixforgigs | nichts | keine API; robots.txt erlaubt Eventseiten | strukturierte Daten ungeprüft | Später prüfen |
 | Bandsintown, Dice, Eventbrite-Suche, Pretix | Bandsintown/Eventbrite deaktiviert | nur für Künstler / eigene Partner-Events / abgeschaltet / Token je Veranstalter | – | Nein (Eventbrite höchstens je bekanntem Veranstalter über `/v3/venues/{id}/events/`) |
 
@@ -346,12 +349,56 @@ Recherche in Programmseiten, Awin-Profilen und Entwickler-Dokumentation; kein Ko
 
 **Rechtliches (allgemein, Anwalt vor Livegang):** Affiliate-Links sind Werbung und müssen direkt am Button erkennbar sein (§ 6 DDG, § 5a Abs. 4 UWG); „Empfehlung“ oder nur ein Warenkorb-Symbol reichten Gerichten nicht. Üblich: „Tickets*“ mit Hinweis „*Affiliate-Link – bei einem Kauf erhalten wir eine Provision, der Preis bleibt gleich“ plus Erklärseite. Tracking-Cookies setzt erst der Anbieter nach dem Klick; trotzdem Datenschutzerklärung ergänzen (Art. 26 DSGVO wird diskutiert).
 
-**Folgerungen für diesen Plan (Q12 neu, Q19):**
-- Der **Ticket-Button aus 6.3** ist genau die Stelle, an der Provision entstehen kann. Er wird so gebaut, dass ein Partner-Link später nur eine Einstellung ist (Link-Vorlage je Anbieter in `web/lib/tickets.ts`, standardmäßig aus).
-- **Ticketmaster:** Antrag im Impact-Programm parallel zum API-Schlüssel stellen und die Freigabe für API + Affiliate schriftlich bestätigen lassen (Auftraggeber).
-- **Eventim/Reservix:** ruhen laut Antwort vom 24.11. Wegen der Provision (Reservix ≈ 5 %, Eventim größte Abdeckung) wäre eine Awin-Anmeldung aber der Weg, an deren Eventdaten **und** Provision zu kommen – Entscheidung beim Auftraggeber (Q19).
-- **Führungen/Freizeit:** Tiqets bzw. GetYourGuide als späterer eigener Kurzplan (Kategorie `stadtfuehrung`, Museen); nicht Teil der Schritte in Abschnitt 7.
-- Affiliate-Links gehen erst live nach Anwalts-Freigabe von Kennzeichnung und Datenschutztext.
+Die Umsetzung steht in 5.5 (Entscheidung des Auftraggebers vom 24.11.: alle diese Anbieter anbinden).
+
+### 5.5 Partner-Anbindung (Entscheidung des Auftraggebers 24.11.2026)
+
+**Umfang:** Ticketmaster (Impact), Eventim (Awin 11388), Reservix (Awin 31293), ADticket (Awin 18490), Tiqets, GetYourGuide. Nicht beauftragt, später möglich: ticket.io, Fever, Viator. Damit ist die Antwort „Eventim/Reservix vorerst nicht“ vom selben Tag überholt; T2 ist wieder aktiv.
+
+#### 5.5.1 Anmeldungen (macht der Auftraggeber – Claude legt keine Konten an)
+
+| Anbieter | Anmeldung | Was danach in GitHub kommt |
+|---|---|---|
+| Eventim, Reservix, ADticket | **ein** Awin-Publisher-Konto, darin Bewerbung bei den drei Programmen (Website-Prüfung durch den Anbieter; Reservix verlangt „Reichweite“) | Variable `AWIN_PUBLISHER_ID` (steht ohnehin in jedem Link, also kein Geheimnis); Secret `AWIN_API_TOKEN`, falls Awin für ein Programm einen Produkt-/Eventfeed anbietet |
+| Reservix (Daten) | zusätzlich Anfrage an affiliate@reservix.de nach der genannten API-Schnittstelle | Secret `RESERVIX_API_KEY` (Name je nach Antwort) |
+| Eventim (Daten) | nach Freigabe im Awin-Konto prüfen, ob „Zugriff auf die Event-Datenbank“ ein Feed/eine API ist | ggf. Feed-URL als Secret |
+| Ticketmaster | Impact-Konto, Ticketmaster-Programm (Deutschland), Impact-ID im Ticketmaster-Entwicklerkonto eintragen; **schriftliche Bestätigung**, dass API-Daten + Affiliate-Links zusammen erlaubt sind | Secret `TICKETMASTER_API_KEY` |
+| Tiqets | Partner-Portal, API-Token dort selbst erzeugen | Secrets `TIQETS_API_TOKEN`, Variable `TIQETS_PARTNER_ID` |
+| GetYourGuide | Partner-Programm, API-Zugang beantragen | Secret `GYG_API_TOKEN`, Variable `GYG_PARTNER_ID` |
+
+Claude legt die Texte für die Ticketmaster-Bestätigung und die Reservix-Anfrage in `docs/partner-anfragen-2026-11-24.md` ab; senden muss der Auftraggeber. Jeder Teil unten funktioniert auch, solange einzelne Freigaben fehlen (fehlende Variable = normaler Link bzw. Quelle wird übersprungen, wie heute bei Ticketmaster).
+
+**Hinweis außerhalb des Plans:** Provisionen sind Einnahmen – Gewerbe/Umsatzsteuer mit dem Steuerberater klären.
+
+#### 5.5.2 Zwei Wege zur Provision
+
+1. **Daten vom Anbieter** (Rang 2): Ticketmaster-API, Reservix-API, Eventim-Feed (falls es ihn gibt) liefern Events mit Ticket-Link; neue Scraper `scraper/tier1/reservix.py`, `scraper/tier1/eventim.py`, bestehender `ticketmaster.py`. Zeitraum 365 Tage, Gebietsfilter wie gehabt.
+2. **Ticket-Link aus der Haus-Quelle** (größter Hebel, wirkt auch ohne Datenfeed): Viele Häuser verlinken ihren Ticketverkauf bei Eventim, Reservix, ADticket oder Ticketmaster (in der Prüfung z. B. Comedy Club, Tor 3 und Nachtresidenz → Eventim, Philara → Reservix). Venue-Scraper speichern diesen Link künftig in einer **neuen Spalte `events.ticket_url`** (der DEG-Scraper liest ihn heute schon intern). Die Website macht daraus bei bekanntem Anbieter einen Partner-Link, bei Awin als Deeplink `https://www.awin1.com/cread.php?awinmid=<Programm>&awinaffid=<Publisher-ID>&ued=<Ziel-URL>`.
+
+SQL (vor dem Deploy von P1): `events.ticket_url text`. Beim Rangwechsel (4.2) bleibt ein vorhandener `ticket_url` stehen, wenn die neue Quelle keinen hat; der Admin-Bereich bekommt das Feld in die Bearbeiten-Whitelist (Abstimmung mit dem Admin-Plan).
+
+#### 5.5.3 Welcher Ticket-Button? (Q20)
+
+- **Ein** Ticket-Button je Event, nie mehrere Anbieter mit Preisen nebeneinander (Awin-Bedingung „kein Preisvergleich“; außerdem übersichtlicher).
+- Auswahl nach **Offiziellkeit, nicht nach Provision:** zuerst der Ticket-Link, den das Haus selbst nennt (`ticket_url`), sonst der Link der Rang-2-Quelle aus `quellen` (4.3). Das hält die Seite redaktionell unabhängig (Magazin und Impressum nach § 18 MStV).
+- Ist die Hauptquelle selbst ein Ticketanbieter, ist „Zum Termin“ schon der Ticket-Link; dann kein zweiter Button.
+- **Keine Partner-Links im Magazin-Text** (Q22), nur auf Event- und Ortsseiten sowie im Ausblick.
+
+#### 5.5.4 Tiqets und GetYourGuide: Angebote statt Events (Q21)
+
+Beide verkaufen Eintrittskarten und Touren mit täglicher Verfügbarkeit, keine Einzeltermine. Als Events würden sie den Kalender fluten. Vorschlag:
+- Neue Tabelle `partner_angebote` (Anbieter, externe ID, Titel, URL, Bild, „ab“-Preis, Bewertung, `ort_id`, aktualisiert_am), gefüllt einmal je Scraper-Lauf über die APIs (nur Düsseldorf/Neuss/Ratingen).
+- **Ortsseiten** von Museen und Attraktionen (Kunstpalast, K20/K21, Aquazoo, Rheinturm …): Button „Tickets“, wenn ein Angebot dem Ort zugeordnet ist. Zuordnung über Name + Adresse als **Vorschlag im Admin-Bereich** (wie die Orte-Vorschläge aus Stufe 3c), erst die Bestätigung schaltet den Button frei.
+- **Stadtführungen** (Kategorie `stadtfuehrung`, Guide-Seite): Block „Führungen buchen“ mit bis zu 6 GetYourGuide-/Tiqets-Touren in Düsseldorf, nach Bewertung.
+- Bilder aus den APIs nur, wenn die Bedingungen das erlauben (Tiqets: Bilder nur auf Antrag) – sonst ohne Bild.
+
+#### 5.5.5 Website
+
+- **`web/lib/tickets.ts`:** erkennt den Anbieter an der Domain (eventim.de, reservix.de, adticket.de, ticketmaster.de, tiqets.com, getyourguide.de) und baut den Partner-Link aus den Variablen. Schalter **`PARTNERLINKS_AKTIV`** als GitHub-Variable wie `KONTEN_AKTIV` (wirkt mit dem nächsten Deploy; der Admin-Bereich zeigt ihn an). Aus = normale Links ohne Partner-Kennung.
+- **Kennzeichnung** direkt am Button: „Tickets*“ und darunter klein „*Partner-Link: Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich.“ (du-Ansprache wie auf den Konto-Seiten). Dazu ein Abschnitt „Partner-Links“ auf `/ueber` (Anker `#partner-links`).
+- Links mit `rel="sponsored noopener"` (Vorgabe von Google für Affiliate-Links).
+- **Kein eigenes Klick-Tracking**, keine Cookies bei uns; Auswertung in den Netzwerk-Konten (Awin, Impact, Tiqets, GetYourGuide).
+- **Datenschutzerklärung** (Sie-Form): neuer Abschnitt zu den Partnerprogrammen; Entwurf von Claude, Freigabe durch den Anwalt **vor** `PARTNERLINKS_AKTIV=1`. Kennzeichnungstext ebenfalls zum Anwalt.
 
 ---
 
@@ -384,10 +431,10 @@ Events > 60 Tage zeigen auf Karten und Eventseite ein kleines Label mit Monat un
 ### 6.3 Quell-Link auf der Eventseite (`web/app/event/[kategorie]/[slug]/page.tsx:282–300`)
 
 - Hauptknopf „Zum Termin“ → `quelle_url` (ist nach Abschnitt 4 immer die beste Quelle).
-- **Neu:** zweiter Knopf „Tickets bei <Eventim|Ticketmaster>“, wenn `quellen` (4.3) eine Rang-2-Quelle enthält und die Hauptquelle Rang 1 ist. Ohne die Spalte entfällt der Knopf.
+- **Neu:** zweiter Button „Tickets“ nach den Regeln in 5.5.3 (`ticket_url` des Hauses, sonst Rang-2-Quelle aus `quellen`). Ohne beide Angaben entfällt der Button.
 - Rausgegangen-Events: siehe 4.4.
 - „Quelle: …“ bleibt wie heute die Hauptquelle.
-- Affiliate-Links (Eventim-Partnerprogramm, Ticketmaster-Affiliate) sind **nicht** Teil dieses Plans (Q12), wären aber über denselben Knopf möglich. Werbekennzeichnung und Datenschutzerklärung müssten dann angepasst werden (Anwalt).
+- Partner-Links, Kennzeichnung und Datenschutz: 5.5.5.
 
 ### 6.4 Name der neuen Seite (Q9, zweite Runde)
 
@@ -414,21 +461,25 @@ Jeder Schritt: lokal bauen und testen → Zusammenfassung → OK des Auftraggebe
 
 | Nr. | Inhalt | SQL | Prüfung nach Deploy |
 |---|---|---|---|
+| **A1** | **Auftraggeber:** Anmeldungen bei Awin (Eventim, Reservix, ADticket), Impact (Ticketmaster), Tiqets, GetYourGuide; Anfragen an Ticketmaster und Reservix senden (Texte von Claude) – läuft parallel ab Freigabe | – | Variablen/Secrets in GitHub |
 | **R1** | Rangfolge `pipeline/quellen_rang.py`; Deduplizierung, Speichern, Dubletten-Vorschläge auf Rang umstellen (4.1, 4.2) | – | Lauf-Log: „Quelle gewechselt: A → B“ jetzt auch zwischen Nicht-Rausgegangen-Quellen; Stichprobe 10 Events |
 | **R2** | Spalte `events.quellen`, Kennzahlen „nur Rausgegangen“ und „Lücken je Ort“ im Lauf-Report (4.3, 4.5) | `quellen_spalte_<datum>.sql` | Kennzahlen im Report plausibel |
 | **Z1** | Zeitraum je Quelle (`vorschau_ende`), Seiten-Grenzen der Langzeit-Scraper, Beschreibungen auf Tag ≤ 60 + Fern-Block 100, Kategorisierungs-Limit befristet 1.500 (5.2, 5.3) | – | Laufzeit je Schritt, Events > 60 Tage je Quelle, keine Zeitüberschreitung |
 | **T1** | Ticketing (5.1): Ticketmaster (Secret vom Auftraggeber, Workflow-`env`, Monatsfenster bis 12 Monate), Songkick aus `QUELLEN` nehmen, Stagedates über Sitemap + JSON-LD | – | Events je Quelle, Gebietsfilter, Dubletten zu d.live/Mitsubishi/Capitol |
-| **T2** | Eventim/Reservix – **ruht** (Auftraggeber 24.11.: vorerst keine Anfrage beim Partnerprogramm) | – | – |
 | **W1** | Website: Fernpool, Suche und eigener Zeitraum bis 12 Monate, Ortsseiten nach Monaten, Monats-Label, Sitemap, `/tag` > 60 (6.1, 6.2) | – | Seiten im Browser, Sitemap-Größe, Ladezeit Startseite unverändert |
 | **V0** | Bestehende Quellen mit großer Wirkung reparieren/erweitern: Kunstsammlung (Führungen/Veranstaltungen), VisitDüsseldorf komplett über Sitemap/Toubiz (3.4) | – | Events je Quelle vorher/nachher |
 | **V1** | Bausteine (3.3) + Welle A der Venues (3.2) | – | je Haus Eventzahl > 0, Ortszuordnung trifft |
+| **P1** | `events.ticket_url`: Venue-Scraper erfassen den Ticket-Link des Hauses (bestehende + Welle A), Rangwechsel behält ihn (5.5.2) | `ticket_url_<datum>.sql` | Anteil Events mit Ticket-Link je Anbieter |
 | **N1** | `quellen_nachziehen.py`: Bestand auf Rang umhängen – Probelauf, dann `--schreiben` | – (Sicherung im Skript) | Bericht |
 | **W2** | Seite „Ausblick“ (`/ausblick`), Startseiten-Box, Ticket-Button (Partner-Link vorbereitet, aus), Link „Website von <Ort>“ (6.1, 6.3, 4.4) | – | Seiten im Browser |
+| **P2** | Partner-Links: `web/lib/tickets.ts`, Kennzeichnung, Abschnitt auf `/ueber`, Datenschutz-Entwurf → Anwalt → Variable `PARTNERLINKS_AKTIV=1` + Deploy (5.5.5) | – | Links im Browser (Partner-Kennung, `rel=sponsored`), Netzwerk-Konten zeigen Klicks |
+| **T2** | Reservix-API und Eventim-Feed als Rang-2-Quellen – sobald A1 Zugang liefert (5.5.2) | – | Events je Quelle, Dubletten |
+| **T3** | Tiqets/GetYourGuide: Tabelle `partner_angebote`, Abruf je Lauf, Zuordnungs-Vorschläge im Admin, Buttons auf Ortsseiten, Block im Stadtführungs-Guide (5.5.4) | `partner_angebote_<datum>.sql` | Angebote je Ort, Vorschläge |
 | **V2** | Welle B (Düsseldorf, Neuss, Ratingen; 3.2) | – | wie V1 |
 
-Cursor-Prüfungen: Plan (Anhang A) vor der Freigabe; Umsetzung nach R1+R2 (Pipeline-Kern) und nach W1+W2 (Website).
+Cursor-Prüfungen: Plan (Anhang A) vor der Freigabe; Umsetzung nach R1+R2 (Pipeline-Kern), nach W1+W2 (Website) und nach P2 (Partner-Links, vor dem Einschalten).
 
-Parallel möglich: V0/V1 (neue Scraper-Dateien) berühren andere Dateien als R1/R2 (Pipeline-Kern) und W1/W2 (Website). Z1 fasst alle Scraper-Dateien an und läuft deshalb **nicht** parallel zu V0/V1.
+Parallel möglich: V0/V1 (neue Scraper-Dateien) berühren andere Dateien als R1/R2 (Pipeline-Kern) und W1/W2 (Website). Z1 fasst alle Scraper-Dateien an und läuft deshalb **nicht** parallel zu V0/V1. A1 (Anmeldungen des Auftraggebers) läuft ab Freigabe nebenher; T1, T2, T3 und das Einschalten von P2 warten jeweils auf den passenden Zugang. P1 baut auf V1 auf (dieselben Scraper-Dateien), P2 auf W2 (Ticket-Button).
 
 ---
 
@@ -445,6 +496,9 @@ Python mit `unittest` (wie bisher; pytest kommt nicht dazu), Website mit dem bes
 - **Bausteine (V1):** JSON-LD mit `@graph`, `subEvent`, fehlender Uhrzeit, Zeitzone; Tribe-API-Antwort mit zwei Seiten; iCal mit Ganztags-Termin und wöchentlicher RRULE. Beispieldateien unter `tests/fixtures/`.
 - Bestehende Tests, die angepasst werden: `tests/test_rausgegangen_vorrang.py`, `test_dedup_aehnlich.py`, `test_dedup_toleranz.py`, `test_redaktion_feldschutz.py`, `test_lauf_report_kennzahlen.py`.
 - **Website (W1/W2):** Zeitraum > 60 Tage wird nicht mehr auf 60 gekürzt, aber auf 366; Suche findet ein Fern-Event im eigenen Block; Startseite enthält kein Event > 60 Tage außer in der neuen Box; Monats-Label ab Tag 61.
+- **Ticket-Link (P1):** Rangwechsel ohne `ticket_url` der neuen Quelle behält den alten; Venue-Fixtures liefern den Ticket-Link.
+- **Partner-Links (P2, `web/tests/`):** je Anbieter-Domain der richtige Partner-Link (Awin-Deeplink mit korrekt kodierter Ziel-URL, Ticketmaster/Tiqets/GetYourGuide mit Partner-Kennung); unbekannte Domain bleibt unverändert; Schalter aus oder fehlende ID → normaler Link; jeder Partner-Link hat `rel="sponsored noopener"` und den Hinweistext; Ticket-Button-Auswahl nach 5.5.3 (Haus-Link vor Rang-2-Quelle, nie zwei Buttons); keine Partner-Links in Magazin-Beiträgen.
+- **Partner-Angebote (T3):** Abruf mit Beispielantworten aus `tests/fixtures/`; nur bestätigte Zuordnungen erzeugen einen Button.
 
 ---
 
@@ -456,6 +510,10 @@ Python mit `unittest` (wie bisher; pytest kommt nicht dazu), Website mit dem bes
 - **Rechtliches:** Nur öffentlich frei zugängliche Termindaten, robots.txt beachtet; Beschreibungen werden wie bisher in eigenen Worten geschrieben, Bilder nur aus der Quelle mit Herkunft. Ticketing-Bedingungen (Attribution, Bildnutzung, Speicherdauer) je Anbieter beachten (5.1).
 - **Falsche Rangfolge in Einzelfällen** (z. B. ein Haus-Scraper mit schlechteren Daten als Ticketmaster): leere Felder überschreiben nie; Redaktion kann Felder im Admin-Bereich festsetzen (`redaktion_felder`).
 - **Öffentliches Repository:** Zugangsdaten nur als GitHub-Secrets; Ortslisten und Venue-Tabellen sind unkritisch.
+- **Partner-Links abmahnfähig:** falsche oder fehlende Kennzeichnung ist ein Wettbewerbsverstoß. Gegenmittel: Kennzeichnung direkt am Button, Erklärseite, Anwalts-Freigabe vor `PARTNERLINKS_AKTIV=1`.
+- **Ticketmaster-Bedingungen:** ohne schriftliche Bestätigung (5.5.1) keine Partner-Links auf Ticketmaster-Daten; dann bleibt der Ticketmaster-Link ein normaler Link.
+- **Awin-Bedingungen:** kein Preisvergleich, keine Suchmaschinen-Anzeigen auf die Marke; Eventim zahlt nur bei Kauf am selben Tag (Cookie 1 Tag) – Erwartung an die Einnahmen niedrig halten.
+- **Glaubwürdigkeit:** Button-Auswahl nach Offiziellkeit (Q20), keine Partner-Links im Magazin (Q22), keine Empfehlung wegen Provision (Empfehlungs-Logik bleibt unverändert).
 
 ---
 
@@ -465,17 +523,17 @@ Antworten des Auftraggebers vom 24.11.2026:
 
 1. **Einnahmen / Provision (Q6-a):** Rückfrage des Auftraggebers – bei welchen Anbietern lassen sich über ein Partnerprogramm Provisionen erzielen? → Recherche in 5.4.
 2. **Ticketmaster-Schlüssel:** reicht der Auftraggeber nach. Bis dahin bleibt T1 für Ticketmaster offen; Stagedates und die Songkick-Abschaltung gehen ohne Schlüssel.
-3. **Eventim/Reservix-Anfrage (Q6-b):** vorerst nicht. T2 ruht.
+3. **Eventim/Reservix-Anfrage (Q6-b):** zunächst „vorerst nicht“, dann (24.11., zweite Antwort): **alle genannten Partner anbinden** → 5.5, Schritte A1, P1, T2, T3, P2.
 4. **Name der neuen Seite (Q9):** „Später im Jahr“ und „Vorverkauf“ gefallen nicht → neue Vorschläge in 6.4.
 5. **Prioritäten bei den Häusern (Q15, Neuss/Ratingen):** keine besonderen Wünsche; Auswahl und Reihenfolge wie in 3.2 vorgeschlagen.
 
 ---
 
-## Anhang A: Cursor-Prüf-Prompt (erste Fassung)
+## Anhang A: Cursor-Prüf-Prompt (dritte Fassung des Plans)
 
 ```
 Prüfe den Plan `docs/plan-quellen-ausbau-2026-11-23.md` (Quellen-Ausbau: Venues direkt, Rausgegangen zuletzt,
-Ticketing mit bis zu 12 Monaten Vorlauf) gegen den tatsächlichen Code im Repo. Ändere keinen Code und keinen
+Ticketing mit bis zu 12 Monaten Vorlauf, Partner-Links mit Provision) gegen den tatsächlichen Code im Repo. Ändere keinen Code und keinen
 Plan – nur Befunde.
 
 Prüfe bitte:
@@ -502,11 +560,16 @@ Prüfe bitte:
    (`scraper/utils/bookingkit.py`, `ra_venue.py`, `http_client.py`) und zum Lauf-Report je Quelle
    (`pipeline/lauf_report.py`, Warnregeln in `pipeline/lauf_warnungen.py`), wenn mehrere Häuser aus einer Datei
    `scraper/tier2/venues.py` kommen?
-7. Widersprüche zwischen den Abschnitten, fehlende Tests, Reihenfolge der Schritte in Abschnitt 7 (insbesondere
+7. Abschnitt 5.5 (Partner-Links): Wo muss `events.ticket_url` überall bekannt sein (Inserts, `_ABGLEICH_SPALTEN`,
+   Rangwechsel in `_anreicherungs_update_bauen`, Admin-Whitelist, `web/lib/daten.ts` Spaltenvarianten)? Reicht
+   `PARTNERLINKS_AKTIV` als GitHub-Variable (Wirkung erst mit Deploy wie `KONTEN_AKTIV`)? Ist die Button-Auswahl
+   (5.5.3) eindeutig, und gibt es Stellen außer der Eventseite, die `quelle_url` als Kauf-Link zeigen (Karten,
+   Merkliste, Konto, Mails, Magazin), an denen Partner-Links ungewollt auftauchen oder fehlen?
+8. Widersprüche zwischen den Abschnitten, fehlende Tests, Reihenfolge der Schritte in Abschnitt 7 (insbesondere
    Konflikte mit dem laufenden Admin-Plan docs/plan-admin-dashboard-2026-11-23.md, der dieselben Dateien ändert).
 
 Ausgabe je Befund: Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile) · Befund ·
-Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen Q1–Q19
+Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen Q1–Q22
 trifft der Auftraggeber; sie sind nicht Gegenstand der Prüfung, wohl aber ihre technische Umsetzbarkeit.
 ```
 
@@ -514,3 +577,4 @@ trifft der Auftraggeber; sie sind nicht Gegenstand der Prüfung, wohl aber ihre 
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
 - 24.11.2026: Antworten des Auftraggebers eingearbeitet (10), Provisions-Recherche (5.4), Namensvorschläge (6.4), Q18–Q19 neu
+- 24.11.2026: dritte Fassung – Auftraggeber: alle Partner-Anbieter anbinden → 5.5, Q19–Q22, Schritte A1/P1/T2/T3/P2, Tests, Risiken
