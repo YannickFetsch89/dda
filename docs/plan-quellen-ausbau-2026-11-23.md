@@ -2,7 +2,7 @@
 
 Status: **Freigegeben vom Auftraggeber am 24.11.2026 (dritte Fassung).** Die Vorschläge Q1–Q22 gelten damit als entschieden und werden nicht still geändert. Gebaut wird schrittweise (Abschnitt 7), jeder Schritt mit eigenem OK des Auftraggebers.
 Jeder Push ist ein Live-Deploy; SQL führt der Auftraggeber im Supabase-SQL-Editor aus.
-Runde 1 (Cursor, 24.11.2026) hat den Plan gegen den Code geprüft und die Befunde unten eingearbeitet. Runde 2 hat die Claude-Befunde 19 und 20 geprüft. Runde 3 hat Nr. 25–33 geprüft. Runde 4 hat Nr. 34 geprüft. Protokoll: Anhang B.
+Runde 1 (Cursor, 24.11.2026) hat den Plan gegen den Code geprüft und die Befunde unten eingearbeitet. Runde 2 hat die Claude-Befunde 19 und 20 geprüft. Runde 3 hat Nr. 25–33 geprüft. Runde 4 hat Nr. 34 geprüft. Runde 5 hat Nr. 35 und 36 gegen den ganzen Plan gehalten und keine kritischen oder mittleren Befunde mehr gefunden. Protokoll: Anhang B.
 
 Drei Ziele des Auftraggebers:
 1. **Möglichst alle einzelnen Venues** in Düsseldorf (plus Neuss/Ratingen) direkt abfragen.
@@ -688,6 +688,8 @@ Status-Werte: `geändert` (Cursor) · `angenommen` / `angepasst` / `zurückgenom
 | 4 | Cursor | 35 | mittel | 5.2, 7 | Die Klammer in Z1 las sich als Ziel (Oper 2 Monate, Schauspielhaus 6, Ticketmaster eine Seite). 5.2 meint damit den heutigen Code (`oper_am_rhein.py:33`, `schauspielhaus.py:47`). Beide Häuser haben Fenster 365. Ticketmaster-Blättern ist T1. RA bleibt bei 5 Seiten (`ra_venue.py:122`). | Z1 zieht Oper und Schauspielhaus auf 365 Tage. RA-Grenze bleibt. Ticketmaster-Blättern bleibt in T1. | geändert → angenommen (Claude: Belege geprüft) |
 | 4 | Cursor | 36 | mittel | 4.2, 7 | „Nach jedem größeren Schritt“ und „erst N1 nach P1“ widersprechen sich. Ein Lauf vor der Spalte `ticket_url` würde das Nachziehen an dieser Spalte scheitern lassen. | Ein Lauf N1, nach P1, vorher keiner. | geändert → angenommen (Claude: Belege geprüft) |
 | 4 | Cursor | 37 | gering | 8, 7 | Abschnitt 8 nannte T1 nicht. Die Abnahme von T1 prüfte `bild_url` nicht. | Test: Beispielantwort mit Bildern ergibt `bild_url` leer. Abnahme: Stichprobe `bild_url` leer. | geändert → angenommen (Claude: Belege geprüft) |
+| 5 | Cursor | – | – | gesamt | keine kritischen oder mittleren Befunde | – | bestätigt |
+| 5 | Claude | – | – | gesamt | Gegenprüfung: keine alten Sätze zu Nr. 35/36 übrig, Schrittfolge A1 R1 R2 Z1 T1 W1 V0 V1 P1 N1 W2 P2 T2 T3 V2 und SQL-Tabelle stimmig | – | bestätigt – **Prüfschleife abgeschlossen** |
 
 ## Prüfhistorie
 
@@ -702,4 +704,6 @@ Status-Werte: `geändert` (Cursor) · `angenommen` / `angepasst` / `zurückgenom
 - 24.11.2026: Runde 3 – Cursor: Nr. 25 bestätigt mit Ergänzung (gering), Nr. 26 bestätigt. Dazu Nr. 27–32 (mittel) und Nr. 33 (gering). Q1–Q22 unverändert.
 - 24.11.2026: Runde 3 – Claude: alle Änderungen gegen den Code geprüft und angenommen; Nr. 34 (gering, Ticketmaster-Bilder) ergänzt
 - 24.11.2026: Runde 4 – Cursor: Nr. 34 bestätigt, Anfrage-Aufzählung korrigiert. Nr. 35 und 36 mittel (Z1-Seitengrenzen, ein Nachziehen N1). Nr. 37 gering (Test für leeres Ticketmaster-Bild). Q1–Q22 unverändert.
-- 24.11.2026: Runde 4 – Claude: alle 4 Änderungen gegen den Code geprüft (`ticketmaster.py:202`, `web/app/bild/event/[id]/route.ts:43`, `web/lib/bild-proxy.ts:213`) und angenommen; keine eigenen Befunde. Offen nur noch die Bestätigungsrunde 5.
+- 24.11.2026: Runde 4 – Claude: alle 4 Änderungen gegen den Code geprüft (`ticketmaster.py:202`, `web/app/bild/event/[id]/route.ts:43`, `web/lib/bild-proxy.ts:213`) und angenommen; keine eigenen Befunde.
+- 24.11.2026: Runde 5 – Cursor: Nr. 35 und 36 sind in 4.2, 5.2, Abschnitt 7, Rückweg, Abnahme und Tests ohne widersprechenden Satz. Keine kritischen oder mittleren Befunde.
+- 24.11.2026: Runde 5 – Claude bestätigt. **Prüfschleife Cursor ↔ Claude abgeschlossen** (5 Runden, 37 Befunde eingearbeitet). Der Plan ist baufertig; gebaut wird schrittweise nach Abschnitt 7 mit OK je Schritt.
