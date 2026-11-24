@@ -173,6 +173,14 @@ class LaufReport:
         })
         return events
 
+    def quelle_abgeschaltet(self, name: str, tier: int, grund: Optional[str]) -> None:
+        """Quelle im Admin-Bereich abgeschaltet (pipeline/quellen.py): Eintrag „uebersprungen“, ohne den Scraper zu starten."""
+        from pipeline.quellen import meldung
+        self.ergebnisse.append({
+            "quelle": name, "tier": tier, "status": "uebersprungen", "anzahl": 0, "dauer_sekunden": 0,
+            "warnungen": 0, "fehler": 0, "meldung": meldung(grund),
+        })
+
     # ── Kennzahlen und Abschluss ─────────────────────────────────────────────
 
     def kennzahl(self, **werte: Any) -> None:

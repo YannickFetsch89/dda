@@ -1,0 +1,80 @@
+{
+  "slugs": [
+    {
+      "titel": "Beethoven als Candle Light Konzert",
+      "ort": "zakk Kulturzentrum",
+      "datum": "2026-10-29",
+      "slug": "beethoven-als-candle-light-konzert-zakk-kulturzentrum-2026-10-29"
+    },
+    {
+      "titel": "Größte Übung: Straßen-Fußball",
+      "ort": "Mitsubishi Electric HALLE",
+      "datum": "2026-12-01",
+      "slug": "groesste-uebung-strassen-fussball-mitsubishi-electric-halle-2026-12-01"
+    },
+    {
+      "titel": "  Café   Ölmühle – Frühstück!!  ",
+      "ort": "Café Ölmühle, Düsseldorf",
+      "datum": "2026-11-30",
+      "slug": "cafe-oelmuehle-fruehstueck-cafe-oelmuehle-duesseldor-2026-11-30"
+    },
+    {
+      "titel": "Kom(m)ödchen: Ein Abend mit Ça va",
+      "ort": "Kom(m)ödchen",
+      "datum": "2027-01-05",
+      "slug": "kom-m-oedchen-ein-abend-mit-ca-va-kom-m-oedchen-2027-01-05"
+    },
+    {
+      "titel": "Sehr langer Titel Sehr langer Titel Sehr langer Titel Sehr langer Titel Sehr langer Titel Sehr langer Titel Sehr langer Titel Sehr langer Titel ",
+      "ort": "Ein noch längerer Ortsname mit vielen Wörtern",
+      "datum": "2026-11-24",
+      "slug": "sehr-langer-titel-sehr-langer-titel-sehr-langer-titel-sehr-l-ein-noch-laengerer-ortsna-2026-11-24"
+    },
+    {
+      "titel": "Ohne Ort",
+      "ort": "",
+      "datum": "2026-11-24",
+      "slug": "ohne-ort-2026-11-24"
+    },
+    {
+      "titel": "",
+      "ort": "Ort",
+      "datum": "2026-11-24",
+      "slug": ""
+    },
+    {
+      "titel": "Mädchen & Jungen – 100 % Spaß",
+      "ort": "D'haus — Central",
+      "datum": "2026-12-24",
+      "slug": "maedchen-jungen-100-spass-d-haus-central-2026-12-24"
+    },
+    {
+      "titel": "Ñandú 🎉 Party",
+      "ort": "Señor Ölçek",
+      "datum": "2026-11-25",
+      "slug": "nandu-party-senor-oelcek-2026-11-25"
+    }
+  ],
+  "suffix": [
+    {
+      "basis": "a-2026-11-24",
+      "vergeben": [],
+      "slug": "a-2026-11-24"
+    },
+    {
+      "basis": "a-2026-11-24",
+      "vergeben": [
+        "a-2026-11-24"
+      ],
+      "slug": "a-2026-11-24-b"
+    },
+    {
+      "basis": "a-2026-11-24",
+      "vergeben": [
+        "a-2026-11-24",
+        "a-2026-11-24-b"
+      ],
+      "slug": "a-2026-11-24-c"
+    }
+  ]
+}

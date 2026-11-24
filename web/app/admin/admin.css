@@ -222,3 +222,7 @@ body:has(.admin-rahmen) :is(.kopf, .katleiste, .fuss, .tabbar, .daten-hinweis, .
 }
 .admin-kacheln .admin-karte { margin: 0; }
 .admin-kacheln strong { display: block; font-size: 1.6rem; }
+
+/* Meldungen (Stufe 5b): Formular und Vorschau nebeneinander */
+.admin-meldung { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; margin-top: 12px; }
+@media (max-width: 800px) { .admin-meldung { grid-template-columns: 1fr; } }

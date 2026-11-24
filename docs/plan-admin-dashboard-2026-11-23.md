@@ -680,6 +680,14 @@ Stufe 5a – Konten, Sensibel, Technik, Schalter, Protokoll (23.11.2026):
   - Befund 3 (mittel) behoben: Ordnergröße mit `opendir` gestreamt, Grenze (200.000 Dateien, 4 s) je Eintrag geprüft.
   - Befund 4 (gering) behoben: „Rückgängig“ prüft die erwarteten Werte auch im UPDATE; trifft es keine Zeile, kommt 409. Bewusst hingenommen: Eine spätere Änderung, die wieder genau auf demselben Wert landet (A → B → A), fällt nicht auf.
 
+Stufe 5b – Meldungen, SEO-Aufräumen, Quellen an/aus (24.11.2026):
+- **Meldungen** (`/admin/meldungen`, Umzug aus `dashboard/meldungen.py`, gleicher Ablauf: reservieren 10 Min → Bild nur mit bestätigten Rechten in `event-bilder` kopieren → Event anlegen → abschließen → privates Original löschen; Rückabwicklung blendet das Event aus und löscht das kopierte Bild).
+  - **Entscheidung (4.10 „bei der Umsetzung“):** Die Slug-Regel ist nach TypeScript übertragen (`lib/admin/meldungen.ts`); dieselbe Prüfliste `tests/fixtures/slugs.json` prüfen Python und TypeScript. Der Stadtteil kommt als Vorschlag aus der PLZ (`web/lib/plz-stadtteil.json` = `PLZ_STADTTEIL`, ein Python-Test hält beide gleich); der Admin kann ihn ändern. Die Venue-Liste des Mappers bleibt in Python.
+  - **Abweichung von 3.3:** Kein Service-Schlüssel nötig – das Admin-Token darf laut `meldungen_newsletter_2026-11-05.sql` Meldungen lesen/ändern, Events anlegen und die Bilder in beiden Buckets lesen, kopieren und löschen.
+- **SEO-Aufräumen** (`/admin/seo`, unverändert aus `dashboard/seo_aufraeumen.py`): Kennzahlen, älteste 500 (offene) Kandidaten, Auswahl, behalten/301/410, zurücknehmen, CSV. Die Website übernimmt Entscheidungen weiter innerhalb von 10 Minuten.
+- **Quellen an/aus:** `database/admin_quellen_2026-11-24.sql` (Tabelle `quellen_einstellungen`, nur Admins). `main.py` liest sie zu Beginn (`pipeline/quellen.py`) und überspringt abgeschaltete Quellen; im Report stehen sie als „uebersprungen“ mit Grund (keine Warnung W1–W4). Ist die Tabelle nicht lesbar, laufen alle. Schalter auf `/admin/scraper`.
+- **Mit im Paket:** Workflow `.github/workflows/zugriffe.yml` (Zugriffs-Muster eines Pfads aus dem nginx-Log, nur lesend, ohne Adressen) nach dem Ausfall vom 23.11.2026.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -701,3 +709,5 @@ Stufe 5a – Konten, Sensibel, Technik, Schalter, Protokoll (23.11.2026):
 - 23.11.2026: Anwalt hat Stufe 4 freigegeben (Texte übernommen), Cursor-Prüfung 4 deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
 - 23.11.2026: Stufe 4 LIVE (220c612). Stufe 5a gebaut (lokal), SQL `admin_rest_2026-11-23.sql`; Notizen in Anhang F.
 - 23.11.2026: SQL Stufe 5a ausgeführt, Cursor-Prüfung 5a deploybar, 4 Befunde eingearbeitet (SQL geändert, erneut auszuführen).
+- 23.11.2026: Stufe 5a LIVE (311090f); Ausfall durch Bot auf /guides/restaurants-cafes, Bremse und Cache live (0466601, f3e58ad).
+- 24.11.2026: Stufe 5b gebaut (lokal), SQL `admin_quellen_2026-11-24.sql`; Notizen in Anhang F.

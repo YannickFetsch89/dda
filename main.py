@@ -173,10 +173,17 @@ async def _schritte_ausfuehren(report: LaufReport):
     logger.info("--- Schritt 1: Scraper ---")
     alle_events = []
     aktueller_tier = 0
+    # Quellen an/aus aus dem Admin-Bereich (pipeline/quellen.py); ohne lesbare Tabelle laufen alle
+    from pipeline.quellen import quellen_abgeschaltet
+    abgeschaltet = quellen_abgeschaltet()
     for name, tier, funktion in QUELLEN:
         if tier != aktueller_tier:
             aktueller_tier = tier
             logger.info("--- Tier-%d-Scraper ---", tier)
+        if name in abgeschaltet:
+            logger.info("%s: im Admin-Bereich abgeschaltet – übersprungen", name)
+            report.quelle_abgeschaltet(name, tier, abgeschaltet[name])
+            continue
         alle_events.extend(await report.scraper_ausfuehren(name, tier, funktion))
 
     logger.info("Scraper gesamt: %d Events gesammelt", len(alle_events))
