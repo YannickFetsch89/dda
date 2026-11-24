@@ -1003,44 +1003,6 @@ behoben: `stadt_im_gebiet` lässt einen Bindestrich nach dem Stadtnamen zu, `adr
 am Anfang eines Adressabschnitts als PLZ, Ticketmaster behält ein Event mit PLZ im Gebiet unabhängig von der
 Schreibweise der Stadt. Zwei Tests dazu, Python gesamt 787 ok.
 
-### W2 – Ausblick, Startseiten-Box, Ticket-Button, Ortswebsite (24.11.2026, lokal gebaut, Browser-Prüfung offen)
-
-- `/ausblick` war im Repo noch frei (geprüft 24.11.). `web/lib/ausblick.ts`: Fernpool (Tag 61–365) gefiltert auf Rang
-  1–2 (`rangGespeichert` ≤ `TICKETVERKAUF`), Orte mit Ortsseite (aktive Spielstätten über `ort_id`), ohne Absagen,
-  nach Datum. `web/app/ausblick/page.tsx`: Liste nach Monaten, Filter-Chips je Kategorie (`?kategorie=`, dann noindex;
-  leere Seite ebenfalls noindex), Titel „Ausblick: Große Events in Düsseldorf bis <Monat Jahr>“, JSON-LD-Liste.
-- `ort_id` steht jetzt in `SPALTEN_BASIS` und in `normalisieren()` (bisher nur im Ortsprogramm geladen).
-- Startseite: `AusblickStartBox` (6 Einträge, eigene Suspense-Grenze, ohne Einträge nichts) über dem Magazin.
-- Navigation (Menü bei den Event-Links), Sitemap (feste Seiten), Proxy: `/ausblick` in Matcher **und** Bremse.
-- Eventseite: zweiter Button „Tickets“ (`web/lib/ticket-button.ts`, `ticketZiel`): `ticket_url` des Hauses, sonst
-  Rang-2-Quelle aus `quellen` (eigene gecachte Abfrage nur, wenn kein `ticket_url`); kein Button, wenn die Hauptquelle
-  selbst Rang 2 ist oder das Ziel gleich dem Haupt-Button wäre; nur kommende, nicht abgesagte Events. `rel="noopener"`,
-  ohne Stern – Partner-Kennung, „Tickets*“ und `rel="sponsored"` kommen mit P2.
-- „Website von <Ort>“ (4.4): nur bei Hauptquelle Rang 5 (Rausgegangen) und `orte.webseite` über `ort_id`, über dem
-  Quellenhinweis.
-- JSON-LD `offers.url`: `ticket_url`, sonst `quelle_url` – immer die echte URL.
-- Tests `web/tests/ausblick-tickets.test.ts`. Browser-Prüfung zusammen mit W1 nach dem Lauf am 27.11. (Turbopack läuft
-  im Worktree nicht mit dem verlinkten node_modules; außerdem fehlen bis dahin die fernen Events).
-
-### P2 – Partner-Links (24.11.2026, lokal gebaut, Schalter aus)
-
-- `web/lib/tickets.ts`: Anbieter nur an den Hauptdomains (eventim.de, reservix.de, adticket.de, ticketmaster.de,
-  tiqets.com, getyourguide.de/.com). Shops auf Subdomains, Eventim Light und Webshops der Häuser bleiben normale Links.
-  Awin-Deeplink mit den Programmen 11388/31293/18490 und `AWIN_PUBLISHER_ID`. Ticketmaster nur mit
-  `TICKETMASTER_PARTNER_OK=1` **und** einer Impact-Vorlage `TICKETMASTER_PARTNER_VORLAGE` (mit `{url}`). Tiqets
-  `partner=`, GetYourGuide `partner_id=`. Fremde Kennungen des Hauses (`affiliate`, `utm_*`, `ref` …) werden vor dem
-  Partner-Link entfernt. Ohne `PARTNERLINKS_AKTIV=1` oder ohne Kennung: normaler Link.
-- Eventseite: Ticket-Button und – wenn die Hauptquelle selbst Rang 2 ist – der Haupt-Button laufen über
-  `partnerLink`. Partner-Link → Text mit „*“, `rel="sponsored noopener"`, darunter der Hinweis mit Link auf
-  `/ueber#partner-links`. JSON-LD bleibt die echte URL.
-- `/ueber` (Abschnitt „Partner-Links“, du) und Datenschutzerklärung (Punkt in Abschnitt 9, Sie, ohne Umnummerierung)
-  erscheinen nur, wenn ein Programm wirklich Links umbaut, und nennen nur diese Programme
-  (`web/components/partner-links.tsx`). Texte zur Freigabe: `docs/partner-links-texte-2026-11-24.md`.
-- Deploy schreibt `PARTNERLINKS_AKTIV`, `TICKETMASTER_PARTNER_OK`, `AWIN_PUBLISHER_ID`, `TICKETMASTER_PARTNER_VORLAGE`,
-  `TIQETS_PARTNER_ID`, `GYG_PARTNER_ID` bei jedem Deploy ausdrücklich in `web/.env.local` (ohne sed). Admin → Technik
-  zeigt `PARTNERLINKS_AKTIV` und `TICKETMASTER_PARTNER_OK`.
-- Reihenfolge zum Einschalten: Anwalt gibt die Texte frei → Kennungen setzen → `PARTNERLINKS_AKTIV=1` → Deploy.
-
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
