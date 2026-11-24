@@ -60,9 +60,32 @@ _VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
 # redaktion_felder: im Admin-Bereich geänderte Felder, die die Pipeline nie überschreibt (Plan Admin-Dashboard 4.4,
 # database/admin_events_2026-11-23.sql – Spalte muss in der DB existieren).
 # quellen: alle Quellen des Events (Plan Quellen-Ausbau 4.3, database/quellen_spalte_2026-11-24.sql – muss existieren).
-_ABGLEICH_SPALTEN: str = ",".join(
-    _QUELL_FELDER + ["beschreibung_quelle", "ort_id", "redaktion_felder", "quellen"] + _ANREICHERBARE_FELDER
+_ABGLEICH_SPALTEN_BASIS: str = ",".join(
+    _QUELL_FELDER + ["beschreibung_quelle", "ort_id", "redaktion_felder"] + _ANREICHERBARE_FELDER
 )
+_ABGLEICH_SPALTEN: str = _ABGLEICH_SPALTEN_BASIS + ",quellen"
+
+# Fehlt die Spalte quellen (SQL database/quellen_spalte_2026-11-24.sql nicht ausgeführt), scheitert sonst JEDE Abfrage
+# und jeder Insert – am 24.11.2026 hat das einen ganzen Lauf gekostet (0 gespeichert, 2.909 Fehler). events_speichern
+# prüft die Spalte deshalb einmal und arbeitet ohne sie weiter.
+_QUELLEN_SPALTE: dict[str, bool] = {"da": True}
+
+
+def _abgleich_spalten() -> str:
+    """Spalten für den Abgleich – mit quellen, wenn es die Spalte gibt."""
+    return _ABGLEICH_SPALTEN if _QUELLEN_SPALTE["da"] else _ABGLEICH_SPALTEN_BASIS
+
+
+def _quellen_spalte_pruefen(db) -> bool:
+    """Gibt es events.quellen? Ergebnis gilt für diesen Lauf; ohne Spalte wird ohne Quellenliste gespeichert."""
+    try:
+        db.table("events").select("quellen").limit(1).execute()
+        _QUELLEN_SPALTE["da"] = True
+    except Exception as fehler:
+        _QUELLEN_SPALTE["da"] = False
+        logger.error("Spalte events.quellen fehlt (%s) – speichere ohne Quellenliste. "
+                     "SQL database/quellen_spalte_2026-11-24.sql ausführen!", str(fehler)[:120])
+    return _QUELLEN_SPALTE["da"]
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
@@ -180,7 +203,7 @@ def _abgleich_redaktion(db: Client, titel: str, datum: str, ort: str, uhrzeit: O
     """
     treffer = (
         db.table("events")
-        .select("id,abgleich_uhrzeit," + _ABGLEICH_SPALTEN)
+        .select("id,abgleich_uhrzeit," + _abgleich_spalten())
         .eq("abgleich_titel", titel)
         .eq("abgleich_datum", datum)
         .eq("abgleich_ort", ort)
@@ -203,7 +226,7 @@ def _tagesbestand(db: Client, datum: str, cache: dict[str, list[dict]]) -> list[
         try:
             antwort = (
                 db.table("events")
-                .select("id,titel,ort,datum,slug," + _ABGLEICH_SPALTEN)
+                .select("id,titel,ort,datum,slug," + _abgleich_spalten())
                 .eq("datum", datum)
                 .execute()
             )
@@ -238,7 +261,7 @@ def _slug_pruefen(db: Client, basis: str, uhrzeit: Optional[str]) -> tuple[Optio
     try:
         antwort = (
             db.table("events")
-            .select("id,slug," + _ABGLEICH_SPALTEN)
+            .select("id,slug," + _abgleich_spalten())
             # PostgREST-Platzhalter "*" statt "%": ein "%" am Ende wird nicht URL-kodiert und lässt die
             # Anfrage beim Supabase-Gateway scheitern (Cloudflare 1101) – dann fehlte der Abgleich und jede
             # weitere Vorstellung am selben Tag scheiterte am eindeutigen Slug (bis 2026-11-05)
@@ -334,6 +357,7 @@ def events_speichern(events: list[dict]) -> dict:
         return {"gespeichert": 0, "duplikate": 0, "angereichert": 0, "fehler": 0, "neu_pro_quelle": neu_pro_quelle}
 
     db = get_supabase_client()
+    _quellen_spalte_pruefen(db)
     gespeichert = 0
     duplikate = 0
     angereichert = 0
@@ -347,7 +371,7 @@ def events_speichern(events: list[dict]) -> dict:
             if k not in _IGNORE_FELDER and k not in _NICHT_IN_DB and not k.startswith("_")
         }
         # Alle Quellen des Events (Deduplizierung hat sie in QUELLEN_FELD gesammelt; Plan Quellen-Ausbau 4.3)
-        if datensatz.get("quelle_name"):
+        if datensatz.get("quelle_name") and _QUELLEN_SPALTE["da"]:
             datensatz["quellen"] = event.get(QUELLEN_FELD) or [quellen_eintrag(event, _jetzt_iso())]
         # Einheitliche Schreibweise für freien Eintritt („Eintritt frei“, „gratis“ … → „kostenlos“)
         if datensatz.get("preis"):
@@ -366,7 +390,7 @@ def events_speichern(events: list[dict]) -> dict:
             if bestehendes is None:
                 treffer = (
                     db.table("events")
-                    .select("id," + _ABGLEICH_SPALTEN)
+                    .select("id," + _abgleich_spalten())
                     .eq("titel", titel)
                     .eq("datum", datum)
                     .eq("ort", ort)

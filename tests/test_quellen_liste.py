@@ -155,3 +155,48 @@ class BestandTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OhneQuellenSpalteTest(unittest.TestCase):
+    """Fehlt events.quellen (SQL nicht ausgeführt), speichert der Lauf trotzdem – ohne Quellenliste (Ausfall 24.11.2026)."""
+
+    class Db:
+        def __init__(self):
+            self.inserts, self._quellen_gefragt = [], False
+
+        def table(self, _):
+            self._quellen_gefragt = False
+            return self
+
+        def select(self, spalten, **_):
+            self._quellen_gefragt = "quellen" in spalten
+            return self
+
+        def insert(self, datensatz):
+            self.inserts.append(datensatz)
+            self._quellen_gefragt = "quellen" in datensatz
+            return self
+
+        def __getattr__(self, _):
+            return lambda *a, **k: self
+
+        @property
+        def not_(self):
+            return self
+
+        def execute(self):
+            if self._quellen_gefragt:
+                raise RuntimeError("column events.quellen does not exist")
+            return type("A", (), {"data": [], "count": 0})()
+
+    def test_speichert_ohne_quellenliste(self):
+        from unittest import mock
+        import database.client as client
+        db = self.Db()
+        event = {**ev("zakk"), "kategorie": "musik"}
+        with mock.patch.object(client, "get_supabase_client", lambda: db):
+            ergebnis = client.events_speichern(deduplizieren([event]))
+        self.assertEqual(ergebnis["fehler"], 0)
+        self.assertEqual(ergebnis["gespeichert"], 1)
+        self.assertNotIn("quellen", db.inserts[0])
+        client._QUELLEN_SPALTE["da"] = True

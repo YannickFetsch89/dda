@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 SCRAPER_FELD = "_scraper"
 # Tier der Quelle aus main.py QUELLEN – für den Rang einer Quelle ohne Eintrag in pipeline/quellen_rang.py
 TIER_FELD = "_tier"
+# Kennzahlen aus dem Quellen-Ausbau (database/quellen_spalte_2026-11-24.sql) – fehlen ihre Spalten, gehen nur sie verloren
+NEUE_KENNZAHLEN = {"kuenftige_events", "nur_rausgegangen", "luecken"}
 
 # Log-Meldungen, an denen bewusst übersprungene bzw. saisonal leere Quellen erkannt werden
 _UEBERSPRUNGEN = re.compile(r"übersprungen|nicht gesetzt|deaktiviert", re.IGNORECASE)
@@ -209,11 +211,17 @@ class LaufReport:
             try:
                 self._db.table("scraper_laeufe").update(update).eq("id", self.lauf_id).execute()
             except Exception as e:
-                # Eine Kennzahl ohne Spalte (z. B. vergessene Migration) darf den Bericht nicht ganz kippen:
-                # Status und Ende ohne Kennzahlen speichern, die Ergebnisse je Quelle trotzdem schreiben.
-                logger.warning("Kennzahlen des Lauf-Reports nicht speicherbar (%s) – speichere nur den Status", e)
-                basis = {k: update[k] for k in ("beendet_am", "status", "fehlermeldung")}
-                self._db.table("scraper_laeufe").update(basis).eq("id", self.lauf_id).execute()
+                # Eine Kennzahl ohne Spalte (z. B. vergessene Migration) darf den Bericht nicht ganz kippen: erst ohne
+                # die jüngsten Kennzahlen (Quellen-Ausbau R2) versuchen, dann nur Status und Ende speichern; die
+                # Ergebnisse je Quelle werden trotzdem geschrieben.
+                logger.warning("Kennzahlen des Lauf-Reports nicht speicherbar (%s) – versuche es ohne neue Kennzahlen", e)
+                ohne_neue = {k: v for k, v in update.items() if k not in NEUE_KENNZAHLEN}
+                try:
+                    self._db.table("scraper_laeufe").update(ohne_neue).eq("id", self.lauf_id).execute()
+                except Exception as e2:
+                    logger.warning("Auch ohne neue Kennzahlen nicht speicherbar (%s) – speichere nur den Status", e2)
+                    basis = {k: update[k] for k in ("beendet_am", "status", "fehlermeldung")}
+                    self._db.table("scraper_laeufe").update(basis).eq("id", self.lauf_id).execute()
             if self.ergebnisse:
                 zeilen = [{**e, "lauf_id": self.lauf_id} for e in self.ergebnisse]
                 self._db.table("scraper_ergebnisse").insert(zeilen).execute()
