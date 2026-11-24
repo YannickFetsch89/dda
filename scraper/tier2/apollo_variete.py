@@ -30,6 +30,7 @@ from bs4 import BeautifulSoup
 from config import vorschau_ende
 from scraper.utils.datum import MONAT_MAP
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,9 @@ def _termine_aus_html(html: str, seiten_url: str, heute: date, enddatum: date,
     if bild_el and "apollo-variete.com" in bild_el["src"]:
         bild_url = bild_el["src"]
 
+    # Ticketshop der Show (tickets.apollo-variete.com, Plan 5.5.2, P1) – nur verlinkt, nie abgerufen (robots „Disallow: /“)
+    ticket_url = ticket_link_aus(soup, seiten_url)
+
     def _event(datum: date, datum_bis: Optional[date] = None) -> dict:
         event = {
             "titel": titel,
@@ -165,6 +169,7 @@ def _termine_aus_html(html: str, seiten_url: str, heute: date, enddatum: date,
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": seiten_url,
+            "ticket_url": ticket_url,
             "bild_url": bild_url,
             "bild_generiert": False,
             "status": "neu",

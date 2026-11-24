@@ -25,6 +25,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_aus
 from scraper.utils.datum import datum_entfernen  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -453,6 +454,15 @@ def _uhrzeit_aus(text: str) -> Optional[str]:
     return f"{int(treffer.group(1)):02d}:{treffer.group(2) or '00'}"
 
 
+def _ticket_url(karte) -> Optional[str]:
+    """Ticket-Link des Termins im Kalender (Button „Tickets“ → shop.kunstsammlung.de/de/offers/…), sonst None."""
+    try:
+        return ticket_link_aus(karte, BASE_URL)
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
+        logger.debug("Kunstsammlung: Ticket-Link nicht lesbar: %s", fehler)
+        return None
+
+
 def _kalender_events(html: str, heute: date, enddatum: date) -> list[dict]:
     """Termine aus dem Veranstaltungskalender (/de/calendar/) zwischen heute und enddatum."""
     soup = BeautifulSoup(html, "html.parser")
@@ -489,6 +499,7 @@ def _kalender_events(html: str, heute: date, enddatum: date) -> list[dict]:
             "preis": "kostenlos" if karte.get("data-free-entry") == "1" else None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": urljoin(BASE_URL, link["href"]),
+            "ticket_url": _ticket_url(karte),
             "bild_url": None,
             "bild_generiert": False,
             "status": "neu",

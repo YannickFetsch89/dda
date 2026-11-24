@@ -23,6 +23,7 @@ from bs4 import BeautifulSoup
 from config import vorschau_ende
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,18 @@ def _titel_text(titel_el) -> str:
         else:
             span.replace_with(f" – {zusatz}")
     return " ".join(titel_el.get_text(" ", strip=True).split()).strip(" –")
+
+
+def _ticket_url(el) -> Optional[str]:
+    """
+    Ticket-Link des Kalendereintrags: Button „Tickets“ in div.calendar__main__action (→ tanzhaus-nrw.reservix.de,
+    *.ticket.io). „Anfrage“-Links und Einträge ohne Button → None.
+    """
+    try:
+        return ticket_link_aus(el.find(class_="calendar__main__action"), BASE_URL)
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
+        logger.debug("Tanzhaus NRW: Ticket-Link nicht lesbar: %s", fehler)
+        return None
 
 
 def _event_aus_element(el, heute: date) -> Optional[dict]:
@@ -152,6 +165,7 @@ def _event_aus_element(el, heute: date) -> Optional[dict]:
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,
+            "ticket_url": _ticket_url(el),
             "bild_url": bild_url,
             "instagram_caption": None,
             "datum_bis": None,

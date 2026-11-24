@@ -23,6 +23,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link, ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,8 @@ def _termine_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": ziel if _eigene_url(ziel) else PROGRAMM_URL,
+            # „Mehr“ führt oft direkt in den Ticketshop des Veranstalters (ticket.io, Eventim Light, vivenu – P1)
+            "ticket_url": ticket_link(ziel) or ticket_link_aus(item, PROGRAMM_URL),
             "bild_url": bild if _eigene_url(bild) else None,
             "bild_generiert": False,
             "status": "neu",

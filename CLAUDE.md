@@ -44,6 +44,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
   "preis": "string oder null (z.B. 'kostenlos', 'ab 12€')",
   "quelle_name": "string (z.B. 'Rausgegangen')",
   "quelle_url": "string (Original-URL des Events)",
+  "ticket_url": "string oder null – Ticket-Link, den das Haus selbst nennt (Anbieter oder eigener Shop, scraper/utils/ticket_link.py); quelle_url bleibt die Seite des Termins",
   "bild_url": "string oder null",
   "bild_generiert": "boolean (true = DALL-E generiert, false = Original vom Veranstalter)",
   "post_typ": "enum: feed | reel",

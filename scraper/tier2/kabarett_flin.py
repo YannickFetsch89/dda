@@ -29,6 +29,7 @@ from bs4 import BeautifulSoup
 from config import vorschau_ende
 from scraper.utils.datum import uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,10 @@ def _event_aus_box(box, heute: date, enddatum: date) -> Optional[dict]:
 
     uhrzeit = uhrzeit_parsen(_text(box.find(class_="klive-zeit")))
 
+    # Eventseite bei Neanderticket („www.neanderticket.de/<Nr>“, dort der Kauf; Plan 5.5.2, P1). Der Button
+    # „Tickets online buchen“ selbst ist nur JavaScript (launchTicket).
+    ticket = box.find("a", href=re.compile(r"neanderticket\.de/\??\d+$"))
+
     return {
         "titel": titel,
         "datum": tag.isoformat(),
@@ -110,6 +115,7 @@ def _event_aus_box(box, heute: date, enddatum: date) -> Optional[dict]:
         "preis": _preis(box),
         "quelle_name": QUELLE_NAME,
         "quelle_url": PROGRAMM_URL,
+        "ticket_url": ticket_link(ticket["href"]) if ticket else None,
         "bild_url": None,
         "bild_generiert": False,
         "status": "neu",

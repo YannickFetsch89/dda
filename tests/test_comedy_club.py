@@ -9,7 +9,7 @@ from scraper.tier2 import comedy_club as modul
 
 FIXTURE = Path(__file__).parent / "fixtures" / "comedy_club_shows.html"
 PFLICHT = ("titel", "datum", "ort", "adresse", "kategorie", "quelle_name", "quelle_url", "status")
-FELDER = {"titel", "datum", "uhrzeit", "ort", "adresse", "kategorie", "beschreibung", "preis", "quelle_name",
+FELDER = {"titel", "datum", "uhrzeit", "ort", "adresse", "kategorie", "beschreibung", "preis", "quelle_name", "ticket_url",
           "quelle_url", "bild_url", "bild_generiert", "status"}
 
 

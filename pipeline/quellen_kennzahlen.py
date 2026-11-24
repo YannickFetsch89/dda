@@ -70,3 +70,18 @@ def bestand_zaehlen(db, heute: Optional[str] = None) -> tuple[Optional[int], Opt
     except Exception as fehler:
         logger.error("Kennzahl „nur Rausgegangen“ nicht berechenbar: %s", fehler)
         return None, None
+
+
+def ticket_links_zaehlen(events: list[dict]) -> tuple[int, Counter]:
+    """
+    Ticket-Links dieses Laufs (Plan Quellen-Ausbau 5.5.2, Schritt P1): (Events mit ticket_url, Anzahl je Anbieter).
+    Anbieter nach Domain (scraper/utils/ticket_link.py); unbekannte Domains zählen als „andere“.
+    """
+    from scraper.utils.ticket_link import anbieter
+
+    je_anbieter: Counter = Counter()
+    for event in events:
+        url = event.get("ticket_url")
+        if url:
+            je_anbieter[anbieter(url) or "andere"] += 1
+    return sum(je_anbieter.values()), je_anbieter

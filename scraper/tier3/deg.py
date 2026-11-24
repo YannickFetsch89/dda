@@ -254,7 +254,9 @@ def _game_center_auswerten(html: str) -> dict:
 
     ticket = soup.select_one(".gc-actions a.gc-button[href]")
     if ticket:
-        ergebnis["ticket_url"] = ticket["href"]
+        href = ticket["href"].strip()
+        # Ticket-Button des Game Centers (Plan Quellen-Ausbau 5.5.2, P1) – nur vollständige Adressen übernehmen
+        ergebnis["ticket_url"] = urljoin(LISTE_URL, href) if not href.startswith(("mailto:", "javascript:", "#")) else None
 
     return ergebnis
 
@@ -324,6 +326,7 @@ async def scrape() -> list[dict]:
                     "preis": PREIS_FALLBACK,
                     "quelle_name": QUELLE_NAME,
                     "quelle_url": spiel["url"],
+                    "ticket_url": details.get("ticket_url"),
                     "bild_url": None,
                     "bild_generiert": False,
                     "post_typ": "feed",

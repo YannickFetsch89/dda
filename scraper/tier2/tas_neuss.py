@@ -29,6 +29,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +143,7 @@ def _termine_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": urljoin(BASIS_URL, link["href"]) if link else SPIELPLAN_URL,
+            "ticket_url": ticket_link_aus(karte, BASIS_URL),  # Kartenkauf karten.tas-neuss.de (Plan 5.5.2, P1)
             "bild_url": _bild(karte),
             "bild_generiert": False,
             "status": "neu",

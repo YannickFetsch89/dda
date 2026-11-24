@@ -35,6 +35,7 @@ from config import vorschau_ende
 from scraper.utils.datum import MONAT_KURZ_MAP
 from scraper.utils.http_client import seite_abrufen
 from scraper.utils.ra_venue import ra_venue_scrapen
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,9 @@ def _events_aus_stagedates(heute: date, enddatum: date) -> list[dict]:
             code = eintrag.get("shortCode")
             if slug and code:
                 event["quelle_url"] = STAGEDATES_EVENT_URL.format(slug=slug, code=code)
+                # Der Club verkauft seine Tickets über den eingebetteten stagedates-Shop – die Eventseite dort
+                # ist zugleich die Kaufseite des Termins.
+                event["ticket_url"] = ticket_link(event["quelle_url"])
             event["bild_url"] = eintrag.get("coverUrl") or eintrag.get("thumbnailUrl") or None
             event["preis"] = _preis_formatieren(
                 (eintrag.get("cheapestPriceMny") or {}).get("amount")

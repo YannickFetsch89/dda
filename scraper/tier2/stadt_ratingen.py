@@ -35,6 +35,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,12 @@ def _reihen_aus_liste(html: str) -> tuple[list[dict], Optional[str]]:
 def _details_aus_html(html: str) -> dict:
     """Adresse und Preis aus einer Detailseite: {"ort", "adresse", "preis"} (Werte ggf. None)."""
     soup = BeautifulSoup(html, "html.parser")
-    ergebnis = {"ort": None, "adresse": None, "preis": None}
+    ergebnis = {"ort": None, "adresse": None, "preis": None, "ticket_url": None}
+    # Ticket-Link der Detailseite (Plan 5.5.2, P1): die Stadt kennzeichnet ihn selbst mit a.event-ticketlink
+    ticket = soup.select_one("a.event-ticketlink[href]")
+    if ticket:
+        href = ticket["href"].strip()
+        ergebnis["ticket_url"] = ticket_link(href) or (href if href.startswith(("https://", "http://")) else None)
     block = soup.select_one(".event-location")
     if block:
         ergebnis["ort"] = _text(block.select_one("h3")) or None
@@ -228,7 +234,9 @@ def _termine_aus_reihen(reihen: list[dict], heute: date, enddatum: date,
             continue
         ort = reihe["ort"]
         detail = details.get(ort) or {}
-        preis = detail.get("preis") if detail.get("url") == reihe["url"] else None
+        passend = detail.get("url") == reihe["url"]
+        preis = detail.get("preis") if passend else None
+        ticket_url = detail.get("ticket_url") if passend else None
         kategorie = _kategorie(reihe)
         for datum, uhrzeit in termine:
             schluessel = (reihe["titel"].lower(), datum, uhrzeit)
@@ -246,6 +254,7 @@ def _termine_aus_reihen(reihen: list[dict], heute: date, enddatum: date,
                 "preis": preis,
                 "quelle_name": QUELLE_NAME,
                 "quelle_url": reihe["url"],
+                "ticket_url": ticket_url,
                 "bild_url": reihe.get("bild_url"),
                 "bild_generiert": False,
                 "status": "neu",

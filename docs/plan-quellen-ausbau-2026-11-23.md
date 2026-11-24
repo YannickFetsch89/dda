@@ -874,6 +874,48 @@ Cursor: V1 deploybar, ein mittlerer und sechs geringe Befunde. Alle sieben einge
 
 Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
 
+### P1 – Ticket-Link des Hauses (24.11.2026, lokal gebaut)
+
+- **SQL** `database/ticket_url_2026-11-24.sql`: `events.ticket_url text` + `NOTIFY pgrst`. Vor dem Deploy ausführen und
+  die Spalte danach per anon-Abfrage prüfen (Lehre aus R2).
+- **Baustein** `scraper/utils/ticket_link.py`: `ticket_link(url, basis)`, `ticket_link_aus(element, basis)`,
+  `anbieter(url)`. Erkennt Anbieter an der Domain (Eventim inkl. Eventim Light, Reservix, ADticket, Ticketmaster,
+  ticket.io, Neanderticket, YesTicket, Stagedates, Eventbrite, pretix, vivenu, Fienta, Rodrigue …) und eigene Shops
+  am Host (`tickets.`, `karten.`, `shop.`). Rausgegangen, PayPal, mailto/javascript zählen nie.
+- **Speichern** (`database/client.py`): Spaltenprobe wie bei `quellen` (`_TICKET_SPALTE`, ohne Spalte wird ohne
+  Ticket-Link gespeichert). `ticket_url` wird ergänzt, wenn er fehlt; ein vorhandener bleibt, wenn die neue Quelle
+  keinen hat; ersetzt wird er nur beim Quellenwechsel zu einem besseren Rang oder von der Quelle, die schon
+  Hauptquelle ist (das Haus hat den Link geändert). `redaktion_felder` schützt ihn wie jedes andere Feld.
+- **Deduplizierung**: `ticket_url` ist anreicherbar (die bessere Quelle zuerst, sonst ergänzt).
+- **Kennzahl**: Log-Zeile „Ticket-Links: n von m Events (x %) – Eventim …, eigener Shop …“ je Lauf
+  (`pipeline/quellen_kennzahlen.ticket_links_zaehlen`). Keine neue Spalte in `scraper_laeufe`.
+- **Admin**: `ticket_url` in `BEARBEITBAR` (nur vollständige http(s)-Adresse), im Event-Editor und in der Admin-API.
+  **Website**: neue erste `SPALTEN_VARIANTEN`-Zeile mit `ticket_url` (Fallback ohne, `spaltenFehlt` kennt die Spalte),
+  Feld `DddEvent.ticket_url`. Angezeigt wird er erst mit W2.
+- **Welle A** (Live-Probe 24.11.): Theater an der Kö 161/167 (Rodrigue-Shop), TaS Neuss 63/84 (karten.tas-neuss.de),
+  Nachtresidenz 7/11 (ticket.io, Eventim Light, vivenu), Tor 3 1/3 (Eventim Light; PayPal-/Anmelde-Links zählen
+  nicht), dazu laut Fixtures Savoy (Eventim-Button je Termin), Bilker Bunker (Eventim), KaBARett FLiN (Eventseite
+  bei Neanderticket `neanderticket.de/<Nr>`, der Kauf-Button selbst ist JavaScript), Apollo (tickets.apollo-variete.com –
+  nur verlinkt, robots sperrt den Shop für Abrufe), Stadt Ratingen (`a.event-ticketlink` der Detailseite, nur für die
+  Reihe dieser Detailseite), Comedy Club (nur `external_url`, z. B. Fienta – sonst verkauft der Club auf der
+  Show-Seite, die schon `quelle_url` ist). DEG schreibt den Game-Center-Button jetzt ins Event.
+- **Bestehende Häuser** (Hilfsagent, je Website höchstens 1–2 Kontrollabrufe, kein zusätzlicher Abruf im Scraper):
+  mit Ticket-Link Kom(m)ödchen (tickets.kommoedchen.de), Kunstsammlung (nur Kalender, shop.kunstsammlung.de), Oper
+  (webshop.operamrhein.de; ausverkauft/„Info“ → keiner), Schauspielhaus (ticket.dhaus.de, live 85/137), Tanzhaus
+  (Reservix, ticket.io; „Anfrage“ → keiner), d.live und Mitsubishi (API-Button „tickets-conversion“, VIP/Parken
+  zählen nicht), Tonhalle (Webshop, gleich `quelle_url`), Pitcher (`external_ticket_url`), Rudas (Stagedates-Teil),
+  NRW-Forum (Kunstpalast-Shop-Pfad `/shop/`), Fortuna (tickets.f95.de, über das Datum der Spielkarte). Ohne Link in
+  den geladenen Daten: Capitol (nur Detailseite), FFT (Links nur zu Rausgegangen), Filmmuseum, Jazz-Schmiede,
+  Stahlwerk, STARTPLATZ, Stadtstrand, Kasematten, EKŌ-Haus, Kunsthalle/Kunstpalast (nur allgemeiner Shop),
+  Stadtbüchereien, zakk (nur Detailseite), R25/Salon (nur über RA), Classic Remise, Messe (Infoseite, kein Shop).
+  Anbieterliste um Live Nation, KölnTicket, ATG Tickets u. a. ergänzt.
+- **Nicht übernommen:** Theater an der Luegallee – der einzige Link je Termin ist „merken“
+  (`theaterkarten/hinzufuegen/?mode=notepad_add`), ein Warenkorb-Eintrag, kein Kauflink. Übrige Welle-A-Häuser
+  (Museen, Schloss Benrath, KIT, Ampere, Weltkunstzimmer, Insel Hombroich, Gerhart Hauptmann Haus, Theatermuseum,
+  Goethe-Museum) nennen keinen Ticket-Link in den geladenen Seiten.
+- **Für P2 merken:** Manche Häuser hängen eigene Partner-Kennungen an (Savoy: `?affiliate=SAV&utm_…`). `tickets.ts`
+  muss beim Bau des Partner-Links fremde Kennungen ersetzen, nicht doppelt anhängen.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

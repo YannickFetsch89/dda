@@ -24,6 +24,7 @@ interface Event {
   ort_id: string | null;
   quelle_name: string | null;
   quelle_url: string | null;
+  ticket_url: string | null;
   abgelehnt: boolean;
   abgesagt: boolean;
   nicht_empfehlen: boolean;
@@ -57,6 +58,7 @@ const TEXTFELDER: { feld: keyof Event; text: string; lang?: boolean; typ?: strin
   { feld: "unterkategorie", text: "Unterkategorie" },
   { feld: "preis", text: "Preis" },
   { feld: "bild_url", text: "Bild-Adresse" },
+  { feld: "ticket_url", text: "Ticket-Link (des Hauses)" },
   { feld: "ort_id", text: "Ortszuordnung (ID)" },
   { feld: "beschreibung", text: "Beschreibung", lang: true },
 ];

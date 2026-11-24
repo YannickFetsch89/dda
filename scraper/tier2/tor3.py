@@ -24,6 +24,7 @@ from urllib.parse import urljoin
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link, ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,8 @@ def _termine_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": urljoin(BASIS_URL, pfad) if pfad.startswith("/") else PROGRAMM_URL,
+            # Feld „ticketlink“ der Sammlung: Eventim Light, Stagedates … (PayPal-/Anmeldeseiten zählen nicht, P1)
+            "ticket_url": ticket_link(str(satz.get("ticketlink") or "")),
             "bild_url": _bild(satz.get("image_fld")),
             "bild_generiert": False,
             "status": "neu",

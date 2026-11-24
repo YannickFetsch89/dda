@@ -31,6 +31,14 @@ describe("Eingaben prüfen (Whitelist)", () => {
     expect(ok).toEqual({ ok: true, felder: { uhrzeit: "19:30", kategorie: "family", adresse: null, bild_url: "/ort-bilder/x.webp", abgesagt: true } });
   });
 
+  it("Ticket-Link des Hauses (Plan Quellen-Ausbau 5.5.2, P1)", () => {
+    expect(eingabenPruefen({ ticket_url: "https://www.eventim.de/event/x-1/" })).toEqual({ ok: true, felder: { ticket_url: "https://www.eventim.de/event/x-1/" } });
+    expect(eingabenPruefen({ ticket_url: "" })).toEqual({ ok: true, felder: { ticket_url: null } });
+    expect(eingabenPruefen({ ticket_url: "/tickets" }).ok).toBe(false);
+    expect(eingabenPruefen({ ticket_url: "javascript:alert(1)" }).ok).toBe(false);
+    expect(eingabenPruefen({ ticket_url: "https://x.de/a b" }).ok).toBe(false);
+  });
+
   it("Kategorie Website → DB", () => {
     expect(kategorieInDb("familie")).toBe("family");
     expect(kategorieInDb("musik")).toBe("musik");

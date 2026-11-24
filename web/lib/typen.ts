@@ -27,6 +27,8 @@ export interface DddEvent {
   preis: string | null;
   quelle_name: string | null;
   quelle_url: string | null;
+  /** Ticket-Link, den das Haus selbst nennt (Plan Quellen-Ausbau 5.5.2); fehlt vor der Migration (dann undefined/null) */
+  ticket_url?: string | null;
   bild_url: string | null;
   stadtteil: string | null;
   /** Feinfilter innerhalb der Kategorie (Slug aus lib/unterkategorien.json, „keine“ = geprüft, nichts passt) */

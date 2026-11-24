@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende, vorschau_tage
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link, ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,21 @@ def _preis_aus_element(performance_el) -> Optional[str]:
             return "kostenlos oder auf Anfrage"
 
     return None
+
+
+def _ticket_url(performance_el) -> Optional[str]:
+    """
+    Ticket-Link der Vorstellung: Button „Karten“/„Restkarten“ (a.ticketbutton__tickets →
+    webshop.operamrhein.de/eventim.webshop/…). Ausverkauft oder nur „Info“ → None.
+    """
+    try:
+        button = performance_el.select_one("a.ticketbutton__tickets[href]")
+        if button:
+            return ticket_link(button["href"], BASE_URL)
+        return ticket_link_aus(performance_el.select_one(".ticketbutton"), BASE_URL)
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf die Vorstellung nie verhindern
+        logger.debug("Oper: Ticket-Link nicht lesbar: %s", fehler)
+        return None
 
 
 def _event_aus_performance(performance_el, heute: date) -> Optional[dict]:
@@ -370,6 +386,7 @@ def _event_aus_performance(performance_el, heute: date) -> Optional[dict]:
             "preis": preis,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,
+            "ticket_url": _ticket_url(performance_el),
             "bild_url": bild_url,
             "instagram_caption": None,
             "datum_bis": None,

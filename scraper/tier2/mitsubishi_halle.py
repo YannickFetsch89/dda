@@ -126,6 +126,27 @@ def _datum_und_uhrzeit_aus_iso(iso_string: Optional[str]) -> tuple[Optional[str]
         return None, None
 
 
+def _ticket_url(api_event: dict) -> Optional[str]:
+    """
+    Ticket-Link des Termins aus der Kalender-API: der Button „Tickets“ (links[] mit class „tickets-conversion“,
+    z. B. eventim.de, ticketmaster.de, tickets.psd-bank-dome.de). VIP-/Logen-, Parken- und KITCHEN-Links zählen
+    nicht. Das Haus nennt den Link selbst – daher auch Anbieter, die scraper/utils/ticket_link.py (noch) nicht
+    kennt (z. B. livenation.de). Kein Button → None.
+    """
+    try:
+        for link in api_event.get("links") or []:
+            if not isinstance(link, dict):
+                continue
+            if "tickets-conversion" not in str(link.get("class") or "").split():
+                continue
+            url = str(link.get("url") or "").strip()
+            if url.startswith(("http://", "https://")) and "rausgegangen." not in url:
+                return url
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
+        logger.debug("Ticket-Link nicht lesbar: %s", fehler)
+    return None
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Veranstaltungen der Mitsubishi Electric HALLE.
@@ -248,6 +269,7 @@ def scrape() -> list[dict]:
                 "preis": preis,
                 "quelle_name": QUELLE_NAME,
                 "quelle_url": quelle_url,
+                "ticket_url": _ticket_url(eintrag),
                 "bild_url": bild_url,
                 "instagram_caption": None,
                 "datum_bis": None,

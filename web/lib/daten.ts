@@ -15,6 +15,8 @@ const SPALTEN_BASIS =
   "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
 // Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
 const SPALTEN_VARIANTEN = [
+  // Ticket-Link des Hauses (database/ticket_url_2026-11-24.sql, Plan Quellen-Ausbau 5.5.2, P1; Button erst mit W2)
+  `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, nicht_empfehlen, ticket_url, reihe:reihen(slug, titel)`,
   // Redaktions-Schalter „nicht empfehlen“ (database/nicht_empfehlen_2026-11-23.sql)
   `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, nicht_empfehlen, reihe:reihen(slug, titel)`,
   // Zeitpunkte der Highlight-/Top-Flaggen (database/flaggen_zeitpunkt_2026-11-13.sql); ohne sie gelten die Flaggen nicht
@@ -68,6 +70,7 @@ export function normalisieren(z: Zeile): DddEvent {
     preis: preisText(z.preis),
     quelle_name: text(z.quelle_name),
     quelle_url: text(z.quelle_url),
+    ticket_url: text(z.ticket_url),
     bild_url: text(z.bild_url),
     stadtteil: text(z.stadtteil),
     slug: text(z.slug),
@@ -92,7 +95,7 @@ function reiheAus(wert: unknown): DddEvent["reihe"] {
 
 /** Supabase meldet eine unbekannte Spalte/Beziehung (Migration noch nicht ausgeführt). */
 function spaltenFehlt(meldung: string | undefined): boolean {
-  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen/.test(meldung);
+  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen|ticket_url/.test(meldung);
 }
 
 /** Events laden mit der neuesten Spaltenvariante, die die DB schon kennt. */

@@ -21,6 +21,7 @@ from urllib.parse import quote
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,18 @@ def _preis(show: dict) -> Optional[str]:
     return f"ab {betrag} €"
 
 
+def _ticket_url(show: dict) -> Optional[str]:
+    """
+    Externer Ticketverkauf einer Show (ticket_details[].external_url, z. B. Fienta; Plan 5.5.2, P1). Ohne ihn verkauft
+    der Club selbst auf der Show-Seite – die ist schon quelle_url, ein zweiter Link wäre doppelt.
+    """
+    for t in show.get("ticket_details") or []:
+        url = str((t or {}).get("external_url") or "").strip()
+        if url and (t or {}).get("active", True):
+            return ticket_link(url) or (url if url.startswith("https://") else None)
+    return None
+
+
 def _bild(show: dict, supabase_basis: str) -> Optional[str]:
     """Bild über den Bild-Dienst der Website (gleiche Adresse wie auf der Seite, Breite 1080)."""
     pfad = str(show.get("imageUrl") or "").strip().lstrip("/")
@@ -142,6 +155,7 @@ def _termine_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
             "preis": _preis(show),
             "quelle_name": QUELLE_NAME,
             "quelle_url": f"{PROGRAMM_URL}/{show_id}" if show_id else PROGRAMM_URL,
+            "ticket_url": _ticket_url(show),
             "bild_url": _bild(show, supabase_basis),
             "bild_generiert": False,
             "status": "neu",

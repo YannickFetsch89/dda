@@ -50,5 +50,38 @@ class VorabTest(unittest.TestCase):
         abruf.assert_called_once()
 
 
+def _spielplan(tag: str) -> str:
+    """Auszug aus dem echten Spielplan (24.11.2026): ein Termin mit, einer ohne Ticket-Button."""
+    return f"""<html><body>
+<div class="day-event-wrapper" data-date="{tag}"><div class="day-event-item">
+  <div class="event--date-time"><span class="date-time">20:00 Uhr</span></div>
+  <div class="event--description-wrapper"><div class="description-details"><div class="description-titles">
+    <a href="https://www.kommoedchen.de/spielplan/noe_eine_entgleisung/">
+      <div class="subtitle">Kom(m)ödchen-Ensemble</div><div class="title">Noë. Eine Entgleisung</div></a>
+  </div></div></div>
+  <div class="event--ticket"><a class="btn default external-events" target="_blank"
+    href="https://tickets.kommoedchen.de/selection/event/seat?perfId=10229867157761&amp;productId=10229401280598&amp;lang=de">Tickets</a></div>
+</div></div>
+<div class="day-event-wrapper" data-date="{tag}"><div class="day-event-item">
+  <div class="event--date-time"><span class="date-time">18:00 Uhr</span></div>
+  <div class="description-titles"><a href="/spielplan/ausverkauft/"><div class="title">Ausverkauft</div></a></div>
+</div></div>
+</body></html>"""
+
+
+class TicketUrlTest(unittest.TestCase):
+    def test_ticket_button_wird_ticket_url(self):
+        from datetime import date, timedelta
+        tag = (date.today() + timedelta(days=3)).isoformat()
+        with mock.patch.object(kommoedchen, "_vorab_html", return_value=_spielplan(tag)):
+            events = kommoedchen.scrape()
+        self.assertEqual(len(events), 2)
+        mit, ohne = events
+        self.assertEqual(mit["ticket_url"], "https://tickets.kommoedchen.de/selection/event/seat"
+                                            "?perfId=10229867157761&productId=10229401280598&lang=de")
+        self.assertEqual(mit["quelle_url"], "https://www.kommoedchen.de/spielplan/noe_eine_entgleisung/")
+        self.assertIsNone(ohne["ticket_url"])
+
+
 if __name__ == "__main__":
     unittest.main()

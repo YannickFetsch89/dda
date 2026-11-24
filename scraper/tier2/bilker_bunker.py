@@ -23,6 +23,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ def _termine_aus_html(html: str, heute: date, enddatum: date, seiten_url: str = 
             "preis": _preis(meta),
             "quelle_name": QUELLE_NAME,
             "quelle_url": seiten_url,   # Einträge haben keine eigene Detailseite (Akkordeon)
+            "ticket_url": ticket_link_aus(item, seiten_url),  # „Zum Ticket-Shop“ (meist Eventim, Plan 5.5.2, P1)
             "bild_url": None,
             "bild_generiert": False,
             "status": "neu",

@@ -18,6 +18,7 @@ export const BEARBEITBAR = [
   "preis",
   "beschreibung",
   "bild_url",
+  "ticket_url", // Ticket-Link des Hauses (Plan Quellen-Ausbau 5.5.2, P1)
   "ort_id",
   "abgesagt",
   "abgelehnt",
@@ -92,6 +93,12 @@ export function eingabenPruefen(eingabe: Record<string, unknown>): { ok: true; f
       case "bild_url": {
         const t = text(wert, 1000, false);
         if (!t.ok || (t.wert !== null && !/^(https:\/\/|\/)/.test(t.wert))) return { ok: false, fehler: "bild_url: https-Adresse oder eigener Pfad." };
+        felder[feld] = t.wert;
+        break;
+      }
+      case "ticket_url": {
+        const t = text(wert, 1000, false);
+        if (!t.ok || (t.wert !== null && !/^https?:\/\/[^\s]+$/.test(t.wert))) return { ok: false, fehler: "ticket_url: vollständige Adresse (https://…)." };
         felder[feld] = t.wert;
         break;
       }

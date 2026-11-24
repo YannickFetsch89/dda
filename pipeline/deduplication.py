@@ -32,6 +32,7 @@ _ANREICHERBARE_FELDER: list[str] = [
     "bild_url",
     "instagram_location_id",
     "kategorie",
+    "ticket_url",  # Ticket-Link des Hauses (Plan Quellen-Ausbau 5.5.2, P1): die bessere Quelle zuerst, sonst ergänzen
 ]
 
 # Erkennung von Rausgegangen-Bildern

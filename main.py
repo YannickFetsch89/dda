@@ -286,7 +286,7 @@ async def _schritte_ausfuehren(report: LaufReport):
     # Abdeckung der Quellen (Plan docs/plan-quellen-ausbau-2026-11-23.md, 4.3/4.5): Lücken je Ort für Warnregel W7,
     # künftige Events und wie viele davon nur Rausgegangen kennt – Spalten aus database/quellen_spalte_2026-11-24.sql
     try:
-        from pipeline.quellen_kennzahlen import bestand_zaehlen, luecken_berechnen
+        from pipeline.quellen_kennzahlen import bestand_zaehlen, luecken_berechnen, ticket_links_zaehlen
         luecken = luecken_berechnen(alle_events)
         kuenftig, nur_rg = bestand_zaehlen(get_supabase_client())
         report.kennzahl(luecken=luecken)
@@ -294,6 +294,11 @@ async def _schritte_ausfuehren(report: LaufReport):
             report.kennzahl(kuenftige_events=kuenftig, nur_rausgegangen=nur_rg)
         logger.info("Quellen: %s künftige Events, davon nur Rausgegangen: %s; Lücken an %d Orten",
                     kuenftig, nur_rg, len(luecken))
+        # Ticket-Links des Hauses (Schritt P1): Anteil je Anbieter – Grundlage für die Partner-Links (P2)
+        mit_link, je_anbieter = ticket_links_zaehlen(alle_events)
+        logger.info("Ticket-Links: %d von %d Events (%.0f %%) – %s", mit_link, len(alle_events),
+                    100 * mit_link / max(1, len(alle_events)),
+                    ", ".join(f"{name} {n}" for name, n in je_anbieter.most_common()) or "keine")
     except Exception as e:
         logger.error("Quellen-Kennzahlen fehlgeschlagen: %s", e)
 

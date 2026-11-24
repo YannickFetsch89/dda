@@ -131,6 +131,22 @@ def _preis_formatieren(preis_ab) -> Optional[str]:
     return f"ab {wert:.2f}€".replace(".", ",")
 
 
+def _ticket_url(eintrag: dict) -> Optional[str]:
+    """
+    Ticket-Link aus der EventFlow-API: external_ticket_url (z. B. pitcher.reservix.de, westticket.de), wenn der
+    externe Verkauf eingeschaltet ist. Fehlt er → None.
+    """
+    try:
+        if eintrag.get("external_ticket_sales_enabled") is False:
+            return None
+        url = str(eintrag.get("external_ticket_url") or "").strip()
+        if url.startswith(("http://", "https://")) and "rausgegangen." not in url:
+            return url
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf das Event nie verhindern
+        logger.debug("Pitcher: Ticket-Link nicht lesbar: %s", fehler)
+    return None
+
+
 def _event_umwandeln(eintrag: dict, heute: date, enddatum: date) -> Optional[dict]:
     """
     Wandelt einen EventFlow-API-Eintrag in ein DDD-Event-Dict um.
@@ -182,6 +198,7 @@ def _event_umwandeln(eintrag: dict, heute: date, enddatum: date) -> Optional[dic
         "preis": _preis_formatieren(eintrag.get("price_from")),
         "quelle_name": QUELLE_NAME,
         "quelle_url": eintrag.get("detail_url") or LISTE_URL,
+        "ticket_url": _ticket_url(eintrag),
         "bild_url": eintrag.get("featured_image_url") or None,
         "instagram_caption": None,
         "datum_bis": None,

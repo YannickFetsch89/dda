@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende, vorschau_tage
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link
 from scraper.utils.datum import datum_entfernen  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -285,6 +286,33 @@ def _preis_aus_text(text: str) -> Optional[str]:
 
 # --- Strategie 1: Monatlicher Spielplan -----------------------------------
 
+def _ticket_url(container, link_el) -> Optional[str]:
+    """
+    Ticket-Link der Vorstellung (a.ticketbutton → ticket.dhaus.de/eventim.webshop/…), sonst None.
+
+    Gesucht wird in der Vorstellung (div.performance), zu der der Titel-Link gehört – ein Container kann ein
+    ganzer Tag mit mehreren Vorstellungen sein. Ohne erkennbare Vorstellung nur, wenn der Container genau einen
+    Ticket-Link enthält.
+    """
+    try:
+        bereich = None
+        if link_el is not None:
+            bereich = link_el.find_parent(lambda t: "performance" in (t.get("class") or []))
+        if bereich is None and "performance" in (container.get("class") or []):
+            bereich = container
+        if bereich is not None:
+            for a in bereich.select("a.ticketbutton[href]") or bereich.find_all("a", href=True):
+                treffer = ticket_link(a["href"], BASE_URL)
+                if treffer:
+                    return treffer
+            return None
+        links = {ticket_link(a["href"], BASE_URL) for a in container.find_all("a", href=True)} - {None}
+        return links.pop() if len(links) == 1 else None
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf die Vorstellung nie verhindern
+        logger.debug("Schauspielhaus: Ticket-Link nicht lesbar: %s", fehler)
+        return None
+
+
 def _event_aus_container(container, heute: date, kontext_jahr: int, kontext_monat: int) -> Optional[dict]:
     """
     Extrahiert ein Event-Dict aus einem Event-Container-Element des Spielplans.
@@ -508,6 +536,7 @@ def _event_aus_container(container, heute: date, kontext_jahr: int, kontext_mona
             "preis": preis,
             "quelle_name": QUELLE_NAME,
             "quelle_url": quelle_url,
+            "ticket_url": _ticket_url(container, link_el),
             "bild_url": bild_url,
             "instagram_caption": None,
             "datum_bis": None,

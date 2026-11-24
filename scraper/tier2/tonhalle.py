@@ -40,6 +40,7 @@ from bs4 import BeautifulSoup
 from config import vorschau_ende
 from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,22 @@ def _ort_aus_saalname(saalname: str) -> str:
 
 # --- Primärstrategie: Webshop (webshop.tonhalle.de) -----------------------
 
+def _ticket_url(section_el, quelle_url: str) -> Optional[str]:
+    """
+    Ticket-Link des Webshop-Produkts: Button „Auswählen“ bzw. Titel-Link (webshop.tonhalle.de/selection/event/
+    date?productId=…) – dort kauft man die Karten für diesen Termin. Hier ist er zugleich die quelle_url.
+    """
+    try:
+        for a in section_el.select("a[href*='/selection/']") or []:
+            treffer = ticket_link(a.get("href"), WEBSHOP_BASE)
+            if treffer:
+                return treffer
+        return ticket_link(quelle_url, WEBSHOP_BASE)
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
+        logger.debug("Tonhalle: Ticket-Link nicht lesbar: %s", fehler)
+        return None
+
+
 def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
     """
     Extrahiert ein oder mehrere Event-Dicts aus einem Webshop-Produktelement.
@@ -142,6 +159,8 @@ def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
             quelle_url = href
         else:
             quelle_url = WEBSHOP_URL
+
+        ticket_url = _ticket_url(section_el, quelle_url)
 
         # --- Alle relevanten Datum-Strings sammeln ---
         datum_el = section_el.select_one("p.date")
@@ -243,6 +262,7 @@ def _event_aus_produkt_section(section_el, heute: date) -> list[dict]:
                 "preis": None,
                 "quelle_name": QUELLE_NAME,
                 "quelle_url": quelle_url,
+                "ticket_url": ticket_url,
                 "bild_url": bild_url,
                 "instagram_caption": None,
                 "datum_bis": datum_bis,

@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from config import vorschau_ende
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,15 @@ KATEGORIE_STANDARD = "kultur"
 
 # Fallback-URL wenn /spielplan nicht erreichbar
 FALLBACK_URL = BASE_URL
+
+
+def _ticket_url(item) -> Optional[str]:
+    """Ticket-Link des Termins (div.event--ticket → tickets.kommoedchen.de/selection/event/…), sonst None."""
+    try:
+        return ticket_link_aus(item.find("div", class_="event--ticket") or item, BASE_URL)
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
+        logger.debug("Kom(m)ödchen: Ticket-Link nicht lesbar: %s", fehler)
+        return None
 
 
 def _event_aus_element(el, heute: date) -> Optional[dict]:
@@ -283,6 +293,7 @@ def scrape() -> list[dict]:
                 "preis": None,
                 "quelle_name": QUELLE_NAME,
                 "quelle_url": quelle_url,
+                "ticket_url": _ticket_url(item),
                 "bild_url": bild_url,
                 "instagram_caption": None,
                 "datum_bis": None,

@@ -24,6 +24,7 @@ from playwright.async_api import async_playwright
 
 from config import vorschau_ende
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,39 @@ def _events_aus_json_ld(html: str, heute: date, enddatum: date) -> list[dict]:
     return events
 
 
+_SPIELDATUM = re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})\b")
+
+
+def _ticket_links_je_datum(soup) -> dict[str, str]:
+    """
+    Ticket-Links der Spielkarten: Button „Tickets sichern“ (→ tickets.f95.de/f95/venue/…) je Spieldatum (ISO).
+
+    Zum Link gehört die kleinste umgebende Karte mit Datumsangabe; enthält sie mehr als ein Datum (Navigation,
+    ganze Liste), wird der Link nicht zugeordnet.
+    """
+    ergebnis: dict[str, str] = {}
+    try:
+        for a in soup.find_all("a", href=True):
+            url = ticket_link(a["href"], BASE_URL)
+            if not url or "ticket" not in a.get_text(" ", strip=True).lower():
+                continue
+            for vorfahr in a.parents:
+                daten = set(_SPIELDATUM.findall(vorfahr.get_text(" ", strip=True)))
+                if not daten:
+                    continue
+                if len(daten) == 1:
+                    tag, monat, jahr = (int(x) for x in daten.pop())
+                    try:
+                        datum = date(jahr if jahr > 100 else 2000 + jahr, monat, tag).isoformat()
+                    except ValueError:
+                        break
+                    ergebnis.setdefault(datum, url)
+                break
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf die Spiele nie verhindern
+        logger.debug("Fortuna: Ticket-Links nicht lesbar: %s", fehler)
+    return ergebnis
+
+
 def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     """
     Fallback: HTML-Parsing des f95.de Spielplans.
@@ -228,6 +262,7 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
     text = soup.get_text("\n", strip=True)
 
     zeilen = [z.strip() for z in text.split("\n") if z.strip()]
+    tickets = _ticket_links_je_datum(soup)
 
     datum_muster = re.compile(
         r"^(?:Mo|Di|Mi|Do|Fr|Sa|So)\.,?\s*(\d{1,2})\.(\d{1,2})\.(\d{2,4})\*?$"
@@ -319,6 +354,7 @@ def _events_aus_html(html: str, heute: date, enddatum: date) -> list[dict]:
             "preis": PREIS_FALLBACK,
             "quelle_name": QUELLE_NAME,
             "quelle_url": LISTE_URL,
+            "ticket_url": tickets.get(datum_obj.isoformat()),
             "bild_url": None,
             "bild_generiert": False,
             "post_typ": "feed",

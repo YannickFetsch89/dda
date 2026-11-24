@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link, ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,7 @@ def _event_aus_block(block, heute: date, enddatum: date) -> Optional[dict]:
         "preis": None,
         "quelle_name": QUELLE_NAME,
         "quelle_url": quelle_url,
+        "ticket_url": ticket_link_aus(block, BASE_URL),  # Kartenkauf tickets.rodrigue.de (Plan 5.5.2, P1)
         "bild_url": bild_url,
         "bild_generiert": False,
         "status": "neu",

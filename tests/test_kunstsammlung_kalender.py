@@ -23,6 +23,14 @@ class KalenderTest(unittest.TestCase):
         self.assertTrue(erstes["quelle_url"].startswith("https://www.kunstsammlung.de/de/events/"))
         self.assertTrue(all(e["quelle_name"] == "Kunstsammlung NRW (K20/K21)" for e in events))
 
+    def test_ticket_url(self):
+        """Plan 5.5.2 P1: Button „Tickets“ des Termins → Webshop-Link, ohne Button kein ticket_url."""
+        events = k._kalender_events(HTML, date(2026, 11, 24), date(2027, 11, 24))
+        yoga = next(e for e in events if "Yoga" in e["titel"])
+        self.assertEqual(yoga["ticket_url"], "https://shop.kunstsammlung.de/de/offers/a954")
+        self.assertTrue(any(e["ticket_url"] is None for e in events))
+        self.assertTrue(all(e["ticket_url"] is None or e["ticket_url"].startswith("https://") for e in events))
+
     def test_zeitfenster(self):
         self.assertEqual(k._kalender_events(HTML, date(2026, 11, 24), date(2026, 11, 24)), [])
 

@@ -31,6 +31,7 @@ from bs4 import BeautifulSoup
 from config import vorschau_ende
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 from scraper.utils.http_client import STANDARD_HEADERS, _backoff
+from scraper.utils.ticket_link import ticket_link, ticket_link_aus
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,7 @@ def _event_aus_box(box, heute: date, enddatum: date) -> Optional[dict]:
         "preis": None,
         "quelle_name": QUELLE_NAME,
         "quelle_url": BASE_URL,
+        "ticket_url": ticket_link_aus(box, BASE_URL),  # Eventim-Button des Termins (Plan 5.5.2, P1)
         "bild_url": bild_url,
         "bild_generiert": False,
         "status": "neu",

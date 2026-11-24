@@ -64,35 +64,50 @@ _ABGLEICH_SPALTEN_BASIS: str = ",".join(
     _QUELL_FELDER + ["beschreibung_quelle", "ort_id", "redaktion_felder"] + _ANREICHERBARE_FELDER
 )
 _ABGLEICH_SPALTEN: str = _ABGLEICH_SPALTEN_BASIS + ",quellen"
+# ticket_url: Ticket-Link des Hauses (Plan Quellen-Ausbau 5.5.2, Schritt P1, database/ticket_url_2026-11-24.sql)
 
 # Fehlt die Spalte quellen (SQL database/quellen_spalte_2026-11-24.sql nicht ausgeführt), scheitert sonst JEDE Abfrage
 # und jeder Insert – am 24.11.2026 hat das einen ganzen Lauf gekostet (0 gespeichert, 2.909 Fehler). events_speichern
 # prüft die Spalte deshalb einmal und arbeitet ohne sie weiter.
 _QUELLEN_SPALTE: dict[str, bool] = {"da": True}
+# Dasselbe für events.ticket_url (Schritt P1): ohne Spalte wird ohne Ticket-Link gespeichert
+_TICKET_SPALTE: dict[str, bool] = {"da": True}
 
 
 def _abgleich_spalten() -> str:
-    """Spalten für den Abgleich – mit quellen, wenn es die Spalte gibt."""
-    return _ABGLEICH_SPALTEN if _QUELLEN_SPALTE["da"] else _ABGLEICH_SPALTEN_BASIS
+    """Spalten für den Abgleich – mit quellen und ticket_url, wenn es die Spalten gibt."""
+    spalten = _ABGLEICH_SPALTEN if _QUELLEN_SPALTE["da"] else _ABGLEICH_SPALTEN_BASIS
+    return spalten + ",ticket_url" if _TICKET_SPALTE["da"] else spalten
+
+
+def _spalte_pruefen(db, spalte: str, schalter: dict, sql_datei: str, ohne: str) -> bool:
+    """Gibt es events.<spalte>? Ergebnis gilt für diesen Lauf; ohne Spalte wird ohne dieses Feld gespeichert."""
+    try:
+        db.table("events").select(spalte).limit(1).execute()
+        schalter["da"] = True
+    except Exception as fehler:
+        text = str(fehler)
+        # Nur eine wirklich fehlende Spalte schaltet das Feld ab; ein kurzer Netz-/Serverfehler nicht
+        # (sonst liefe der ganze Lauf ohne das Feld) – Cursor-Prüfung V1
+        if any(z in text for z in ("42703", "PGRST204", "does not exist", "Could not find")):
+            schalter["da"] = False
+            logger.error("Spalte events.%s fehlt (%s) – speichere ohne %s. SQL %s ausführen!",
+                         spalte, text[:120], ohne, sql_datei)
+        else:
+            schalter["da"] = True
+            logger.warning("Spaltenprobe events.%s fehlgeschlagen (%s) – nehme an, dass die Spalte da ist",
+                           spalte, text[:120])
+    return schalter["da"]
 
 
 def _quellen_spalte_pruefen(db) -> bool:
-    """Gibt es events.quellen? Ergebnis gilt für diesen Lauf; ohne Spalte wird ohne Quellenliste gespeichert."""
-    try:
-        db.table("events").select("quellen").limit(1).execute()
-        _QUELLEN_SPALTE["da"] = True
-    except Exception as fehler:
-        text = str(fehler)
-        # Nur eine wirklich fehlende Spalte schaltet die Quellenliste ab; ein kurzer Netz-/Serverfehler nicht
-        # (sonst liefe der ganze Lauf ohne Quellenliste) – Cursor-Prüfung V1
-        if any(z in text for z in ("42703", "PGRST204", "does not exist", "Could not find")):
-            _QUELLEN_SPALTE["da"] = False
-            logger.error("Spalte events.quellen fehlt (%s) – speichere ohne Quellenliste. "
-                         "SQL database/quellen_spalte_2026-11-24.sql ausführen!", text[:120])
-        else:
-            _QUELLEN_SPALTE["da"] = True
-            logger.warning("Spaltenprobe events.quellen fehlgeschlagen (%s) – nehme an, dass die Spalte da ist", text[:120])
-    return _QUELLEN_SPALTE["da"]
+    """Gibt es events.quellen? Ohne Spalte wird ohne Quellenliste gespeichert."""
+    return _spalte_pruefen(db, "quellen", _QUELLEN_SPALTE, "database/quellen_spalte_2026-11-24.sql", "Quellenliste")
+
+
+def _ticket_spalte_pruefen(db) -> bool:
+    """Gibt es events.ticket_url? Ohne Spalte wird ohne Ticket-Link gespeichert."""
+    return _spalte_pruefen(db, "ticket_url", _TICKET_SPALTE, "database/ticket_url_2026-11-24.sql", "Ticket-Link")
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
@@ -184,6 +199,18 @@ def _anreicherungs_update_bauen(
             neu_wert = neu.get(feld)
             if neu_wert and neu_wert != bestehendes.get(feld):
                 update[feld] = neu_wert
+
+    # Ticket-Link des Hauses (Plan Quellen-Ausbau 5.5.2, Schritt P1): ergänzen, wenn er fehlt. Ein vorhandener bleibt,
+    # wenn die neue Quelle keinen hat (leere Werte überschreiben nie). Ersetzt wird er bei einem Quellenwechsel zu
+    # einem besseren Rang und von der Quelle, die schon Hauptquelle ist (das Haus hat den Link geändert) – nie von
+    # einer schlechteren oder fremden Quelle gleichen Rangs.
+    neu_ticket, alt_ticket = neu.get("ticket_url"), bestehendes.get("ticket_url")
+    if neu_ticket and neu_ticket != alt_ticket and (
+        not alt_ticket
+        or (rang_neu < rang_alt and neu.get("quelle_url"))
+        or (neu.get("quelle_name") and neu.get("quelle_name") == bestehendes.get("quelle_name"))
+    ):
+        update["ticket_url"] = neu_ticket
 
     # Quellenliste (Plan Quellen-Ausbau 4.3): die Quellen des neuen Eintrags ergänzen; geschrieben wird nur bei einer
     # neuen Quelle, anderem Link/Rang, veraltetem „zuletzt“ oder wenn die Zeile noch gar keine Liste hat
@@ -365,6 +392,7 @@ def events_speichern(events: list[dict]) -> dict:
 
     db = get_supabase_client()
     _quellen_spalte_pruefen(db)
+    _ticket_spalte_pruefen(db)
     gespeichert = 0
     duplikate = 0
     angereichert = 0
@@ -380,6 +408,9 @@ def events_speichern(events: list[dict]) -> dict:
         # Alle Quellen des Events (Deduplizierung hat sie in QUELLEN_FELD gesammelt; Plan Quellen-Ausbau 4.3)
         if datensatz.get("quelle_name") and _QUELLEN_SPALTE["da"]:
             datensatz["quellen"] = event.get(QUELLEN_FELD) or [quellen_eintrag(event, _jetzt_iso())]
+        # Ticket-Link nur speichern, wenn es die Spalte gibt; leere Werte gar nicht erst mitschicken
+        if not _TICKET_SPALTE["da"] or not datensatz.get("ticket_url"):
+            datensatz.pop("ticket_url", None)
         # Einheitliche Schreibweise für freien Eintritt („Eintritt frei“, „gratis“ … → „kostenlos“)
         if datensatz.get("preis"):
             datensatz["preis"] = preis_normalisieren(datensatz["preis"])

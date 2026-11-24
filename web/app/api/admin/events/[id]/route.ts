@@ -13,7 +13,7 @@ import { eventPfad } from "@/lib/pfade";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SPALTEN =
   "id, slug, titel, datum, datum_bis, uhrzeit, ort, adresse, stadtteil, kategorie, unterkategorie, preis, beschreibung, " +
-  "bild_url, ort_id, quelle_name, quelle_url, abgelehnt, abgesagt, nicht_empfehlen, tipp_des_tages, highlight_der_woche, " +
+  "bild_url, ort_id, quelle_name, quelle_url, ticket_url, abgelehnt, abgesagt, nicht_empfehlen, tipp_des_tages, highlight_der_woche, " +
   "top_event_des_monats, erstellt_am, redaktion_felder, abgleich_titel, abgleich_datum, abgleich_uhrzeit, abgleich_ort";
 
 function cacheLeeren(id: string, bild: boolean) {

@@ -13,8 +13,10 @@ import logging
 import re
 from datetime import date
 from typing import Optional
+from urllib.parse import urljoin
 
 from config import vorschau_ende
+from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +98,26 @@ def _kategorie_erkennen(text: str) -> str:
     return KATEGORIE_STANDARD
 
 
+def _ticket_url(href: Optional[str]) -> Optional[str]:
+    """
+    Ticket-Link aus dem Button „Tickets“ eines Termins. Das NRW-Forum verkauft über den Shop des Kunstpalasts
+    (www.kunstpalast.de/de/shop/ticketauswahl-nrw-forum/?e=<Termin>) – ein Shop-Pfad, den
+    scraper/utils/ticket_link.py nicht kennt; daher zählt hier auch eine http(s)-URL mit „/shop/“ im Pfad.
+    """
+    try:
+        if not href:
+            return None
+        url = ticket_link(href, BASE_URL)
+        if url:
+            return url
+        absolut = urljoin(BASE_URL + "/", href.strip())
+        if absolut.startswith(("http://", "https://")) and "/shop/" in absolut and "rausgegangen." not in absolut:
+            return absolut
+    except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
+        logger.debug("NRW-Forum: Ticket-Link nicht lesbar: %s", fehler)
+    return None
+
+
 def scrape() -> list[dict]:
     """
     Scrapt Veranstaltungen des NRW-Forums Düsseldorf.
@@ -128,6 +150,8 @@ def scrape() -> list[dict]:
                     let items = host.shadowRoot.querySelectorAll('.list-item');
                     return Array.from(items).map(el => {
                         let btn = el.querySelector('sl-button[href]');
+                        let tbtn = Array.from(el.querySelectorAll('sl-button[href], a[href]'))
+                            .find(b => /ticket|karten/i.test(b.textContent || ''));
                         return {
                             date: el.querySelector('.when div')?.textContent?.trim() || '',
                             time: el.querySelector('.when small:last-child')?.textContent?.trim() || '',
@@ -136,6 +160,7 @@ def scrape() -> list[dict]:
                             venue: el.querySelector('.venue-block small')?.textContent?.trim() || '',
                             img: el.querySelector('.thumb img')?.src || null,
                             href: btn ? btn.getAttribute('href') : null,
+                            ticket: tbtn ? tbtn.getAttribute('href') : null,
                         };
                     });
                 }""")
@@ -204,6 +229,7 @@ def scrape() -> list[dict]:
                 "preis": None,
                 "quelle_name": QUELLE_NAME,
                 "quelle_url": quelle_url,
+                "ticket_url": _ticket_url(eintrag.get("ticket")),
                 "bild_url": bild_url,
                 "instagram_caption": None,
                 "datum_bis": None,
