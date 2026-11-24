@@ -26,6 +26,10 @@ Zum Plan `docs/plan-quellen-ausbau-2026-11-23.md`, Abschnitt 5.5.1. Entwürfe vo
 > - a clearly marked "Tickets" button with the affiliate link;
 > - removal within 24 hours on request.
 >
+> Please also confirm whether we may show the event images delivered by the API on our event pages. Our website
+> loads images through its own image proxy (resized, cached for a limited time, always shown with the event and
+> linked to Ticketmaster). If this is not permitted, we will show Ticketmaster events without images.
+>
 > If the Discovery Feed is available to us as an approved partner, we would also be happy to use it instead of the API.
 >
 > Thank you and kind regards,
