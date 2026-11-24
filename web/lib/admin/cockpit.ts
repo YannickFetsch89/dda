@@ -22,7 +22,14 @@ export interface CockpitDaten {
   ampeln: Ampel[];
   warnungen: Warnung[];
   aufgaben: Aufgabe[];
-  kennzahlen: { eventsHeute: number | null; events7Tage: number | null; neuSeitLauf: number | null; konten: number | null };
+  kennzahlen: {
+    eventsHeute: number | null;
+    events7Tage: number | null;
+    neuSeitLauf: number | null;
+    konten: number | null;
+    /** Letzter beendeter Lauf: künftige Events, davon nur bei Rausgegangen (Plan Quellen-Ausbau 4.3) */
+    nurRausgegangen: { anzahl: number; von: number } | null;
+  };
   luecken: EventLuecken | null;
 }
 
@@ -39,22 +46,24 @@ async function sicher<T>(f: () => Promise<T>, ersatz: T): Promise<T> {
   }
 }
 
+type CockpitLauf = LaufZeile & { github_run_url: string | null; kuenftige_events?: number | null; nur_rausgegangen?: number | null };
+
 async function scraperLaden(db: SupabaseClient) {
   const { data: laeufe, error } = await db
     .from("scraper_laeufe")
-    .select("id, gestartet_am, beendet_am, status, speicher_fehler, github_run_url")
+    .select("id, gestartet_am, beendet_am, status, speicher_fehler, github_run_url, kuenftige_events, nur_rausgegangen, luecken")
     .order("gestartet_am", { ascending: false })
     .limit(8);
   if (error) throw new Error(error.message);
   const ids = (laeufe ?? []).map((l) => l.id as string);
-  if (!ids.length) return { laeufe: [] as (LaufZeile & { github_run_url: string | null })[], ergebnisse: [] as ErgebnisZeile[] };
+  if (!ids.length) return { laeufe: [] as CockpitLauf[], ergebnisse: [] as ErgebnisZeile[] };
   const { data: ergebnisse, error: f2 } = await db
     .from("scraper_ergebnisse")
     .select("lauf_id, quelle, status, anzahl, meldung")
     .in("lauf_id", ids)
     .limit(2000);
   if (f2) throw new Error(f2.message);
-  return { laeufe: (laeufe ?? []) as (LaufZeile & { github_run_url: string | null })[], ergebnisse: (ergebnisse ?? []) as ErgebnisZeile[] };
+  return { laeufe: (laeufe ?? []) as CockpitLauf[], ergebnisse: (ergebnisse ?? []) as ErgebnisZeile[] };
 }
 
 /** Antwortet die Website? (robots.txt) */
@@ -168,6 +177,11 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
   ];
 
   const letzterStart = scraper?.laeufe[0]?.gestartet_am ?? null;
+  const beendeterLauf = scraper?.laeufe.find((l) => l.status !== "laeuft");
+  const nurRausgegangen =
+    beendeterLauf && typeof beendeterLauf.nur_rausgegangen === "number" && typeof beendeterLauf.kuenftige_events === "number"
+      ? { anzahl: beendeterLauf.nur_rausgegangen, von: beendeterLauf.kuenftige_events }
+      : null;
   const neuSeitLauf = pool && letzterStart ? pool.alle.filter((e) => (e.erstellt_am ?? "") >= letzterStart).length : null;
 
   return {
@@ -180,6 +194,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       events7Tage: luecken?.events7Tage ?? null,
       neuSeitLauf,
       konten: zahlen?.konten ?? null,
+      nurRausgegangen,
     },
     luecken,
   };

@@ -1,4 +1,4 @@
-// Admin-Bereich – Warnregeln W1–W6 für die Scraper-Läufe (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.3).
+// Admin-Bereich – Warnregeln W1–W7 für die Scraper-Läufe (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.3).
 // Reine Funktionen ohne Datenbank. Dieselben Regeln rechnet ab Stufe 1c auch Python (Warn-Mail nach dem Lauf);
 // beide prüfen gegen tests/fixtures/lauf_warnungen.json.
 //
@@ -11,6 +11,8 @@ export interface LaufZeile {
   beendet_am: string | null;
   status: "laeuft" | "erfolgreich" | "fehler";
   speicher_fehler: number | null;
+  /** W7: {Ort: Anzahl} Rausgegangen-Events an direkt abgefragten Häusern ohne Treffer (Plan Quellen-Ausbau 4.5) */
+  luecken?: Record<string, number> | null;
 }
 
 export interface ErgebnisZeile {
@@ -21,7 +23,7 @@ export interface ErgebnisZeile {
   meldung?: string | null;
 }
 
-export type Regel = "W1" | "W2" | "W3" | "W4" | "W5" | "W6";
+export type Regel = "W1" | "W2" | "W3" | "W4" | "W5" | "W6" | "W7";
 
 export interface Warnung {
   regel: Regel;
@@ -36,6 +38,8 @@ const STUNDE_MS = 60 * 60 * 1000;
 export const LAUF_ALT_TAGE = 4;
 /** W5: ein Lauf, der so lange „laeuft“, hängt (CI-Timeout ist 75 min) */
 export const LAUF_HAENGT_MINUTEN = 90;
+/** W7: ab wie vielen Lücken an einem Ort gewarnt wird (mehr als 3) */
+export const LUECKEN_GRENZE = 3;
 
 function median(werte: number[]): number {
   const s = [...werte].sort((a, b) => a - b);
@@ -72,6 +76,14 @@ export function warnungenBerechnen(laeufe: LaufZeile[], ergebnisse: ErgebnisZeil
   // W6: Speicherfehler im letzten beendeten Lauf
   if ((letzter.speicher_fehler ?? 0) > 0) {
     warnungen.push({ regel: "W6", stufe: "gelb", quelle: null, text: `${letzter.speicher_fehler} Events konnten nicht gespeichert werden.` });
+  }
+
+  // W7 (Plan Quellen-Ausbau 4.5): mehr als LUECKEN_GRENZE Rausgegangen-Events an einem Ort, dessen Haus wir direkt
+  // abfragen, ohne Treffer der Direktquelle – Hinweis auf eine Lücke im Venue-Scraper. Gelb, keine Mail.
+  for (const [ort, anzahl] of Object.entries(letzter.luecken ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
+    if (typeof anzahl === "number" && anzahl > LUECKEN_GRENZE) {
+      warnungen.push({ regel: "W7", stufe: "gelb", quelle: ort, text: `${anzahl} Termine nur bei Rausgegangen – fehlen im Scraper des Hauses?` });
+    }
   }
 
   // Ergebnisse je Quelle, neueste zuerst (Reihenfolge der beendeten Läufe)

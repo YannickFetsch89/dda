@@ -147,3 +147,70 @@ def quellen_rang(event: dict) -> int:
 def ist_sammelquelle(event: dict) -> bool:
     """True, wenn die Quelle Termine nur weitergibt (Rang ≥ 2) – dort ist die Uhrzeit oft der Einlass."""
     return quellen_rang(event) >= TICKETVERKAUF
+
+
+# ── Alle Quellen eines Events (Plan Quellen-Ausbau 4.3, Schritt R2) ─────────────────────────────────────────────
+# Spalte events.quellen: [{"name", "url", "rang", "zuletzt"}], höchstens ein Eintrag je Name. Im Lauf trägt jedes
+# Event die Liste im internen Feld QUELLEN_FELD; die Deduplizierung vereinigt die Listen zusammengeführter Events.
+QUELLEN_FELD = "_quellen"
+# „zuletzt“ wird nur neu geschrieben, wenn der Eintrag älter ist – sonst gäbe jedes Duplikat in jedem Lauf ein Update
+ZULETZT_AKTUALISIEREN_TAGE = 7
+
+
+def quellen_eintrag(event: dict, zuletzt: str) -> dict:
+    """Eintrag der eigenen Quelle eines Events (gespeicherter Name, Link, Rang, Zeitpunkt)."""
+    return {"name": event.get("quelle_name"), "url": event.get("quelle_url"), "rang": quellen_rang(event), "zuletzt": zuletzt}
+
+
+def quellen_vereinigen(bisher: Optional[list], neu: Optional[list]) -> tuple[list, bool]:
+    """
+    Vereinigt zwei Quellenlisten (je Name ein Eintrag) und sagt, ob sich gegenüber `bisher` etwas Wesentliches
+    geändert hat: neuer Name, anderer Link oder Rang, oder `zuletzt` älter als ZULETZT_AKTUALISIEREN_TAGE.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    ergebnis = [dict(e) for e in (bisher or []) if isinstance(e, dict) and e.get("name")]
+    nach_name = {e["name"]: e for e in ergebnis}
+    geaendert = False
+    for eintrag in neu or []:
+        if not isinstance(eintrag, dict) or not eintrag.get("name"):
+            continue
+        alt = nach_name.get(eintrag["name"])
+        if alt is None:
+            kopie = dict(eintrag)
+            ergebnis.append(kopie)
+            nach_name[kopie["name"]] = kopie
+            geaendert = True
+            continue
+        for feld in ("url", "rang"):
+            if eintrag.get(feld) and eintrag.get(feld) != alt.get(feld):
+                alt[feld] = eintrag[feld]
+                geaendert = True
+        if eintrag.get("zuletzt") and eintrag["zuletzt"] > (alt.get("zuletzt") or ""):
+            try:
+                alt_zeit = datetime.fromisoformat(str(alt.get("zuletzt")).replace("Z", "+00:00"))
+                if alt_zeit.tzinfo is None:
+                    alt_zeit = alt_zeit.replace(tzinfo=timezone.utc)
+                veraltet = datetime.now(timezone.utc) - alt_zeit > timedelta(days=ZULETZT_AKTUALISIEREN_TAGE)
+            except (TypeError, ValueError):
+                veraltet = True
+            alt["zuletzt"] = eintrag["zuletzt"]
+            geaendert = geaendert or veraltet
+    return ergebnis, geaendert
+
+
+def quellen_der_zeile(zeile: dict) -> list:
+    """Gespeicherte Quellenliste einer Zeile; ohne Liste (alte Zeile) die heutige Hauptquelle."""
+    liste = zeile.get("quellen")
+    if isinstance(liste, list) and liste:
+        return liste
+    if zeile.get("quelle_name"):
+        return [{"name": zeile.get("quelle_name"), "url": zeile.get("quelle_url"),
+                 "rang": rang_gespeichert(zeile.get("quelle_name"), zeile.get("quelle_url")), "zuletzt": None}]
+    return []
+
+
+def nur_rausgegangen(liste: list) -> bool:
+    """True, wenn alle Quellen der Liste Rausgegangen sind (Rang 5) – und es mindestens eine gibt."""
+    raenge = [e.get("rang") for e in liste if isinstance(e, dict)]
+    return bool(raenge) and all(r == RAUSGEGANGEN for r in raenge)

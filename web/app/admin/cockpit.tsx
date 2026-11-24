@@ -64,6 +64,13 @@ export function Cockpit() {
             <div><strong>{zahl(daten.kennzahlen.events7Tage)}</strong><span>nächste 7 Tage</span></div>
             <div><strong>{zahl(daten.kennzahlen.neuSeitLauf)}</strong><span>neu seit letztem Lauf</span></div>
             <div><strong>{zahl(daten.kennzahlen.konten)}</strong><span>Konten</span></div>
+            <div>
+              <strong>{daten.kennzahlen.nurRausgegangen ? zahl(daten.kennzahlen.nurRausgegangen.anzahl) : "–"}</strong>
+              <span>
+                nur bei Rausgegangen
+                {daten.kennzahlen.nurRausgegangen ? ` (von ${zahl(daten.kennzahlen.nurRausgegangen.von)} künftigen)` : ""}
+              </span>
+            </div>
           </section>
 
           <h2 className="admin-abschnitt">Ampeln</h2>

@@ -19,7 +19,9 @@ from pipeline.deduplication import (
     kategorie_ersetzen,
     preis_normalisieren,
 )
-from pipeline.quellen_rang import AGGREGATOR, HAUS, quellen_rang, rang_gespeichert
+from pipeline.quellen_rang import (
+    AGGREGATOR, HAUS, QUELLEN_FELD, quellen_der_zeile, quellen_eintrag, quellen_rang, quellen_vereinigen, rang_gespeichert,
+)
 from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
@@ -57,7 +59,10 @@ _VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
 # zum Ergänzen einer fehlenden Zuordnung. Spalte muss in der DB existieren (database/orte_spielstaetten_2026-11-19.sql).
 # redaktion_felder: im Admin-Bereich geänderte Felder, die die Pipeline nie überschreibt (Plan Admin-Dashboard 4.4,
 # database/admin_events_2026-11-23.sql – Spalte muss in der DB existieren).
-_ABGLEICH_SPALTEN: str = ",".join(_QUELL_FELDER + ["beschreibung_quelle", "ort_id", "redaktion_felder"] + _ANREICHERBARE_FELDER)
+# quellen: alle Quellen des Events (Plan Quellen-Ausbau 4.3, database/quellen_spalte_2026-11-24.sql – muss existieren).
+_ABGLEICH_SPALTEN: str = ",".join(
+    _QUELL_FELDER + ["beschreibung_quelle", "ort_id", "redaktion_felder", "quellen"] + _ANREICHERBARE_FELDER
+)
 
 # Spalten die noch nicht in der DB existieren – werden aus Inserts/Selects herausgefiltert
 # Nachtragen via Supabase Dashboard: ALTER TABLE events ADD COLUMN instagram_location_id TEXT;
@@ -71,6 +76,11 @@ _RAUSGEGANGEN_MUSTER = re.compile(r"rausgegangen", re.IGNORECASE)
 def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     """Erkennt ob eine Bild-URL von Rausgegangen stammt."""
     return bool(bild_url and _RAUSGEGANGEN_MUSTER.search(bild_url))
+
+
+def _jetzt_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _anreicherungs_update_bauen(
@@ -144,6 +154,13 @@ def _anreicherungs_update_bauen(
             neu_wert = neu.get(feld)
             if neu_wert and neu_wert != bestehendes.get(feld):
                 update[feld] = neu_wert
+
+    # Quellenliste (Plan Quellen-Ausbau 4.3): die Quellen des neuen Eintrags ergänzen; geschrieben wird nur bei einer
+    # neuen Quelle, anderem Link/Rang, veraltetem „zuletzt“ oder wenn die Zeile noch gar keine Liste hat
+    if neu.get("quellen"):
+        liste, geaendert = quellen_vereinigen(quellen_der_zeile(bestehendes), neu["quellen"])
+        if geaendert or not bestehendes.get("quellen"):
+            update["quellen"] = liste
 
     # Feldschutz (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.4 Teil A, E7): Felder, die die Redaktion im
     # Admin-Bereich geändert hat, schreibt die Pipeline nie – an keiner der vier Stellen oben (ort_id-Nachtrag,
@@ -329,6 +346,9 @@ def events_speichern(events: list[dict]) -> dict:
             k: v for k, v in event.items()
             if k not in _IGNORE_FELDER and k not in _NICHT_IN_DB and not k.startswith("_")
         }
+        # Alle Quellen des Events (Deduplizierung hat sie in QUELLEN_FELD gesammelt; Plan Quellen-Ausbau 4.3)
+        if datensatz.get("quelle_name"):
+            datensatz["quellen"] = event.get(QUELLEN_FELD) or [quellen_eintrag(event, _jetzt_iso())]
         # Einheitliche Schreibweise für freien Eintritt („Eintritt frei“, „gratis“ … → „kostenlos“)
         if datensatz.get("preis"):
             datensatz["preis"] = preis_normalisieren(datensatz["preis"])

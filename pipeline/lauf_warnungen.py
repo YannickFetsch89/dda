@@ -1,6 +1,6 @@
 """
 lauf_warnungen.py – DiesDasDüsseldorf
-Warnregeln W1–W6 für die Scraper-Läufe und Warn-Mail nach dem Lauf (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.3).
+Warnregeln W1–W7 für die Scraper-Läufe und Warn-Mail nach dem Lauf (Plan docs/plan-admin-dashboard-2026-11-23.md, 4.3).
 
 Dieselben Regeln rechnet das Cockpit in TypeScript (web/lib/admin/warnregeln.ts). Beide prüfen gegen
 tests/fixtures/lauf_warnungen.json.
@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 LAUF_ALT_TAGE = 4
 LAUF_HAENGT_MINUTEN = 90
+# W7: ab wie vielen Lücken an einem Ort gewarnt wird (Plan Quellen-Ausbau 4.5: mehr als 3)
+LUECKEN_GRENZE = 3
 # Diese Regeln lösen die Mail aus (W3 und W5 nur im Cockpit: W3 ist nur gelb, W5 kann der laufende Job nicht sehen)
 MAIL_REGELN = {"W1", "W2", "W4", "W6"}
 EMPFAENGER = "hallo@diesdas.events"
@@ -64,6 +66,12 @@ def warnungen_berechnen(laeufe: list[dict], ergebnisse: list[dict], jetzt: datet
     # W6
     if (letzter.get("speicher_fehler") or 0) > 0:
         warnungen.append(Warnung("W6", "gelb", None, f"{letzter['speicher_fehler']} Events konnten nicht gespeichert werden."))
+
+    # W7 (Plan Quellen-Ausbau 4.5): mehr als LUECKEN_GRENZE Rausgegangen-Events an einem Ort, dessen Haus wir direkt
+    # abfragen, ohne Treffer der Direktquelle – Hinweis auf eine Lücke im Venue-Scraper. Gelb, keine Mail.
+    for ort, anzahl in sorted((letzter.get("luecken") or {}).items()):
+        if isinstance(anzahl, int) and anzahl > LUECKEN_GRENZE:
+            warnungen.append(Warnung("W7", "gelb", ort, f"{anzahl} Termine nur bei Rausgegangen – fehlen im Scraper des Hauses?"))
 
     position = {l["id"]: i for i, l in enumerate(beendet)}
     je_quelle: dict[str, list[dict]] = {}

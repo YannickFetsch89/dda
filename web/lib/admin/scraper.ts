@@ -11,6 +11,9 @@ export interface LaufAnzeige extends LaufZeile {
   neu_gespeichert: number | null;
   duplikate: number | null;
   fehlermeldung: string | null;
+  /** Quellen-Kennzahlen (Plan Quellen-Ausbau 4.3, database/quellen_spalte_2026-11-24.sql) */
+  kuenftige_events: number | null;
+  nur_rausgegangen: number | null;
 }
 
 export interface QuelleAnzeige {
@@ -37,7 +40,7 @@ export async function scraperDatenLaden(db: SupabaseClient): Promise<ScraperDate
   const jetzt = new Date();
   const { data: laeufe, error } = await db
     .from("scraper_laeufe")
-    .select("id, gestartet_am, beendet_am, status, speicher_fehler, ausloeser, github_run_url, events_gesammelt, neu_gespeichert, duplikate, fehlermeldung")
+    .select("id, gestartet_am, beendet_am, status, speicher_fehler, ausloeser, github_run_url, events_gesammelt, neu_gespeichert, duplikate, fehlermeldung, kuenftige_events, nur_rausgegangen, luecken")
     .order("gestartet_am", { ascending: false })
     .limit(LAEUFE);
   if (error) throw new Error(error.message);

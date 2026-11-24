@@ -720,6 +720,32 @@ Gebaut wie 4.1/4.2, Punkte 1–3 (Punkt 4 Nachziehen = N1, später):
   nur Rausgegangen); Ticketmaster wird von einem Haus abgelöst; Uhrzeit-Regel unverändert, aber Meetup.com zählt als
   Sammelquelle. Rückweg: Commit zurücknehmen (kein Schalter, kein SQL).
 
+### R2 – Quellenliste, Kennzahlen, W7 (24.11.2026, lokal gebaut)
+
+- SQL `database/quellen_spalte_2026-11-24.sql` (vor dem Deploy): `events.quellen jsonb` mit Vorbelegung (Rang per CASE
+  aus derselben Tabelle wie `pipeline/quellen_rang.py`, erzeugt aus `RANG_GESPEICHERT`), `scraper_laeufe.kuenftige_events`,
+  `nur_rausgegangen`, `luecken jsonb`, `NOTIFY pgrst`, zwei Kontrollabfragen.
+- `pipeline/quellen_rang.py`: `QUELLEN_FELD` (`_quellen`), `quellen_eintrag`, `quellen_vereinigen` (je Name ein Eintrag;
+  meldet eine Änderung nur bei neuer Quelle, anderem Link/Rang oder `zuletzt` älter als 7 Tage – sonst gäbe jedes Duplikat
+  in jedem Lauf ein Update), `quellen_der_zeile` (alte Zeilen ohne Liste), `nur_rausgegangen`.
+- `pipeline/deduplication.py`: jedes Event startet mit seiner eigenen Quelle, `_events_mergen` vereinigt die Listen.
+- `database/client.py`: `quellen` in `_ABGLEICH_SPALTEN`; Insert schreibt die Liste; `_anreicherungs_update_bauen`
+  ergänzt sie (Feldschutz gilt wie für alle Felder).
+- `pipeline/quellen_kennzahlen.py`: `luecken_berechnen` (Haus = `_haus_id` bzw. `ort_id`; „direkt abgefragt“ = eine
+  Rang-1-Quelle hat in diesem Lauf Events an dem Haus geliefert – abgeschaltete und saisonal leere Quellen liefern
+  keine und zählen deshalb nicht; Lücke = Event nur mit Rausgegangen an einem solchen Haus an einem Tag ohne Event der
+  Direktquelle), `bestand_zaehlen` (künftige sichtbare Events, davon nur Rausgegangen). `main.py` schreibt beides nach
+  Schritt 2 als Kennzahlen; Fehler werden nur geloggt.
+- W7 in `pipeline/lauf_warnungen.py` und `web/lib/admin/warnregeln.ts` (gelb, nicht in `MAIL_REGELN`, Grenze > 3),
+  zwei neue Fälle in `tests/fixtures/lauf_warnungen.json`. Die Python-Mail-Abfrage holt `luecken` nicht (W7 löst keine
+  Mail aus).
+- Admin: `scraper.ts` und `cockpit.ts` holen `kuenftige_events`, `nur_rausgegangen`, `luecken`; das Cockpit zeigt
+  „nur bei Rausgegangen (von n künftigen)“ des letzten beendeten Laufs.
+- **Abweichung:** Die Website lädt `quellen` noch nicht in den Pool (`SPALTEN_VARIANTEN`); das braucht erst der
+  Ticket-Button in W2 und kommt dort dazu.
+- Tests: `tests/test_quellen_liste.py` (13); Python gesamt 562 ok, Website 708 ok.
+- Rückweg: Commit zurücknehmen; die Spalten bleiben liegen und stören nicht.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

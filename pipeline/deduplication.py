@@ -18,7 +18,7 @@ import re
 from typing import Optional
 
 from pipeline.ortsnamen import einheitlicher_name, ortsname_vereinheitlichen
-from pipeline.quellen_rang import HAUS, TICKETVERKAUF, quellen_rang
+from pipeline.quellen_rang import HAUS, QUELLEN_FELD, TICKETVERKAUF, quellen_eintrag, quellen_rang, quellen_vereinigen
 
 logger = logging.getLogger(__name__)
 
@@ -402,6 +402,9 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
         rang_basis, rang_duplikat = rang_duplikat, rang_basis
 
     merged = dict(basis)
+    # Alle Quellen beider Einträge merken (Spalte events.quellen, Plan Quellen-Ausbau 4.3)
+    if basis.get(QUELLEN_FELD) is not None or duplikat.get(QUELLEN_FELD) is not None:
+        merged[QUELLEN_FELD] = quellen_vereinigen(basis.get(QUELLEN_FELD), duplikat.get(QUELLEN_FELD))[0]
 
     # Ortszuordnung (Plan Locations 3.4): Treffer des verbleibenden Namens zuerst, sonst der des Duplikats –
     # nie NULL über einen vorhandenen Wert („zakk – Halle“ von Rausgegangen behält die Saal-ID, wenn die
@@ -477,8 +480,13 @@ def deduplizieren(events: list[dict]) -> list[dict]:
     pro_datum: dict[str, list[str]] = {}  # Datum → Schlüssel (für den Ähnlichkeitsvergleich)
     duplikat_anzahl = 0
     angereichert_anzahl = 0
+    from datetime import datetime, timezone
+    jetzt = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     for event in events:
+        # Eigene Quelle merken, bevor ein Merge sie mit anderen vereinigt (Plan Quellen-Ausbau 4.3)
+        if event.get(QUELLEN_FELD) is None and event.get("quelle_name"):
+            event[QUELLEN_FELD] = [quellen_eintrag(event, jetzt)]
         # Eine Schreibweise pro Spielstätte (pipeline/ortsnamen.py) – vor allen Vergleichen
         ortsname_vereinheitlichen(event)
         titel_status_bereinigen(event)

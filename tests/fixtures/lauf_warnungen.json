@@ -1,5 +1,5 @@
 {
-  "beschreibung": "Gemeinsame Fixture für die Warnregeln W1–W6 (Plan Admin-Dashboard 4.3). Geprüft von web/tests/admin-cockpit.test.ts und ab Stufe 1c von tests/test_lauf_warnungen.py.",
+  "beschreibung": "Gemeinsame Fixture für die Warnregeln W1–W7 (Plan Admin-Dashboard 4.3). Geprüft von web/tests/admin-cockpit.test.ts und ab Stufe 1c von tests/test_lauf_warnungen.py.",
   "faelle": [
     {
       "name": "alle Quellenregeln, letzter Lauf beendet",
@@ -97,6 +97,30 @@
         { "lauf_id": "a2", "quelle": "abgeschaltet", "status": "fehler", "anzahl": 0, "meldung": "HTTP 500" },
         { "lauf_id": "a1", "quelle": "abgeschaltet", "status": "fehler", "anzahl": 0, "meldung": "HTTP 500" }
       ],
+      "erwartet": []
+    },
+    {
+      "name": "W7: Lücken im Venue-Scraper (mehr als 3 an einem Ort), laufender Lauf zählt nicht",
+      "jetzt": "2026-11-24T12:00:00Z",
+      "laeufe": [
+        { "id": "r1", "gestartet_am": "2026-11-21T05:00:00Z", "beendet_am": "2026-11-21T08:00:00Z", "status": "erfolgreich", "speicher_fehler": 0, "luecken": { "K20 Grabbeplatz": 5, "zakk": 3, "Theatermuseum": 4 } },
+        { "id": "r2", "gestartet_am": "2026-11-24T11:30:00Z", "beendet_am": null, "status": "laeuft", "speicher_fehler": 0, "luecken": { "Kunsthalle Düsseldorf": 9 } }
+      ],
+      "ergebnisse": [
+        { "lauf_id": "r1", "quelle": "gesund", "status": "ok", "anzahl": 20 }
+      ],
+      "erwartet": [
+        { "regel": "W7", "quelle": "K20 Grabbeplatz" },
+        { "regel": "W7", "quelle": "Theatermuseum" }
+      ]
+    },
+    {
+      "name": "W7: Lauf ohne Lücken-Angabe (null) warnt nicht",
+      "jetzt": "2026-11-24T12:00:00Z",
+      "laeufe": [
+        { "id": "s1", "gestartet_am": "2026-11-24T05:00:00Z", "beendet_am": "2026-11-24T08:00:00Z", "status": "erfolgreich", "speicher_fehler": 0, "luecken": null }
+      ],
+      "ergebnisse": [],
       "erwartet": []
     }
   ]

@@ -239,6 +239,20 @@ async def _schritte_ausfuehren(report: LaufReport):
     )
     report.neu_pro_quelle_setzen(stats.get("neu_pro_quelle") or {})
 
+    # Abdeckung der Quellen (Plan docs/plan-quellen-ausbau-2026-11-23.md, 4.3/4.5): Lücken je Ort für Warnregel W7,
+    # künftige Events und wie viele davon nur Rausgegangen kennt – Spalten aus database/quellen_spalte_2026-11-24.sql
+    try:
+        from pipeline.quellen_kennzahlen import bestand_zaehlen, luecken_berechnen
+        luecken = luecken_berechnen(alle_events)
+        kuenftig, nur_rg = bestand_zaehlen(get_supabase_client())
+        report.kennzahl(luecken=luecken)
+        if kuenftig is not None:
+            report.kennzahl(kuenftige_events=kuenftig, nur_rausgegangen=nur_rg)
+        logger.info("Quellen: %s künftige Events, davon nur Rausgegangen: %s; Lücken an %d Orten",
+                    kuenftig, nur_rg, len(luecken))
+    except Exception as e:
+        logger.error("Quellen-Kennzahlen fehlgeschlagen: %s", e)
+
     # Ortszuordnung über den ganzen Bestand prüfen (Plan Locations 3.4): gespeicherte ort_id ohne Treffer oder
     # mehrdeutig – nur Meldung, nichts wird geändert. Eine Zahl über 0 heißt: Lösung vergessen bzw. doppelte Schreibweise.
     if orte_index is not None:
