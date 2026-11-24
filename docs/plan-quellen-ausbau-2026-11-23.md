@@ -1,6 +1,6 @@
 # Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – dritte Fassung, **freigegeben 24.11.2026**
 
-Status: **Freigegeben vom Auftraggeber am 24.11.2026 (dritte Fassung).** Die Vorschläge Q1–Q22 gelten damit als entschieden. Gebaut wird erst nach Freigabe, schrittweise und jeweils mit OK des Auftraggebers.
+Status: **Freigegeben vom Auftraggeber am 24.11.2026 (dritte Fassung).** Die Vorschläge Q1–Q22 gelten damit als entschieden. Gebaut wird schrittweise (Abschnitt 7), jeder Schritt mit eigenem OK des Auftraggebers.
 Jeder Push ist ein Live-Deploy; SQL führt der Auftraggeber im Supabase-SQL-Editor aus.
 
 Drei Ziele des Auftraggebers:
