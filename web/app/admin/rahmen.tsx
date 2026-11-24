@@ -70,7 +70,6 @@ export function AdminRahmen({ children }: { children: ReactNode }) {
               </span>
             ),
           )}
-          <a href="/alt/">Altes Dashboard</a>
         </nav>
         <div className="admin-nutzer">
           {email !== null && <span>{email}</span>}

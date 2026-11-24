@@ -182,15 +182,14 @@ jobs:
 
             # Python-Pakete aktualisieren falls requirements geändert (venv stammt von uv, enthält kein pip)
             uv pip install --python venv/bin/python -q -r requirements.txt
-            uv pip install --python venv/bin/python -q -r dashboard/requirements.txt
 
-            # Dashboard neu starten (über PID-Datei, im Jail gibt es kein pkill)
-            mkdir -p /home/dies_das_duesseldorfadmin/bin
-            cp dashboard/dashboard.sh /home/dies_das_duesseldorfadmin/bin/
-            chmod +x /home/dies_das_duesseldorfadmin/bin/dashboard.sh
-            /home/dies_das_duesseldorfadmin/bin/dashboard.sh neustart
-            sleep 5
-            curl -sf -o /dev/null -m 10 http://127.0.0.1:8502/alt/_stcore/health || { echo "Dashboard antwortet nicht"; tail -20 /home/dies_das_duesseldorfadmin/dda/logs/dashboard.log; exit 1; }
+            # Streamlit ist abgeschaltet (Plan Admin-Dashboard 4.11, Stufe 6): einen noch laufenden Prozess über die
+            # PID-Datei beenden (im Jail gibt es kein pkill) und das alte Startskript entfernen. Wiederholbar.
+            if [ -f logs/dashboard.pid ]; then
+              kill "$(cat logs/dashboard.pid)" 2>/dev/null && echo "Altes Dashboard (Streamlit) beendet" || echo "Altes Dashboard lief nicht mehr"
+              rm -f logs/dashboard.pid
+            fi
+            rm -f /home/dies_das_duesseldorfadmin/bin/dashboard.sh
 
             # Website (Next.js) bauen und neu starten
             # Start-Skript und /proc-Shim liegen im Repo, Cron ruft ~/bin/website.sh auf

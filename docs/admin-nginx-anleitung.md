@@ -65,15 +65,8 @@ Mit dem Deploy zieht das alte Streamlit-Dashboard auf `/alt/` um. Bis zu dieser 
        proxy_set_header X-DDD-Bereich admin;
    }
 
-   # Altes Dashboard (Streamlit) übergangsweise unter /alt/
-   location /alt/ {
-       proxy_pass http://127.0.0.1:8502;
-       proxy_http_version 1.1;
-       proxy_set_header Upgrade $http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header Host $host;
-       proxy_read_timeout 86400;
-   }
+   # Bis 24.11.2026 stand hier „location /alt/“ für das alte Dashboard (Streamlit). Seit Stufe 6 entfernt – siehe
+   # Abschnitt „Stufe 6“ unten.
 
    # Alles andere gibt es hier nicht
    location / {
@@ -114,3 +107,8 @@ location / {
 ```
 
 Umgestellt am 23.11.2026. Live mit `curl` geprüft: `/` → 308 `/admin`, `/admin` → 307 Anmeldung, `/api/admin/ich` → 401, `/entdecken` → 404, `/alt/` → 200. `diesdas.events/admin` liefert mit gefälschtem Kopf 404. In `dashboard/dashboard.sh` die Zeile `BASIS=alt` und `--server.baseUrlPath` entfernen, dann deployen.
+
+## Stufe 6: Streamlit abgeschaltet (24.11.2026)
+
+Der Deploy beendet Streamlit und entfernt dessen Startskript. Danach in ISPConfig bei **admin.diesdas.events → Options → nginx Directives** den ganzen Block `location /alt/ { … }` löschen (er zeigt auf Port 8502, der nicht mehr läuft) und speichern. Danach liefert `admin.diesdas.events/alt/` über `location /` eine 404 statt eines 502.
+

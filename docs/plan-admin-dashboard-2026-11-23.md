@@ -691,6 +691,11 @@ Stufe 5b – Meldungen, SEO-Aufräumen, Quellen an/aus (24.11.2026):
   - Befund 1 (mittel) behoben: Die Suche nach belegten Slugs nutzt den PostgREST-Platzhalter `*` (wie das Streamlit-Dashboard); vorher hätte eine zweite Vorstellung am selben Tag denselben Slug bekommen und die Freigabe wäre mit einer falschen Dubletten-Meldung gescheitert.
   - Befund 2 (mittel) behoben: Steht eine Quelle im letzten Lauf auf „uebersprungen“ (z. B. abgeschaltet), gilt für sie keine Warnregel, auch nicht W4 – in Python und TypeScript, neuer Fall in `tests/fixtures/lauf_warnungen.json`.
 
+Stufe 6 – Streamlit abgeschaltet (24.11.2026):
+- **Abdeckung geprüft:** Tagesplaner und Featured Events → Empfehlungen (Tipp des Tages, Highlight der Woche, Top-Event des Monats); Event-Liste → Events; Scraper-Report → Scraper; Meldungen, Newsletter, SEO-Aufräumen → eigene Seiten (Stufen 4, 5b); Kennzahlen der Seitenleiste → Cockpit.
+- **Entfernt:** `dashboard/` (inkl. `requirements.txt` und `dashboard.sh`), `tests/test_seo_aufraeumen.py` (die Regeln prüft jetzt `web/tests/admin-seo.test.ts`), die Streamlit-Schritte in `deploy.yml` (stattdessen einmalig: laufenden Prozess über `logs/dashboard.pid` beenden, Startskript löschen), Link „Altes Dashboard“, Cockpit-Link der Meldungen zeigt auf `/admin/meldungen`.
+- **Beim Auftraggeber:** nginx-Block `location /alt/` bei admin.diesdas.events löschen (`docs/admin-nginx-anleitung.md`, Abschnitt „Stufe 6“). Streamlit-Pakete bleiben im venv (stören nicht).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -715,3 +720,4 @@ Stufe 5b – Meldungen, SEO-Aufräumen, Quellen an/aus (24.11.2026):
 - 23.11.2026: Stufe 5a LIVE (311090f); Ausfall durch Bot auf /guides/restaurants-cafes, Bremse und Cache live (0466601, f3e58ad).
 - 24.11.2026: Stufe 5b gebaut (lokal), SQL `admin_quellen_2026-11-24.sql`; Notizen in Anhang F.
 - 24.11.2026: SQL Stufe 5b ausgeführt, Cursor-Prüfung 5b deploybar, 2 Befunde eingearbeitet.
+- 24.11.2026: Stufe 5b LIVE (3f67edb). Stufe 6 Streamlit abschalten gebaut (lokal); nginx-Block /alt beim Auftraggeber.

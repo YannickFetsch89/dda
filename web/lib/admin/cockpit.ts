@@ -142,7 +142,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
   const luecken = pool && pool.quelle === "supabase" ? eventLuecken(pool.events, pool.heute) : null;
   const zweiTage = new Date(jetzt.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const aufgaben: Aufgabe[] = [
-    { schluessel: "meldungen", titel: "Offene Meldungen", anzahl: meldungen, farbe: meldungen ? "gelb" : "gruen", link: "/alt/" },
+    { schluessel: "meldungen", titel: "Offene Meldungen", anzahl: meldungen, farbe: meldungen ? "gelb" : "gruen", link: "/admin/meldungen" },
     {
       schluessel: "magazin",
       titel: "Magazin-Entwürfe zur Prüfung",
