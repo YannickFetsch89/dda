@@ -1,7 +1,8 @@
 # Plan: Quellen-Ausbau – Venues direkt, Rausgegangen zuletzt, Ticketing mit Vorlauf – dritte Fassung, **freigegeben 24.11.2026**
 
-Status: **Freigegeben vom Auftraggeber am 24.11.2026 (dritte Fassung).** Die Vorschläge Q1–Q22 gelten damit als entschieden. Gebaut wird schrittweise (Abschnitt 7), jeder Schritt mit eigenem OK des Auftraggebers.
+Status: **Freigegeben vom Auftraggeber am 24.11.2026 (dritte Fassung).** Die Vorschläge Q1–Q22 gelten damit als entschieden und werden nicht still geändert. Gebaut wird schrittweise (Abschnitt 7), jeder Schritt mit eigenem OK des Auftraggebers.
 Jeder Push ist ein Live-Deploy; SQL führt der Auftraggeber im Supabase-SQL-Editor aus.
+Runde 1 (Cursor, 24.11.2026) hat den Plan gegen den Code geprüft und die Befunde unten eingearbeitet. Protokoll: Anhang B.
 
 Drei Ziele des Auftraggebers:
 1. **Möglichst alle einzelnen Venues** in Düsseldorf (plus Neuss/Ratingen) direkt abfragen.
@@ -73,7 +74,7 @@ Auffälligkeiten im selben Lauf (nicht Teil dieses Plans, aber relevant):
 
 ### 1.4 Wo die 60 Tage stehen
 
-Python: `config.py` `SCRAPER_VORSCHAU_TAGE = 60`, genutzt in **47 Scraper-Dateien** (davon 5 deaktiviert) und `scraper/utils/` (`enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)`). Ohne Fenster: R25, Salon des Amateurs, Parkrun, Kleine Weihnachtsmärkte.
+Python: `config.py:83` `SCRAPER_VORSCHAU_TAGE = 60`. Die Konstante steht in **48 Dateien** unter `scraper/` (Zählung 24.11.). Die **47** sind die Länge von `main.py` `QUELLEN` (Zeile 86–139), nicht die Zahl der Dateien. Die Konstante nutzen auch die deaktivierten Dateien `eventbrite.py`, `eventfinder.py`, `bandsintown.py` und `spontacts.py`. `meinestadt.py` ist deaktiviert und nutzt sie nicht. `scraper/utils/ra_venue.py:113` setzt das Fenster für Kulturschlachthof R25 und Salon des Amateurs (höchstens 5 Seiten, `ra_venue.py:122`). Wirklich ohne dieses Fenster: Parkrun (nächster Samstag) und Kleine Weihnachtsmärkte (feste Einträge).
 
 Website:
 - `web/lib/daten.ts:34` `TAGE_VORAUS = 60` → `eventPoolLaden()` lädt alles bis heute + 60. Davon leben Startseite, `/entdecken`, Kategorie-, Stadtteil-, Wochenend-, Kostenlos-, Tagesseiten, Guides, Konto-Bereich, Sitemap, `/api/events`.
@@ -93,7 +94,7 @@ Website:
 | Q3 | Events, die nur Rausgegangen kennt | behalten; Button weiter auf Rausgegangen, zusätzlich „Website von <Ort>“ (a) | 4.4 |
 | Q4 | Rausgegangen-Event an einem Ort mit eigenem Scraper, ohne Treffer | behalten und als Lücke melden (a) | 4.5 |
 | Q5 | Wann Rausgegangen abschalten? | nicht in diesem Plan; Kennzahl „nur Rausgegangen < 5 % über drei Läufe“ als Signal | 4.6 |
-| Q6 | Ticketing | Ticketmaster, Eventim, Reservix, ADticket, Stagedates ja; Songkick nein (**Auftraggeber 24.11.: alle Partner-Anbieter anbinden**) | 5.1, 5.5 |
+| Q6 | Ticketing | Ticketmaster, Eventim, Reservix, ADticket, Stagedates ja; **Songkick nein** (bleibt dabei). Die Partner-Anbieter aus 5.5 bindet der Auftraggeber alle an (24.11.) – das hebt Songkick nicht auf | 5.1, 5.5 |
 | Q7 | Zeitraum je Quelle | große Häuser + Ticketing 365, kleine Häuser 120, VisitDüsseldorf 120, Aggregatoren/Rausgegangen 60 | 5.2 |
 | Q8 | 60-Tage-Pool der Website | bleibt; zweiter Fernpool für Tag 61–365 | 6.1 |
 | Q9 | Neue Liste für spätere Events | eigene Seite **„Ausblick“ unter `/ausblick`** (zweite Runde, 24.11.; erste Vorschläge abgelehnt) | 6.4 |
@@ -171,8 +172,8 @@ Spalten: **RG** = Rausgegangen-Events dieses Ortes in 120 Tagen · **andere** = 
 | Komödie Düsseldorf | – | – | Weiterleitungsschleife unter der geprüften Adresse – richtige URL klären | M |
 | Kloster Flingern, Boston Club, Klub Kulb (Wix) | 2–3 | 1–6 | Termine im HTML | S |
 | The Vinyl Room | 4 | 0 | echter iCal-Feed (`plattenparty.ics`) | S |
-| The Craft Studio, Eigenlob Keramik (Workshops, Buchung über etermin) | 18 / 17 | 0 | Termine im HTML (103 / 52 Daten) | S – **Q16:** Workshops/Kurse aufnehmen? |
-| Filmkunstkinos (Metropol, Bambi, Cinema) | 7 | 4 | reines Kinoprogramm (814 Daten) | S – **Q17:** normales Kinoprogramm aufnehmen? Vorschlag nein, nur Sonderveranstaltungen |
+| The Craft Studio, Eigenlob Keramik (Workshops, Buchung über etermin) | 18 / 17 | 0 | Termine im HTML (103 / 52 Daten) | S – **Q16 entschieden: ja**, als `community`, erst in dieser Welle |
+| Filmkunstkinos (Metropol, Bambi, Cinema) | 7 | 4 | reines Kinoprogramm (814 Daten) | S – **Q17 entschieden: nein**; nur Sonderveranstaltungen, nicht der normale Spielplan |
 
 #### Bleibt bei Rausgegangen (keine brauchbare eigene Quelle)
 
@@ -214,9 +215,9 @@ Damit 20–40 neue Häuser nicht 20–40 eigene Dateien mit eigenem Parser werde
 2. **`scraper/utils/wp_tribe.py`** – WordPress „The Events Calendar“: `/wp-json/tribe/events/v1/events?start_date=…&end_date=…&per_page=50`, seitenweise. Pitcher nutzt schon die WP-REST-API (eigener Code, wird nicht umgebaut).
 3. **`scraper/utils/ical.py`** – iCal-Feeds (`.ics`) mit einem kleinen eigenen Parser für `VEVENT` (DTSTART, SUMMARY, LOCATION, URL, DESCRIPTION; RRULE nur `FREQ=WEEKLY/MONTHLY` mit `UNTIL`/`COUNT`). **Keine neue Bibliothek** – falls RRULE-Vielfalt das nötig macht, wird vorher gefragt.
 
-Dazu **`scraper/tier2/venues.py`**: eine Tabelle `VENUES = [{name, quelle_name, methode, url, ort, adresse, kategorie_standard, vorschau, ...}]` und eine `scrape()`-Funktion, die je Eintrag den passenden Baustein ruft. Jeder Eintrag erscheint im Lauf-Report als eigene Quelle (Anzeigename), damit Warnregeln W1–W5 je Haus greifen. Häuser mit eigenem HTML brauchen weiter eine eigene Datei in `scraper/tier2/`.
+Das gemeinsame Modul darf **nicht** als eine Zeile in `QUELLEN` laufen. `pipeline/lauf_report.py:148–165` schreibt je Aufruf von `scraper_ausfuehren` genau einen Quellnamen (`SCRAPER_FELD`) und einen Status. Eine gemeinsame `scrape()` für 20 Häuser wäre im Report, in den Warnregeln und in „neu je Quelle“ ein einziger Topf: ein leeres Haus versteckt sich, ein Absturz trifft alle. Deshalb bekommt **jedes Haus eine eigene Zeile** in `main.py` `QUELLEN` (dünner Aufruf mit demselben Baustein und dem Anzeigenamen). Der Anzeigename ist zugleich `quelle_name`. Häuser mit eigenem HTML brauchen weiter eine eigene Datei in `scraper/tier2/`.
 
-Regeln je neuer Quelle (wie bisher): robots.txt prüfen (im Code als Kommentar mit Datum festhalten), 2 s Pause, Backoff, realistischer User-Agent, `ort` exakt in der Schreibweise der Ortstabelle (damit `ort_zuordnung` trifft), Test mit gespeicherter Beispielseite in `tests/fixtures/`.
+Regeln je neuer Quelle (wie bisher): robots.txt prüfen (im Code als Kommentar mit Datum festhalten), Pause = das **größere** aus 2 Sekunden und dem Crawl-delay (Goethe-Museum und KaBARett FLiN: 10), Backoff bei 429, realistischer User-Agent, `ort` exakt in der Schreibweise der Ortstabelle (damit `ort_zuordnung` trifft), Test mit gespeicherter Beispielseite in `tests/fixtures/`. Saisonale Häuser (Globe Neuss, nur Juni/Juli) melden den bestehenden Status `saisonal`, sonst feuert W2 bei jedem Lauf außerhalb der Saison.
 
 ---
 
@@ -224,26 +225,31 @@ Regeln je neuer Quelle (wie bisher): robots.txt prüfen (im Code als Kommentar m
 
 ### 4.1 Rangfolge der Quellen (Q1)
 
-Neue Datei `pipeline/quellen_rang.py` mit **einer** Funktion `quellen_rang(event) -> int` (kleiner = besser). Grundlage ist eine feste Tabelle nach `quelle_name` (so wie heute in `main.py` `QUELLEN` benannt), Rausgegangen zusätzlich über die URL erkannt (wie `ist_rausgegangen()`):
+Neue Datei `pipeline/quellen_rang.py` mit **einer** Funktion `quellen_rang(event) -> int` (kleiner = besser). Grundlage ist eine feste Tabelle nach `quelle_name`, exakt die Anzeigenamen aus `main.py` `QUELLEN` (Zeile 86–139). Rausgegangen wird zusätzlich über die URL erkannt (wie `ist_rausgegangen()`, `deduplication.py:370–374`). **Nicht** über die Domain in `quelle_url`: ein Haus, das auf eventim.de oder ticketmaster.de verlinkt, bleibt Rang 1. Das heutige `ist_aggregator` sucht die Domain im Namen **und** in der URL (`deduplication.py:193–196`) – diese URL-Suche darf der Rang nicht übernehmen, sonst springt ein Haus mit Ticket-Link auf Rang 2.
 
-| Rang | Gruppe | Quellen |
+| Rang | Gruppe | Quellen (Anzeigenamen) |
 |---:|---|---|
-| 1 | **Veranstalter / Haus** | alle Tier-2- und Tier-3-Scraper und die neuen Venue-Scraper (Abschnitt 3); Meetup-Gruppenseiten der Veranstalter (StartupDorf) |
-| 2 | **Offizieller Ticketverkauf** | Eventim, Ticketmaster, (später) Reservix |
-| 3 | **Offizielle Portale** | VisitDüsseldorf (+ Führungen), Kulturportal Düsseldorf, Meetup.com, Resident Advisor |
-| 4 | **Aggregatoren** | PRINZ.de, AllEvents.in, Songkick, Eventfinder, meinestadt |
-| 5 | **Rausgegangen** | nur, wenn sonst nichts |
+| 1 | **Veranstalter / Haus** | alle Tier-2- und Tier-3-Zeilen in `QUELLEN` und die neuen Venue-Zeilen (Abschnitt 3), inklusive `StartupDorf Meetup` |
+| 2 | **Offizieller Ticketverkauf** | `Ticketmaster`, Eventim, Reservix, ADticket, Stagedates (Q6, Q19, Abschnitt 5.1 – nicht „später“) |
+| 3 | **Offizielle Portale** | `VisitDüsseldorf`, `VisitDüsseldorf Führungen`, `Kulturportal Düsseldorf`, `Meetup.com`, `Resident Advisor` |
+| 4 | **Aggregatoren** | `PRINZ.de Düsseldorf`, `AllEvents.in Düsseldorf`, `Songkick` (bis T1 die Zeile entfernt), Eventfinder, meinestadt (beide heute nicht in `QUELLEN`, nur für alte Zeilen) |
+| 5 | **Rausgegangen** | `Rausgegangen`, und jede URL mit `rausgegangen.de` |
 
-Unbekannte `quelle_name` (neuer Scraper ohne Eintrag) → Rang 1, wenn der Scraper in `QUELLEN` Tier 2/3 hat, sonst 4; ein Test sorgt dafür, dass jeder Name aus `QUELLEN` in der Tabelle steht.
+Unbekannte `quelle_name`: Rang 1, wenn die Zeile in `QUELLEN` Tier 2 oder 3 hat, sonst Rang 4. Ein Test verlangt, dass **jeder** heutige Anzeigename aus `QUELLEN` ausdrücklich in der Tabelle steht, damit Ticketmaster nicht versehentlich Rang 4 wird.
 
-`ist_aggregator()` bleibt für die Uhrzeit-Regel bestehen, wird aber aus dem Rang abgeleitet (Rang ≥ 2 = „gibt Termine nur weiter“), damit es nur noch eine Liste gibt. Die Uhrzeit-Regel ist dann: bei Abweichung gilt die Zeit der Quelle mit dem **besseren Rang**, wenn dieser 1 ist (wie heute).
+**Anzeigename ≠ gespeicherter `quelle_name` (Claude, Runde 1):** Bei vier Zeilen schreibt der Scraper einen anderen `quelle_name` als den Anzeigenamen: `VisitDüsseldorf Führungen` → `VisitDüsseldorf` (`scraper/tier1/visitduesseldorf_fuehrungen.py:42`), `Classic Remise Düsseldorf` → `Classic Remise`, `Street Food Thursday` → `Street Food Thursday Düsseldorf`, `Kleine Weihnachtsmärkte` → `Kleine Weihnachtsmärkte (Redaktion)` bzw. der Name aus der CSV-Spalte `quelle_name` („Stadt Neuss“, „neuss feiert“ …, `scraper/tier3/kleine_weihnachtsmaerkte.py:57`). Gespeicherte Zeilen kennen nur `quelle_name`. Deshalb:
+- **Im Lauf** zählt der Anzeigename aus `_scraper` (`SCRAPER_FELD`, gesetzt in `pipeline/lauf_report.py:148–149`). Weil `events_speichern` alle `_`-Felder vor `_anreicherungs_update_bauen` entfernt (`database/client.py`, Aufbau von `datensatz`), wird der Rang **vorher** berechnet und als Argument übergeben (wie heute `kategorie_fest`).
+- **Für gespeicherte Zeilen** gilt eine zweite Tabelle `quelle_name → Rang`, gebaut aus den Anzeigenamen **und** den `QUELLE_NAME`-Konstanten der Module. Unbekannter gespeicherter Name (z. B. CSV-Namen der kleinen Märkte) → **Rang 3** (neutral: ein Haus löst ihn ab, ein Aggregator nicht).
+- Test: Für jede Zeile in `QUELLEN` werden die `QUELLE_NAME`-Werte des Moduls gesammelt; jeder muss in der zweiten Tabelle stehen und denselben Rang haben wie der Anzeigename.
+
+`ist_aggregator()` bleibt für die Uhrzeit-Regel bestehen und wird aus dem Rang abgeleitet (Rang ≥ 2). Dieselbe Ableitung ersetzt die Kopie `AGGREGATOR` in `web/lib/admin/events.ts:164–165` (Dubletten-Uhrzeit im Admin). Die Uhrzeit-Regel: bei Abweichung gilt die Zeit der Quelle mit dem besseren Rang, wenn dieser 1 ist. Gleicher Rang ändert die Uhrzeit nicht.
 
 ### 4.2 Wo der Rang greift
 
-1. **In-Memory-Deduplizierung** (`_events_mergen`): Statt „Rausgegangen gegen den Rest“ wird die Quelle mit dem besseren Rang zur Basis. Gleicher Rang → wie heute die zuerst gekommene. Die Reihenfolge in `QUELLEN` wird damit egal (bleibt aber: Rausgegangen zuletzt).
-2. **Speichern** (`_anreicherungs_update_bauen`): Der Quellenwechsel gilt für jeden **besseren Rang**, nicht nur ab Rausgegangen. Übernommen werden wie heute `quelle_name`, `quelle_url` und die Vorrang-Felder Bild, Preis, Adresse, Beschreibung – Beschreibung nicht, wenn `beschreibung_quelle` gesetzt ist; nichts, was in `redaktion_felder` steht (Admin-Plan 4.4, E7). Bild: ein Bild der besseren Quelle ersetzt das bisherige nur, wenn das bisherige von Rang ≥ 4 stammt (Ticketing-Bilder von Rang 2 sind oft gute Pressebilder und sollen von einem Haus-Scraper ohne Bild nicht gelöscht werden – leere Werte überschreiben nie).
+1. **In-Memory-Deduplizierung** (`_events_mergen`, heute nur Tausch wenn die Basis Rausgegangen ist, `deduplication.py:393–398`): die Quelle mit dem **strikt besseren** Rang wird Basis. Gleicher Rang → die zuerst gekommene bleibt, auch wenn sie später noch einmal hereinkommt. Die Reihenfolge in `QUELLEN` wird damit egal (bleibt aber: Rausgegangen zuletzt, `main.py:136–138`).
+2. **Speichern** (`_anreicherungs_update_bauen`, heute nur Wechsel weg von Rausgegangen und nur mit `quelle_url`, `client.py:128–135`): Der Quellenwechsel gilt für jeden **strikt besseren** Rang, und nur wenn das neue Event eine `quelle_url` hat. Ohne URL werden leere Felder aufgefüllt, `quelle_name`/`quelle_url` bleiben. So verliert ein gespeicherter Ticket-Link nicht den Button, und zwei Quellen können nicht hin- und herspringen: der schlechtere Rang schreibt die Quelle nie zurück, gleicher Rang auch nicht. Übernommen werden wie heute `quelle_name`, `quelle_url` und die Vorrang-Felder Bild, Preis, Adresse, Beschreibung – Beschreibung nicht, wenn `beschreibung_quelle` gesetzt ist; nichts, was in `redaktion_felder` steht (der Filter sitzt am Ende und gilt für alle vier Blöcke, `client.py:137–142`). Bild: ein Bild der besseren Quelle ersetzt das bisherige nur, wenn das bisherige von Rang ≥ 4 stammt (Ticketing-Bilder von Rang 2 bleiben, auch wenn das Haus kein eigenes Bild hat – leere Werte überschreiben nie). `ticket_url` (ab P1) bleibt stehen, wenn die neue Quelle keinen Ticket-Link hat. Slug und `abgleich_*` bleiben unangetastet (`_slug_pruefen`, `_abgleich_redaktion` finden die Zeile, sie wechseln die Quelle nicht).
 3. **Dubletten-Vorschläge** (`dubletten_sql.paare_finden`, `vorschlaege.py`): Sortierung „Status-Zusatz, Rang, älterer Eintrag“ statt „Status-Zusatz, Aggregator, älterer Eintrag“. Behalten wird also der Eintrag mit dem besseren Rang.
-4. **Einmaliges Nachziehen** (`rausgegangen_nachziehen.py`): wird auf den Rang umgestellt und heißt dann `pipeline/quellen_nachziehen.py` (altes Modul bleibt als dünner Aufruf, damit Doku-Verweise stimmen). Lauf nach jedem größeren Schritt in Abschnitt 7, erst als Probelauf (Bericht), dann `--schreiben` mit OK.
+4. **Einmaliges Nachziehen** (`rausgegangen_nachziehen.py`): wird auf den Rang umgestellt und heißt dann `pipeline/quellen_nachziehen.py` (altes Modul bleibt als dünner Aufruf, damit Doku-Verweise stimmen). Dieselben Grenzen wie beim Speichern: nur strikt besserer Rang, nur mit URL der besseren Quelle, `redaktion_felder` und `beschreibung_quelle` bleiben, vorhandene `ticket_url` und `quellen` werden nicht geleert. Lauf nach jedem größeren Schritt in Abschnitt 7, erst als Probelauf (Bericht), dann `--schreiben` mit OK. N1 läuft erst, wenn P1 die Spalte `ticket_url` schon angelegt hat.
 
 Abstimmung mit dem Admin-Plan: Der Admin-Plan ist seit 24.11. komplett live (Stufe 6, `3f6a7ab`). Er hat `database/client.py` (Feldschutz `redaktion_felder`), `pipeline/vorschlaege.py` (Dubletten-, Gebiets- und Orte-Vorschläge) und „Quellen an/aus“ (Stufe 5b, `3333855`) eingeführt. R1 baut auf diesem Stand auf und muss alle drei berücksichtigen.
 
@@ -256,23 +262,28 @@ Wofür:
 - **Ticket-Link:** Ist die Hauptquelle ein Haus (Rang 1) und kennt eine Rang-2-Quelle dasselbe Event, zeigt die Eventseite zusätzlich „Tickets bei Eventim/Ticketmaster“ (Abschnitt 6.3).
 - **Abdeckungsprüfung:** Rausgegangen-Events an Orten, die wir direkt abfragen, ohne Treffer der Direktquelle → Hinweis auf eine Lücke im Venue-Scraper (Abschnitt 4.5).
 
-SQL (`database/quellen_spalte_<datum>.sql`, führt der Auftraggeber **vor** dem Deploy von R2 aus): Spalte, kein Index nötig. Die Pipeline liest die Spalte wie `redaktion_felder` in `_ABGLEICH_SPALTEN` mit; die Website liest sie nur auf der Eventseite und lädt notfalls ohne sie (`SPALTEN_VARIANTEN` in `web/lib/daten.ts`). Bestehende Events bekommen beim ersten Lauf ihre aktuelle Quelle eingetragen (SQL-Vorbelegung aus `quelle_name`/`quelle_url`).
+SQL (`database/quellen_spalte_<datum>.sql`, führt der Auftraggeber **vor** dem Deploy von R2 aus): Spalte `jsonb`, kein Index nötig. Vorbelegung aus `quelle_name`/`quelle_url`. Neue Spalten auf `events` erben die Policy „Events lesen“ (`database/auth_rollen.sql:147–149`, `abgelehnt = false` für anon). R1 liest und schreibt die Spalte nicht. Ab R2 hängt sie an `_ABGLEICH_SPALTEN` (`client.py:61`). Fehlt sie, schlägt jede Abgleich-Abfrage fehl, nicht nur der Eventseiten-Select.
+
+Die Website hängt neue Spalten an die **erste** Zeile von `SPALTEN_VARIANTEN` (`web/lib/daten.ts:17–26`). Diese Liste gilt für den ganzen Pool, nicht nur für die Eventseite. Fehlt die Spalte, fällt der Pool auf die nächste Variante zurück und verliert damit auch `nicht_empfehlen`. Deshalb zuerst SQL, dann Deploy. `quellen` ist klein und darf im Pool mitkommen.
+
+Die Kennzahl „nur Rausgegangen“ steht im Lauf-Report. **Speicherort (Claude, Runde 1):** Kennzahlen des Laufs sind Spalten von `scraper_laeufe`; eine neue braucht erst eine Spalte (`main.py:299`, `pipeline/lauf_report.py:186–188`). Das SQL von R2 legt deshalb zusätzlich `scraper_laeufe.kuenftige_events int`, `scraper_laeufe.nur_rausgegangen int` und `scraper_laeufe.luecken jsonb` (`{Ort: Anzahl}` für W7) an. W7 in TypeScript (`web/lib/admin/warnregeln.ts`) liest `luecken` aus dieser Spalte; fehlt sie, entfällt W7 still. Das Cockpit zeigt die Kennzahl des letzten Laufs. Es zählt sie nicht aus `eventPoolLaden()` nach (`web/lib/admin/cockpit.ts:5` und `:97` laden nur 60 Tage).
 
 ### 4.4 Was mit Events passiert, die nur Rausgegangen kennt (Q3)
 
-Vorschlag: **behalten**, aber
-- Der Haupt-Button „Zum Termin“ zeigt weiter auf die Rausgegangen-Seite (sie ist die einzige Seite mit Ticket-/Detailinfos zu genau diesem Termin). **Zusätzlich**, wenn der Ort in `orte` eine `webseite` hat: Link „Website von <Ort>“ über dem Quellenhinweis.
-- Alternative Q3-b: Haupt-Button auf die Website des Ortes, Rausgegangen nur als kleiner Hinweis „gefunden bei Rausgegangen“. Nachteil: Die Ortswebsite nennt den Termin oft nicht; Nutzer finden nichts.
+**Entschieden (Q3-a):** behalten.
+- Der Haupt-Button zeigt weiter auf die Rausgegangen-Seite (sie ist die einzige Seite mit Ticket-/Detailinfos zu genau diesem Termin). Heute heißt er „Zum Termin um … Uhr“, wenn diese Uhrzeit einen eigenen Link hat, sonst „Zur Veranstalter-Seite“ (`web/app/event/[kategorie]/[slug]/page.tsx:74–75` und `:282–286`). Die Texte bleiben. **Zusätzlich**, wenn die zugeordnete Zeile in `orte` (über `ort_id`, nicht über eine Namenssuche) eine `webseite` hat: Link „Website von <Ort>“ über dem Quellenhinweis.
+- Q3-b (Haupt-Button auf die Ortswebsite) ist verworfen: die Ortswebsite nennt den Termin oft nicht.
 
 ### 4.5 Rausgegangen-Events an Orten mit eigener Quelle (Q4)
 
-Liefert Rausgegangen ein Event an einem Ort, dessen Haus wir direkt abfragen (Rang-1-Scraper mit derselben `ort_id`/`_haus_id`), und die Direktquelle hat an dem Tag nichts Passendes:
-- **Vorschlag Q4-a:** Event trotzdem speichern (sonst fehlen Termine, die unser Scraper übersieht – z. B. Kunstsammlung: Führungen fehlen), aber im Lauf-Report als „Lücke im Venue-Scraper“ je Ort zählen. Mehr als 3 Lücken an einem Ort in einem Lauf → gelbe Warnung im Admin-Scraper-Tab (neue Regel neben W1–W5).
-- Q4-b: verwerfen. Sauberer im Sinne „Rausgegangen nur zuletzt“, aber riskant, solange Venue-Scraper Lücken haben.
+**Entschieden (Q4-a).** Liefert Rausgegangen ein Event an einem Ort, dessen Haus wir direkt abfragen (Rang-1-Zeile in `QUELLEN` mit derselben `ort_id`/`_haus_id`), und die Direktquelle hat an dem Tag nichts Passendes:
+- Event trotzdem speichern (sonst fehlen Termine, die unser Scraper übersieht – z. B. Kunstsammlung: Führungen fehlen), aber im Lauf-Report als „Lücke im Venue-Scraper“ je Ort zählen. Mehr als 3 Lücken an einem Ort in einem Lauf → gelbe Warnung **W7** im Admin-Scraper-Tab. Die Regeln heißen heute W1–W6 (`pipeline/lauf_warnungen.py:3`, dieselbe Liste in `web/lib/admin/warnregeln.ts:24`). Die Mail geht bei W1, W2, W4 und W6 raus (`lauf_warnungen.py:25–26`). W7 ist gelb und steht **nicht** in `MAIL_REGELN`, wie W3. Beide Seiten (Python und TypeScript) und `tests/fixtures/lauf_warnungen.json` bekommen die Regel.
+- Nicht mitzählen: die Rang-1-Quelle ist im Admin abgeschaltet (`pipeline/quellen.py:21`, Status `uebersprungen`) oder der Lauf hat sie als `saisonal` gemeldet. Sonst warnt jedes abgeschaltete Haus und jedes Festival außerhalb der Saison.
+- Q4-b (verwerfen) ist verworfen: Venue-Scraper haben am Anfang Lücken.
 
 ### 4.6 Rausgegangen-Scraper selbst
 
-Bleibt unverändert: nur die Startseite, ein Abruf je Lauf (C4 aus dem Club-Plan). Keine weiteren Rausgegangen-Seiten. Mittelfristig soll der Anteil so weit sinken, dass ein Abschalten möglich ist (Kennzahl aus 4.3). Ziel-Kennzahl für die Freigabe zum Abschalten: Vorschlag Q5 – „nur Rausgegangen“ unter 5 % der künftigen Events über drei Läufe.
+Bleibt unverändert: nur die Startseite, ein Abruf je Lauf (C4 aus dem Club-Plan). Keine weiteren Rausgegangen-Seiten. **Q5 entschieden:** in diesem Plan nicht abschalten. Die Kennzahl aus 4.3 ist das Signal: „nur Rausgegangen“ unter 5 % der künftigen Events über drei Läufe. Abgeschaltet wird erst in einem späteren Plan.
 
 ---
 
@@ -284,7 +295,7 @@ Recherche vom 23.11.2026 (Dokumentation und Bedingungen der Anbieter gelesen, ro
 
 | Anbieter | Stand bei uns | Zugang | Bedingungen / Haken | Vorschlag |
 |---|---|---|---|---|
-| **Ticketmaster** | Scraper fertig (`tier1/ticketmaster.py`), läuft leer: **kein Secret** im Workflow | Discovery API v2, Schlüssel sofort nach Registrierung; 5.000 Abfragen/Tag, mit 2/s planen; Blättern nur bis 1.000 Treffer → Abfrage in Monatsfenster teilen; `countryCode=DE`, `city`/`geoPoint`+`radius` | Kein Nachbau von Ticketmaster; Inhalte nur „angemessen lange“ zwischenspeichern; auf Verlangen binnen 24 h entfernen; Ticketmaster nicht als Bild-Host; Team-/Liga-Logos nicht frei. **Einnahmen „aus der Nutzung der API“ sind ausgeschlossen** (Ausnahme nicht auffindbar) → Q6-a | **Ja, zuerst** (T1): Auftraggeber registriert sich, Secret `TICKETMASTER_API_KEY`, Workflow-`env` ergänzen. Wie viele Düsseldorfer Events Ticketmaster DE liefert, zeigt erst der erste Lauf (Eventim dominiert in DE) |
+| **Ticketmaster** | Scraper vorhanden (`tier1/ticketmaster.py`), läuft leer: **kein Secret** im Workflow (`scrape.yml` setzt `TICKETMASTER_API_KEY` nicht). Heute **eine** Abfrage, `size=50`, `city=Düsseldorf`, ohne Blättern (`ticketmaster.py:287–294`), danach Schnitt bei 60 Tagen (`:340–342`) | Discovery API v2, Schlüssel sofort nach Registrierung; 5.000 Abfragen/Tag, mit 2/s planen; Blättern nur bis 1.000 Treffer → Abfrage in Monatsfenster teilen; `countryCode=DE`, `city`/`geoPoint`+`radius` | Kein Nachbau von Ticketmaster; Inhalte nur „angemessen lange“ zwischenspeichern; auf Verlangen binnen 24 h entfernen; Ticketmaster nicht als Bild-Host; Team-/Liga-Logos nicht frei. **Einnahmen „aus der Nutzung der API“ sind ausgeschlossen** (Ausnahme nicht auffindbar; in Runde 1 nicht erneut auf der Anbieterseite geprüft) → Q6-a | **Ja, zuerst** (T1): Auftraggeber registriert sich, Secret `TICKETMASTER_API_KEY`, Workflow-`env` ergänzen, **und** der Scraper bekommt Monatsfenster bis 12 Monate plus Blättern. Der Schlüssel allein liefert höchstens 50 Events. Wie viele Düsseldorfer Events Ticketmaster DE hat, zeigt erst der erste Lauf (Eventim dominiert in DE) |
 | **Eventim** | nichts (Umsetzung: 5.5) | Keine öffentliche API. Partnerprogramm über Awin (Programm „eventim DE“) mit Deeplinks; ob es einen **Event-Datenfeed** gibt und ob man daraus Eventseiten bauen darf, ist nur im Awin-Konto bzw. auf Anfrage zu klären | eventim.de blockt automatisierte Abrufe technisch (Akamai; jede Anfrage lief in einen Timeout) – **kein Scraping** | **Ja** über Awin (5.5): Ticket-Links der Häuser als Partner-Links (P1/P2), Eventdaten nur, falls Awin einen Feed liefert (T2) |
 | **Songkick** | Scraper fertig, kein Secret | API nur noch als **bezahlte Lizenz** mit Partnervertrag, keine Hobby-/Kleinprojekte | Metro-Seite hätte JSON-LD (50 Konzerte/Seite), aber die Nutzungsbedingungen verbieten Scraper ohne schriftliche Zustimmung und kommerzielle Nutzung | **Nein.** Scraper bleibt im Code, aber aus `QUELLEN` raus (wie Bandsintown), CLAUDE.md-Tabelle anpassen |
 | **Stagedates** | nur indirekt (Rudas Studios) | `sitemap-events.xml` (≈ 830 URLs), Eventseiten mit JSON-LD `Event`/`Offer`; robots.txt erlaubt alles | Nutzungsbedingungen noch zu lesen | **Ja** (mit Welle A): Sitemap filtern auf Düsseldorf/Neuss/Ratingen, JSON-LD-Baustein (3.3) |
@@ -301,37 +312,35 @@ Ticketmaster-Abfrage: ein Durchlauf je Monat bis 12 Monate voraus, `countryCode=
 `config.py` bekommt statt der einen Zahl eine kleine Tabelle und eine Hilfsfunktion:
 
 ```python
-SCRAPER_VORSCHAU_TAGE = 60          # Standard (Aggregatoren, kleine Häuser) – Name bleibt für Altcode
-VORSCHAU_TAGE_LANG = 365            # große Häuser und Ticketing
-VORSCHAU_TAGE_JE_QUELLE = {         # Schlüssel = Anzeigename aus main.py QUELLEN
-    "Ticketmaster": 365, "Eventim": 365,
-    "d-live": 365, "Mitsubishi Electric HALLE": 365, "Capitol Theater Düsseldorf": 365,
-    "Tonhalle Düsseldorf": 365, "Deutsche Oper am Rhein": 365, "Düsseldorfer Schauspielhaus": 365,
-    "Kom(m)ödchen Düsseldorf": 365, "Messe Düsseldorf": 365, "Fortuna Düsseldorf": 365,
-    "DEG Eishockey Düsseldorf": 365,
-    # neue Häuser aus Abschnitt 3 mit Kennzeichen „lang“
-}
-def vorschau_ende(quelle: str, heute: date) -> date: ...
+SCRAPER_VORSCHAU_TAGE = 60  # Fallback: Aggregatoren und Rausgegangen. Name bleibt für Altcode.
+def vorschau_ende(quelle: str, heute: date) -> date:
+    """Tage aus VORSCHAU_TAGE, sonst 120 für Tier 2/3 und 60 für Tier 1."""
 ```
 
-- Jeder Scraper ersetzt `heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)` durch `vorschau_ende(QUELLE_NAME, heute)`. Mechanisch, aber 47 Dateien – deshalb in einem eigenen Schritt (Z1) mit Test „jeder Scraper nutzt `vorschau_ende`“ (Quelltext-Prüfung wie bei anderen Struktur-Tests).
-- **Aggregatoren bleiben bei 60**, ebenso Rausgegangen (liefert ohnehin nur die Startseite), Meetup, RA, VisitDüsseldorf-Kalender (Q7-b: VisitDüsseldorf/Toubiz hätte Termine bis weit ins nächste Jahr – Vorschlag 120 Tage).
-- **Kleine Häuser** (Clubs, Kneipen, Kleinkunst): 120 Tage als Mittelweg (Q7-c) – deren Programme reichen selten weiter, und so ist das Fenster für den Rang-Abgleich mit Ticketing (365) nicht zu kurz.
-- **Seiten-Grenzen prüfen:** Ein längeres Fenster hilft nur, wenn der Scraper auch weiter blättert. Je Langzeit-Scraper wird geprüft und ggf. erweitert: Oper (`MONATE_VORAUS`, Monatsseiten), Schauspielhaus, Tonhalle (Saison-Spielplan), Capitol, d.live, Mitsubishi-Halle, Kom(m)ödchen (Spielplan über unseren Server), Fortuna/DEG (Saison-Spielpläne). Ergebnis je Scraper im Umsetzungsnotiz-Anhang.
+`VORSCHAU_TAGE` schlüsselt auf den **Anzeigenamen** in `QUELLEN`. Maßgeblich ist Q7, nicht eine unvollständige Skizze:
+
+- **365:** `Ticketmaster`, Eventim, Reservix, ADticket, Stagedates, `d-live`, `Mitsubishi Electric HALLE`, `Capitol Theater Düsseldorf`, `Tonhalle Düsseldorf`, `Deutsche Oper am Rhein`, `Düsseldorfer Schauspielhaus`, `Kom(m)ödchen Düsseldorf`, `Messe Düsseldorf`, `Fortuna Düsseldorf`, `DEG Eishockey Düsseldorf`, `Kunstsammlung NRW (K20/K21)`, und jedes neue Haus, dessen Spalte „Fenster“ in 3.2 **365** ist. In der Neuss/Ratingen-Tabelle fehlt die Spalte: Haus-Spielplan 365 (TaS, Rheinisches Landestheater, Globe nur in der Festivalzeit), städtischer Kalender 120 (`Stadt Ratingen`).
+- **120:** `VisitDüsseldorf`, `VisitDüsseldorf Führungen` (Q7, entschieden – nicht mehr „Vorschlag“), und jedes andere Tier-2-/Tier-3-Haus ohne 365-Eintrag (zakk, Stadtbüchereien, Pitcher, …). Ein neues Tier-2-/Tier-3-Haus ohne Eintrag bekommt 120, nicht 60.
+- **60:** die übrigen Tier-1-Namen, inklusive `Rausgegangen`, `Meetup.com`, `Resident Advisor`, `PRINZ.de Düsseldorf`, `AllEvents.in Düsseldorf`.
+
+- Jeder Scraper ersetzt `heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)` durch `vorschau_ende(QUELLE_NAME, heute)`. Das sind die 48 Dateien aus 1.4, deshalb ein eigener Schritt (Z1) mit Test „kein Scraper rechnet das Fenster mehr selbst“ (Quelltext-Prüfung). `config.py:83` verliert den Kommentar „Website zeigt ebenfalls 60“.
+- **Seiten-Grenzen sind Teil von Z1, nicht optional.** Ein längeres Fenster hilft nur, wenn der Scraper auch weiter liest. Bekannt am 24.11.: Oper `MONATE_VORAUS = 2` (`oper_am_rhein.py:33`), Schauspielhaus `MONATE_VORAUS = 6` (`schauspielhaus.py:47`), Ticketmaster eine Seite à 50 (5.1), RA-Häuser höchstens 5 Seiten (`ra_venue.py:122`). Tonhalle, Capitol, d.live, Mitsubishi-Halle, Kom(m)ödchen, Fortuna und DEG werden im selben Schritt gelesen und, wo der Spielplan kürzer ist als das Fenster, erweitert. Ergebnis je Scraper in der Umsetzungsnotiz.
 
 ### 5.3 Folgen für die Pipeline
 
 - **Speichern:** heute 8 min für 1.829 Events (bis zu 3 Abfragen je Event). Mit +2.000–4.000 Fern-Terminen etwa +10–20 min. Vertretbar; Optimierung (Tagesbestand vorab laden) nur, wenn der Lauf über 4 h kommt.
 - **Kategorisierung** (`categorizer.kategorisieren(limit=300)`, nach Datum sortiert): Ferne Events kommen erst dran, wenn die nahen fertig sind. Beim ersten Lauf mit 12 Monaten entsteht ein Rückstand von 2.000+ Events → **Q13:** Limit für zwei Wochen auf 1.500 anheben (Haiku, ≈ 0,1–0,2 Cent je Event, also ≈ 2–3 € einmalig), danach zurück auf 300. Der Fernpool (6.1) lädt deshalb nur Events mit Kategorie (`kategorie is not null`), damit unfertige Einträge nicht im Ausblick landen.
 - **Unterkategorien** (limit 600): gleiche Logik, unkritisch.
-- **Beschreibungen (Schritt 3b, heute 2,5 h):** Hier liegt das eigentliche Risiko (Job-Grenze 6 h, Workflow-Timeout 240 min). **Q14, Vorschlag:** Beschreibungen nur für Events bis Tag 60 wie bisher; Fern-Events bekommen ihre Beschreibung, sobald sie ins 60-Tage-Fenster rutschen. Ausnahme: höchstens 100 Fern-Events je Lauf mit Rang 1–2 (für den Ausblick und die Sitemap), nach Datum. Umsetzung: zusätzlicher Datumsfilter `datum <= heute + 60` in den Abfragen von `beschreibungen_nachziehen()` und `veranstalter_nachziehen()` (`pipeline/beschreibung_quellen.py:461`, `:604`, `:631`) plus der kleine Fern-Block.
-- **IndexNow, Reihen, Club-Scores:** laufen über alle künftigen Events; mehr Events, aber ohne KI. Club-Scores nutzen nur die nahen Termine (Programm-Wert) – prüfen, dass ein Club mit vielen Fern-Terminen nicht künstlich steigt (`scraper/orte/clubs_profil.py`, Fenster festschreiben auf 60 Tage).
-- **Instagram/Captions:** unverändert (nur nahe Events).
+- **Beschreibungen (Schritt 3b, im Lauf vom 21.11. 2 h 28 min):** Hier liegt das eigentliche Risiko. Das Workflow-Timeout ist **240 Minuten** (`.github/workflows/scrape.yml:44`), nicht 6 Stunden. GitHub ließe 360 zu, der Job ist aber auf 240 gesetzt. Nach einem Lauf von 3 h 7 min bleiben rund 50 Minuten. **Q14, entschieden:** Beschreibungen nur für Events bis Tag 60 wie bisher; Fern-Events bekommen ihre Beschreibung, sobald sie ins 60-Tage-Fenster rutschen. Ausnahme: höchstens 100 Fern-Events je Lauf mit Rang 1–2 (für den Ausblick und die Sitemap), nach Datum. Umsetzung: oberes Datum `datum <= heute + 60` in `offene_rausgegangen_events` und `offene_veranstalter_events` (`pipeline/beschreibung_quellen.py:461`, `:604`, `:631`; die Funktionen selbst stehen bei `:454`, `:592`, `:673`) plus der kleine Fern-Block.
+- **IndexNow** meldet nur Events, die **dieser Lauf** angelegt hat (`pipeline/indexnow.py:167–175`), nicht den ganzen künftigen Bestand. Ein erster Lauf mit Tausenden neuen Fern-Events kann trotzdem viele URLs auf einmal schicken. Ob das Tageskontingent von IndexNow reicht, ist offen (nicht geprüft). Die Meldung bleibt auf neue Events beschränkt; sie wird nicht auf alle Fern-Events ausgedehnt.
+- **Reihen** laden schon alle Events ab heute minus 365 Tage, ohne oberes Datum (`pipeline/reihen_zuordnen.py:24` und `:116–119`). Mehr Zeilen, keine KI. Kein neues Fenster nötig.
+- **Club-Scores:** der Zahlenwert „Programm“ zählt schon nur heute−90 bis heute+60 (`clubs_profil.py:663–664`). `kalender_laden` holt aber alle kommenden Events ohne Obergrenze (`:294–298`), und `kalender_quelle` behält von der nach Datum sortierten Liste die **letzten** 60 Zeilen (`:379–385`) – das wären die fernsten Termine, nicht die nächsten. Z1 begrenzt diese Quelle auf heute+60, bevor der Prompt gebaut wird.
+- **Instagram/Captions:** sollen nah bleiben, tun das im Code aber nicht. `caption_generator.py:208–216` lädt `status = neu` mit Beschreibung **ohne** Datumsfilter (Limit 50). `publisher.py:281–290` postet `status = aufbereitet` ohne Datumsfilter, die nächsten zuerst, Top/Highlight/Tipp vorgezogen. Sobald Q14 einem Fern-Event eine Beschreibung gibt, kann es eine Caption bekommen und später gepostet werden. Z1 setzt in beiden Abfragen `datum <= heute + 60`. Top/Highlight/Tipp eines Fern-Events postet der Publisher erst, wenn das Event in diesem Fenster liegt.
 - **Gebietsfilter:** Ticketing liefert Region (Köln, Essen …) – `pipeline/gebiet.py` filtert schon nach Düsseldorf/Neuss/Ratingen; Ticketmaster-Abfrage zusätzlich per Ort/Radius eingrenzen.
 
 ### 5.4 Provision: Partnerprogramme mit Eventdaten (Recherche 24.11.2026, Rückfrage des Auftraggebers)
 
-Recherche in Programmseiten, Awin-Profilen und Entwickler-Dokumentation; kein Konto angelegt. Die tatsächlichen Sätze für Deutschland stehen bei mehreren Anbietern erst nach der Anmeldung im jeweiligen Netzwerk fest.
+Recherche in Programmseiten, Awin-Profilen und Entwickler-Dokumentation; kein Konto angelegt. Die tatsächlichen Sätze für Deutschland stehen bei mehreren Anbietern erst nach der Anmeldung im jeweiligen Netzwerk fest. **Runde 1 hat diese Anbieterseiten nicht erneut abgerufen** – Sätze, Cookie-Fristen und API-Zusagen in dieser Tabelle bleiben offen/ungeprüft, Stand 24.11.2026.
 
 | Anbieter | Eventdaten | Provision (soweit öffentlich) | Netzwerk | Haken | Einschätzung |
 |---|---|---|---|---|---|
@@ -373,30 +382,30 @@ Claude legt die Texte für die Ticketmaster-Bestätigung und die Reservix-Anfrag
 #### 5.5.2 Zwei Wege zur Provision
 
 1. **Daten vom Anbieter** (Rang 2): Ticketmaster-API, Reservix-API, Eventim-Feed (falls es ihn gibt) liefern Events mit Ticket-Link; neue Scraper `scraper/tier1/reservix.py`, `scraper/tier1/eventim.py`, bestehender `ticketmaster.py`. Zeitraum 365 Tage, Gebietsfilter wie gehabt.
-2. **Ticket-Link aus der Haus-Quelle** (größter Hebel, wirkt auch ohne Datenfeed): Viele Häuser verlinken ihren Ticketverkauf bei Eventim, Reservix, ADticket oder Ticketmaster (in der Prüfung z. B. Comedy Club, Tor 3 und Nachtresidenz → Eventim, Philara → Reservix). Venue-Scraper speichern diesen Link künftig in einer **neuen Spalte `events.ticket_url`** (der DEG-Scraper liest ihn heute schon intern). Die Website macht daraus bei bekanntem Anbieter einen Partner-Link, bei Awin als Deeplink `https://www.awin1.com/cread.php?awinmid=<Programm>&awinaffid=<Publisher-ID>&ued=<Ziel-URL>`.
+2. **Ticket-Link aus der Haus-Quelle** (größter Hebel, wirkt auch ohne Datenfeed): Viele Häuser verlinken ihren Ticketverkauf bei Eventim, Reservix, ADticket oder Ticketmaster (in der Prüfung z. B. Comedy Club, Tor 3 und Nachtresidenz → Eventim, Philara → Reservix). Venue-Scraper speichern diesen Link künftig in einer **neuen Spalte `events.ticket_url`**. Der DEG-Scraper liest den Link heute nur intern (`scraper/tier3/deg.py:255–257`) und schreibt ihn **nicht** ins Event (`:316–331`). P1 übernimmt ihn dort. Die Website macht daraus bei bekanntem Anbieter einen Partner-Link, bei Awin als Deeplink `https://www.awin1.com/cread.php?awinmid=<Programm>&awinaffid=<Publisher-ID>&ued=<Ziel-URL>`.
 
-SQL (vor dem Deploy von P1): `events.ticket_url text`. Beim Rangwechsel (4.2) bleibt ein vorhandener `ticket_url` stehen, wenn die neue Quelle keinen hat; der Admin-Bereich bekommt das Feld in die Bearbeiten-Whitelist (Abstimmung mit dem Admin-Plan).
+SQL (vor dem Deploy von P1): `events.ticket_url text`. Dieselbe Policy wie bei `quellen` (4.3): die Spalte erbt „Events lesen“. Beim Rangwechsel (4.2) bleibt ein vorhandener `ticket_url` stehen, wenn die neue Quelle keinen hat. `ticket_url` kommt in `BEARBEITBAR` (`web/lib/admin/events.ts:7–24`) und in die erste `SPALTEN_VARIANTEN`-Zeile, analog zu `quellen`. `quelle_url` bleibt die Hauptquelle und ist kein Ersatz für `ticket_url`.
 
 #### 5.5.3 Welcher Ticket-Button? (Q20)
 
 - **Ein** Ticket-Button je Event, nie mehrere Anbieter mit Preisen nebeneinander (Awin-Bedingung „kein Preisvergleich“; außerdem übersichtlicher).
 - Auswahl nach **Offiziellkeit, nicht nach Provision:** zuerst der Ticket-Link, den das Haus selbst nennt (`ticket_url`), sonst der Link der Rang-2-Quelle aus `quellen` (4.3). Das hält die Seite redaktionell unabhängig (Magazin und Impressum nach § 18 MStV).
-- Ist die Hauptquelle selbst ein Ticketanbieter, ist „Zum Termin“ schon der Ticket-Link; dann kein zweiter Button.
+- Ist die Hauptquelle selbst ein Ticketanbieter (Rang 2), ist der Haupt-Button schon der Ticket-Link; dann kein zweiter Button. Der Button-Text bleibt der heutige (6.3), nicht pauschal „Zum Termin“.
 - **Keine Partner-Links im Magazin-Text** (Q22), nur auf Event- und Ortsseiten sowie im Ausblick.
 
 #### 5.5.4 Tiqets und GetYourGuide: Angebote statt Events (Q21)
 
-Beide verkaufen Eintrittskarten und Touren mit täglicher Verfügbarkeit, keine Einzeltermine. Als Events würden sie den Kalender fluten. Vorschlag:
-- Neue Tabelle `partner_angebote` (Anbieter, externe ID, Titel, URL, Bild, „ab“-Preis, Bewertung, `ort_id`, aktualisiert_am), gefüllt einmal je Scraper-Lauf über die APIs (nur Düsseldorf/Neuss/Ratingen).
+Beide verkaufen Eintrittskarten und Touren mit täglicher Verfügbarkeit, keine Einzeltermine. Als Events würden sie den Kalender fluten. **Umsetzung (Q21, entschieden):**
+- Neue Tabelle `partner_angebote` (Anbieter, externe ID, Titel, URL, Bild, „ab“-Preis, Bewertung, `ort_id`, `bestaetigt`, aktualisiert_am), gefüllt einmal je Scraper-Lauf über die APIs (nur Düsseldorf/Neuss/Ratingen). SQL legt RLS und Grants an, nach dem Muster von `database/auth_rollen.sql:147` und `database/admin_quellen_2026-11-24.sql:24–37`: anon liest nur Zeilen mit `bestaetigt = true`; `authenticated` liest und bestätigt über die Admin-Prüfung `ist_admin()`; Schreiben aus der Pipeline nur mit `service_role`. Ohne Policy wäre die Tabelle für die Website unsichtbar oder für jeden lesbar.
 - **Ortsseiten** von Museen und Attraktionen (Kunstpalast, K20/K21, Aquazoo, Rheinturm …): Button „Tickets“, wenn ein Angebot dem Ort zugeordnet ist. Zuordnung über Name + Adresse als **Vorschlag im Admin-Bereich** (wie die Orte-Vorschläge aus Stufe 3c), erst die Bestätigung schaltet den Button frei.
 - **Stadtführungen** (Kategorie `stadtfuehrung`, Guide-Seite): Block „Führungen buchen“ mit bis zu 6 GetYourGuide-/Tiqets-Touren in Düsseldorf, nach Bewertung.
 - Bilder aus den APIs nur, wenn die Bedingungen das erlauben (Tiqets: Bilder nur auf Antrag) – sonst ohne Bild.
 
 #### 5.5.5 Website
 
-- **`web/lib/tickets.ts`:** erkennt den Anbieter an der Domain (eventim.de, reservix.de, adticket.de, ticketmaster.de, tiqets.com, getyourguide.de) und baut den Partner-Link aus den Variablen. Schalter **`PARTNERLINKS_AKTIV`** als GitHub-Variable wie `KONTEN_AKTIV` (wirkt mit dem nächsten Deploy; der Admin-Bereich zeigt ihn an). Aus = normale Links ohne Partner-Kennung.
+- **`web/lib/tickets.ts`:** erkennt den Anbieter an der Domain (eventim.de, reservix.de, adticket.de, ticketmaster.de, tiqets.com, getyourguide.de) und baut den Partner-Link aus den Variablen. Schalter **`PARTNERLINKS_AKTIV`** als GitHub-Variable wie `KONTEN_AKTIV` (wirkt mit dem nächsten Deploy). Der Admin zeigt Schalter nur aus der festen Liste `SCHALTER` (`web/lib/admin/github.ts:92`) mit Texten in `web/app/admin/technik/ansicht.tsx:19–25`. P2 trägt `PARTNERLINKS_AKTIV` dort ein, sonst erscheint er nicht. Aus oder fehlende Variable = normale Links ohne Partner-Kennung. **Ticketmaster bleibt zusätzlich außen vor**, bis die schriftliche Bestätigung aus 5.5.1 da ist (eigene Variable `TICKETMASTER_PARTNER_OK` oder eine Domänen-Allowlist, Standard aus). Ein globaler Schalter allein würde Ticketmaster-Links zu früh umbauen (Abschnitt 9).
 - **Kennzeichnung** direkt am Button: „Tickets*“ und darunter klein „*Partner-Link: Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich.“ (du-Ansprache wie auf den Konto-Seiten). Dazu ein Abschnitt „Partner-Links“ auf `/ueber` (Anker `#partner-links`).
-- Links mit `rel="sponsored noopener"` (Vorgabe von Google für Affiliate-Links).
+- Partner-Links mit `rel="sponsored noopener"`. Der heutige Haupt-Button hat nur `rel="noopener"` (`page.tsx:283`). JSON-LD behält die echte URL ohne Partner-Umleitung: `offers.url` ist heute `quelle_url` (`web/lib/json-ld.ts:109–113`) und wird, wenn vorhanden, die rohe `ticket_url`. Die Partner-URL steht nur im Button.
 - **Kein eigenes Klick-Tracking**, keine Cookies bei uns; Auswertung in den Netzwerk-Konten (Awin, Impact, Tiqets, GetYourGuide).
 - **Datenschutzerklärung** (Sie-Form): neuer Abschnitt zu den Partnerprogrammen; Entwurf von Claude, Freigabe durch den Anwalt **vor** `PARTNERLINKS_AKTIV=1`. Kennzeichnungstext ebenfalls zum Anwalt.
 
@@ -413,16 +422,16 @@ Der bestehende Pool `eventPoolLaden()` bleibt bei **60 Tagen**. Alles, was „wa
 | Startseite, Tagesleiste, Wochenende, Kostenlos, Kategorie-/Stadtteilseiten, Tagesplaner | **60 Tage** | keine |
 | Empfehlungen (Admin, Fokustag, Top/Highlight) | **60 Tage** | keine (`admin/empfehlungen.ts:51` bleibt) |
 | Magazin-Pool | wie heute | keine |
-| **Eventseite** | **unbegrenzt** | funktioniert schon (`eventLaden()` lädt einzeln nach); neu: Monats-Label („MÄRZ 2027“) bei Events > 60 Tage, Ticket-Link (6.3) |
-| **Ortsseiten** (`/orte/…`, Clubs, Kneipen) | **unbegrenzt** | lädt schon über `ort_id`; neu: Liste nach Monat gruppiert, ab Tag 61 eingeklappt „Ausblick (n)“ |
+| **Eventseite** | **unbegrenzt** | `eventLaden()` lädt das Event einzeln nach; neu: Monats-Label („MÄRZ 2027“) bei Events > 60 Tage, Ticket-Link (6.3). „Weitere Events an diesem Ort“ und „ähnliche Events“ lesen heute nur den 60-Tage-Pool (`page.tsx:81–88`). Liegt das Event hinter Tag 60, kommen diese beiden Blöcke aus dem Fernpool, sonst bliebe die Seite ohne Nachbarn. |
+| **Ortsseiten** (`/orte/…`, Clubs, Kneipen) | **unbegrenzt** | lädt schon über `ort_id`; neu: Liste nach Monat gruppiert, ab Tag 61 eingeklappt „Ausblick (n)“. Die Ortsseite zeigt heute höchstens 60 Karten und zählt den Rest nur (`web/app/orte/[slug]/page.tsx:175–180`). Der Guide-Block `OrtProgramm` zeigt 10 (`web/components/ort-programm.tsx:12`). Die 60 bzw. 10 gelten für die nahen Termine; der Ausblick ist der eingeklappte Rest und wird nicht von der Kappung verschluckt. |
 | **/entdecken – Suche** (`?q=`) | **12 Monate** | Treffer aus dem Fernpool als eigener Block „Ausblick“ unter den normalen Treffern |
 | **/entdecken – eigener Zeitraum** | **12 Monate** | `MAX_ZEITRAUM_TAGE` 60 → 366; liegt der Zeitraum ganz oder teilweise hinter Tag 60, kommen die Events aus dem Fernpool dazu |
 | **Neue Seite „Ausblick“** (Q9, `/ausblick`) | **Tag 61–365** | Liste nach Monaten, Filter Kategorie; nur Quellen Rang 1–2 und Orte mit Ortsseite (keine Kleinst-Events) |
 | Startseite – neue Box | Teaser | Q10: kleine Box „Große Events später im Jahr“ (6 Einträge, Rang 1–2, nach Datum) mit Link auf die neue Seite |
-| **Sitemap** | **12 Monate** | Eventseiten aus dem Fernpool aufnehmen (sonst findet Google die fernen Events nicht); Tagesseiten bleiben bei 60 |
+| **Sitemap** | **12 Monate** | Eventseiten aus dem Fernpool aufnehmen (sonst findet Google die fernen Events nicht). Tagesseiten in der Sitemap sind heute **14**, nicht 60 (`web/app/sitemap.ts:93–96`). Das bleibt. Der Fernpool hängt am selben `cacheTag(EVENTS_CACHE_TAG)` (`daten.ts:12`, `eventPoolLaden` bei `:239`), damit der Admin beide Pools leert. Einige Tausend Event-URLs bleiben unter der Sitemap-Grenze von 50.000. |
 | `/api/events`, Konto (Merkliste, „Für dich“), Geburtstags-Tipps | 60 Tage | keine; die Merkliste lädt gemerkte Events schon einzeln |
 
-Nicht geändert wird die Tagesleiste: Sie springt heute schon bis 366 Tage, wenn ein ferner Tag gewählt ist (`datum.ts:39`) – die Tagesseite `/tag/<datum>` hinter Tag 60 bleibt aber leer, solange sie den 60-Tage-Pool nutzt. Vorschlag: `/tag/<datum>` > Tag 60 nutzt den Fernpool; in der Sitemap stehen Tagesseiten weiter nur bis Tag 60 (heute ist eine ferne Tagesseite indexierbar, aber leer – `app/tag/[datum]/page.tsx:17` setzt `noindex` nur für vergangene Tage).
+Nicht geändert wird die Tagesleiste: Sie springt heute schon bis 366 Tage, wenn ein ferner Tag gewählt ist (`datum.ts:37–39`, höchstens 366). Die Tagesseite `/tag/<datum>` hinter Tag 60 bleibt leer, solange sie den 60-Tage-Pool nutzt. **Entschieden mit Q8:** `/tag/<datum>` hinter Tag 60 nutzt den Fernpool. In der Sitemap stehen Tagesseiten weiter nur die nächsten 14 (`sitemap.ts:93`). Eine ferne Tagesseite, die jemand verlinkt, ist heute indexierbar und leer: `app/tag/[datum]/page.tsx:17` setzt `noindex` nur für vergangene Tage. Sobald der Fernpool Termine für den Tag hat, ist die Seite zu Recht indexierbar; ohne Termine setzt sie `noindex`. `/ausblick` braucht keinen Eintrag im Proxy-Matcher (`web/proxy.ts:146–156`), solange die Seite keine 404 oder 308 aus dem Proxy braucht. Monatsseiten (Q18) kommen später und dann mit eigener Regel.
 
 ### 6.2 Kennzeichnung
 
@@ -430,15 +439,15 @@ Events > 60 Tage zeigen auf Karten und Eventseite ein kleines Label mit Monat un
 
 ### 6.3 Quell-Link auf der Eventseite (`web/app/event/[kategorie]/[slug]/page.tsx:282–300`)
 
-- Haupt-Button „Zum Termin“ → `quelle_url` (ist nach Abschnitt 4 immer die beste Quelle).
-- **Neu:** zweiter Button „Tickets“ nach den Regeln in 5.5.3 (`ticket_url` des Hauses, sonst Rang-2-Quelle aus `quellen`). Ohne beide Angaben entfällt der Button.
+- Haupt-Button → `quelle_url` (ist nach Abschnitt 4 immer die beste Quelle). Text wie heute: „Zum Termin um … Uhr“ oder „Zur Veranstalter-Seite“ (`page.tsx:282–286`), bei abgelaufenen Events der schlichte Link (`:289–292`).
+- **Neu:** zweiter Button „Tickets*“ nach den Regeln in 5.5.3 (`ticket_url` des Hauses, sonst Rang-2-Quelle aus `quellen`). Ohne beide Angaben entfällt der Button. Karten, Merkliste, Konto, Geburtstagsmail und Magazin verlinken auf die Eventseite (`eventPfad`), nicht auf `quelle_url`. Partner-Links entstehen dort nicht. Einzige weitere Kauf-URL ist `offers.url` im JSON-LD (5.5.5), und die bleibt ohne Partner-Umleitung.
 - Rausgegangen-Events: siehe 4.4.
 - „Quelle: …“ bleibt wie heute die Hauptquelle.
 - Partner-Links, Kennzeichnung und Datenschutz: 5.5.5.
 
 ### 6.4 Name der neuen Seite (Q9, zweite Runde)
 
-Die bestehenden Adressen sind kurze deutsche Zeitwörter: `/heute`, `/morgen`, `/wochenende`, `/kostenlos`. Die neue Seite sollte in diese Reihe passen und nicht mit vorhandenen Begriffen kollidieren („Merkliste“, Magazin-„Wochenvorschau“, Admin-„Vorschau“). Alle folgenden Adressen sind frei.
+Die bestehenden Adressen sind kurze deutsche Zeitwörter: `/heute`, `/morgen`, `/wochenende`, `/kostenlos`. **Q9 ist entschieden: „Ausblick“ unter `/ausblick`.** Die übrigen Zeilen sind die verworfenen Vorschläge der zweiten Runde und werden nicht gebaut. Alle genannten Adressen waren am 24.11. frei; vor W2 wird das noch einmal im Repo geprüft (`/vormerken`, `/highlights` und die anderen dürfen bis dahin nicht belegt worden sein).
 
 | Vorschlag | Adresse | Seitentitel (SEO) | Für | Gegen |
 |---|---|---|---|---|
@@ -449,7 +458,7 @@ Die bestehenden Adressen sind kurze deutsche Zeitwörter: `/heute`, `/morgen`, `
 | Save the Date | `/save-the-date` | „Save the Date: Düsseldorfs große Events“ | bekannt, locker | englisch, die übrigen Adressen sind deutsch |
 | Highlights | `/highlights` | „Highlights in Düsseldorf: was die nächsten Monate bringen“ | griffig | Highlight ist schon eine Empfehlungsstufe auf der Startseite |
 
-Ergänzend für Google (unabhängig vom Namen): Unterseiten je Monat (`/ausblick/2027-03`, Titel „Events in Düsseldorf im März 2027“) – danach wird viel gesucht. Vorschlag: erst die Hauptseite, Monatsseiten nach einigen Wochen, wenn genug Fern-Events da sind (Q18).
+Ergänzend für Google (unabhängig vom Namen): Unterseiten je Monat (`/ausblick/2027-03`, Titel „Events in Düsseldorf im März 2027“) – danach wird viel gesucht. **Q18 entschieden:** erst die Hauptseite, Monatsseiten später, wenn genug Fern-Events da sind.
 
 Label auf Karten (Q11) passt sich an: bei „Ausblick“ statt „Vorverkauf“ einfach das Monatskürzel groß („MÄRZ 2027“) – das erklärt sich selbst.
 
@@ -463,16 +472,16 @@ Jeder Schritt: lokal bauen und testen → Zusammenfassung → OK des Auftraggebe
 |---|---|---|---|
 | **A1** | **Auftraggeber:** Anmeldungen bei Awin (Eventim, Reservix, ADticket), Impact (Ticketmaster), Tiqets, GetYourGuide; Anfragen an Ticketmaster und Reservix senden (Texte von Claude) – läuft parallel ab Freigabe | – | Variablen/Secrets in GitHub |
 | **R1** | Rangfolge `pipeline/quellen_rang.py`; Deduplizierung, Speichern, Dubletten-Vorschläge auf Rang umstellen (4.1, 4.2) | – | Lauf-Log: „Quelle gewechselt: A → B“ jetzt auch zwischen Nicht-Rausgegangen-Quellen; Stichprobe 10 Events |
-| **R2** | Spalte `events.quellen`, Kennzahlen „nur Rausgegangen“ und „Lücken je Ort“ im Lauf-Report (4.3, 4.5) | `quellen_spalte_<datum>.sql` | Kennzahlen im Report plausibel |
-| **Z1** | Zeitraum je Quelle (`vorschau_ende`), Seiten-Grenzen der Langzeit-Scraper, Beschreibungen auf Tag ≤ 60 + Fern-Block 100, Kategorisierungs-Limit befristet 1.500 (5.2, 5.3) | – | Laufzeit je Schritt, Events > 60 Tage je Quelle, keine Zeitüberschreitung |
+| **R2** | Spalte `events.quellen`, Kennzahlen „nur Rausgegangen“ und „Lücken je Ort“ im Lauf-Report, W7 (4.3, 4.5) | `quellen_spalte_<datum>.sql` (inkl. drei Spalten in `scraper_laeufe`) | Kennzahlen im Report plausibel |
+| **Z1** | Zeitraum je Quelle (`vorschau_ende`, 5.2), Seiten-Grenzen der Langzeit-Scraper (Oper 2 Monate, Schauspielhaus 6, Ticketmaster eine Seite, RA 5 Seiten), Beschreibungen auf Tag ≤ 60 + Fern-Block 100, Kategorisierungs-Limit befristet 1.500, Captions und Publisher auf Tag ≤ 60, Club-Prompt auf +60 (5.3) | – | Laufzeit je Schritt gegen das Timeout von 240 Minuten, Events > 60 Tage je Quelle, kein Instagram-Post eines Fern-Events |
 | **T1** | Ticketing (5.1): Ticketmaster (Secret vom Auftraggeber, Workflow-`env`, Monatsfenster bis 12 Monate), Songkick aus `QUELLEN` nehmen, Stagedates über Sitemap + JSON-LD | – | Events je Quelle, Gebietsfilter, Dubletten zu d.live/Mitsubishi/Capitol |
 | **W1** | Website: Fernpool, Suche und eigener Zeitraum bis 12 Monate, Ortsseiten nach Monaten, Monats-Label, Sitemap, `/tag` > 60 (6.1, 6.2) | – | Seiten im Browser, Sitemap-Größe, Ladezeit Startseite unverändert |
-| **V0** | Bestehende Quellen mit großer Wirkung reparieren/erweitern: Kunstsammlung (Führungen/Veranstaltungen), VisitDüsseldorf komplett über Sitemap/Toubiz (3.4) | – | Events je Quelle vorher/nachher |
+| **V0** | Bestehende Quellen mit großer Wirkung reparieren/erweitern: Kunstsammlung (Führungen/Veranstaltungen), VisitDüsseldorf komplett über Sitemap/Toubiz (3.2, nicht ein eigener Abschnitt 3.4) | – | Events je Quelle vorher/nachher |
 | **V1** | Bausteine (3.3) + Welle A der Venues (3.2) | – | je Haus Eventzahl > 0, Ortszuordnung trifft |
 | **P1** | `events.ticket_url`: Venue-Scraper erfassen den Ticket-Link des Hauses (bestehende + Welle A), Rangwechsel behält ihn (5.5.2) | `ticket_url_<datum>.sql` | Anteil Events mit Ticket-Link je Anbieter |
 | **N1** | `quellen_nachziehen.py`: Bestand auf Rang umhängen – Probelauf, dann `--schreiben` | – (Sicherung im Skript) | Bericht |
 | **W2** | Seite „Ausblick“ (`/ausblick`), Startseiten-Box, Ticket-Button (Partner-Link vorbereitet, aus), Link „Website von <Ort>“ (6.1, 6.3, 4.4) | – | Seiten im Browser |
-| **P2** | Partner-Links: `web/lib/tickets.ts`, Kennzeichnung, Abschnitt auf `/ueber`, Datenschutz-Entwurf → Anwalt → Variable `PARTNERLINKS_AKTIV=1` + Deploy (5.5.5) | – | Links im Browser (Partner-Kennung, `rel=sponsored`), Netzwerk-Konten zeigen Klicks |
+| **P2** | Partner-Links: `web/lib/tickets.ts`, Kennzeichnung, Abschnitt auf `/ueber`, Datenschutz-Entwurf → Anwalt → Variable `PARTNERLINKS_AKTIV=1` + Deploy (5.5.5). Ticketmaster-Domain erst mit der schriftlichen Bestätigung. Schalter in `SCHALTER` und in der Technik-Ansicht | – | Links im Browser (Partner-Kennung, `rel=sponsored`), Ticketmaster-Link ohne Bestätigung noch ohne Partner-Kennung, Netzwerk-Konten zeigen Klicks |
 | **T2** | Reservix-API und Eventim-Feed als Rang-2-Quellen – sobald A1 Zugang liefert (5.5.2) | – | Events je Quelle, Dubletten |
 | **T3** | Tiqets/GetYourGuide: Tabelle `partner_angebote`, Abruf je Lauf, Zuordnungs-Vorschläge im Admin, Buttons auf Ortsseiten, Block im Stadtführungs-Guide (5.5.4) | `partner_angebote_<datum>.sql` | Angebote je Ort, Vorschläge |
 | **V2** | Welle B (Düsseldorf, Neuss, Ratingen; 3.2) | – | wie V1 |
@@ -491,13 +500,13 @@ Python mit `unittest` (wie bisher; pytest kommt nicht dazu), Website mit dem bes
 - **Merge (R1):** Paare Haus/Ticketmaster, Ticketmaster/PRINZ, PRINZ/Rausgegangen, Haus/Rausgegangen in beiden Reihenfolgen → Basis ist immer der bessere Rang; gleicher Rang → erste Quelle; Uhrzeit des Hauses gewinnt; leere Werte überschreiben nie; Bild der Rang-2-Quelle bleibt, wenn das Haus keines hat.
 - **Speichern (R1):** `_anreicherungs_update_bauen` mit gespeichertem PRINZ-Event und eingehendem Haus-Event → Quellenwechsel; umgekehrt keiner; `redaktion_felder` und `beschreibung_quelle` bleiben geschützt (bestehende Tests erweitern).
 - **Dubletten (R1):** `paare_finden` behält den besseren Rang.
-- **Quellenliste (R2):** neue Quelle wird angehängt, gleiche Quelle aktualisiert `zuletzt`, höchstens ein Eintrag je Name.
-- **Zeitraum (Z1):** `vorschau_ende` je Gruppe; Struktur-Test: kein Scraper rechnet mehr selbst mit `SCRAPER_VORSCHAU_TAGE`.
+- **Quellenliste (R2):** neue Quelle wird angehängt, gleiche Quelle aktualisiert `zuletzt`, höchstens ein Eintrag je Name. W7 zählt eine Lücke nicht, wenn die Rang-1-Quelle abgeschaltet oder saisonal ist.
+- **Zeitraum (Z1):** `vorschau_ende` je Gruppe (365 / 120 / 60, unbekannter Tier-2-Name = 120); Struktur-Test: kein Scraper rechnet das Fenster mehr selbst. Captions und Publisher lassen ein Event hinter Tag 60 aus. Der Club-Prompt enthält keine Zeile hinter Tag 60.
 - **Bausteine (V1):** JSON-LD mit `@graph`, `subEvent`, fehlender Uhrzeit, Zeitzone; Tribe-API-Antwort mit zwei Seiten; iCal mit Ganztags-Termin und wöchentlicher RRULE. Beispieldateien unter `tests/fixtures/`.
 - Bestehende Tests, die angepasst werden: `tests/test_rausgegangen_vorrang.py`, `test_dedup_aehnlich.py`, `test_dedup_toleranz.py`, `test_redaktion_feldschutz.py`, `test_lauf_report_kennzahlen.py`.
-- **Website (W1/W2):** Zeitraum > 60 Tage wird nicht mehr auf 60 gekürzt, aber auf 366; Suche findet ein Fern-Event im eigenen Block; Startseite enthält kein Event > 60 Tage außer in der neuen Box; Monats-Label ab Tag 61.
+- **Website (W1/W2):** Zeitraum > 60 Tage wird nicht mehr auf 60 gekürzt, aber auf 366; Suche findet ein Fern-Event im eigenen Block; Startseite enthält kein Event > 60 Tage außer in der neuen Box; Monats-Label ab Tag 61. Ortsseite und `OrtProgramm` kappen nur die nahen Termine, der Ausblick bleibt. Eine Tagesseite hinter Tag 60 ohne Termine ist `noindex`. Sitemap-Tage bleiben 14, Event-URLs kommen aus dem Fernpool.
 - **Ticket-Link (P1):** Rangwechsel ohne `ticket_url` der neuen Quelle behält den alten; Venue-Fixtures liefern den Ticket-Link.
-- **Partner-Links (P2, `web/tests/`):** je Anbieter-Domain der richtige Partner-Link (Awin-Deeplink mit korrekt kodierter Ziel-URL, Ticketmaster/Tiqets/GetYourGuide mit Partner-Kennung); unbekannte Domain bleibt unverändert; Schalter aus oder fehlende ID → normaler Link; jeder Partner-Link hat `rel="sponsored noopener"` und den Hinweistext; Ticket-Button-Auswahl nach 5.5.3 (Haus-Link vor Rang-2-Quelle, nie zwei Buttons); keine Partner-Links in Magazin-Beiträgen.
+- **Partner-Links (P2, `web/tests/`):** je Anbieter-Domain der richtige Partner-Link (Awin-Deeplink mit korrekt kodierter Ziel-URL, Tiqets/GetYourGuide mit Partner-Kennung); unbekannte Domain bleibt unverändert; Schalter aus oder fehlende ID → normaler Link; Ticketmaster ohne `TICKETMASTER_PARTNER_OK` bleibt ein normaler Link, auch wenn `PARTNERLINKS_AKTIV=1`; jeder Partner-Link hat `rel="sponsored noopener"` und den Hinweistext; JSON-LD `offers.url` enthält die Partner-URL nicht; Ticket-Button-Auswahl nach 5.5.3 (Haus-Link vor Rang-2-Quelle, nie zwei Buttons); keine Partner-Links in Magazin-Beiträgen, Karten, Merkliste und Mails.
 - **Partner-Angebote (T3):** Abruf mit Beispielantworten aus `tests/fixtures/`; nur bestätigte Zuordnungen erzeugen einen Button.
 
 ---
@@ -505,13 +514,13 @@ Python mit `unittest` (wie bisher; pytest kommt nicht dazu), Website mit dem bes
 ## 9. Risiken
 
 - **Mehr Dubletten** durch Ticketing (andere Titel-Schreibweisen: „KÜNSTLER – Tour 2027 – Düsseldorf, Halle“). Gegenmittel: `_bandname_enthalten` deckt viele Fälle; Prüfung nach T1; Dubletten-Vorschläge im Admin-Bereich.
-- **Laufzeit:** Beschreibungen sind schon heute bei 2,5 h. Ohne das Datumsfenster (Q14) würde der Lauf das Workflow-Timeout reißen.
+- **Laufzeit:** Beschreibungen waren im Lauf vom 21.11. bei 2 h 28 min. Das Timeout steht auf 240 Minuten (`scrape.yml:44`). Ohne das Datumsfenster (Q14) und ohne die Datumsgrenze bei Captions und Publisher würde der Lauf das Timeout reißen oder ferne Events auf Instagram posten.
 - **Venue-Scraper veralten** (Relaunch, neue Struktur): Bausteine warnen bei 0 Treffern; Warnregeln W1/W2 im Admin-Scraper-Tab.
 - **Rechtliches:** Nur öffentlich frei zugängliche Termindaten, robots.txt beachtet; Beschreibungen werden wie bisher in eigenen Worten geschrieben, Bilder nur aus der Quelle mit Herkunft. Ticketing-Bedingungen (Attribution, Bildnutzung, Speicherdauer) je Anbieter beachten (5.1).
 - **Falsche Rangfolge in Einzelfällen** (z. B. ein Haus-Scraper mit schlechteren Daten als Ticketmaster): leere Felder überschreiben nie; Redaktion kann Felder im Admin-Bereich festsetzen (`redaktion_felder`).
 - **Öffentliches Repository:** Zugangsdaten nur als GitHub-Secrets; Ortslisten und Venue-Tabellen sind unkritisch.
 - **Partner-Links abmahnfähig:** falsche oder fehlende Kennzeichnung ist ein Wettbewerbsverstoß. Gegenmittel: Kennzeichnung direkt am Button, Erklärseite, Anwalts-Freigabe vor `PARTNERLINKS_AKTIV=1`.
-- **Ticketmaster-Bedingungen:** ohne schriftliche Bestätigung (5.5.1) keine Partner-Links auf Ticketmaster-Daten; dann bleibt der Ticketmaster-Link ein normaler Link.
+- **Ticketmaster-Bedingungen:** ohne schriftliche Bestätigung (5.5.1) keine Partner-Links auf Ticketmaster-Daten, auch nicht wenn `PARTNERLINKS_AKTIV` schon 1 ist. Der Ticketmaster-Link bleibt dann ein normaler Link. Die API-Formulierung zu Einnahmen ist in Runde 1 nicht erneut gelesen.
 - **Awin-Bedingungen:** kein Preisvergleich, keine Suchmaschinen-Anzeigen auf die Marke; Eventim zahlt nur bei Kauf am selben Tag (Cookie 1 Tag) – Erwartung an die Einnahmen niedrig halten.
 - **Glaubwürdigkeit:** Button-Auswahl nach Offiziellkeit (Q20), keine Partner-Links im Magazin (Q22), keine Empfehlung wegen Provision (Empfehlungs-Logik bleibt unverändert).
 
@@ -524,7 +533,7 @@ Antworten des Auftraggebers vom 24.11.2026:
 1. **Einnahmen / Provision (Q6-a):** Rückfrage des Auftraggebers – bei welchen Anbietern lassen sich über ein Partnerprogramm Provisionen erzielen? → Recherche in 5.4.
 2. **Ticketmaster-Schlüssel:** reicht der Auftraggeber nach. Bis dahin bleibt T1 für Ticketmaster offen; Stagedates und die Songkick-Abschaltung gehen ohne Schlüssel.
 3. **Eventim/Reservix-Anfrage (Q6-b):** zunächst „vorerst nicht“, dann (24.11., zweite Antwort): **alle genannten Partner anbinden** → 5.5, Schritte A1, P1, T2, T3, P2.
-4. **Name der neuen Seite (Q9):** „Später im Jahr“ und „Vorverkauf“ gefallen nicht → neue Vorschläge in 6.4.
+4. **Name der neuen Seite (Q9):** „Später im Jahr“ und „Vorverkauf“ gefallen nicht. Entschieden ist **Ausblick** `/ausblick` (6.4). Die anderen Namen dort sind die verworfene Liste, keine offene Wahl.
 5. **Prioritäten bei den Häusern (Q15, Neuss/Ratingen):** keine besonderen Wünsche; Auswahl und Reihenfolge wie in 3.2 vorgeschlagen.
 
 ---
@@ -589,7 +598,28 @@ Status-Werte: `geändert` (Cursor) · `angenommen` / `angepasst` / `zurückgenom
 
 ### Runden
 
-(noch keine)
+| Runde | Wer | Nr. | Schweregrad | Abschnitt | Befund | Änderung im Plan | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | Cursor | 1 | kritisch | 3.3 | Eine gemeinsame `scrape()` ist im Lauf-Report eine Quelle. `scraper_ausfuehren` setzt einen Namen und einen Status (`pipeline/lauf_report.py:148–165`). Warnregeln und „neu je Quelle“ sähen 20 Häuser nicht. | Jedes Haus eine eigene Zeile in `QUELLEN`, gemeinsames Modul dahinter. Saisonale Häuser melden `saisonal`. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 2 | kritisch | 5.3 | Captions und Publisher filtern nicht nach Datum (`pipeline/caption_generator.py:208–216`, `pipeline/publisher.py:281–290`). Q14 würde ferne Events caption-fähig machen. Der Plan sagte „nur nahe Events“. | Z1 setzt in beiden Abfragen `datum <= heute + 60`. Top/Highlight/Tipp eines Fern-Events wartet bis dahin. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 3 | kritisch | 4.1 | Die Rangtabelle nannte Reservix „später“ und ließ ADticket und Stagedates weg. Ein unbekannter Tier-1-Name würde Rang 4. `ist_aggregator` sucht die Domain auch in der URL (`pipeline/deduplication.py:193–196`). | Rang 2 = Ticketmaster, Eventim, Reservix, ADticket, Stagedates. Rang nur über `quelle_name`, Rausgegangen zusätzlich über die URL. Q6-Zelle stellt klar: Songkick bleibt nein. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 4 | mittel | 5.2 | Die Dict-Skizze kennt weder 120 Tage noch VisitDüsseldorf noch die Kunstsammlung. Oper liest 2 Monate (`scraper/tier2/oper_am_rhein.py:33`), Schauspielhaus 6 (`schauspielhaus.py:47`), RA höchstens 5 Seiten (`scraper/utils/ra_venue.py:122`). | Regel 365/120/60 nach Q7 und Spalte „Fenster“. Seiten-Grenzen sind Pflicht in Z1, nicht „ggf.“. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 5 | mittel | 1.4 | „47 Dateien, davon 5 deaktiviert“ und „R25/Salon ohne Fenster“ stimmen nicht. 48 Dateien enthalten die Konstante. R25 und Salon laufen über `ra_venue.py:113`. `QUELLEN` hat 47 Zeilen (`main.py:86–139`). | Absatz auf die Zählung vom 24.11. korrigiert. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 6 | mittel | 5.3, 9 | Als Job-Grenze standen 6 Stunden. Gesetzt sind 240 Minuten (`.github/workflows/scrape.yml:44`). | Timeout-Angabe korrigiert. Nach dem Lauf vom 21.11. (3 h 7 min) bleiben rund 50 Minuten. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 7 | mittel | 4.5 | Die Warnregeln heißen W1–W6 (`pipeline/lauf_warnungen.py:3`, `web/lib/admin/warnregeln.ts:24`). Die Mail geht bei W1, W2, W4, W6 (`lauf_warnungen.py:25–26`). Abgeschaltete Quellen stehen in `pipeline/quellen.py:21`. | Neue Lückenregel ist W7, gelb, keine Mail. Abgeschaltete und saisonale Quellen zählen nicht. Q4-a als entschieden markiert. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 8 | mittel | 4.2 | Ein Rang über die Ticket-Domain oder ein Wechsel bei gleichem Rang ließe die Quelle springen. Heute wechselt die Quelle nur weg von Rausgegangen und nur mit URL (`database/client.py:128–135`). Der Admin dupliziert das Aggregator-Muster (`web/lib/admin/events.ts:164`). | Wechsel nur bei strikt besserem Rang und mit `quelle_url`. Dieselbe Ableitung im Admin. Nachziehen leert `ticket_url` und `quellen` nicht. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 9 | mittel | 4.3, 5.5 | `SPALTEN_VARIANTEN` gilt für den ganzen Pool (`web/lib/daten.ts:17–26`). `BEARBEITBAR` hat kein `ticket_url` (`web/lib/admin/events.ts:7–24`). `SCHALTER` hat kein `PARTNERLINKS_AKTIV` (`web/lib/admin/github.ts:92`, `web/app/admin/technik/ansicht.tsx:19–25`). Das Cockpit lädt den 60-Tage-Pool (`web/lib/admin/cockpit.ts:5`, `:97`). | Neue Spalten in die erste Variante, SQL davor, R1 fasst sie nicht an. `ticket_url` in die Whitelist, Schalter in beide Listen. Kennzahl aus dem Lauf-Report, nicht aus dem Pool. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 10 | mittel | 5.5.4 | `partner_angebote` war ohne RLS und Grants beschrieben. Anon liest `events` nur über „Events lesen“ (`database/auth_rollen.sql:147–149`). | SQL: anon nur `bestaetigt`, Admin über `ist_admin()`, Schreiben nur `service_role`. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 11 | mittel | 6.1, 6.3 | Sitemap-Tage sind 14 (`web/app/sitemap.ts:93–96`). Die Ortsseite kappt bei 60 Karten (`web/app/orte/[slug]/page.tsx:175–180`), `OrtProgramm` bei 10 (`web/components/ort-programm.tsx:12`). Ähnliche Events kommen aus dem 60-Tage-Pool (`page.tsx:81–88`). Der Button heißt nicht immer „Zum Termin“ (`page.tsx:282–286`). `offers.url` ist `quelle_url` (`web/lib/json-ld.ts:109–113`). | Kappung nur für nahe Termine. Fernpool für Nachbarn hinter Tag 60. Ferne Tagesseite ohne Termine `noindex`. Partner-URL nicht ins JSON-LD. Karten, Merkliste, Mails verlinken die Eventseite. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 12 | mittel | 5.3 | `kalender_laden` hat keine Obergrenze (`scraper/orte/clubs_profil.py:294–298`). `kalender_quelle` behält die letzten 60 Zeilen der Datumssortierung (`:379–385`), also die fernsten. IndexNow meldet nur neue Events des Laufs (`pipeline/indexnow.py:167–175`), nicht alle künftigen. | Club-Prompt auf heute+60. IndexNow-Satz korrigiert. Kontingent von IndexNow offen. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 13 | mittel | 5.1 | Ticketmaster holt eine Seite à 50 und schneidet bei 60 Tagen (`scraper/tier1/ticketmaster.py:287–294`, `:340–342`). Der Workflow setzt den Schlüssel nicht (`scrape.yml:93–109`). | T1 baut Monatsfenster und Blättern. Der Schlüssel allein reicht nicht. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 14 | mittel | 3.2, 4.4, 4.6, 5.5.4, 6.4, 7 | Q3, Q4, Q5, Q9, Q16, Q17, Q18 und Q21 sind entschieden, der Text fragte oder sagte „Vorschlag“. Schritt V0 verwies auf Abschnitt 3.4, den es nicht gibt. | Als entschieden markiert. V0 verweist auf 3.2. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 15 | mittel | 5.5.5, 9 | Ein globaler Schalter würde Ticketmaster-Links vor der schriftlichen Bestätigung zu Partner-Links machen. | Ticketmaster-Domain bleibt außen vor, bis `TICKETMASTER_PARTNER_OK` gesetzt ist. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 16 | gering | 3.3 | Goethe-Museum und KaBARett FLiN haben Crawl-delay 10. Die Baustein-Regel nannte nur 2 Sekunden. | Pause = das größere aus 2 Sekunden und Crawl-delay. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 17 | gering | 5.5.2 | Der DEG-Scraper legt `ticket_url` nur intern ab (`scraper/tier3/deg.py:255–257`) und nicht ins Event (`:316–331`). | P1 übernimmt das Feld ins Event. | angenommen (Claude: Belege geprüft) |
+| 1 | Cursor | 18 | gering | 1.1, 5.4 | Die Zahlen vom 23.11. und die Anbieterbedingungen (Sätze, Cookies, API-Formulierung) sind in dieser Runde nicht erneut abgerufen. | In 5.4 als offen/ungeprüft gekennzeichnet. Keine Zahl geändert. | angenommen (Claude: Belege geprüft) |
+| 1 | Claude | 19 | mittel | 4.1 | Rangtabelle nach Anzeigenamen trifft gespeicherte `quelle_name` nicht (4 Abweichungen + CSV-Namen der kleinen Märkte); `_scraper` fehlt in `_anreicherungs_update_bauen`, weil `_`-Felder vorher entfernt werden | Lauf: Rang aus `_scraper`, vorab berechnet und übergeben; DB: zweite Tabelle aus Anzeigenamen + `QUELLE_NAME`, unbekannt = Rang 3; Struktur-Test | angenommen |
+| 1 | Claude | 20 | mittel | 4.3, 7 | Neue Kennzahlen (nur Rausgegangen, Lücken je Ort) haben keinen Speicherort: Kennzahlen sind Spalten in `scraper_laeufe` (`main.py:299`) | R2-SQL um `kuenftige_events`, `nur_rausgegangen`, `luecken jsonb` ergänzt; W7 in TS liest `luecken` | angenommen |
 
 ## Prüfhistorie
 
@@ -598,3 +628,5 @@ Status-Werte: `geändert` (Cursor) · `angenommen` / `angepasst` / `zurückgenom
 - 24.11.2026: dritte Fassung – Auftraggeber: alle Partner-Anbieter anbinden → 5.5, Q19–Q22, Schritte A1/P1/T2/T3/P2, Tests, Risiken
 - 24.11.2026: dritte Fassung vom Auftraggeber freigegeben. Cursor-Prüfung (Anhang A) steht noch aus; Empfehlung: vor Schritt R1.
 - 24.11.2026: Worktree auf origin (3f6a7ab, Admin-Plan komplett) gesetzt; Anhang A zur Prüfliste, Anhang B Prüfschleife Cursor ↔ Claude; „Knopf“ → „Button“
+- 24.11.2026: Runde 1 – Cursor 18 Befunde (3 kritisch, 12 mittel, 3 gering), alle von Claude geprüft und angenommen; Claude 2 weitere (mittel), eingearbeitet
+- 24.11.2026: Runde 1 Cursor – 18 Befunde (3 kritisch, 12 mittel, 3 gering), Plan angepasst, Q1–Q22 unverändert. Gegenprüfung durch Claude steht aus.
