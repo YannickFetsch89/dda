@@ -2,6 +2,7 @@
 // Reine Funktionen (getestet in web/tests/admin-events.test.ts): Eingaben prüfen, Änderung und Feldschutz bauen.
 
 import { KATEGORIEN } from "../kategorien";
+import { istSammelquelle } from "../quellen-rang";
 
 /** Felder, die der Admin-Bereich ändern darf (Whitelist, 4.4) */
 export const BEARBEITBAR = [
@@ -158,11 +159,9 @@ export function updateBauen(bisher: EventZeile, felder: Partial<Record<Feld, Wer
   return { update, geaendert };
 }
 
-/** Sammel-Quellen wie in pipeline/deduplication.py (_AGGREGATOR_MUSTER): Uhrzeit dort oft der Einlass */
-const AGGREGATOR = /rausgegangen|visitd(?:ue|ü)sseldorf|allevents|resident advisor|ra\.co|prinz|kulturportal|eventfinder|meinestadt|eventbrite|ticketmaster|songkick/i;
-
+/** Sammel-Quellen wie pipeline/deduplication.ist_aggregator: Rang ≥ 2 (lib/quellen-rang.ts), Uhrzeit dort oft der Einlass */
 export function istAggregator(e: { quelle_name?: unknown; quelle_url?: unknown }): boolean {
-  return AGGREGATOR.test(`${typeof e.quelle_name === "string" ? e.quelle_name : ""} ${typeof e.quelle_url === "string" ? e.quelle_url : ""}`);
+  return istSammelquelle(e);
 }
 
 /**

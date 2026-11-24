@@ -8,6 +8,8 @@ Zwei Regeln:
    Duplikat ergänzt.
 2. Beim bild_url wird ein Rausgegangen-Bild immer durch ein Bild einer
    anderen Quelle ersetzt, sofern vorhanden.
+3. Hauptquelle ist die Quelle mit dem besseren Rang (pipeline/quellen_rang.py: Haus vor Ticketverkauf vor
+   Portalen vor Aggregatoren vor Rausgegangen; Plan docs/plan-quellen-ausbau-2026-11-23.md, 4.2).
 
 Erstellt: 2026-03-05
 """
@@ -16,6 +18,7 @@ import re
 from typing import Optional
 
 from pipeline.ortsnamen import einheitlicher_name, ortsname_vereinheitlichen
+from pipeline.quellen_rang import HAUS, TICKETVERKAUF, quellen_rang
 
 logger = logging.getLogger(__name__)
 
@@ -188,20 +191,17 @@ def _titel_passt(a: dict, b: dict) -> bool:
     return len(titel_a & titel_b) / len(titel_a | titel_b) >= 0.75
 
 
-# Quellen, die Termine nur weitergeben: Die Uhrzeit ist dort oft der Einlass statt des Beginns
-# (Shinedown: d-live 19:30, Rausgegangen 18:30) – bei Abweichungen gilt die Zeit des Veranstalters.
-_AGGREGATOR_MUSTER = re.compile(
-    r"rausgegangen|visitd(?:ue|ü)sseldorf|allevents|resident advisor|ra\.co|prinz|kulturportal|eventfinder|meinestadt"
-    r"|eventbrite|ticketmaster|songkick",
-    re.IGNORECASE,
-)
 # Wie weit dürfen Uhrzeiten zweier Quellen auseinanderliegen und trotzdem dasselbe Event meinen (Einlass/Beginn)?
 ZEIT_TOLERANZ_MINUTEN = 120
 
 
 def ist_aggregator(event: dict) -> bool:
-    """True für Sammel-Quellen (Rausgegangen, Visit Düsseldorf, AllEvents …), False für Veranstalter-Scraper."""
-    return bool(_AGGREGATOR_MUSTER.search(f"{event.get('quelle_name') or ''} {event.get('quelle_url') or ''}"))
+    """
+    True für Quellen, die Termine nur weitergeben (Rang ≥ 2: Ticketverkauf, Portale, Aggregatoren, Rausgegangen),
+    False für Veranstalter (Rang 1). Dort ist die Uhrzeit oft der Einlass statt des Beginns (Shinedown: d-live 19:30,
+    Rausgegangen 18:30) – bei Abweichungen gilt die Zeit des Veranstalters. Rang: pipeline/quellen_rang.py.
+    """
+    return quellen_rang(event) >= TICKETVERKAUF
 
 
 def _quelle(event: dict) -> str:
@@ -379,9 +379,10 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
     Mergt zwei Events: Fehlende Felder der Basis werden aus dem Duplikat ergänzt.
     Bei bild_url: Rausgegangen-Bilder werden durch andere Quellen ersetzt.
 
-    Vorrang: Trifft ein Rausgegangen-Eintrag auf dasselbe Event aus einer anderen Quelle,
-    wird die andere Quelle zur Basis (Link, Quelle, Bild, Beschreibung, Preis, Adresse).
-    Rausgegangen füllt danach nur noch Felder auf, die dort fehlen.
+    Vorrang (Plan Quellen-Ausbau 4.2, Schritt R1): Die Quelle mit dem strikt besseren Rang (pipeline/quellen_rang.py)
+    wird zur Basis (Link, Quelle, Bild, Beschreibung, Preis, Adresse) – aber nur, wenn sie einen eigenen Link
+    (quelle_url) hat. Bei gleichem Rang bleibt die zuerst gekommene. Die andere Quelle füllt danach nur noch Felder
+    auf, die in der Basis fehlen.
 
     Args:
         basis: Primärer Event-Eintrag (wird angereichert)
@@ -390,12 +391,15 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
     Returns:
         Angereicherter Event-Dict
     """
-    if ist_rausgegangen(basis) and not ist_rausgegangen(duplikat):
+    rang_basis, rang_duplikat = quellen_rang(basis), quellen_rang(duplikat)
+    if rang_duplikat < rang_basis and duplikat.get("quelle_url"):
         logger.debug(
-            "Quelle getauscht: Rausgegangen → '%s' für '%s'",
-            duplikat.get("quelle_name", "?"), (duplikat.get("titel") or "")[:40],
+            "Quelle getauscht: '%s' (Rang %d) → '%s' (Rang %d) für '%s'",
+            basis.get("quelle_name", "?"), rang_basis, duplikat.get("quelle_name", "?"), rang_duplikat,
+            (duplikat.get("titel") or "")[:40],
         )
         basis, duplikat = duplikat, basis
+        rang_basis, rang_duplikat = rang_duplikat, rang_basis
 
     merged = dict(basis)
 
@@ -407,9 +411,10 @@ def _events_mergen(basis: dict, duplikat: dict) -> dict:
             if feld in duplikat:
                 merged[feld] = duplikat[feld]
 
-    # Uhrzeit: Bei Abweichung gilt die des Veranstalters (Aggregatoren nennen oft den Einlass)
+    # Uhrzeit: Bei Abweichung gilt die des Veranstalters (Rang 1; die anderen nennen oft den Einlass). Greift nur, wenn
+    # der Veranstalter nicht Basis wurde (ohne eigenen Link); gleicher Rang ändert die Uhrzeit nicht.
     if (_uhrzeit(duplikat) and _uhrzeit(basis) and _uhrzeit(basis) != _uhrzeit(duplikat)
-            and ist_aggregator(basis) and not ist_aggregator(duplikat)):
+            and rang_duplikat == HAUS and rang_basis > HAUS):
         merged["uhrzeit"] = duplikat["uhrzeit"]
 
     for feld in _ANREICHERBARE_FELDER:
@@ -450,8 +455,8 @@ def deduplizieren(events: list[dict]) -> list[dict]:
 
     Duplikate (gleicher Titel + Datum + Ort) werden nicht verworfen,
     sondern in den ersten Eintrag gemergt. Fehlende Felder werden
-    ergänzt, Rausgegangen-Bilder durch bessere Quellen ersetzt. Liefert eine andere
-    Quelle dasselbe Event wie Rausgegangen, wird sie zur Hauptquelle (siehe _events_mergen).
+    ergänzt, Rausgegangen-Bilder durch bessere Quellen ersetzt. Liefert eine Quelle mit
+    besserem Rang dasselbe Event, wird sie zur Hauptquelle (siehe _events_mergen).
 
     Verschiedene Uhrzeiten am selben Tag sind KEINE Duplikate, sondern weitere
     Termine (z.B. Führungen um 11 und 14 Uhr) und bleiben getrennt. Fehlt bei

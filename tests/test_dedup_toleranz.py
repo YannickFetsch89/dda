@@ -78,9 +78,10 @@ class QuellenToleranzTest(unittest.TestCase):
         self.assertNotIn("uhrzeit", _anreicherungs_update_bauen(neu, alt))
 
     def test_aggregatoren(self):
-        for q in ["Rausgegangen", "VisitDüsseldorf", "AllEvents.in Düsseldorf", "Resident Advisor", "PRINZ.de Düsseldorf"]:
+        # Meetup.com ist seit dem Quellen-Rang (Plan Quellen-Ausbau 4.1) ein Portal (Rang 3)
+        for q in ["Rausgegangen", "VisitDüsseldorf", "AllEvents.in Düsseldorf", "Resident Advisor", "PRINZ.de Düsseldorf", "Meetup.com"]:
             self.assertTrue(ist_aggregator({"quelle_name": q}), q)
-        for q in ["d-live", "zakk", "Meetup.com", "Stadtbüchereien Düsseldorf", "Jazz-Schmiede Düsseldorf"]:
+        for q in ["d-live", "zakk", "Stadtbüchereien Düsseldorf", "Jazz-Schmiede Düsseldorf"]:
             self.assertFalse(ist_aggregator({"quelle_name": q}), q)
 
 

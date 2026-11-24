@@ -16,11 +16,10 @@ from pipeline.deduplication import (
     KATEGORIE_FEST_FELD,
     TITEL_STATUS_FELD,
     bester_treffer,
-    ist_aggregator,
-    ist_rausgegangen,
     kategorie_ersetzen,
     preis_normalisieren,
 )
+from pipeline.quellen_rang import AGGREGATOR, HAUS, quellen_rang, rang_gespeichert
 from pipeline.slug_generator import slug_fuer_event, slug_mit_suffix
 
 load_dotenv()
@@ -44,10 +43,10 @@ _ANREICHERBARE_FELDER: list[str] = [
     "stadtteil",
 ]
 
-# Quellenangaben, die beim Vorrang-Wechsel (Rausgegangen → andere Quelle) mitgelesen werden
+# Quellenangaben, die beim Vorrang-Wechsel (zur Quelle mit besserem Rang) mitgelesen werden
 _QUELL_FELDER: list[str] = ["quelle_name", "quelle_url"]
 
-# Felder, die bei einem Rausgegangen-Eintrag von der anderen Quelle übernommen werden,
+# Felder, die beim Vorrang-Wechsel von der Quelle mit besserem Rang übernommen werden,
 # auch wenn sie schon belegt sind (sonst gilt überall: nur leere Felder auffüllen)
 _VORRANG_FELDER: list[str] = ["bild_url", "beschreibung", "preis", "adresse"]
 
@@ -74,7 +73,9 @@ def _ist_rausgegangen_bild(bild_url: Optional[str]) -> bool:
     return bool(bild_url and _RAUSGEGANGEN_MUSTER.search(bild_url))
 
 
-def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bool = False) -> dict:
+def _anreicherungs_update_bauen(
+    bestehendes: dict, neu: dict, kategorie_fest: bool = False, rang_neu: Optional[int] = None,
+) -> dict:
     """
     Berechnet welche Felder eines bestehenden DB-Eintrags angereichert werden sollen.
 
@@ -83,19 +84,26 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
       (gilt in jede Richtung – auch Rausgegangen füllt Lücken einer anderen Quelle)
     - bild_url: Rausgegangen-Bild wird durch nicht-Rausgegangen-Bild ersetzt,
       auch wenn bereits vorhanden
-    - Vorrang: Stammt der bestehende Eintrag von Rausgegangen und der neue von einer anderen
-      Quelle, wechselt die Quelle (quelle_name, quelle_url); Bild, Beschreibung, Preis und
-      Adresse kommen dann von der anderen Quelle, soweit sie dort belegt sind. Slug bleibt.
+    - Vorrang (Plan Quellen-Ausbau 4.2, Schritt R1): Hat der neue Eintrag einen strikt besseren Rang
+      (pipeline/quellen_rang.py) und einen eigenen Link, wechselt die Quelle (quelle_name, quelle_url); Preis,
+      Adresse und Beschreibung kommen dann von der besseren Quelle, soweit sie dort belegt sind, das Bild nur, wenn
+      das bisherige von Rang ≥ 4 stammt. Gleicher oder schlechterer Rang wechselt nie – so springt kein Event
+      zwischen zwei Quellen hin und her. Slug, abgleich_* und ort_id bleiben.
       Ausnahme: Eine aus der Veranstalter-Seite recherchierte Beschreibung (beschreibung_quelle) bleibt.
 
     Args:
         bestehendes: Aktueller DB-Eintrag
-        neu: Neu eingehender Event
+        neu: Neu eingehender Event (ohne interne „_“-Felder, siehe events_speichern)
+        rang_neu: Rang der Quelle des neuen Events. events_speichern rechnet ihn vor dem Entfernen von `_scraper`
+            aus dem Anzeigenamen; ohne Angabe gilt der Rang des gespeicherten Namens (quelle_name).
 
     Returns:
         Dict mit Feldern die aktualisiert werden sollen (leer = kein Update nötig)
     """
     update: dict = {}
+    if rang_neu is None:
+        rang_neu = quellen_rang(neu)
+    rang_alt = rang_gespeichert(bestehendes.get("quelle_name"), bestehendes.get("quelle_url"))
 
     # Ortszuordnung: nur ergänzen, wenn sie fehlt – nie NULL und nie eine vorhandene ersetzen (das tut nur der
     # Nachtrag mit einem Treffer des gespeicherten Namens, Plan Locations 3.4)
@@ -119,17 +127,20 @@ def _anreicherungs_update_bauen(bestehendes: dict, neu: dict, kategorie_fest: bo
             if not db_wert and neu_wert:
                 update[feld] = neu_wert
 
-    # Uhrzeit: Bei Abweichung gilt die des Veranstalters – Aggregatoren nennen oft den Einlass statt des Beginns
+    # Uhrzeit: Bei Abweichung gilt die des Veranstalters (Rang 1) – die anderen nennen oft den Einlass statt des Beginns.
+    # Gleicher Rang ändert die Uhrzeit nicht.
     neue_zeit = _uhrzeit_hhmm(neu.get("uhrzeit"))
     if (neue_zeit and bestehendes.get("uhrzeit") and neue_zeit != _uhrzeit_hhmm(bestehendes.get("uhrzeit"))
-            and ist_aggregator(bestehendes) and not ist_aggregator(neu)):
+            and rang_neu == HAUS and rang_alt > HAUS):
         update["uhrzeit"] = neu["uhrzeit"]
 
-    # Ohne eigenen Link bleibt Rausgegangen Quelle (sonst zeigte „Zum Termin“ weiter auf Rausgegangen)
-    if ist_rausgegangen(bestehendes) and neu.get("quelle_url") and not ist_rausgegangen(neu):
+    # Quellenwechsel nur zu einem strikt besseren Rang und nur mit eigenem Link (ohne ihn zeigte „Zum Termin“ ins Leere)
+    if rang_neu < rang_alt and neu.get("quelle_url"):
         for feld in _QUELL_FELDER + _VORRANG_FELDER:
             if feld == "beschreibung" and bestehendes.get("beschreibung_quelle"):
                 continue  # aus der Veranstalter-Seite recherchierter Text bleibt (nur Lücken würden gefüllt)
+            if feld == "bild_url" and rang_alt < AGGREGATOR:
+                continue  # Bild eines Hauses, Ticketverkaufs oder Portals bleibt (leere Werte füllt die Schleife oben)
             neu_wert = neu.get(feld)
             if neu_wert and neu_wert != bestehendes.get(feld):
                 update[feld] = neu_wert
@@ -289,8 +300,8 @@ def events_speichern(events: list[dict]) -> dict:
       - Fehlende Felder werden aus dem neuen Eintrag ergänzt.
       - Ein Rausgegangen-Bild wird durch ein Bild einer anderen Quelle ersetzt,
         sofern der neue Eintrag ein besseres Bild mitbringt.
-      - Ein Rausgegangen-Eintrag wechselt zur anderen Quelle (Vorrang-Regel, siehe
-        _anreicherungs_update_bauen); der Slug bleibt.
+      - Ein Eintrag wechselt zur Quelle mit strikt besserem Rang (Vorrang-Regel, siehe
+        _anreicherungs_update_bauen, pipeline/quellen_rang.py); der Slug bleibt.
 
     Args:
         events: Liste von Event-Dicts im DiesDasDüsseldorf-Format
@@ -388,8 +399,10 @@ def events_speichern(events: list[dict]) -> dict:
             else:
                 # Duplikat: Anreicherung prüfen
                 duplikate += 1
+                alte_quelle = bestehendes.get("quelle_name")
+                # Rang aus dem Anzeigenamen (`_scraper`) – datensatz enthält die „_“-Felder nicht mehr
                 update = _anreicherungs_update_bauen(
-                    bestehendes, datensatz, bool(event.get(KATEGORIE_FEST_FELD))
+                    bestehendes, datensatz, bool(event.get(KATEGORIE_FEST_FELD)), quellen_rang(event)
                 )
 
                 if update:
@@ -398,8 +411,8 @@ def events_speichern(events: list[dict]) -> dict:
                     bestehendes.update(update)
                     angereichert += 1
                     if "quelle_name" in update:
-                        logger.info("Quelle gewechselt: Rausgegangen → '%s' für '%s' (%s)",
-                                    update["quelle_name"], titel[:40], datum)
+                        logger.info("Quelle gewechselt: '%s' → '%s' für '%s' (%s)",
+                                    alte_quelle, update["quelle_name"], titel[:40], datum)
                     logger.info(
                         "Duplikat angereichert in DB: '%s' (%s) – Felder: %s",
                         titel[:40], datum, ", ".join(update.keys()),

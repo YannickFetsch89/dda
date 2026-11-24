@@ -1,0 +1,114 @@
+{
+ "_hinweis": "Gemeinsame Prüfdaten für pipeline/quellen_rang.py und web/lib/quellen-rang.ts (Plan Quellen-Ausbau 4.1). Ändert sich die Tabelle, beide Dateien und diese Datei anpassen.",
+ "unbekannt_gespeichert": 3,
+ "gespeichert": {
+  "Ticketmaster": 2,
+  "Kulturportal Düsseldorf": 3,
+  "VisitDüsseldorf": 3,
+  "VisitDüsseldorf Führungen": 3,
+  "Meetup.com": 3,
+  "Resident Advisor": 3,
+  "PRINZ.de Düsseldorf": 4,
+  "Songkick": 4,
+  "AllEvents.in Düsseldorf": 4,
+  "Rausgegangen": 5,
+  "Tonhalle Düsseldorf": 1,
+  "zakk": 1,
+  "Deutsche Oper am Rhein": 1,
+  "Düsseldorfer Schauspielhaus": 1,
+  "d-live": 1,
+  "Kunstpalast Düsseldorf": 1,
+  "Kunstsammlung NRW (K20/K21)": 1,
+  "NRW-Forum Düsseldorf": 1,
+  "FFT Düsseldorf": 1,
+  "Stahlwerk Düsseldorf": 1,
+  "Rudas Studios Düsseldorf": 1,
+  "Mitsubishi Electric HALLE": 1,
+  "Kulturschlachthof R25": 1,
+  "Salon des Amateurs": 1,
+  "Pitcher Rock HQ": 1,
+  "Kunsthalle Düsseldorf": 1,
+  "Filmmuseum Düsseldorf": 1,
+  "Stadtbüchereien Düsseldorf": 1,
+  "Tanzhaus NRW": 1,
+  "Jazz-Schmiede Düsseldorf": 1,
+  "Capitol Theater Düsseldorf": 1,
+  "Kom(m)ödchen Düsseldorf": 1,
+  "STARTPLATZ Düsseldorf": 1,
+  "Parkrun Volksgarten Düsseldorf": 1,
+  "Sport im Park Düsseldorf": 1,
+  "Fortuna Düsseldorf": 1,
+  "DEG Eishockey Düsseldorf": 1,
+  "Messe Düsseldorf": 1,
+  "EKŌ-Haus der Japanischen Kultur": 1,
+  "Classic Remise Düsseldorf": 1,
+  "Stadtstrand Düsseldorf": 1,
+  "IHK Düsseldorf": 1,
+  "StartupDorf Meetup": 1,
+  "Street Food Thursday": 1,
+  "Kasematten Düsseldorf": 1,
+  "Auf ins Viertel": 1,
+  "Kleine Weihnachtsmärkte": 1,
+  "Classic Remise": 1,
+  "Street Food Thursday Düsseldorf": 1,
+  "Kleine Weihnachtsmärkte (Redaktion)": 1,
+  "Event-Meldung": 1,
+  "Eventbrite": 4,
+  "eventfinder.de": 4,
+  "meinestadt.de": 4,
+  "Bandsintown": 4,
+  "Spontacts Düsseldorf": 4
+ },
+ "faelle": [
+  {
+   "quelle_name": "Rausgegangen",
+   "quelle_url": null,
+   "rang": 5
+  },
+  {
+   "quelle_name": "PRINZ.de Düsseldorf",
+   "quelle_url": "https://rausgegangen.de/events/x",
+   "rang": 5
+  },
+  {
+   "quelle_name": "d-live",
+   "quelle_url": "https://www.eventim.de/event/x",
+   "rang": 1
+  },
+  {
+   "quelle_name": "Ticketmaster",
+   "quelle_url": "https://www.ticketmaster.de/event/x",
+   "rang": 2
+  },
+  {
+   "quelle_name": "VisitDüsseldorf",
+   "quelle_url": null,
+   "rang": 3
+  },
+  {
+   "quelle_name": "Stadt Neuss",
+   "quelle_url": null,
+   "rang": 3
+  },
+  {
+   "quelle_name": null,
+   "quelle_url": null,
+   "rang": 3
+  },
+  {
+   "quelle_name": "AllEvents.in Düsseldorf",
+   "quelle_url": null,
+   "rang": 4
+  },
+  {
+   "quelle_name": "Classic Remise",
+   "quelle_url": null,
+   "rang": 1
+  },
+  {
+   "quelle_name": "Event-Meldung",
+   "quelle_url": null,
+   "rang": 1
+  }
+ ]
+}

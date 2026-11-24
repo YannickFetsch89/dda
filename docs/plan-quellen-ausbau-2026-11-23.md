@@ -691,6 +691,35 @@ Status-Werte: `geändert` (Cursor) · `angenommen` / `angepasst` / `zurückgenom
 | 5 | Cursor | – | – | gesamt | keine kritischen oder mittleren Befunde | – | bestätigt |
 | 5 | Claude | – | – | gesamt | Gegenprüfung: keine alten Sätze zu Nr. 35/36 übrig, Schrittfolge A1 R1 R2 Z1 T1 W1 V0 V1 P1 N1 W2 P2 T2 T3 V2 und SQL-Tabelle stimmig | – | bestätigt – **Prüfschleife abgeschlossen** |
 
+## Anhang C: Umsetzungsnotizen
+
+### R1 – Rangfolge der Quellen (24.11.2026, lokal gebaut)
+
+Gebaut wie 4.1/4.2, Punkte 1–3 (Punkt 4 Nachziehen = N1, später):
+- `pipeline/quellen_rang.py`: `RANG_ANZEIGE` (alle 47 Zeilen aus `QUELLEN`), `RANG_GESPEICHERT` (dazu die abweichenden
+  `QUELLE_NAME`-Werte, `Event-Meldung` aus `web/app/api/admin/meldungen/route.ts:18` als Rang 1 und die Namen der
+  deaktivierten Scraper für alte Zeilen), `quellen_rang(event)`, `rang_gespeichert(...)`, `rang_anzeige(name, tier)`.
+- `pipeline/lauf_report.py`: setzt neben `_scraper` auch `_tier` (für den Rang eines Anzeigenamens ohne Tabelleneintrag,
+  Tier 2/3 → 1, sonst 4). Wird wie alle `_`-Felder vor dem Speichern entfernt.
+- `pipeline/deduplication.py`: `_events_mergen` tauscht zur Quelle mit strikt besserem Rang. **Abweichung vom
+  Wortlaut von 4.2 Punkt 1:** auch hier nur, wenn die bessere Quelle eine `quelle_url` hat – wie beim Speichern
+  (Punkt 2); sonst verlöre das Event seinen Link. Die Uhrzeit des Hauses gilt dann trotzdem. `ist_aggregator` =
+  Rang ≥ 2; `_AGGREGATOR_MUSTER` entfällt (die URL-Suche nach Ticket-Domains damit auch).
+- `database/client.py`: `_anreicherungs_update_bauen(..., rang_neu)`; `events_speichern` rechnet den Rang vor dem
+  Entfernen der `_`-Felder. Quellenwechsel nur bei strikt besserem Rang mit Link; Bild nur ersetzt, wenn die alte
+  Quelle Rang ≥ 4 hat; `beschreibung_quelle`, `redaktion_felder`, `ort_id` bleiben. Log: „Quelle gewechselt: A → B“.
+- `pipeline/dubletten_sql.py` `paare_finden`: Sortierung nach Rang (damit auch `vorschlaege.py`).
+- `web/lib/quellen-rang.ts` (neue Datei, Tabelle der gespeicherten Namen) und `web/lib/admin/events.ts`
+  (`istAggregator` = Rang ≥ 2 statt eigenem Muster).
+- Gemeinsame Prüfdaten `tests/fixtures/quellen_rang.json`; Tests `tests/test_quellen_rang.py` (20) und
+  `web/tests/quellen-rang.test.ts` (4). `tests/test_dedup_toleranz.py`: Meetup.com gilt jetzt als Sammelquelle
+  (Rang 3, Q1).
+- Ergebnis: Python 548 Tests ok, Website 703 Tests ok. `tsc` meldet im Worktree nur die bekannten fehlenden
+  `PageProps`-Typen (entstehen erst beim Next-Build), keine Fehler in den geänderten Dateien.
+- Verhaltensänderungen im Lauf: PRINZ, AllEvents, VisitDüsseldorf usw. werden jetzt von einem Haus abgelöst (bisher
+  nur Rausgegangen); Ticketmaster wird von einem Haus abgelöst; Uhrzeit-Regel unverändert, aber Meetup.com zählt als
+  Sammelquelle. Rückweg: Commit zurücknehmen (kein Schalter, kein SQL).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

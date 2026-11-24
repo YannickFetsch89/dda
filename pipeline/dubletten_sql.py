@@ -8,7 +8,7 @@ gleiche Uhrzeit – bei verschiedenen Quellen auch Einlass/Beginn (≤ 2 Std.) o
 („ENTFÄLLT! …“) werden erkannt.
 
 Je Paar:
-- Behalten wird der Eintrag des Veranstalters (sonst der ältere). Er bekommt fehlende Felder (Bild, Beschreibung,
+- Behalten wird der Eintrag mit der besseren Quelle (Rang, pipeline/quellen_rang.py; bei gleichem Rang der ältere). Er bekommt fehlende Felder (Bild, Beschreibung,
   Preis, Adresse) und – bei Abweichung – die Uhrzeit des Veranstalters bzw. die Absage.
 - Die Dublette wird ausgeblendet (abgelehnt = true) und ihre URL per 301 auf die behaltene Seite umgeleitet
   (event_seo_entscheidungen, wie die SEO-Entscheidungen im Dashboard). So läuft keine URL ins Leere.
@@ -36,6 +36,7 @@ from pipeline.deduplication import (
     titel_status_bereinigen,
 )
 from pipeline.indexnow import kategorie_web
+from pipeline.quellen_rang import quellen_rang
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +115,8 @@ def paare_finden(events: list[dict]) -> tuple[list[tuple[dict, dict]], list[dict
         pro_tag[e["datum"]].append(e)
     paare, allein_mit_zusatz = [], []
     for tag in sorted(pro_tag):
-        # Veranstalter zuerst, Einträge mit Zusatz zuletzt, sonst die älteren zuerst
-        reihe = sorted(pro_tag[tag], key=lambda e: (bool(e.get(TITEL_STATUS_FELD)), ist_aggregator(e), e.get("erstellt_am") or ""))
+        # Bessere Quelle zuerst (Rang, pipeline/quellen_rang.py), Einträge mit Zusatz zuletzt, sonst die älteren zuerst
+        reihe = sorted(pro_tag[tag], key=lambda e: (bool(e.get(TITEL_STATUS_FELD)), quellen_rang(e), e.get("erstellt_am") or ""))
         behalten: list[dict] = []
         for e in reihe:
             treffer = bester_treffer(behalten, e)

@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 # Interner Schlüssel, mit dem jedes Event seine Quelle durch Deduplizierung und Speicherung trägt.
 # Felder mit "_" am Anfang werden vor dem Speichern entfernt (database/client.py).
 SCRAPER_FELD = "_scraper"
+# Tier der Quelle aus main.py QUELLEN – für den Rang einer Quelle ohne Eintrag in pipeline/quellen_rang.py
+TIER_FELD = "_tier"
 
 # Log-Meldungen, an denen bewusst übersprungene bzw. saisonal leere Quellen erkannt werden
 _UEBERSPRUNGEN = re.compile(r"übersprungen|nicht gesetzt|deaktiviert", re.IGNORECASE)
@@ -147,6 +149,7 @@ class LaufReport:
 
         for event in events:
             event[SCRAPER_FELD] = name
+            event[TIER_FELD] = tier
 
         if absturz:
             status, meldung = "fehler", absturz
