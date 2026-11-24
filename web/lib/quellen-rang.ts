@@ -101,6 +101,7 @@ export const RANG_GESPEICHERT: Readonly<Record<string, number>> = {
 /** Unbekannter gespeicherter Name (z. B. CSV-Namen der kleinen Weihnachtsmärkte): neutral zwischen Haus und Aggregator */
 export const UNBEKANNT_GESPEICHERT = 3;
 export const HAUS = 1;
+export const TICKETVERKAUF = 2;
 export const RAUSGEGANGEN = 5;
 
 const text = (wert: unknown) => (typeof wert === "string" ? wert : "");

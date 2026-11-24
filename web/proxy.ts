@@ -64,7 +64,8 @@ export async function proxy(request: NextRequest) {
 
   // Bremse gegen Massenabrufe der Guides (Ausfall 23.11.2026: ~3.000 Abrufe von /guides/restaurants-cafes durch einen
   // einzelnen Client, Speicherüberlauf alle ~40 s). Vor jeder Rechnung: zu viele Aufrufe derselben Adresse → 429.
-  if (pfad === "/guides" || pfad.startsWith("/guides/")) {
+  // /ausblick rechnet mit dem Fernpool (Tag 61–365) – dieselbe Bremse (Plan Quellen-Ausbau 6.1, W2)
+  if (pfad === "/guides" || pfad.startsWith("/guides/") || pfad === "/ausblick") {
     if (gebremst(bremsAdresse(request.headers))) {
       return new NextResponse("Zu viele Anfragen. Bitte in einer Minute noch einmal versuchen.", {
         status: 429,
@@ -146,7 +147,7 @@ export const config = {
   matcher: [
     // Guides: alle Pfade (auch die Hub-Seiten selbst) – wegen der Bremse gegen Massenabrufe (23.11.2026)
     "/event/:path*", "/tag/:datum", "/reihe/:slug", "/guides", "/guides/:path*", "/kategorie/:slug",
-    "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken", "/magazin/:path*", "/feed.xml",
+    "/kategorie/:slug/:unter", "/stadtteil/:slug", "/entdecken", "/magazin/:path*", "/feed.xml", "/ausblick",
     // Ortsseiten (Plan Locations 3.10): aktive Spielstätte 200, Guide-Slug 308 auf die kanonische Guide-URL,
     // alter Slug 308 über ort_weiterleitungen, sonst echte 404. /orte selbst ist die Übersicht (immer 200).
     "/orte/:path+",

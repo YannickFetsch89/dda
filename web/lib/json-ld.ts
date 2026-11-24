@@ -106,11 +106,13 @@ export function eventJsonLd(e: DddEvent, seitenUrl: string, siteUrl: string): Re
   }
   if (e.beschreibung) daten.description = kurzBeschreibung(e.beschreibung, 500) ?? e.beschreibung;
   if (bild) daten.image = [absolut(bild, siteUrl)];
-  if (e.quelle_url) {
+  // Angebot: Ticket-Link des Hauses, sonst die Hauptquelle – immer die echte URL, nie ein Partner-Link (Plan 5.5.5)
+  const angebotUrl = e.ticket_url || e.quelle_url;
+  if (angebotUrl) {
     const betrag = istKostenlos(e) ? 0 : preisBetrag(e.preis);
     daten.offers = {
       "@type": "Offer",
-      url: e.quelle_url,
+      url: angebotUrl,
       ...(betrag !== null ? { price: betrag, priceCurrency: "EUR" } : {}),
       // Nur, wenn die Quelle es ausdrücklich sagt; sonst keine Angabe (Verfügbarkeit kennen wir nicht)
       ...(/ausverkauft/i.test(e.preis ?? "") ? { availability: "https://schema.org/SoldOut" } : {}),

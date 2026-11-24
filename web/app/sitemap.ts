@@ -88,6 +88,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/morgen`, ...mit(juengstes(amTag(plusTage(pool.heute, 1)))), changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE_URL}/entdecken`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE_URL}/wochenende`, ...mit(juengstes(imZeitraum("wochenende"))), changeFrequency: "daily", priority: 0.8 },
+    // Ausblick: große Events Tag 61–365 (Plan Quellen-Ausbau 6.1, W2)
+    { url: `${SITE_URL}/ausblick`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/stadtteile`, ...mit(juengstes(imZeitraum("woche"))), changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/event-melden`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/ueber`, changeFrequency: "monthly", priority: 0.4 },

@@ -12,7 +12,7 @@ import type { DddEvent, EventPool } from "./typen";
 export const EVENTS_CACHE_TAG = "events";
 
 const SPALTEN_BASIS =
-  "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
+  "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats, ort_id";
 // Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
 const SPALTEN_VARIANTEN = [
   // Ticket-Link des Hauses (database/ticket_url_2026-11-24.sql, Plan Quellen-Ausbau 5.5.2, P1; Button erst mit W2)
@@ -71,6 +71,7 @@ export function normalisieren(z: Zeile): DddEvent {
     quelle_name: text(z.quelle_name),
     quelle_url: text(z.quelle_url),
     ticket_url: text(z.ticket_url),
+    ort_id: text(z.ort_id),
     bild_url: text(z.bild_url),
     stadtteil: text(z.stadtteil),
     slug: text(z.slug),

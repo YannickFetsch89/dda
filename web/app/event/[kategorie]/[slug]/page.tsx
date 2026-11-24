@@ -27,7 +27,9 @@ import { unterkategorieIndexierbar } from "@/lib/landing-listen";
 import { hubOrte, stadtteileImHub } from "@/lib/guide-stadtteile";
 import { clubProfil } from "@/lib/clubs";
 import { clubsLaden } from "@/lib/clubs-daten";
-import { eventOrtLink } from "@/lib/spielstaetten-daten";
+import { eventOrtLink, ortZeileLaden } from "@/lib/spielstaetten-daten";
+import { eventQuellenLaden, ortWebsite, ticketZiel } from "@/lib/ticket-button";
+import { RAUSGEGANGEN, rangGespeichert } from "@/lib/quellen-rang";
 import { ortPfad } from "@/components/ort-karten";
 import { Krumen } from "@/components/landing";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
@@ -118,6 +120,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
   // Genau ein Ortslink (Plan Locations 3.2): kanonische Seite des zugeordneten Ortes (events.ort_id); dann entfallen
   // der Suchlink und ein Club-Link, der auf ein anderes Ziel zeigen würde
   const ortLink = await eventOrtLink(e.id);
+  // Ticket-Button (Plan Quellen-Ausbau 5.5.3/6.3): Ticket-Link des Hauses, sonst Ticketverkaufs-Quelle aus der Liste.
+  // Nur für kommende, nicht abgesagte Events. Partner-Links kommen erst mit P2 (dann rel="sponsored").
+  const tickets = !abgelaufen && !e.abgesagt ? ticketZiel(e, e.ticket_url ? [] : await eventQuellenLaden(e.id)) : null;
+  // „Website von <Ort>“ (4.4): nur bei Events, die nur Rausgegangen kennt, über die Ortszuordnung (ort_id)
+  const ortSeite = rangGespeichert(e) === RAUSGEGANGEN && e.ort_id ? ortWebsite(e, await ortZeileLaden(e.ort_id)) : null;
   const club = ortLink ? null : clubTreffer;
   // Weihnachtsmarkt-Guide (Plan Weihnachtsmärkte 3.3/5.6, Stufe 1b): Event meint einen Guide-Eintrag → Markt-Kasten,
   // sonst bei Weihnachtsmarkt im Titel ein Link auf den Hub. Nur mit Schalter.
@@ -288,6 +295,12 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                 <Icon name="open_in_new" />
               </a>
             )}
+            {tickets && (
+              <a className="btn btn--outline btn--gross btn--block" href={tickets} target="_blank" rel="noopener">
+                Tickets
+                <Icon name="confirmation_number" />
+              </a>
+            )}
             {/* Abgelaufen: kein Ticket-Button mehr, nur ein schlichter Verweis auf den Original-Eintrag */}
             {e.quelle_url && abgelaufen && (
               <a className="link" href={e.quelle_url} target="_blank" rel="noopener">
@@ -300,6 +313,11 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
               </h2>
               <TeilenLeiste titel={titel} pfad={pfad} />
             </section>
+            {ortSeite && (
+              <a className="link" href={ortSeite.url} target="_blank" rel="noopener">
+                Website von {ortSeite.name} <Icon name="open_in_new" />
+              </a>
+            )}
             {e.quelle_name && <p className="quelle">Quelle: {e.quelle_name}</p>}
             {ortLink ? (
               <Link className="link" href={ortLink.pfad}>

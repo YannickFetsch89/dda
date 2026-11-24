@@ -53,7 +53,7 @@ export interface DddEvent {
   reihe: { slug: string; titel: string } | null;
   /** Nur bei gebündelten Listeneinträgen (lib/termine.ts): alle Uhrzeiten des Tages, sonst null */
   uhrzeiten: string[] | null;
-  /** Zugeordneter Ort (orte.id, Plan Locations 3.4) – nur, wo geladen (Ortsseiten, Eventseite) */
+  /** Zugeordneter Ort (orte.id, Plan Locations 3.4) – seit W2 in allen Pools (Ausblick nur an Orten mit Ortsseite) */
   ort_id?: string | null;
 }
 

@@ -10,6 +10,7 @@ import { Datumsleiste } from "@/components/datumsleiste";
 import { WochenendTag } from "@/components/wochenend-tag";
 import { WmStartBox } from "@/components/wm-startbox";
 import { MagazinStartBox } from "@/components/magazin-verweise";
+import { AusblickStartBox } from "@/components/ausblick-box";
 import { StartPersoenlich, VorschauLinks, VorschauLinksMit } from "@/components/start-persoenlich";
 import { kontenAktiv } from "@/lib/konto/konfig";
 import { EventKarte, Icon, KompaktKarte, Leer, ListenZeile, ThumbZeile, Bild, GratisZeile, eventPfad } from "@/components/karten";
@@ -358,6 +359,11 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             Ganzes Wochenende ansehen
           </Link>
         </section>
+
+        {/* Ausblick (Plan Quellen-Ausbau 6.1, Q10): sechs große Events ab Tag 61; ohne Einträge nichts */}
+        <Suspense fallback={null}>
+          <AusblickStartBox />
+        </Suspense>
 
         {/* Magazin (Plan Redaktion 5.9, E9): die drei neuesten Beiträge; ohne Beitrag oder bei Schalter aus nichts */}
         <Suspense fallback={null}>
