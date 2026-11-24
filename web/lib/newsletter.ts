@@ -12,14 +12,22 @@ function mac(id: string, zweck: TokenZweck, schluessel: string): string {
   return createHmac("sha256", schluessel).update(ZWECK[zweck] + id, "utf8").digest("base64url");
 }
 
+/** Schlüssel ohne jeden Leerraum – dieselbe Regel wie deploy.yml (tr -d) und pipeline/newsletter_bestaetigung.py.
+ * Livetest 24.11.2026: Die Website erbte das Secret roh mit Zeilenumbruch, alle Bestätigungslinks waren ungültig. */
+export function schluesselBereinigen(s: string | undefined): string {
+  return (s ?? "").replace(/[ \r\n\t]/g, "");
+}
+
 /** Token für eine Anmeldung (Tests; der Job erzeugt es in Python mit derselben Rechnung). */
-export function newsletterToken(id: string, zweck: TokenZweck, schluessel: string | undefined = process.env.NEWSLETTER_TOKEN_SCHLUESSEL): string | null {
+export function newsletterToken(id: string, zweck: TokenZweck, roh: string | undefined = process.env.NEWSLETTER_TOKEN_SCHLUESSEL): string | null {
+  const schluessel = schluesselBereinigen(roh);
   if (!schluessel || !UUID.test(id)) return null;
   return `${id}.${mac(id, zweck, schluessel)}`;
 }
 
 /** Anmelde-ID aus einem gültigen Token, sonst null (zeitkonstanter Vergleich; ein Token gilt nur für seinen Zweck). */
-export function newsletterTokenPruefen(token: unknown, zweck: TokenZweck, schluessel: string | undefined = process.env.NEWSLETTER_TOKEN_SCHLUESSEL): string | null {
+export function newsletterTokenPruefen(token: unknown, zweck: TokenZweck, roh: string | undefined = process.env.NEWSLETTER_TOKEN_SCHLUESSEL): string | null {
+  const schluessel = schluesselBereinigen(roh);
   if (!schluessel || typeof token !== "string" || token.length > 200) return null;
   const punkt = token.indexOf(".");
   if (punkt < 0) return null;

@@ -24,6 +24,17 @@ describe("Tokens", () => {
   });
 });
 
+describe("Schlüssel mit Zeilenumbruch (Livetest 24.11.2026)", () => {
+  it("Secret roh mit Umbruch prüft dieselben Links wie der Mail-Job", () => {
+    expect(newsletterTokenPruefen(PY_BESTAETIGEN, "bestaetigen", `${S}\n`)).toBe(ID);
+    expect(newsletterTokenPruefen(PY_BESTAETIGEN, "bestaetigen", ` test\r\nschluessel\t`)).toBe(ID);
+    expect(newsletterToken(ID, "bestaetigen", `${S}\r\n`)).toBe(PY_BESTAETIGEN);
+  });
+  it("nur Leerraum gilt als fehlender Schlüssel", () => {
+    expect(newsletterTokenPruefen(PY_BESTAETIGEN, "bestaetigen", " \n")).toBeNull();
+  });
+});
+
 describe("Anmeldung planen", () => {
   const jetzt = Date.parse("2026-11-23T12:00:00Z");
   const b = (x: Partial<{ bestaetigt_am: string | null; bestaetigung_zugestellt_am: string | null; mails_gesendet: number }>) => ({

@@ -202,6 +202,12 @@ jobs:
             cd web
             export NODE_OPTIONS="--require /home/dies_das_duesseldorfadmin/bin/jail-shim.cjs"
             export NEXT_TELEMETRY_DISABLED=1
+            # Die Secrets aus „envs“ NICHT an Build und Website vererben: Next bevorzugt Umgebungsvariablen vor
+            # web/.env.local, und dort stehen sie bereinigt. Roh enthielt NEWSLETTER_TOKEN_SCHLUESSEL einen Zeilenumbruch –
+            # die Website prüfte Bestätigungslinks mit einem anderen Schlüssel als der Mail-Job (Livetest 24.11.2026).
+            # So startet Next nach dem Deploy genauso wie nach einem Neustart durch den Wächter (Cron, ohne diese Sitzung).
+            unset SUPABASE_SERVICE_KEY GOOGLE_PLACES_API_KEY KONTEN_AKTIV MAGAZIN_JOB_SCHLUESSEL GEBURTSTAG_TOKEN_SCHLUESSEL
+            unset GEBURTSTAG_JOB_SCHLUESSEL ADMIN_GITHUB_TOKEN NEWSLETTER_TOKEN_SCHLUESSEL NL_SCHLUESSEL
             npm ci --no-audit --no-fund
             npm run build
             /home/dies_das_duesseldorfadmin/bin/website.sh neustart
