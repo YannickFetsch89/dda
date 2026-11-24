@@ -1,0 +1,68 @@
+name: Quelle testen
+
+# Führt EINEN Scraper aus main.QUELLEN aus und zeigt das Ergebnis – schreibt nichts in die Datenbank, keine KI, keine
+# Mails. Für neue Schlüssel und Quellen (Plan Quellen-Ausbau, z. B. Ticketmaster nach dem Hinterlegen des Secrets).
+# Manuell: GitHub → Actions → „Quelle testen“ → Run workflow (oder: gh workflow run quelle-testen.yml -f quelle=Ticketmaster)
+on:
+  workflow_dispatch:
+    inputs:
+      quelle:
+        description: "Name der Quelle wie in main.QUELLEN (z. B. Ticketmaster, Stagedates, Tonhalle Düsseldorf)"
+        required: true
+        default: "Ticketmaster"
+
+jobs:
+  testen:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Python-Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Quelle ausführen (ohne Speichern)
+        env:
+          QUELLE: ${{ inputs.quelle }}
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          TICKETMASTER_BILDER_OK: ${{ vars.TICKETMASTER_BILDER_OK }}
+          VORSCHAU_NOTAUS: ${{ vars.VORSCHAU_NOTAUS }}
+          TZ: Europe/Berlin
+        run: |
+          python - <<'PY'
+          import asyncio, inspect, logging, os, sys
+          from collections import Counter
+          logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+          logging.getLogger("httpx").setLevel(logging.WARNING)  # keine URLs mit Schlüssel im Log
+          from main import QUELLEN
+          name = os.environ["QUELLE"].strip()
+          treffer = [(n, t, f) for n, t, f in QUELLEN if n == name]
+          if not treffer:
+              print(f"Quelle „{name}“ gibt es nicht. Vorhanden: " + ", ".join(n for n, _, _ in QUELLEN))
+              sys.exit(1)
+          if name == "Ticketmaster":
+              print("TICKETMASTER_API_KEY gesetzt:", "ja" if os.environ.get("TICKETMASTER_API_KEY", "").strip() else "NEIN")
+          _, tier, funktion = treffer[0]
+          events = asyncio.run(funktion()) if inspect.iscoroutinefunction(funktion) else funktion()
+          events = list(events or [])
+          print(f"\n=== {name} (Tier {tier}): {len(events)} Events ===")
+          if not events:
+              sys.exit(1)
+          daten = sorted(e["datum"] for e in events if e.get("datum"))
+          print(f"Zeitraum: {daten[0]} bis {daten[-1]}")
+          print("Je Monat:", dict(sorted(Counter(d[:7] for d in daten).items())))
+          print("Orte (Top 15):", Counter(e.get("ort") for e in events).most_common(15))
+          print("Kategorien:", dict(Counter(e.get("kategorie") for e in events)))
+          print("Mit Bild:", sum(1 for e in events if e.get("bild_url")), "| mit Preis:", sum(1 for e in events if e.get("preis")),
+                "| mit Ticket-Link:", sum(1 for e in events if e.get("ticket_url")))
+          print("\nBeispiele:")
+          for e in events[:12]:
+              print(f"  {e.get('datum')} {e.get('uhrzeit') or '--:--'} | {e.get('titel','')[:60]} | {e.get('ort')} | {e.get('quelle_url')}")
+          PY
