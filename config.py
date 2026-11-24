@@ -95,6 +95,8 @@ VORSCHAU_TAGE: dict[str, int] = {
         "d-live", "Mitsubishi Electric HALLE", "Capitol Theater Düsseldorf", "Tonhalle Düsseldorf",
         "Deutsche Oper am Rhein", "Düsseldorfer Schauspielhaus", "Kom(m)ödchen Düsseldorf",
         "Messe Düsseldorf", "Fortuna Düsseldorf", "DEG Eishockey Düsseldorf", "Kunstsammlung NRW (K20/K21)",
+        # Welle A (V1)
+        "Theater an der Kö", "Theater an der Luegallee", "KaBARett FLiN", "Savoy Theater", "Roncalli's Apollo Varieté", "Schloss Benrath", "Theater am Schlachthof Neuss",
     )},
     # 120
     **{name: VORSCHAU_MITTEL for name in (
@@ -107,6 +109,8 @@ VORSCHAU_TAGE: dict[str, int] = {
         "Classic Remise Düsseldorf", "Classic Remise", "Stadtstrand Düsseldorf", "IHK Düsseldorf",
         "StartupDorf Meetup", "Street Food Thursday", "Street Food Thursday Düsseldorf", "Kasematten Düsseldorf",
         "Auf ins Viertel", "Kleine Weihnachtsmärkte", "Kleine Weihnachtsmärkte (Redaktion)", "Spontacts Düsseldorf",
+        # Welle A (V1)
+        "Theatermuseum Düsseldorf", "Gerhart Hauptmann Haus", "Goethe-Museum", "KIT – Kunst im Tunnel", "Comedy Club Düsseldorf", "Bilker Bunker", "Tor 3", "Nachtresidenz", "Ampere", "Weltkunstzimmer", "Insel Hombroich", "Stadt Ratingen Veranstaltungskalender",
     )},
     # 60
     **{name: VORSCHAU_KURZ for name in (

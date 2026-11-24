@@ -56,6 +56,14 @@ jobs:
           key: vd-fuehrungen-${{ github.run_id }}
           restore-keys: vd-fuehrungen-
 
+      # Stagedates: schon gelesene Eventseiten behalten (Plan Quellen-Ausbau V1) – sonst lädt jeder Lauf alle neu
+      - name: Zwischenspeicher Stagedates
+        uses: actions/cache@v4
+        with:
+          path: data/stagedates
+          key: stagedates-${{ github.run_id }}
+          restore-keys: stagedates-
+
       - name: Python 3.11 einrichten
         uses: actions/setup-python@v5
         with:

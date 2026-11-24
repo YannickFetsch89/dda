@@ -88,6 +88,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 #### APIs (kostenlos, strukturiert)
 | Name | API-Docs | Auth |
 |---|---|---|
+| Stagedates | stagedates.com/sitemap-events.xml + JSON-LD der Eventseiten, nur Düsseldorf/Neuss/Ratingen, Zwischenspeicher data/stagedates/ | – (robots erlaubt alles) |
 | Ticketmaster | developer.ticketmaster.com (Discovery API, je Monat bis 12 Monate, 25 km um Düsseldorf) | API Key (TICKETMASTER_API_KEY); Bilder nur mit TICKETMASTER_BILDER_OK=1 |
 | Eventbrite | eventbrite.com/platform/api | OAuth Token |
 | Meetup.com | meetup.com/api | API Key |
@@ -137,6 +138,19 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Institution | URL |
 |---|---|
 | STARTPLATZ Düsseldorf | startplatz.de/events |
+
+#### Welle A (Quellen-Ausbau V1, 24.11.2026 – Module in scraper/tier2/, je Haus eine Zeile in main.py QUELLEN)
+| Haus | Quelle / Methode |
+|---|---|
+| Theater an der Kö · Theater an der Luegallee · Savoy Theater · Roncalli's Apollo Varieté | Spielplan-HTML (Savoy: Liste über admin-ajax, robots erlaubt), Fenster 365 Tage |
+| KaBARett FLiN | eingebetteter Spielplan von neanderticket.de (Crawl-delay 10), 365 Tage |
+| Schloss Benrath · Theater am Schlachthof Neuss | Veranstaltungsliste HTML, 365 Tage |
+| Theatermuseum (theater-museum.de) · Gerhart Hauptmann Haus · Goethe-Museum (Crawl-delay 10) · KIT (WP-REST) | HTML/REST, 120 Tage |
+| Comedy Club Düsseldorf · Bilker Bunker/Schleuse Zwei · Tor 3 · Nachtresidenz · Ampere · Weltkunstzimmer | HTML/JSON im Quelltext, 120 Tage |
+| Insel Hombroich (Tribe-API) · Stadt Ratingen Veranstaltungskalender (Crawl-delay 10) | 120 Tage |
+| ~~Maxhaus~~ | nicht gebaut: Datum nur auf jeder Detailseite (siehe Plan Anhang C) |
+
+Bausteine: scraper/utils/jsonld_events.py (JSON-LD), wp_tribe.py (The Events Calendar), ical.py (.ics).
 
 ---
 

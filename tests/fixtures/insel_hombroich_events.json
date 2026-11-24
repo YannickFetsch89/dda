@@ -1,0 +1,831 @@
+{
+ "events": [
+  {
+   "id": 913,
+   "global_id": "www.inselhombroich.de?id=913",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-11-11 12:55:49",
+   "date_utc": "2025-11-11 11:55:49",
+   "modified": "2026-02-24 16:15:35",
+   "modified_utc": "2026-02-24 15:15:35",
+   "url": "https://www.inselhombroich.de/de/event/20-inselfestival/",
+   "title": "20. Inselfestival",
+   "description": "",
+   "excerpt": "",
+   "slug": "20-inselfestival",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/Inselfestival_Klangwanderung-11-scaled.jpg"
+   },
+   "all_day": true,
+   "start_date": "2025-06-06 00:00:00",
+   "end_date": "2025-06-09 23:59:59",
+   "utc_start_date": "2025-06-05 22:00:00",
+   "utc_end_date": "2025-06-09 21:59:59",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 39,
+     "name": "Konzert",
+     "slug": "konzert",
+     "parent": 22
+    },
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 914,
+    "venue": "Hombroich",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/hombroich/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 2596,
+   "global_id": "www.inselhombroich.de?id=2596",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-12-16 13:43:23",
+   "date_utc": "2025-12-16 12:43:23",
+   "modified": "2025-12-16 13:43:23",
+   "modified_utc": "2025-12-16 12:43:23",
+   "url": "https://www.inselhombroich.de/de/event/sammlung-kahmen-auf-dem-kirkeby-feld/",
+   "title": "Sammlung Kahmen auf dem Kirkeby-Feld",
+   "description": "",
+   "excerpt": "",
+   "slug": "sammlung-kahmen-auf-dem-kirkeby-feld",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/12/Sammlung-Kahmen_Ausstellungsansicht.jpg"
+   },
+   "all_day": false,
+   "start_date": "2025-07-13 12:00:00",
+   "end_date": "2025-07-13 17:00:00",
+   "utc_start_date": "2025-07-13 10:00:00",
+   "utc_end_date": "2025-07-13 15:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 269,
+     "name": "Führung",
+     "slug": "fuehrung-veranstaltung",
+     "parent": 22
+    },
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 1484,
+    "venue": "Kirkeby-Feld",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/kirkeby-feld/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 2543,
+   "global_id": "www.inselhombroich.de?id=2543",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-12-16 12:10:22",
+   "date_utc": "2025-12-16 11:10:22",
+   "modified": "2026-02-24 18:05:37",
+   "modified_utc": "2026-02-24 17:05:37",
+   "url": "https://www.inselhombroich.de/de/event/das-dschungelfest-konzert-der-kinder-insel-hombroich/",
+   "title": "Das Dschungelfest: Konzert der Kinder Insel Hombroich",
+   "description": "",
+   "excerpt": "",
+   "slug": "das-dschungelfest-konzert-der-kinder-insel-hombroich",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/12/Konzert-Vanessa-Vieto-13-9-2025-Illustration_web.jpg"
+   },
+   "all_day": false,
+   "start_date": "2025-09-13 11:00:00",
+   "end_date": "2025-09-13 13:00:00",
+   "utc_start_date": "2025-09-13 09:00:00",
+   "utc_end_date": "2025-09-13 11:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 39,
+     "name": "Konzert",
+     "slug": "konzert",
+     "parent": 22
+    },
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 2629,
+    "venue": "Scheune, Museum Insel Hombroich",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/scheune-museum-insel-hombroich/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 958,
+   "global_id": "www.inselhombroich.de?id=958",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-11-11 13:00:29",
+   "date_utc": "2025-11-11 12:00:29",
+   "modified": "2025-11-11 13:21:46",
+   "modified_utc": "2025-11-11 12:21:46",
+   "url": "https://www.inselhombroich.de/de/event/konzert-leonkoro-quartett/",
+   "title": "Konzert: Leonkoro Quartett",
+   "description": "",
+   "excerpt": "",
+   "slug": "konzert-leonkoro-quartett",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/FV-Konzert_Leonkoro_Quartett.webp"
+   },
+   "all_day": false,
+   "start_date": "2025-09-28 11:00:00",
+   "end_date": "2025-09-28 12:30:00",
+   "utc_start_date": "2025-09-28 09:00:00",
+   "utc_end_date": "2025-09-28 10:30:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 39,
+     "name": "Konzert",
+     "slug": "konzert",
+     "parent": 22
+    }
+   ],
+   "venue": {
+    "id": 797,
+    "venue": "Veranstaltungshalle, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/veranstaltungshalle-raketenstation-hombroich/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 979,
+   "global_id": "www.inselhombroich.de?id=979",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-11-11 13:54:20",
+   "date_utc": "2025-11-11 12:54:20",
+   "modified": "2025-12-18 13:13:52",
+   "modified_utc": "2025-12-18 12:13:52",
+   "url": "https://www.inselhombroich.de/de/event/buchvorstellung-resistance-flood-fire-resistance/",
+   "title": "Buchvorstellung: Resistance, Flood, Fire, Resistance",
+   "description": "",
+   "excerpt": "",
+   "slug": "buchvorstellung-resistance-flood-fire-resistance",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/Buchvorstellung-Beate-Guetschow.jpg"
+   },
+   "all_day": false,
+   "start_date": "2025-11-09 15:00:00",
+   "end_date": "2025-11-09 17:00:00",
+   "utc_start_date": "2025-11-09 14:00:00",
+   "utc_end_date": "2025-11-09 16:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CET",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 24,
+     "name": "Lesung",
+     "slug": "lesung",
+     "parent": 22
+    }
+   ],
+   "venue": {
+    "id": 1490,
+    "venue": "Räume für Fotografie, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/raeume-fuer-fotografie-im-siza-pavillon-raketenstation/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 6873,
+   "global_id": "www.inselhombroich.de?id=6873",
+   "author": "6",
+   "status": "publish",
+   "date": "2026-04-08 15:00:43",
+   "date_utc": "2026-04-08 13:00:43",
+   "modified": "2026-04-15 11:16:45",
+   "modified_utc": "2026-04-15 09:16:45",
+   "url": "https://www.inselhombroich.de/de/event/19-april-2026/",
+   "title": "Eröffnungssonntag",
+   "description": "",
+   "excerpt": "",
+   "slug": "19-april-2026",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2026/02/luftbild_raketenstation.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-04-19 10:00:00",
+   "end_date": "2026-04-19 17:00:00",
+   "utc_start_date": "2026-04-19 08:00:00",
+   "utc_end_date": "2026-04-19 15:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": [],
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 6474,
+   "global_id": "www.inselhombroich.de?id=6474",
+   "author": "6",
+   "status": "publish",
+   "date": "2026-02-25 13:07:13",
+   "date_utc": "2026-02-25 12:07:13",
+   "modified": "2026-03-03 09:56:28",
+   "modified_utc": "2026-03-03 08:56:28",
+   "url": "https://www.inselhombroich.de/de/event/teezeremonien/",
+   "title": "Teezeremonien",
+   "description": "",
+   "excerpt": "",
+   "slug": "teezeremonien",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2026/02/bauten_ein-stein-teehaus_web.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-04-25 13:00:00",
+   "end_date": "2026-04-25 16:00:00",
+   "utc_start_date": "2026-04-25 11:00:00",
+   "utc_end_date": "2026-04-25 14:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 5513,
+    "venue": "Ein Stein Teehaus, Raketenstation Hombroich",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/ein-stein-teehaus-raketenstation-hombroich/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 1293,
+   "global_id": "www.inselhombroich.de?id=1293",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-11-20 15:25:43",
+   "date_utc": "2025-11-20 14:25:43",
+   "modified": "2026-02-04 09:45:57",
+   "modified_utc": "2026-02-04 08:45:57",
+   "url": "https://www.inselhombroich.de/de/event/offenes-gastalier-stefanie-klingemann-und/",
+   "title": "Offenes One Man House: Stefanie Klingemann und",
+   "description": "",
+   "excerpt": "",
+   "slug": "offenes-gastalier-stefanie-klingemann-und",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/one-man-house_illustration_klingemann.jpg"
+   },
+   "all_day": false,
+   "start_date": "2025-11-30 12:00:00",
+   "end_date": "2025-11-30 15:00:00",
+   "utc_start_date": "2025-11-30 11:00:00",
+   "utc_end_date": "2025-11-30 14:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CET",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 1295,
+    "venue": "One Man House, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/one-man-house/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 10030085,
+   "global_id": "www.inselhombroich.de?id=10030085",
+   "author": "6",
+   "status": "publish",
+   "date": "2026-04-30 15:37:09",
+   "date_utc": "2026-04-30 13:37:09",
+   "modified": "2026-04-30 15:37:09",
+   "modified_utc": "2026-04-30 13:37:09",
+   "url": "https://www.inselhombroich.de/event/fuehrungen-im-thomas-kling-archiv-3-2/2026-12-04/",
+   "title": "Führungen im Thomas Kling Archiv",
+   "description": "",
+   "excerpt": "",
+   "slug": "fuehrungen-im-thomas-kling-archiv-3-2",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/ansicht_Thomas-Kling-Archiv-scaled.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-12-04 15:00:00",
+   "end_date": "2026-12-04 16:00:00",
+   "utc_start_date": "2026-12-04 14:00:00",
+   "utc_end_date": "2026-12-04 15:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 269,
+     "name": "Führung",
+     "slug": "fuehrung-veranstaltung",
+     "parent": 22
+    },
+    {
+     "id": 22,
+     "name": "Veranstaltung",
+     "slug": "veranstaltung",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 1468,
+    "venue": "Turmgebäude, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/turmgebaeude-raketenstation/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 10030144,
+   "global_id": "www.inselhombroich.de?id=10030144",
+   "author": "6",
+   "status": "publish",
+   "date": "2026-04-30 15:37:09",
+   "date_utc": "2026-04-30 13:37:09",
+   "modified": "2026-03-05 10:14:18",
+   "modified_utc": "2026-03-05 09:14:18",
+   "url": "https://www.inselhombroich.de/event/fuehrungen-im-thomas-kling-archiv-3/2026-12-04/",
+   "title": "Guided tours of the Thomas Kling Archive",
+   "description": "",
+   "excerpt": "",
+   "slug": "fuehrungen-im-thomas-kling-archiv-3",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/ansicht_Thomas-Kling-Archiv-scaled.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-12-04 15:00:00",
+   "end_date": "2026-12-04 16:00:00",
+   "utc_start_date": "2026-12-04 14:00:00",
+   "utc_end_date": "2026-12-04 15:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 71,
+     "name": "Event",
+     "slug": "event",
+     "parent": 0
+    },
+    {
+     "id": 278,
+     "name": "Führung",
+     "slug": "fuehrung-veranstaltung",
+     "parent": 71
+    }
+   ],
+   "venue": {
+    "id": 1248,
+    "venue": "Turmgebäude, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/en/veranstaltungsort/turmgebaeude-raketenstation/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 10037237,
+   "global_id": "www.inselhombroich.de?id=10037237",
+   "author": "6",
+   "status": "publish",
+   "date": "2026-10-12 11:39:51",
+   "date_utc": "2026-10-12 09:39:51",
+   "modified": "2026-10-12 14:58:18",
+   "modified_utc": "2026-10-12 12:58:18",
+   "url": "https://www.inselhombroich.de/event/wachhaus-23-sumin-shin/2026-11-24/",
+   "title": "Wachhaus #23: Sumin Shin",
+   "description": "",
+   "excerpt": "",
+   "slug": "wachhaus-23-sumin-shin",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2026/10/Sumin-scaled.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-11-24 10:00:00",
+   "end_date": "2026-11-24 18:00:00",
+   "utc_start_date": "2026-11-24 09:00:00",
+   "utc_end_date": "2026-11-24 17:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CET",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 20,
+     "name": "Ausstellung",
+     "slug": "ausstellung-de",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 1471,
+    "venue": "Wachhaus, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/wachhaus-raketenstation/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 10035557,
+   "global_id": "www.inselhombroich.de?id=10035557",
+   "author": "9",
+   "status": "publish",
+   "date": "2026-09-07 13:46:25",
+   "date_utc": "2026-09-07 11:46:25",
+   "modified": "2026-10-09 16:31:12",
+   "modified_utc": "2026-10-09 14:31:12",
+   "url": "https://www.inselhombroich.de/event/was-jetzt-ist-30-jahre-raketenstation-hombroich/2026-11-27/",
+   "title": "Was Jetzt Ist – 30 Jahre Raketenstation Hombroich",
+   "description": "",
+   "excerpt": "",
+   "slug": "was-jetzt-ist-30-jahre-raketenstation-hombroich",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2026/08/key_image_was-jetzt-ist.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-11-27 12:00:00",
+   "end_date": "2026-11-27 16:00:00",
+   "utc_start_date": "2026-11-27 11:00:00",
+   "utc_end_date": "2026-11-27 15:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 20,
+     "name": "Ausstellung",
+     "slug": "ausstellung-de",
+     "parent": 0
+    }
+   ],
+   "venue": [
+    {
+     "id": 897,
+     "venue": "Siza-Pavillon, Raketenstation",
+     "url": "https://www.inselhombroich.de/de/veranstaltungsort/siza-pavillon/"
+    },
+    {
+     "id": 2727,
+     "venue": "Field Institute Hombroich, Raketenstation",
+     "url": "https://www.inselhombroich.de/de/veranstaltungsort/field-institute-hombroich-raketenstation/"
+    }
+   ],
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 10033882,
+   "global_id": "www.inselhombroich.de?id=10033882",
+   "author": "8",
+   "status": "publish",
+   "date": "2026-09-01 15:55:11",
+   "date_utc": "2026-09-01 13:55:11",
+   "modified": "2026-09-01 15:57:18",
+   "modified_utc": "2026-09-01 13:57:18",
+   "url": "https://www.inselhombroich.de/event/skulpturenhalle-neuss-jane-und-louise-wilson-2-2-2/2026-11-27/",
+   "title": "Frauen – 10 Jahre Skulpturenhalle",
+   "description": "",
+   "excerpt": "",
+   "slug": "skulpturenhalle-neuss-jane-und-louise-wilson-2-2-2",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2026/01/bauten_skulpturenhalle_nic-tenwiggenhorn.jpg"
+   },
+   "all_day": false,
+   "start_date": "2026-11-27 12:00:00",
+   "end_date": "2026-11-27 18:00:00",
+   "utc_start_date": "2026-11-27 11:00:00",
+   "utc_end_date": "2026-11-27 17:00:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 20,
+     "name": "Ausstellung",
+     "slug": "ausstellung-de",
+     "parent": 0
+    }
+   ],
+   "venue": {
+    "id": 3974,
+    "venue": "Skulpturenhalle Neuss",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/skulpturenhalle-neuss/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  },
+  {
+   "id": 958,
+   "global_id": "www.inselhombroich.de?id=958",
+   "author": "4",
+   "status": "publish",
+   "date": "2025-11-11 13:00:29",
+   "date_utc": "2025-11-11 12:00:29",
+   "modified": "2025-11-11 13:21:46",
+   "modified_utc": "2025-11-11 12:21:46",
+   "url": "https://www.inselhombroich.de/de/event/konzert-leonkoro-quartett/",
+   "title": "Konzert: Leonkoro Quartett",
+   "description": "",
+   "excerpt": "",
+   "slug": "konzert-leonkoro-quartett",
+   "image": {
+    "url": "https://www.inselhombroich.de/wp-content/uploads/2025/11/FV-Konzert_Leonkoro_Quartett.webp"
+   },
+   "all_day": false,
+   "start_date": "2025-09-28 11:00:00",
+   "end_date": "2025-09-28 12:30:00",
+   "utc_start_date": "2025-09-28 09:00:00",
+   "utc_end_date": "2025-09-28 10:30:00",
+   "timezone": "Europe/Berlin",
+   "timezone_abbr": "CEST",
+   "cost": "",
+   "cost_details": {
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "currency_position": "suffix",
+    "values": []
+   },
+   "website": "",
+   "show_map": false,
+   "show_map_link": true,
+   "hide_from_listings": false,
+   "sticky": false,
+   "featured": false,
+   "categories": [
+    {
+     "id": 39,
+     "name": "Konzert",
+     "slug": "konzert",
+     "parent": 22
+    }
+   ],
+   "venue": {
+    "id": 797,
+    "venue": "Veranstaltungshalle, Raketenstation",
+    "address": null,
+    "zip": null,
+    "city": null,
+    "url": "https://www.inselhombroich.de/de/veranstaltungsort/veranstaltungshalle-raketenstation-hombroich/"
+   },
+   "is_virtual": false,
+   "virtual_url": null,
+   "virtual_video_source": ""
+  }
+ ],
+ "total": 13,
+ "total_pages": 1
+}

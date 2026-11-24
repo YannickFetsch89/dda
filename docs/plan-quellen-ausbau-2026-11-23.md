@@ -827,6 +827,33 @@ Urteil Cursor: R1 und R2 in Ordnung, Z1 und T1 nicht (je ein mittlerer Befund), 
   `tests/fixtures/kunstsammlung_kalender.html`; Python gesamt 592 ok.
 - CLAUDE.md-Tabellen angepasst. Rückweg: im Admin unter „Quellen an/aus“ abschalten oder Commit zurücknehmen.
 
+### V1 – Bausteine und Welle A (24.11.2026, lokal gebaut)
+
+- **Bausteine:** `scraper/utils/jsonld_events.py` (schema.org-Events inkl. `@graph`, `subEvent`, Zeitzonen → Ortszeit,
+  Angebote, abgesagt), `scraper/utils/wp_tribe.py` (The Events Calendar, seitenweise), `scraper/utils/ical.py` (ohne
+  Bibliothek: gefaltete Zeilen, ganztägig, UTC → Ortszeit, RRULE DAILY/WEEKLY/MONTHLY mit INTERVAL/UNTIL/COUNT, EXDATE,
+  CANCELLED). Tests `tests/test_bausteine.py`.
+- **Stagedates** (`scraper/tier1/stagedates.py`, Rang 2, 365 Tage): Sitemap, Datum aus dem Slug, nur noch nicht
+  gelesene Seiten (höchstens 150 je Lauf, Zwischenspeicher `data/stagedates/` per `actions/cache` im Workflow), JSON-LD,
+  nur Düsseldorf/Neuss/Ratingen. Nutzungsbedingungen am 24.11. im Browser gelesen (AGB Ticketkäufer, kein Verbot).
+- **Welle A, 19 Häuser** (je eine Zeile in `QUELLEN`, Rang 1, Fenster in `config.VORSCHAU_TAGE`), gebaut von vier
+  Unteragenten nach gemeinsamer Vorgabe, von Claude geprüft und eingebunden. Live-Proben 24.11. (teils mit 60/120 Tagen):
+  Theater an der Kö 167 · Theater an der Luegallee 68 · KaBARett FLiN 124 (über den eingebetteten Spielplan von
+  neanderticket.de) · Savoy 28 bei 6 Seiten (Liste per admin-ajax-POST, robots erlaubt; `MAX_SEITEN` 35 für 365 Tage) ·
+  Apollo 17 (Spielzeiten als `datum_bis`, Einzelvorstellungen nur im gesperrten Ticketshop) · Theatermuseum 36 (Quelle
+  theater-museum.de, die städtische Seite ist leer) · Gerhart Hauptmann Haus 7 (Website zeigt nur ≈ 3 Monate) ·
+  Goethe-Museum 4 · Schloss Benrath 127 (ohne 280 Ticket-Zeitfenster) · KIT 28 (WP-REST) · Comedy Club 83 · Bilker
+  Bunker/Schleuse Zwei 9 · Tor 3 3 · Nachtresidenz 11 · Ampere 12 · Weltkunstzimmer 4 · Insel Hombroich 2 (Winter;
+  Tribe-API, ohne englische Doppel und Ausstellungstage) · Stadt Ratingen 59 (ohne Wochenmärkte, Crawl-delay 10) ·
+  TaS Neuss 29.
+- **Nicht gebaut: Maxhaus** – Termindatum nur auf jeder Detailseite (REST liefert nur das Veröffentlichungsdatum),
+  Liste per JetEngine-POST. Möglich später: Detailseiten mit höherer Grenze oder Anfrage beim Haus.
+- Bekannte Grenzfälle: Poetry Slam 04.12. bei Theatermuseum und Goethe-Museum mit abweichender Uhrzeit (Dublette
+  möglich, Dubletten-Vorschläge im Admin); Schloss Benrath „Die Leuchtenden Gärten“ 52 Einzeltermine; Comedy-Club-Bilder
+  als AVIF (Bild-Proxy prüfen).
+- Tests: 116 neue in `tests/test_<haus>.py`; Python gesamt 716 ok, Website 712 ok.
+- Rückweg: einzelne Häuser im Admin unter „Quellen an/aus“ abschalten; sonst Commit zurücknehmen.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

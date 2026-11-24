@@ -13,6 +13,7 @@ from pipeline.lauf_report import LaufReport
 from scraper.tier1 import (
     rausgegangen,
     ticketmaster,
+    stagedates,
     kulturportal,
     visitduesseldorf,
     visitduesseldorf_fuehrungen,
@@ -50,6 +51,26 @@ from scraper.tier2 import (
     capitol_theater,
     kommoedchen,
     startplatz,
+    # Welle A (Plan Quellen-Ausbau 3.2, Schritt V1)
+    theater_an_der_koe,
+    theater_luegallee,
+    kabarett_flin,
+    savoy_theater,
+    apollo_variete,
+    theatermuseum,
+    gerhart_hauptmann_haus,
+    goethe_museum,
+    schloss_benrath,
+    kit,
+    comedy_club,
+    bilker_bunker,
+    tor3,
+    nachtresidenz,
+    ampere,
+    weltkunstzimmer,
+    insel_hombroich,
+    stadt_ratingen,
+    tas_neuss,
 )
 from scraper.tier3 import (
     parkrun,
@@ -89,6 +110,7 @@ KATEGORIEN_RUECKSTAND_BIS = date(2026, 12, 9)
 QUELLEN = [
     # Tier 1: Aggregatoren und APIs
     ("Ticketmaster", 1, ticketmaster.scrape),
+    ("Stagedates", 1, stagedates.scrape),  # Ticketplattform, Sitemap + JSON-LD, Rang 2
     ("Kulturportal Düsseldorf", 1, kulturportal.scrape),
     ("VisitDüsseldorf", 1, visitduesseldorf.scrape),
     ("VisitDüsseldorf Führungen", 1, visitduesseldorf_fuehrungen.scrape),  # Stadtführungen aus den Event-Seiten
@@ -120,6 +142,26 @@ QUELLEN = [
     ("Capitol Theater Düsseldorf", 2, capitol_theater.scrape),
     ("Kom(m)ödchen Düsseldorf", 2, kommoedchen.scrape),
     ("STARTPLATZ Düsseldorf", 2, startplatz.scrape),
+    # Welle A der Venues (Plan Quellen-Ausbau 3.2, Schritt V1) – je Haus eine Zeile, damit der Lauf-Report jedes Haus einzeln führt
+    ("Theater an der Kö", 2, theater_an_der_koe.scrape),
+    ("Theater an der Luegallee", 2, theater_luegallee.scrape),
+    ("KaBARett FLiN", 2, kabarett_flin.scrape),
+    ("Savoy Theater", 2, savoy_theater.scrape),
+    ("Roncalli's Apollo Varieté", 2, apollo_variete.scrape),
+    ("Theatermuseum Düsseldorf", 2, theatermuseum.scrape),
+    ("Gerhart Hauptmann Haus", 2, gerhart_hauptmann_haus.scrape),
+    ("Goethe-Museum", 2, goethe_museum.scrape),
+    ("Schloss Benrath", 2, schloss_benrath.scrape),
+    ("KIT – Kunst im Tunnel", 2, kit.scrape),
+    ("Comedy Club Düsseldorf", 2, comedy_club.scrape),
+    ("Bilker Bunker", 2, bilker_bunker.scrape),
+    ("Tor 3", 2, tor3.scrape),
+    ("Nachtresidenz", 2, nachtresidenz.scrape),
+    ("Ampere", 2, ampere.scrape),
+    ("Weltkunstzimmer", 2, weltkunstzimmer.scrape),
+    ("Insel Hombroich", 2, insel_hombroich.scrape),
+    ("Stadt Ratingen Veranstaltungskalender", 2, stadt_ratingen.scrape),
+    ("Theater am Schlachthof Neuss", 2, tas_neuss.scrape),
     # Tier 3: Nischen- und Spezialquellen
     ("Parkrun Volksgarten Düsseldorf", 3, parkrun.scrape),
     ("Sport im Park Düsseldorf", 3, sport_im_park.scrape),

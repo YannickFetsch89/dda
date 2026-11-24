@@ -30,6 +30,9 @@ LANG = {
     "Ticketmaster", "d-live", "Mitsubishi Electric HALLE", "Capitol Theater Düsseldorf", "Tonhalle Düsseldorf",
     "Deutsche Oper am Rhein", "Düsseldorfer Schauspielhaus", "Kom(m)ödchen Düsseldorf", "Messe Düsseldorf",
     "Fortuna Düsseldorf", "DEG Eishockey Düsseldorf", "Kunstsammlung NRW (K20/K21)",
+    # Welle A (V1): Bühnen mit Spielplan bis zu einem Jahr und die Ticketplattform Stagedates
+    "Stagedates", "Theater an der Kö", "Theater an der Luegallee", "KaBARett FLiN", "Savoy Theater",
+    "Roncalli's Apollo Varieté", "Schloss Benrath", "Theater am Schlachthof Neuss",
 }
 
 
