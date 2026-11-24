@@ -31,9 +31,12 @@ describe("Eigener Zeitraum aus dem Kalender (datum=von_bis)", () => {
     expect(zeitraumKey("2026-11-20", "2026-11-20")).toBe("2026-11-20");
     expect(zeitraumKey("2026-11-20", "2026-11-22")).toBe("2026-11-20_2026-11-22");
   });
-  it("Vergangenes beginnt heute, höchstens 60 Tage, ungültige Angaben → heute", () => {
+  it("Vergangenes beginnt heute, höchstens 366 Tage (Plan Quellen-Ausbau 6.1), ungültige Angaben → heute", () => {
     expect(zeitraumAuflösen("2026-11-01_2026-11-15", HEUTE)).toMatchObject({ von: HEUTE, bis: "2026-11-15", key: "2026-11-12_2026-11-15" });
-    expect(zeitraumAuflösen("2026-11-12_2027-06-01", HEUTE)).toMatchObject({ von: HEUTE, bis: "2027-01-10" });
+    expect(zeitraumAuflösen("2026-11-12_2027-06-01", HEUTE)).toMatchObject({ von: HEUTE, bis: "2027-06-01" });
+    expect(zeitraumAuflösen("2026-11-12_2028-06-01", HEUTE)).toMatchObject({ von: HEUTE, bis: "2027-11-12" });
+    // Der Preset „alle“ bleibt 60 Tage
+    expect(zeitraumAuflösen("alle", HEUTE)).toMatchObject({ label: "60 Tage", bis: "2027-01-10" });
     expect(zeitraumAuflösen("2026-11-22_2026-11-18", HEUTE).key).toBe("heute"); // Ende vor Start
     expect(zeitraumAuflösen("2026-11-01_2026-11-05", HEUTE).key).toBe("heute"); // ganz vorbei
     expect(zeitraumAuflösen("2026-02-30_2026-03-02", HEUTE).key).toBe("heute"); // kein echter Tag

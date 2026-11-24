@@ -4,11 +4,11 @@ import { ErwaehntImMagazin } from "@/components/magazin-verweise";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GoogleKarte, HerzButton, Reihe, TeilenButton, TeilenLeiste, ZurueckButton } from "@/components/client";
-import { Bild, EventKarte, Icon, KatBadge, eventPfad } from "@/components/karten";
+import { Bild, EventKarte, Icon, KatBadge, MonatsLabel, eventPfad } from "@/components/karten";
 import { WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import { KURZ_MUSTER, WM_BASIS, eintragFuerEvent, wmPfad } from "@/lib/weihnachtsmaerkte";
 import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
-import { eventLaden, eventPoolLaden } from "@/lib/daten";
+import { eventLaden, eventPoolLaden, fernPoolLaden, istFern } from "@/lib/daten";
 import { filtern, istKostenlos, istOnline, nachBeliebtheit } from "@/lib/ableitungen";
 import { kurzDatum, plusTage, tagLang } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
@@ -68,8 +68,10 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
 
   const pool = await eventPoolLaden();
   const { heute } = pool;
+  // Liegt das Event hinter Tag 60, kommen Nachbarn (weitere Uhrzeiten, ähnliche Events) aus dem Fernpool (Plan 6.1)
+  const nachbarn = istFern(e.datum, heute) ? await fernPoolLaden() : pool;
   // Weitere Uhrzeiten desselben Events am selben Tag (je Uhrzeit eine eigene Event-Seite)
-  const termine = termineAmTag(pool.alle, e);
+  const termine = termineAmTag(nachbarn.alle, e);
   const titel = anzeigeTitel(e.titel, e.ort);
   // „Zum Termin um …“ nur, wenn dieser Termin einen eigenen Link hat (sonst führen alle Uhrzeiten zur selben Seite)
   const eigenerTerminLink = termine.length > 0 && !!e.quelle_url && termine.filter((t) => t.quelle_url === e.quelle_url).length === 1;
@@ -82,7 +84,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
     !!ortSchluessel(e.ort) &&
     filtern(pool.events, { von: heute, bis: plusTage(heute, 59), suche: e.ort, mitLanglaeufern: true }).some((x) => x.id !== e.id);
   const ortSuche = ortHatMehr ? `/entdecken?q=${encodeURIComponent(e.ort)}&datum=alle` : null;
-  const aehnliche = abgelaufen ? [] : filtern(pool.events, { von: plusTage(e.datum, -7) < heute ? heute : plusTage(e.datum, -7), bis: plusTage(e.datum, 7), kategorie: e.kategorie })
+  const aehnliche = abgelaufen ? [] : filtern(nachbarn.events, { von: plusTage(e.datum, -7) < heute ? heute : plusTage(e.datum, -7), bis: plusTage(e.datum, 7), kategorie: e.kategorie })
     .filter((x) => x.id !== e.id && terminSchluessel(x) !== eigenerSchluessel)
     .sort(nachBeliebtheit)
     .slice(0, 8);
@@ -186,6 +188,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                   </span>
                   <div>
                     <b>
+                      <MonatsLabel datum={e.datum} heute={heute} />
                       <time dateTime={e.datum_bis && e.datum_bis !== e.datum ? e.datum : `${e.datum}${e.uhrzeit ? `T${e.uhrzeit}` : ""}`}>{zeitText}</time>
                     </b>
                     <span>

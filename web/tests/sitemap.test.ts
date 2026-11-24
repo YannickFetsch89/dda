@@ -15,6 +15,14 @@ vi.mock("@/lib/daten", () => ({
     ];
     return { heute: HEUTE, jetzt: `${HEUTE}T10:00:00Z`, events: alle, alle, quelle: "supabase", fehler: null };
   },
+  // Fernpool (Plan Quellen-Ausbau 6.1): ein Event hinter Tag 60 und eines, das auch im Nah-Pool steht (keine Doppelung)
+  fernPoolLaden: async () => {
+    const alle = [
+      ev({ id: "fern", datum: "2027-03-14", slug: "konzert-2027-03-14" }),
+      ev({ id: "heute", datum: HEUTE, slug: "heute-2026-11-05" }),
+    ];
+    return { heute: HEUTE, jetzt: `${HEUTE}T10:00:00Z`, events: alle, alle, quelle: "supabase", fehler: null };
+  },
 }));
 vi.mock("@/lib/orte", () => ({
   orteLaden: async () => [{ id: "r", slug: "r", typ: "restaurant", aktualisiert_am: null, extras: {} }],
@@ -76,6 +84,13 @@ describe("Sitemap", () => {
     expect(urls.some((u) => u.endsWith("/ausstellung-2026-10-01"))).toBe(true);
     expect(urls.some((u) => u.endsWith("/gestern-2026-11-04"))).toBe(false);
     expect(urls.some((u) => u.endsWith("/vorbei-2026-10-01"))).toBe(false);
+  });
+
+  it("enthält ferne Eventseiten aus dem Fernpool, jede nur einmal (Plan Quellen-Ausbau 6.1)", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls.some((u) => u.endsWith("/konzert-2027-03-14"))).toBe(true);
+    expect(urls.filter((u) => u.endsWith("/heute-2026-11-05"))).toHaveLength(1);
   });
 
   it("enthält Reihenseiten mit kommenden Terminen, aber keine ohne", async () => {

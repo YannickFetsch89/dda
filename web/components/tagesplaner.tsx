@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Icon, Leer } from "./karten";
 import { Zeitleiste, type Abschnitt } from "./zeitleiste";
-import { eventPoolLaden } from "@/lib/daten";
+import { eventPoolLaden, fernPoolLaden, istFern } from "@/lib/daten";
 import { TAGESZEITEN, ersteUhrzeitIn, filtern, nachZeit, tageszeiten } from "@/lib/ableitungen";
 import { WT_LANG, plusTage, tagMonat, wochentag } from "@/lib/datum";
 import { jsonLdText } from "@/lib/json-ld";
@@ -43,7 +43,9 @@ export async function Tagesplaner({ tag: tagProp, tageVoraus, pfad }: { tag?: st
   const titel = istHeute ? "Heute" : d === plusTage(heute, 1) ? "Morgen" : WT_LANG[wochentag(d)];
   const untertitel = istHeute || d === plusTage(heute, 1) ? `${WT_LANG[wochentag(d)]}, ${tagMonat(d)}` : tagMonat(d);
 
-  const events = filtern(pool.events, { von: d, bis: d }).sort(nachZeit);
+  // Tage hinter Tag 60 kommen aus dem Fernpool (Plan Quellen-Ausbau 6.1, W1)
+  const quelle = istFern(d, heute) ? await fernPoolLaden() : pool;
+  const events = filtern(quelle.events, { von: d, bis: d }).sort(nachZeit);
   const ganztags = events.filter((e) => !e.uhrzeit);
   const abschnitte: Abschnitt[] = TAGESZEITEN.map((t) => ({
     name: t.name,

@@ -4,12 +4,12 @@ import type { Metadata } from "next";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
 import Link from "next/link";
 import { Bild, EventKarte, Icon, KatBadge, Leer, eventPfad } from "@/components/karten";
-import { eventPoolLaden } from "@/lib/daten";
+import { FERN_AB_TAG, FERN_BIS_TAG, eventPoolLaden, fernPoolLaden } from "@/lib/daten";
 import { OrtKartenGrid } from "@/components/ort-karten";
 import { orteLaden } from "@/lib/orte";
 import { orteSuchen } from "@/lib/orte-suche";
 import { TAGESZEITEN, filtern, highlights, kategorieZaehlen, unterkategorienZaehlen, nachBeliebtheit, nachNeu, nachZeit, stadtteileZaehlen, type Tageszeit } from "@/lib/ableitungen";
-import { ZEITRAUM_OPTIONEN, istEigenerZeitraum, metaZeile, zeitraumAuflösen } from "@/lib/datum";
+import { ZEITRAUM_OPTIONEN, istEigenerZeitraum, metaZeile, plusTage, zeitraumAuflösen } from "@/lib/datum";
 import { DatumWaehler, EigenerZeitraumKnopf } from "@/components/datum-waehler";
 import { KATEGORIEN, kategorie } from "@/lib/kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
@@ -81,19 +81,41 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
   const tz = TAGESZEITEN.find((t) => t.key === p.tageszeit)?.key as Tageszeit | undefined;
   const bezirk = BEZIRKE.find((b) => String(b.nr) === p.bezirk);
 
+  // Fernpool (Tag 61–365, Plan Quellen-Ausbau 6.1): bei einer Suche als eigener Block „Ausblick“, bei einem eigenen
+  // Zeitraum hinter Tag 60 direkt in der Trefferliste
+  const fernAb = plusTage(heute, FERN_AB_TAG);
+  const zeitraumFern = z.bis >= fernAb;
+  const fern = zeitraumFern || p.q?.trim() ? await fernPoolLaden() : null;
+  const quellEvents = zeitraumFern && fern ? [...pool.events, ...fern.events] : pool.events;
+
   const basisFilter = { von: z.von, bis: z.bis, mitLanglaeufern: true, suche: p.q, thema: p.thema };
   // Unterkategorie nur, wenn sie zur gewählten Kategorie gehört
   const unter = p.kategorie ? kategorie(p.kategorie).unterkategorien.find((u) => u.slug === p.unter) : undefined;
-  const ohneUnter = filtern(pool.events, { ...basisFilter, kategorie: p.kategorie, stadtteil: p.stadtteil, bezirk: bezirk?.nr, preis, tageszeit: tz });
+  const ohneUnter = filtern(quellEvents, { ...basisFilter, kategorie: p.kategorie, stadtteil: p.stadtteil, bezirk: bezirk?.nr, preis, tageszeit: tz });
   const treffer = unter ? ohneUnter.filter((e) => e.unterkategorie === unter.slug) : ohneUnter;
   const unterListe = p.kategorie ? unterkategorienZaehlen(ohneUnter, kategorie(p.kategorie).slug) : [];
   treffer.sort(sort === "neu" ? nachNeu : sort === "datum" ? nachZeit : nachBeliebtheit);
 
   // Zähler für die Dropdowns (jeweils ohne den eigenen Filter)
-  const katZahlen = kategorieZaehlen(filtern(pool.events, { ...basisFilter, stadtteil: p.stadtteil, bezirk: bezirk?.nr, preis, tageszeit: tz }));
-  const stadtteilListe = stadtteileZaehlen(filtern(pool.events, { ...basisFilter, kategorie: p.kategorie, preis, tageszeit: tz }));
+  const katZahlen = kategorieZaehlen(filtern(quellEvents, { ...basisFilter, stadtteil: p.stadtteil, bezirk: bezirk?.nr, preis, tageszeit: tz }));
+  const stadtteilListe = stadtteileZaehlen(filtern(quellEvents, { ...basisFilter, kategorie: p.kategorie, preis, tageszeit: tz }));
 
   const gezeigt = treffer.slice(0, seite * PRO_SEITE);
+  // Suche ohne fernen Zeitraum: Treffer hinter Tag 60 als eigener Block unter den normalen Treffern
+  const ausblick =
+    fern && p.q?.trim() && !zeitraumFern
+      ? filtern(fern.events, {
+          von: fernAb,
+          bis: plusTage(heute, FERN_BIS_TAG),
+          suche: p.q,
+          thema: p.thema,
+          kategorie: p.kategorie,
+          stadtteil: p.stadtteil,
+          bezirk: bezirk?.nr,
+          preis,
+          tageszeit: tz,
+        }).sort(nachZeit)
+      : [];
   // Sachsatz nur auf der indexierbaren Standardansicht (ohne Parameter), nicht bei Beispieldaten (Feinschliff, Paket 2)
   const satz = !Object.values(p).some(Boolean) && pool.quelle === "supabase" ? entdeckenSatz(treffer) : null;
   const ohneFilter = !p.kategorie && !p.stadtteil && !p.bezirk && !preis && !tz && !p.q && !p.thema && !unter;
@@ -153,7 +175,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
               ))}
               <EigenerZeitraumKnopf aktiv={!!eigenerZeitraum} />
               <div className="filter-kalender">
-                <DatumWaehler key={z.key} heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} zeitraum={eigenerZeitraum} mitZeitraum />
+                <DatumWaehler key={z.key} heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} zeitraum={eigenerZeitraum} mitZeitraum max={plusTage(heute, FERN_BIS_TAG)} />
               </div>
             </FilterGruppe>
             <FilterGruppe titel="Kategorie">
@@ -200,7 +222,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
           ))}
           <EigenerZeitraumKnopf aktiv={!!eigenerZeitraum} className="popover__knopf" />
           <span className="popover__titel">Datum wählen</span>
-          <DatumWaehler key={z.key} heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} zeitraum={eigenerZeitraum} mitZeitraum />
+          <DatumWaehler key={z.key} heute={heute} parameter={ohneDatum} gewaehlt={exaktesDatum} zeitraum={eigenerZeitraum} mitZeitraum max={plusTage(heute, FERN_BIS_TAG)} />
         </Dropdown>
         <Dropdown label={aktiv.kategorie ?? "Kategorie"} aktiv={!!aktiv.kategorie}>
           <Link href={url(p, { kategorie: undefined, unter: undefined })}>Alle Kategorien</Link>
@@ -305,7 +327,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
         </section>
       )}
 
-      {treffer.length === 0 && ortTreffer.length > 0 ? null : treffer.length === 0 ? (
+      {treffer.length === 0 && (ortTreffer.length > 0 || ausblick.length > 0) ? null : treffer.length === 0 ? (
         <div className="sektion">
           <Leer titel="Dazu haben wir gerade nichts gefunden.">
             <Link href="/entdecken" className="link">
@@ -355,6 +377,29 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
             </span>
           </div>
         </>
+      )}
+
+      {ausblick.length > 0 && (
+        <section className="sektion" aria-labelledby="ausblick-titel" style={{ marginTop: 28 }}>
+          <h2 id="ausblick-titel" className="d such-events-titel">
+            Ausblick: später im Jahr
+          </h2>
+          <p className="tagesatz">
+            {ausblick.length} {ausblick.length === 1 ? "Termin" : "Termine"} zu „{p.q}“ nach den nächsten 60 Tagen.
+          </p>
+          <div className="raster" role="list" style={{ marginTop: 12 }}>
+            {ausblick.slice(0, PRO_SEITE).map((e) => (
+              <EventKarte key={e.id} e={e} heute={heute} variante="grid" />
+            ))}
+          </div>
+          {ausblick.length > PRO_SEITE && (
+            <div className="mehr-laden">
+              <Link href={url(p, { datum: `${fernAb}_${plusTage(heute, FERN_BIS_TAG)}` })} className="btn btn--outline btn--gross">
+                Alle {ausblick.length} anzeigen
+              </Link>
+            </div>
+          )}
+        </section>
       )}
     </>
   );

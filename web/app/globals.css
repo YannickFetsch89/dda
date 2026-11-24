@@ -2659,3 +2659,11 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
 .mz-ueber a { color: var(--ddd-link); text-decoration: underline; text-underline-offset: 2px; }
 /* Rubrik-Seite: Icon im Titel */
 .mz-rubrik-h1 { display: flex; align-items: center; gap: 14px; }
+/* Monats-Label für Events hinter Tag 60 (Plan Quellen-Ausbau 6.2) */
+.monat-label {
+  display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 4px; vertical-align: 1px;
+  background: var(--ddd-navy); color: var(--ddd-gold); font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+}
+/* Ortsseiten: eingeklappter Ausblick hinter Tag 60 (Plan Quellen-Ausbau 6.1) */
+.os-ausblick { margin-top: 20px; }
+.os-ausblick > summary { cursor: pointer; list-style: revert; }

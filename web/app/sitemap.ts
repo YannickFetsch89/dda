@@ -3,7 +3,7 @@
 import { kostenlosEvents, kostenlosIndexierbar, unterkategorieEvents, unterkategorieIndexierbar } from "@/lib/landing-listen";
 import type { MetadataRoute } from "next";
 import { istAbgelaufen } from "@/lib/abgelaufen";
-import { eventPoolLaden } from "@/lib/daten";
+import { eventPoolLaden, fernPoolLaden } from "@/lib/daten";
 import { findetStatt, plusTage, zeitraumAuflösen } from "@/lib/datum";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { clubIndexierbar, eigeneClubSeite } from "@/lib/clubs";
@@ -68,6 +68,9 @@ export function magazinEintraege(
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pool = await eventPoolLaden();
+  // Fernpool (Tag 61–365, Plan Quellen-Ausbau 6.1): ferne Eventseiten, damit Suchmaschinen sie finden. Bei einem
+  // Ladefehler leer (nie Beispieldaten).
+  const fern = await fernPoolLaden();
   // lastModified = Inhaltsdatum (SEO-/GEO-Plan, Maßnahme 12): wann zuletzt ein Event dazukam, das auf
   // DIESER Seite steht (Standardansicht der Seite, nicht der ganze Pool)
   const zwischen = (von: string, bis: string) => pool.alle.filter((e) => findetStatt(e, von, bis, true));
@@ -96,16 +99,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   // Beispiel-Events (Fallback ohne Supabase) gehören nicht in die Sitemap
+  const nahIds = new Set(pool.alle.map((e) => e.id));
   const events: MetadataRoute.Sitemap =
     pool.quelle === "supabase"
-      ? pool.alle // jede Uhrzeit hat eine eigene Seite (Listen zeigen sie gebündelt)
+      ? [...pool.alle, ...fern.alle.filter((e) => !nahIds.has(e.id))] // jede Uhrzeit hat eine eigene Seite
           // Abgelaufene Events raus (ihre Seiten bleiben online, gehören aber nicht mehr in die Sitemap)
           .filter((e) => e.slug && !istAbgelaufen(e, pool.heute))
           .map((e) => ({
             url: `${SITE_URL}/event/${encodeURIComponent(e.kategorie)}/${encodeURIComponent(e.slug!)}`,
             ...mit(juengstes([e])),
             changeFrequency: "weekly",
-            priority: 0.5,
+            priority: nahIds.has(e.id) ? 0.5 : 0.4,
           }))
       : [];
 

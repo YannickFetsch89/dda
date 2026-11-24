@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BildImg, HerzButton } from "./client";
 import { eventBildUrl } from "@/lib/bilder";
 import { katStil, kategorie } from "@/lib/kategorien";
-import { metaZeile } from "@/lib/datum";
+import { metaZeile, monatsLabel } from "@/lib/datum";
 import { stadtteilName } from "@/lib/stadtteile";
 import { symbolbild } from "@/lib/symbolbild";
 import { istOnline } from "@/lib/ableitungen";
@@ -60,6 +60,12 @@ export function OnlineTag({ className = "" }: { className?: string }) {
   return <span className={`online-tag ${className}`}><Icon name="videocam" />Online</span>;
 }
 
+/** „MÄRZ 2027“ vor der Datumszeile, wenn das Event hinter Tag 60 liegt (Plan Quellen-Ausbau 6.2) */
+export function MonatsLabel({ datum, heute }: { datum: string; heute: string }) {
+  const label = monatsLabel(datum, heute);
+  return label ? <span className="monat-label">{label}</span> : null;
+}
+
 export function KatBadge({ slug, variante = "" }: { slug: string; variante?: string }) {
   const k = kategorie(slug);
   return (
@@ -97,7 +103,10 @@ export function EventKarte({ e, heute, variante = "standard", rang, gross = fals
       </Bild>
       <HerzButton id={e.id} titel={e.titel} />
       <div className="karte__text">
-        <span className="meta">{metaZeile(e, heute)}</span>
+        <span className="meta">
+          <MonatsLabel datum={e.datum} heute={heute} />
+          {metaZeile(e, heute)}
+        </span>
         <h3 className="karte__titel">
           <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </h3>
@@ -121,7 +130,10 @@ export function KompaktKarte({ e, heute, mitId = false }: { e: DddEvent; heute: 
         <span className="icon" aria-hidden data-icon={k.icon} />
       </span>
       <div className="kompakt__text">
-        <span className="meta">{metaZeile(e, heute)}</span>
+        <span className="meta">
+          <MonatsLabel datum={e.datum} heute={heute} />
+          {metaZeile(e, heute)}
+        </span>
         <h3 className="kompakt__titel">
           <Link href={eventPfad(e)}>{anzeigeTitel(e.titel, e.ort)}</Link>
         </h3>

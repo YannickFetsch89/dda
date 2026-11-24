@@ -26,6 +26,7 @@ import {
 } from "@/lib/spielstaetten-daten";
 import { spielstaetteJsonLd } from "@/lib/spielstaetten-json-ld";
 import type { DddEvent, DddOrt } from "@/lib/typen";
+import { nachMonat, plusTage } from "@/lib/datum";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -143,7 +144,12 @@ async function Programm({ stand, searchParams }: { stand: Stand; searchParams: P
   }
   const events = eigeneEvents(stand, programm.events, saal);
   const laeufer = events.filter((e) => e.datum_bis && e.datum_bis > e.datum);
-  const termine = events.filter((e) => !(e.datum_bis && e.datum_bis > e.datum));
+  const alleTermine = events.filter((e) => !(e.datum_bis && e.datum_bis > e.datum));
+  // Nahe Termine wie bisher (höchstens 60 Karten), alles hinter Tag 60 eingeklappt als „Ausblick“, nach Monaten
+  // (Plan Quellen-Ausbau 6.1) – die Kappung auf 60 verschluckt den Ausblick nicht
+  const grenze = plusTage(programm.heute, 60);
+  const termine = alleTermine.filter((e) => e.datum <= grenze);
+  const ausblick = alleTermine.filter((e) => e.datum > grenze);
   const pfad = ortSeitePfad(stand.ort.slug);
   return (
     <section className="gd-abschnitt" id="programm">
@@ -177,7 +183,20 @@ async function Programm({ stand, searchParams }: { stand: Stand; searchParams: P
       ) : (
         !laeufer.length && <p className="muted">Gerade keine kommenden Termine in unserem Kalender.</p>
       )}
-      {termine.length > 60 && <p className="muted">… und {termine.length - 60} weitere Termine.</p>}
+      {termine.length > 60 && <p className="muted">… und {termine.length - 60} weitere Termine in den nächsten 60 Tagen.</p>}
+      {ausblick.length > 0 && (
+        <details className="os-ausblick">
+          <summary className="os-unterkopf">Ausblick ({ausblick.length} {ausblick.length === 1 ? "Termin" : "Termine"} später im Jahr)</summary>
+          {nachMonat(ausblick).map((g) => (
+            <div key={g.monat}>
+              <h3 className="os-unterkopf">{g.monat}</h3>
+              <div className="raster" role="list">
+                {g.termine.map((e) => <EventKarte key={e.id} e={e} heute={programm.heute} variante="grid" />)}
+              </div>
+            </div>
+          ))}
+        </details>
+      )}
     </section>
   );
 }

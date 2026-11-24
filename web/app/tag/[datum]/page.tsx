@@ -3,18 +3,20 @@ import { notFound } from "next/navigation";
 import { seitenMetadaten } from "@/lib/seo";
 import { Tagesplaner } from "@/components/tagesplaner";
 import { istGueltigerTag, tagLang } from "@/lib/datum";
-import { eventPoolLaden } from "@/lib/daten";
+import { eventPoolLaden, fernPoolLaden, istFern } from "@/lib/daten";
 
 export async function generateMetadata(props: PageProps<"/tag/[datum]">): Promise<Metadata> {
   const { datum } = await props.params;
   if (!istGueltigerTag(datum)) return { title: "Tag nicht gefunden" };
-  // Vergangene Tage: noindex (der Pool hat dafür keine Events; ein Archiv wird erst bewusst indexiert)
+  // Vergangene Tage: noindex (der Pool hat dafür keine Events; ein Archiv wird erst bewusst indexiert).
+  // Tage hinter Tag 60: noindex, solange der Fernpool für den Tag keine Termine hat (Plan Quellen-Ausbau 6.1)
   const { heute } = await eventPoolLaden();
+  const fernOhneTermine = istFern(datum, heute) && !(await fernPoolLaden()).events.some((e) => e.datum === datum);
   return seitenMetadaten({
     pfad: `/tag/${datum}`,
     titel: `Events am ${tagLang(datum)}`,
     beschreibung: `Alle Events in Düsseldorf am ${tagLang(datum)}.`,
-    noindex: datum < heute,
+    noindex: datum < heute || fernOhneTermine,
   });
 }
 

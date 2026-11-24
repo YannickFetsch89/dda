@@ -124,19 +124,20 @@ export function poolGrenzen(von: string, ende?: string): { von: string; bis: str
   return { von, bis: ende && ende > standard ? ende : standard };
 }
 
-async function ausSupabaseLaden(heute: string, ende?: string): Promise<DddEvent[]> {
+async function ausSupabaseLaden(heute: string, ende?: string, fern = false): Promise<DddEvent[]> {
   const client = supabaseClient();
   if (!client) throw new Error("SUPABASE_URL / SUPABASE_KEY fehlen in .env.local");
 
-  const { bis } = poolGrenzen(heute, ende);
+  const { bis } = fern ? { bis: ende ?? heute } : poolGrenzen(heute, ende);
   const events: DddEvent[] = [];
   let variante = 0;
   for (let seite = 0; seite < 20; seite++) {
-    const { data, error } = await client
-      .from("events")
-      .select(SPALTEN_VARIANTEN[variante])
-      .eq("abgelehnt", false)
-      .or(`datum.gte.${heute},datum_bis.gte.${heute}`)
+    const basis = client.from("events").select(SPALTEN_VARIANTEN[variante]).eq("abgelehnt", false);
+    // Fernpool: nur Termine, die an `heute` (= erster Ferntag) beginnen, und nur fertig kategorisierte (Plan 6.1, 5.3)
+    const abfrage = fern
+      ? basis.gte("datum", heute).not("kategorie", "is", null)
+      : basis.or(`datum.gte.${heute},datum_bis.gte.${heute}`);
+    const { data, error } = await abfrage
       .lte("datum", bis)
       .order("datum", { ascending: true })
       .order("id", { ascending: true })
@@ -251,6 +252,38 @@ export async function eventPoolLaden(): Promise<EventPool> {
     console.warn(`Events konnten nicht geladen werden, nutze Beispieldaten: ${fehler}`);
     const alle = beispielEvents(heute, jetzt);
     return { heute, jetzt: jetzt.toISOString(), events: buendeln(alle), alle, quelle: "beispiel", fehler };
+  }
+}
+
+/** Erster und letzter Tag des Fernpools (Plan Quellen-Ausbau 6.1): Tag 61 bis 365 ab heute. */
+export const FERN_AB_TAG = TAGE_VORAUS + 1;
+export const FERN_BIS_TAG = 365;
+
+/** Liegt ein Tag hinter dem 60-Tage-Pool (also im Fernpool)? */
+export function istFern(datum: string, heute: string): boolean {
+  return datum >= plusTage(heute, FERN_AB_TAG);
+}
+
+/**
+ * Zweiter, schlanker Pool für Tag 61–365 (Plan docs/plan-quellen-ausbau-2026-11-23.md, 6.1, Schritt W1): Suche und
+ * eigener Zeitraum auf /entdecken, ferne Tagesseiten, Nachbarn ferner Eventseiten, Sitemap. Gleiche Spalten und
+ * normalisieren() wie eventPoolLaden(), nur kategorisierte Events. Hängt am selben Cache-Tag (der Admin-Bereich leert
+ * beide). Bei einem Fehler: leere Liste – nie Beispieldaten (Ausblick und Sitemap dürfen sie nicht zeigen).
+ */
+export async function fernPoolLaden(): Promise<EventPool> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 900, expire: 3600 });
+  cacheTag(EVENTS_CACHE_TAG);
+
+  const jetzt = new Date();
+  const heute = heuteBerlin(jetzt);
+  try {
+    const alle = await ausSupabaseLaden(plusTage(heute, FERN_AB_TAG), plusTage(heute, FERN_BIS_TAG), true);
+    return { heute, jetzt: jetzt.toISOString(), events: buendeln(alle), alle, quelle: "supabase", fehler: null };
+  } catch (err) {
+    const fehler = err instanceof Error ? err.message : String(err);
+    console.warn(`Fernpool konnte nicht geladen werden (leer): ${fehler}`);
+    return { heute, jetzt: jetzt.toISOString(), events: [], alle: [], quelle: "supabase", fehler };
   }
 }
 

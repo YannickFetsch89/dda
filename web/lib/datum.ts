@@ -125,8 +125,34 @@ export function wochenende(heute: string): { fr: string; sa: string; so: string 
 
 /** Eigener Zeitraum aus dem Kalender: „2026-11-18_2026-11-22“ (Start und Ende, beide einschließlich). */
 const EIGENER_ZEITRAUM = /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})$/;
-/** Längster wählbarer Zeitraum – so weit wie Tagesleiste und Kalender reichen. */
-export const MAX_ZEITRAUM_TAGE = 60;
+/** Längster wählbarer Zeitraum: 12 Monate (Plan Quellen-Ausbau 6.1, W1) – hinter Tag 60 kommt der Fernpool dazu. */
+export const MAX_ZEITRAUM_TAGE = 366;
+
+const MONATE_GROSS = ["JANUAR", "FEBRUAR", "MÄRZ", "APRIL", "MAI", "JUNI", "JULI", "AUGUST", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DEZEMBER"];
+
+
+/** „März 2027“ aus einem ISO-Datum (Monatsüberschriften im Ausblick). */
+export function monatName(datum: string): string {
+  return `${MONATE[Number(datum.slice(5, 7)) - 1]} ${datum.slice(0, 4)}`;
+}
+
+/** Termine nach Monat gruppiert, in der gegebenen Reihenfolge („März 2027“ → Termine). */
+export function nachMonat<T extends { datum: string }>(termine: T[]): { monat: string; termine: T[] }[] {
+  const gruppen = new Map<string, T[]>();
+  for (const t of termine) {
+    const schluessel = t.datum.slice(0, 7);
+    gruppen.set(schluessel, [...(gruppen.get(schluessel) ?? []), t]);
+  }
+  return [...gruppen.values()].map((liste) => ({ monat: monatName(liste[0].datum), termine: liste }));
+}
+
+/**
+ * Label für Events hinter Tag 60 („MÄRZ 2027“, Plan Quellen-Ausbau 6.2), damit niemand sie für bald hält; sonst null.
+ */
+export function monatsLabel(datum: string, heute: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datum) || tageZwischen(heute, datum) <= 60) return null;
+  return `${MONATE_GROSS[Number(datum.slice(5, 7)) - 1]} ${datum.slice(0, 4)}`;
+}
 
 export const zeitraumKey = (von: string, bis: string) => (von === bis ? von : `${von}_${bis}`);
 
