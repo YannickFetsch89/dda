@@ -41,6 +41,8 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from pipeline.schluessel import bereinigen
+
 logger = logging.getLogger(__name__)
 
 SITE_URL = os.getenv("SITE_URL", "https://diesdas.events").rstrip("/")
@@ -327,14 +329,14 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     tag = heute_berlin()
     db = get_supabase_client()
-    job_schluessel = os.getenv("GEBURTSTAG_JOB_SCHLUESSEL")
+    job_schluessel = bereinigen(os.getenv("GEBURTSTAG_JOB_SCHLUESSEL")) or None
 
     if a.aufgabe == "probe":
         ids = empfaenger_ids(db.rpc("geburtstag_empfaenger", {"tag": tag.isoformat()}).execute().data)
         logger.info(f"Geburtstagsmail Probelauf {tag.isoformat()}: {len(ids)} Empfänger, nichts gesendet")
         return 0
 
-    token_schluessel = _umgebung("GEBURTSTAG_TOKEN_SCHLUESSEL")
+    token_schluessel = bereinigen(_umgebung("GEBURTSTAG_TOKEN_SCHLUESSEL"))
 
     if a.aufgabe == "test":
         if not a.an:

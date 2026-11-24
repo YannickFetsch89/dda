@@ -41,6 +41,8 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from pipeline.schluessel import bereinigen
+
 logger = logging.getLogger(__name__)
 
 BERLIN = ZoneInfo("Europe/Berlin")
@@ -481,7 +483,7 @@ def entwurf_erstellen(db: Datenbank, rubrik: str, von: date | None = None, *, dr
         logger.info("Magazin %s %s: Ausgabe existiert schon – kein zweiter Entwurf (Prüfung g)", rubrik, start)
         return None
     try:
-        auswahl = auswahl_holen(rubrik, start, ende, schluessel if schluessel is not None else os.getenv("MAGAZIN_JOB_SCHLUESSEL"), post)
+        auswahl = auswahl_holen(rubrik, start, ende, schluessel if schluessel is not None else (bereinigen(os.getenv("MAGAZIN_JOB_SCHLUESSEL")) or None), post)
     except AuswahlFehler as e:
         logger.error("Magazin %s %s: %s – Abbruch ohne Entwurf und ohne Kosten", rubrik, start, e)
         raise

@@ -2,6 +2,7 @@
 // Deterministisch, ohne KI: dieselbe Stufen- und Highlight-Logik wie die Startseite (lib/ableitungen.ts). Die Pipeline
 // (Python) ruft sie über die geschützte Route app/api/magazin/auswahl auf.
 import "server-only";
+import { schluesselBereinigen } from "@/lib/schluessel";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { breite, filtern, highlightsImZeitraum, nachEmpfehlung, stufenKontext } from "./ableitungen";
 import { istGueltigerTag, plusTage, wochentag } from "./datum";
@@ -138,7 +139,10 @@ export function auswahlRechnen(pool: EventPool, rubrik: AuswahlRubrik, von: stri
  * Header-Schlüssel der Route (T11, Cursor-Prüfung 4 Befund 1): SHA-256 beider Werte (immer 32 Byte), dann
  * timingSafeEqual – nie ein Fehler bei ungleicher Länge. Fehlt der Header oder die Umgebungsvariable → false.
  */
-export function schluesselOk(gesendet: string | null | undefined, erwartet: string | undefined = process.env.MAGAZIN_JOB_SCHLUESSEL): boolean {
+export function schluesselOk(roh: string | null | undefined, rohErwartet: string | undefined = process.env.MAGAZIN_JOB_SCHLUESSEL): boolean {
+  // Beide Seiten wie deploy.yml und die Python-Jobs bereinigen (Cursor-Prüfung 24.11.2026)
+  const gesendet = schluesselBereinigen(roh);
+  const erwartet = schluesselBereinigen(rohErwartet);
   if (!gesendet || !erwartet) return false;
   const a = createHash("sha256").update(gesendet).digest();
   const b = createHash("sha256").update(erwartet).digest();

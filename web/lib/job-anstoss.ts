@@ -20,9 +20,14 @@ type Stand = { letzterStart: number | null; geplant: boolean };
 const g = globalThis as typeof globalThis & { __dddJobAnstoss?: Map<WorkflowName, Stand> };
 const staende = (g.__dddJobAnstoss ??= new Map());
 
-async function starten(name: WorkflowName, inputs: Record<string, string>) {
+async function starten(name: WorkflowName, inputs: Record<string, string>, s: Stand) {
   const ergebnis = await workflowStarten(name, inputs);
-  if (!ergebnis.ok) console.error(`Job-Anstoß ${name} gescheitert (${ergebnis.meldung}) – der Zeitplan holt es nach`);
+  if (!ergebnis.ok) {
+    // Cursor-Prüfung 24.11.2026: Ein gescheiterter Start darf die Sperrzeit nicht belegen – der nächste Aufruf
+    // (nächste Anmeldung) stößt sofort wieder an; bis dahin bleibt der Zeitplan.
+    s.letzterStart = null;
+    console.error(`Job-Anstoß ${name} gescheitert (${ergebnis.meldung}) – nächster Aufruf versucht es sofort, sonst der Zeitplan`);
+  }
 }
 
 /** Stößt den Workflow an (ohne zu warten); Fehler landen nur im Log, nie beim Nutzer. */
@@ -32,13 +37,13 @@ export function jobAnstossen(name: WorkflowName, inputs: Record<string, string>)
   const plan = anstossPlanen(s.letzterStart, s.geplant, Date.now());
   if (plan.art === "jetzt") {
     s.letzterStart = Date.now();
-    void starten(name, inputs);
+    void starten(name, inputs, s);
   } else if (plan.art === "spaeter") {
     s.geplant = true;
     setTimeout(() => {
       s.geplant = false;
       s.letzterStart = Date.now();
-      void starten(name, inputs);
+      void starten(name, inputs, s);
     }, plan.in_ms).unref?.();
   }
 }

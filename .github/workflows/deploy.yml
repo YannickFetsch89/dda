@@ -119,26 +119,24 @@ jobs:
             # Schlüssel der Magazin-Auswahl-Route (Plan Redaktion T11) in web/.env.local – vor „npm run build“; nur „envs“
             # reicht nicht, weil web/deploy/website.sh Next ohne die Variablen dieser SSH-Sitzung startet.
             # Ohne Secret bleibt die Route geschlossen (404).
-            if [ -n "$MAGAZIN_JOB_SCHLUESSEL" ]; then
+            WERT=$(printf '%s' "$MAGAZIN_JOB_SCHLUESSEL" | tr -d ' \r\n\t')
+            if [ -n "$WERT" ]; then
               touch web/.env.local
-              if grep -q "^MAGAZIN_JOB_SCHLUESSEL=" web/.env.local; then
-                sed -i "s|^MAGAZIN_JOB_SCHLUESSEL=.*|MAGAZIN_JOB_SCHLUESSEL=$MAGAZIN_JOB_SCHLUESSEL|" web/.env.local
-              else
-                echo "MAGAZIN_JOB_SCHLUESSEL=$MAGAZIN_JOB_SCHLUESSEL" >> web/.env.local
-              fi
-              echo "Magazin-Schlüssel in web/.env.local gesetzt"
+              grep -v "^MAGAZIN_JOB_SCHLUESSEL=" web/.env.local > web/.env.local.neu || true
+              printf 'MAGAZIN_JOB_SCHLUESSEL=%s\n' "$WERT" >> web/.env.local.neu
+              mv web/.env.local.neu web/.env.local
+              echo "Magazin-Schlüssel in web/.env.local gesetzt (${#WERT} Zeichen)"
             fi
 
             # Geburtstagsmail (Plan Geburtstagsmail G2/G4): Token-Schlüssel der Abmelde-Routen und Schlüssel der internen
             # Tipps-Route in web/.env.local. Ohne Secret: Abmelde-Links ungültig bzw. Tipps-Route geschlossen (404).
-            if [ -n "$GEBURTSTAG_TOKEN_SCHLUESSEL" ]; then
+            WERT=$(printf '%s' "$GEBURTSTAG_TOKEN_SCHLUESSEL" | tr -d ' \r\n\t')
+            if [ -n "$WERT" ]; then
               touch web/.env.local
-              if grep -q "^GEBURTSTAG_TOKEN_SCHLUESSEL=" web/.env.local; then
-                sed -i "s|^GEBURTSTAG_TOKEN_SCHLUESSEL=.*|GEBURTSTAG_TOKEN_SCHLUESSEL=$GEBURTSTAG_TOKEN_SCHLUESSEL|" web/.env.local
-              else
-                echo "GEBURTSTAG_TOKEN_SCHLUESSEL=$GEBURTSTAG_TOKEN_SCHLUESSEL" >> web/.env.local
-              fi
-              echo "Geburtstag-Token-Schlüssel in web/.env.local gesetzt"
+              grep -v "^GEBURTSTAG_TOKEN_SCHLUESSEL=" web/.env.local > web/.env.local.neu || true
+              printf 'GEBURTSTAG_TOKEN_SCHLUESSEL=%s\n' "$WERT" >> web/.env.local.neu
+              mv web/.env.local.neu web/.env.local
+              echo "Geburtstag-Token-Schlüssel in web/.env.local gesetzt (${#WERT} Zeichen)"
             fi
             # Newsletter Double-Opt-in (Plan Admin-Dashboard 4.9): Token-Schlüssel der Bestätigen-/Abmelde-Routen
             # Ohne sed (Deploy 23.11.2026 brach mit „unterminated s command“ ab): Leerzeichen und Zeilenumbrüche aus dem
@@ -151,14 +149,13 @@ jobs:
               mv web/.env.local.neu web/.env.local
               echo "Newsletter-Token-Schlüssel in web/.env.local gesetzt (${#NL_SCHLUESSEL} Zeichen)"
             fi
-            if [ -n "$GEBURTSTAG_JOB_SCHLUESSEL" ]; then
+            WERT=$(printf '%s' "$GEBURTSTAG_JOB_SCHLUESSEL" | tr -d ' \r\n\t')
+            if [ -n "$WERT" ]; then
               touch web/.env.local
-              if grep -q "^GEBURTSTAG_JOB_SCHLUESSEL=" web/.env.local; then
-                sed -i "s|^GEBURTSTAG_JOB_SCHLUESSEL=.*|GEBURTSTAG_JOB_SCHLUESSEL=$GEBURTSTAG_JOB_SCHLUESSEL|" web/.env.local
-              else
-                echo "GEBURTSTAG_JOB_SCHLUESSEL=$GEBURTSTAG_JOB_SCHLUESSEL" >> web/.env.local
-              fi
-              echo "Geburtstag-Job-Schlüssel in web/.env.local gesetzt"
+              grep -v "^GEBURTSTAG_JOB_SCHLUESSEL=" web/.env.local > web/.env.local.neu || true
+              printf 'GEBURTSTAG_JOB_SCHLUESSEL=%s\n' "$WERT" >> web/.env.local.neu
+              mv web/.env.local.neu web/.env.local
+              echo "Geburtstag-Job-Schlüssel in web/.env.local gesetzt (${#WERT} Zeichen)"
             fi
 
             # GitHub-Token des Admin-Bereichs (Plan Admin-Dashboard 3.4): nur Zeichen [A-Za-z0-9_], sed-sicher.
@@ -207,7 +204,7 @@ jobs:
             # die Website prüfte Bestätigungslinks mit einem anderen Schlüssel als der Mail-Job (Livetest 24.11.2026).
             # So startet Next nach dem Deploy genauso wie nach einem Neustart durch den Wächter (Cron, ohne diese Sitzung).
             unset SUPABASE_SERVICE_KEY GOOGLE_PLACES_API_KEY KONTEN_AKTIV MAGAZIN_JOB_SCHLUESSEL GEBURTSTAG_TOKEN_SCHLUESSEL
-            unset GEBURTSTAG_JOB_SCHLUESSEL ADMIN_GITHUB_TOKEN NEWSLETTER_TOKEN_SCHLUESSEL NL_SCHLUESSEL
+            unset GEBURTSTAG_JOB_SCHLUESSEL ADMIN_GITHUB_TOKEN NEWSLETTER_TOKEN_SCHLUESSEL NL_SCHLUESSEL WERT
             npm ci --no-audit --no-fund
             npm run build
             /home/dies_das_duesseldorfadmin/bin/website.sh neustart

@@ -377,6 +377,12 @@ describe("Auswahl", () => {
     expect(schluesselOk("richtig", undefined)).toBe(false);
   });
 
+  it("Schlüssel mit Leerraum wie deploy.yml bereinigt (Cursor-Prüfung 24.11.2026)", () => {
+    expect(schluesselOk("richtig", "richtig\n")).toBe(true);
+    expect(schluesselOk(" richtig ", "rich\r\ntig")).toBe(true);
+    expect(schluesselOk(" ", "\n")).toBe(false);
+  });
+
   it("Auswahl-Route: 404 ohne Schlüssel, 400 bei falschem Zeitraum, 200 mit no-store", async () => {
     const { POST, GET } = await import("@/app/api/magazin/auswahl/route");
     const anfrage = (kopf: Record<string, string>, body: unknown) =>

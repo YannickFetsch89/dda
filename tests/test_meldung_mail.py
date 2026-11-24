@@ -141,7 +141,7 @@ class Versand(unittest.TestCase):
             yield FakeVersender()
 
         zahlen = mm.versenden(FakeDb([]), fabrik)
-        self.assertEqual(zahlen, {"beansprucht": 0, "gesendet": 0, "fehlgeschlagen": 0})
+        self.assertEqual(zahlen, {"beansprucht": 0, "gesendet": 0, "fehlgeschlagen": 0, "nicht_verbucht": 0})
         self.assertEqual(geoeffnet, [])
 
     def test_erfolg_und_fehler_einzeln(self):
@@ -154,7 +154,7 @@ class Versand(unittest.TestCase):
             yield v
 
         zahlen = mm.versenden(db, fabrik)
-        self.assertEqual(zahlen, {"beansprucht": 2, "gesendet": 1, "fehlgeschlagen": 1})
+        self.assertEqual(zahlen, {"beansprucht": 2, "gesendet": 1, "fehlgeschlagen": 1, "nicht_verbucht": 0})
         self.assertIn(("meldung_mail_versandt", {"p_id": "a"}), db.aufrufe)
         self.assertIn(("meldung_mail_freigeben", {"p_id": "b"}), db.aufrufe)
 
@@ -204,7 +204,7 @@ class Verbuchen(unittest.TestCase):
 
         with mock.patch.object(mm.uhr, "sleep") as schlafen:
             zahlen = mm.versenden(db, fabrik)
-        self.assertEqual(zahlen, {"beansprucht": 1, "gesendet": 1, "fehlgeschlagen": 0})
+        self.assertEqual(zahlen, {"beansprucht": 1, "gesendet": 1, "fehlgeschlagen": 0, "nicht_verbucht": 0})
         self.assertEqual(len(v.gesendet), 1)
         self.assertEqual(zaehler["versandt"], 3)
         self.assertEqual(schlafen.call_count, 2)
@@ -221,9 +221,25 @@ class Verbuchen(unittest.TestCase):
         with mock.patch.object(mm.uhr, "sleep"):
             zahlen = mm.versenden(db, fabrik)
         self.assertEqual(zahlen["gesendet"], 1)
+        self.assertEqual(zahlen["nicht_verbucht"], 1)
         self.assertEqual(zaehler["versandt"], mm.VERBUCHEN_VERSUCHE)
         self.assertEqual(len(v.gesendet), 1)
         self.assertNotIn("meldung_mail_freigeben", [a[0] for a in db.aufrufe])
+
+    def test_nicht_verbuchbar_bricht_den_lauf_ab(self):
+        """Cursor-Prüfung 24.11.2026: ohne Datenbank keine weiteren Mails, die sich ebenfalls nicht verbuchen ließen."""
+        db, _ = self._db(fehler_bis=99)
+        db.zeilen = [{**FALL, "id": "a", "kontakt_email": "a@example.org"}, {**FALL, "id": "b", "kontakt_email": "b@example.org"}]
+        v = FakeVersender()
+
+        @contextmanager
+        def fabrik():
+            yield v
+
+        with mock.patch.object(mm.uhr, "sleep"):
+            zahlen = mm.versenden(db, fabrik)
+        self.assertEqual(v.gesendet, ["a@example.org"])
+        self.assertEqual(zahlen, {"beansprucht": 2, "gesendet": 1, "fehlgeschlagen": 0, "nicht_verbucht": 1})
 
 
 class Schalter(unittest.TestCase):

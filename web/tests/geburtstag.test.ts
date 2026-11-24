@@ -108,6 +108,9 @@ describe("Abmelde-Token (G4)", () => {
   it("gleicher Vektor wie der Python-Job", () => {
     expect(geburtstagToken(ID, "testschluessel")).toBe(VEKTOR);
     expect(geburtstagTokenPruefen(VEKTOR, "testschluessel")).toBe(ID);
+    // Secret mit Zeilenumbruch: dieselbe Bereinigung wie deploy.yml und der Python-Job (Cursor-Prüfung 24.11.2026)
+    expect(geburtstagTokenPruefen(VEKTOR, "testschluessel\n")).toBe(ID);
+    expect(geburtstagToken(ID, "test\r\nschluessel")).toBe(VEKTOR);
   });
   it("fälschungssicher", () => {
     const [, mac] = VEKTOR.split(".");

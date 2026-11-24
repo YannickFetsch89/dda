@@ -160,7 +160,7 @@ def _freigeben(db, z: dict) -> None:
         logger.error(f"Newsletter-Bestätigung: Freigeben gescheitert ({type(e).__name__})")
 
 
-LEERRAUM = " \r\n\t"  # dieselben Zeichen wie tr -d in deploy.yml
+from pipeline.schluessel import LEERRAUM  # noqa: E402 – gemeinsame Regel (Website, deploy.yml)
 
 
 def token_schluessel(roh: Optional[str]) -> tuple[str, int]:

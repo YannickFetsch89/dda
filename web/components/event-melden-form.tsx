@@ -212,7 +212,7 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
       <div className="formular__danke" role="status">
         <span className="icon" aria-hidden data-icon="check_circle" />
         <h2 className="d">Danke für deine Meldung!</h2>
-        <p>Wir schauen uns dein Event an und schalten es nach der Prüfung frei – meist innerhalb von ein bis zwei Tagen. Sobald dein Event online ist, schicken wir dir den Link per E-Mail; bei Rückfragen melden wir uns ebenfalls per E-Mail.</p>
+        <p>Wir schauen uns dein Event an und schalten es nach der Prüfung frei – meist innerhalb von ein bis zwei Tagen. Sobald dein Event online ist, schicken wir dir den Link per E-Mail (sofern es dann noch bevorsteht); bei Rückfragen melden wir uns ebenfalls per E-Mail.</p>
         <div className="formular__aktionen">
           <button type="button" className="btn btn--gold" onClick={() => { setZustand("bereit"); setKostenlos(false); setMehrtaegig(false); setBildInfo(null); }}>
             Weiteres Event melden
@@ -336,7 +336,7 @@ export function EventMeldenForm({ kategorien }: { kategorien: KategorieOption[] 
 
       <fieldset className="formular__gruppe">
         <legend className="d">Kontakt für Rückfragen</legend>
-        <span className="formular__hinweis">Wird nicht veröffentlicht. An diese Adresse schicken wir dir auch den Link, sobald dein Event online ist.</span>
+        <span className="formular__hinweis">Wird nicht veröffentlicht. An diese Adresse schicken wir dir auch den Link, sobald dein Event online ist (sofern es dann noch bevorsteht).</span>
         <div className="formular__reihe">
           <label className="formular__feld">
             <span className="formular__label">Name</span>

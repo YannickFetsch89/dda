@@ -2,6 +2,7 @@
 // Token: "<nutzer-id>.<HMAC-SHA256(GEBURTSTAG_TOKEN_SCHLUESSEL, "geburtstag:" + nutzer-id), base64url>".
 // Erzeugt im Versandjob (pipeline/geburtstag_mails.py), geprüft hier. Ohne Ablauf, nur für diesen Zweck.
 import "server-only";
+import { schluesselBereinigen } from "@/lib/schluessel";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { einwilligungSetzen } from "./einwilligungen";
@@ -14,13 +15,15 @@ function mac(nutzerId: string, schluessel: string): string {
 }
 
 /** Token für eine Nutzer-ID (Tests; der Job erzeugt es in Python mit derselben Rechnung). */
-export function geburtstagToken(nutzerId: string, schluessel: string | undefined = process.env.GEBURTSTAG_TOKEN_SCHLUESSEL): string | null {
+export function geburtstagToken(nutzerId: string, roh: string | undefined = process.env.GEBURTSTAG_TOKEN_SCHLUESSEL): string | null {
+  const schluessel = schluesselBereinigen(roh);
   if (!schluessel || !UUID.test(nutzerId)) return null;
   return `${nutzerId}.${mac(nutzerId, schluessel)}`;
 }
 
 /** Prüft ein Token; gibt die Nutzer-ID zurück oder null. Vergleich in konstanter Zeit, nie ein Fehler. */
-export function geburtstagTokenPruefen(token: unknown, schluessel: string | undefined = process.env.GEBURTSTAG_TOKEN_SCHLUESSEL): string | null {
+export function geburtstagTokenPruefen(token: unknown, roh: string | undefined = process.env.GEBURTSTAG_TOKEN_SCHLUESSEL): string | null {
+  const schluessel = schluesselBereinigen(roh);
   if (!schluessel || typeof token !== "string" || token.length > 200) return null;
   const punkt = token.indexOf(".");
   if (punkt < 0) return null;

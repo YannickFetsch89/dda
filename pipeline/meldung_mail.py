@@ -186,7 +186,7 @@ def mail_bauen(an: str, z: dict[str, Any], url: Optional[str] = None) -> EmailMe
 def versenden(db, versender_fabrik, je_lauf: int = JE_LAUF) -> dict[str, int]:
     """Beanspruchte Meldungen anschreiben; bei Fehler freigeben. SMTP nur öffnen, wenn es etwas zu senden gibt.
     Rückgabe: Anzahlen (nie Adressen)."""
-    zahlen = {"beansprucht": 0, "gesendet": 0, "fehlgeschlagen": 0}
+    zahlen = {"beansprucht": 0, "gesendet": 0, "fehlgeschlagen": 0, "nicht_verbucht": 0}
     zeilen: list[dict[str, Any]] = db.rpc("meldung_mail_beanspruchen", {"p_anzahl": je_lauf}).execute().data or []
     zahlen["beansprucht"] = len(zeilen)
     if not zeilen:
@@ -200,7 +200,13 @@ def versenden(db, versender_fabrik, je_lauf: int = JE_LAUF) -> dict[str, int]:
                     v.senden(mail_bauen(str(z["kontakt_email"]), z))
                     zahlen["gesendet"] += 1
                     # Mail ist raus: nur das Verbuchen wiederholen, nie die Mail (Cursor-Prüfung, gering 1)
-                    _rpc(db, "meldung_mail_versandt", z, versuche=VERBUCHEN_VERSUCHE)
+                    if not _rpc(db, "meldung_mail_versandt", z, versuche=VERBUCHEN_VERSUCHE):
+                        # Datenbank nicht erreichbar: keine weiteren Mails in diesem Lauf, die sich ebenfalls nicht
+                        # verbuchen ließen (Cursor-Prüfung 24.11.2026). Die übrigen Ansprüche verfallen nach 30 Minuten,
+                        # diese eine Mail kann dann höchstens noch einmal rausgehen; der Lauf endet mit Fehler.
+                        zahlen["nicht_verbucht"] += 1
+                        logger.error(f"Meldungs-Mail: Versand nicht verbuchbar – Lauf abgebrochen, {len(offen)} bleiben offen")
+                        break
                 except Exception as e:  # noqa: BLE001 – jede Mail einzeln
                     zahlen["fehlgeschlagen"] += 1
                     logger.error(f"Meldungs-Mail: Versand gescheitert ({type(e).__name__})")
@@ -282,8 +288,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 0
     zahlen = versenden(db, _versender)
     logger.info(f"Meldungs-Mail: {zahlen['beansprucht']} beansprucht, {zahlen['gesendet']} gesendet, "
-                f"{zahlen['fehlgeschlagen']} fehlgeschlagen")
-    return 1 if zahlen["fehlgeschlagen"] else 0
+                f"{zahlen['fehlgeschlagen']} fehlgeschlagen, {zahlen['nicht_verbucht']} nicht verbucht")
+    return 1 if zahlen["fehlgeschlagen"] or zahlen["nicht_verbucht"] else 0
 
 
 if __name__ == "__main__":

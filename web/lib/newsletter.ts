@@ -3,6 +3,7 @@
 // Zwecken „newsletter-bestaetigen:“ und „newsletter-abmelden:“ – gleich wie pipeline/newsletter_bestaetigung.py.
 // Getestet in web/tests/newsletter.test.ts.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { schluesselBereinigen } from "@/lib/schluessel";
 
 export type TokenZweck = "bestaetigen" | "abmelden";
 const ZWECK: Record<TokenZweck, string> = { bestaetigen: "newsletter-bestaetigen:", abmelden: "newsletter-abmelden:" };
@@ -12,11 +13,7 @@ function mac(id: string, zweck: TokenZweck, schluessel: string): string {
   return createHmac("sha256", schluessel).update(ZWECK[zweck] + id, "utf8").digest("base64url");
 }
 
-/** Schlüssel ohne jeden Leerraum – dieselbe Regel wie deploy.yml (tr -d) und pipeline/newsletter_bestaetigung.py.
- * Livetest 24.11.2026: Die Website erbte das Secret roh mit Zeilenumbruch, alle Bestätigungslinks waren ungültig. */
-export function schluesselBereinigen(s: string | undefined): string {
-  return (s ?? "").replace(/[ \r\n\t]/g, "");
-}
+export { schluesselBereinigen };
 
 /** Token für eine Anmeldung (Tests; der Job erzeugt es in Python mit derselben Rechnung). */
 export function newsletterToken(id: string, zweck: TokenZweck, roh: string | undefined = process.env.NEWSLETTER_TOKEN_SCHLUESSEL): string | null {

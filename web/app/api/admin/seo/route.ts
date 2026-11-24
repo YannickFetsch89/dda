@@ -57,12 +57,16 @@ async function laden(db: SupabaseClient, nurOffen: boolean) {
       mehr = true;
       break;
     }
-    const { data, error } = await db
+    // Nur offene: entschiedene Events schon in der Datenbank ausnehmen (Anti-Join über die Einbettung; Cursor-
+    // Prüfung 24.11.2026 – sonst konnten 20 Seiten voller entschiedener Events die offenen verdecken)
+    let abfrage = db
       .from("events")
-      .select("id, titel, datum, datum_bis, ort, kategorie, slug, reihe:reihen(slug)")
+      .select(nurOffen ? "id, titel, datum, datum_bis, ort, kategorie, slug, reihe:reihen(slug), seo:event_seo_entscheidungen!left(event_id)" : "id, titel, datum, datum_bis, ort, kategorie, slug, reihe:reihen(slug)")
       .eq("abgelehnt", false)
       .not("slug", "is", null)
-      .or(filter)
+      .or(filter);
+    if (nurOffen) abfrage = abfrage.is("seo", null);
+    const { data, error } = await abfrage
       .order("datum")
       .order("id")
       .range(seite * SEITE, seite * SEITE + SEITE - 1);
