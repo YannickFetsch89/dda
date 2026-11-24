@@ -696,6 +696,11 @@ Stufe 6 – Streamlit abgeschaltet (24.11.2026):
 - **Entfernt:** `dashboard/` (inkl. `requirements.txt` und `dashboard.sh`), `tests/test_seo_aufraeumen.py` (die Regeln prüft jetzt `web/tests/admin-seo.test.ts`), die Streamlit-Schritte in `deploy.yml` (stattdessen einmalig: laufenden Prozess über `logs/dashboard.pid` beenden, Startskript löschen), Link „Altes Dashboard“, Cockpit-Link der Meldungen zeigt auf `/admin/meldungen`.
 - **Beim Auftraggeber:** nginx-Block `location /alt/` bei admin.diesdas.events löschen (`docs/admin-nginx-anleitung.md`, Abschnitt „Stufe 6“). Streamlit-Pakete bleiben im venv (stören nicht).
 
+Cursor-Gesamtprüfung (24.11.2026, abnahmefähig, kein kritischer Befund):
+- **Fehlalarm (mittel + 2 gering):** „PostgREST wertet nur * als Platzhalter“ (Newsletter-Suche, Quellen-Filter der Event-Liste, Protokoll-Filter). Live gegen die Datenbank geprüft: `ilike('%jazz%')` und `ilike('*jazz*')` liefern beide 8, `like('jazz%')` und `like('jazz*')` beide 1 – supabase-js kodiert `%` richtig. Nichts geändert; der Kommentar in der Meldungen-Route (Befund 1 aus Stufe 5b war ebenso ein Fehlalarm, `*` bleibt dort unschädlich) ist richtiggestellt.
+- **Behoben (gering):** SEO-Aufräumen lud zum Zählen alle abgelaufenen Event-IDs. Jetzt zählt die Datenbank „gesamt“ (count, head), „entschieden“ zählt die passenden Events der (kleinen) Entscheidungs-Tabelle stückweise, die Liste bricht nach 500 Einträgen, 20 Seiten oder 4 s ab.
+- **nginx:** Block `/alt/` beim Auftraggeber entfernt; live geprüft: `/` 308, `/admin` 307, `/api/admin/ich` 401, `/alt/` 404, `/entdecken` 404, diesdas.events/admin auch mit gefälschtem Kopf 404.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Bestand per Code und SQL-Dateien geprüft.
@@ -721,3 +726,4 @@ Stufe 6 – Streamlit abgeschaltet (24.11.2026):
 - 24.11.2026: Stufe 5b gebaut (lokal), SQL `admin_quellen_2026-11-24.sql`; Notizen in Anhang F.
 - 24.11.2026: SQL Stufe 5b ausgeführt, Cursor-Prüfung 5b deploybar, 2 Befunde eingearbeitet.
 - 24.11.2026: Stufe 5b LIVE (3f67edb). Stufe 6 Streamlit abschalten gebaut (lokal); nginx-Block /alt beim Auftraggeber.
+- 24.11.2026: Stufe 6 LIVE (3f6a7ab), nginx /alt entfernt; Cursor-Gesamtprüfung abnahmefähig, 1 Befund behoben, 3 als Fehlalarm belegt. **Plan vollständig umgesetzt.**

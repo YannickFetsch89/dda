@@ -25,16 +25,38 @@ async function alle<T>(abfrage: (von: number, bis: number) => PromiseLike<{ data
   return ergebnis;
 }
 
+/**
+ * Kennzahlen und Liste (Cursor-Gesamtprüfung, gering: vorher wurden zum Zählen alle abgelaufenen Event-IDs geladen,
+ * bis zu 500.000 Zeilen im Website-Prozess). Jetzt: „gesamt“ zählt die Datenbank (count, head), die Entscheidungen
+ * (kleine Tabelle) werden geladen und ihre noch passenden Events stückweise gezählt; die Liste bricht nach
+ * ANZEIGE_MAX Einträgen, MAX_SEITEN Seiten oder MAX_MS ab.
+ */
+const MAX_SEITEN = 20;
+const MAX_MS = 4000;
+
 async function laden(db: SupabaseClient, nurOffen: boolean) {
+  const start = Date.now();
   const filter = abgelaufenFilter(heuteBerlin(new Date()));
+  const kandidaten = () => db.from("events").select("id", { count: "exact", head: true }).eq("abgelehnt", false).not("slug", "is", null).or(filter);
+  const { count: gesamt, error: fGesamt } = await kandidaten();
+  if (fGesamt) throw new Error(fGesamt.message);
   const entscheidungen = new Map(
     (await alle<{ event_id: string; aktion: string; ziel: string | null }>((a, b) => db.from("event_seo_entscheidungen").select("event_id, aktion, ziel").order("event_id").range(a, b))).map((z) => [z.event_id, z]),
   );
-  const kandidatenIds = await alle<{ id: string }>((a, b) => db.from("events").select("id").eq("abgelehnt", false).not("slug", "is", null).or(filter).order("id").range(a, b));
-  const entschieden = kandidatenIds.filter((k) => entscheidungen.has(k.id)).length;
+  let entschieden = 0;
+  const ids = [...entscheidungen.keys()];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { count, error } = await kandidaten().in("id", ids.slice(i, i + 200));
+    if (error) throw new Error(error.message);
+    entschieden += count ?? 0;
+  }
   const liste: SeoEvent[] = [];
   let mehr = false;
-  for (let seite = 0; seite < 500 && liste.length < ANZEIGE_MAX; seite++) {
+  for (let seite = 0; liste.length < ANZEIGE_MAX; seite++) {
+    if (seite >= MAX_SEITEN || Date.now() - start > MAX_MS) {
+      mehr = true;
+      break;
+    }
     const { data, error } = await db
       .from("events")
       .select("id, titel, datum, datum_bis, ort, kategorie, slug, reihe:reihen(slug)")
@@ -55,7 +77,7 @@ async function laden(db: SupabaseClient, nurOffen: boolean) {
     }
     if ((data ?? []).length < SEITE) break;
   }
-  return { entscheidungen, gesamt: kandidatenIds.length, entschieden, liste, mehr };
+  return { entscheidungen, gesamt: gesamt ?? 0, entschieden, liste, mehr };
 }
 
 export async function GET(request: Request) {
