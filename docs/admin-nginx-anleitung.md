@@ -110,5 +110,43 @@ Umgestellt am 23.11.2026. Live mit `curl` geprüft: `/` → 308 `/admin`, `/admi
 
 ## Stufe 6: Streamlit abgeschaltet (24.11.2026)
 
-Der Deploy beendet Streamlit und entfernt dessen Startskript. Danach in ISPConfig bei **admin.diesdas.events → Options → nginx Directives** den ganzen Block `location /alt/ { … }` löschen (er zeigt auf Port 8502, der nicht mehr läuft) und speichern. Danach liefert `admin.diesdas.events/alt/` über `location /` eine 404 statt eines 502.
+Der Deploy vom 24.11.2026 (3f6a7ab) hat Streamlit beendet; `/alt/` liefert seitdem 502. In ISPConfig bei **admin.diesdas.events → Options → nginx Directives** den gesamten Inhalt durch diesen Block ersetzen und speichern:
 
+```
+add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+location = /robots.txt {
+    default_type text/plain;
+    return 200 "User-agent: *
+Disallow: /
+";
+}
+
+# Startseite → /admin
+location = / {
+    return 308 /admin;
+}
+
+# Admin-Bereich und alles, was seine Seiten laden (Next.js auf 3847)
+location ~ ^/(admin|api/admin|_next|bild|fallback|magazin-bild|magazin-autoren|ort-foto|ort-bilder)(/|$) {
+    proxy_pass http://127.0.0.1:3847;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-DDD-Bereich admin;
+}
+location = /icon.svg {
+    proxy_pass http://127.0.0.1:3847;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-DDD-Bereich admin;
+}
+
+# Alles andere gibt es hier nicht (auch /alt/ seit Stufe 6)
+location / {
+    return 404;
+}
+```
+
+Gegenüber dem bisherigen Inhalt fällt nur der Block `location /alt/ { … }` weg. Danach liefert `admin.diesdas.events/alt/` eine 404. diesdas.events bleibt unverändert.
