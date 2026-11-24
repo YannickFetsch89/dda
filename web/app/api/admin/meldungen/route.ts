@@ -105,7 +105,6 @@ async function freigeben(db: SupabaseClient, m: Meldung, w: FreigabeWerte, admin
       quelle_url: w.link ?? QUELLE_STANDARD_URL,
       bild_url: bildUrl,
       bild_generiert: false,
-      post_typ: "feed",
       status: "neu",
     });
     if (!(await abschliessen(db, m.id, token, adminId, { status: "freigegeben", event_id: eventId, mail_status: "offen" }))) {

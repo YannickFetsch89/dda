@@ -10,6 +10,7 @@ export const WORKFLOWS = {
   geburtstag: "geburtstag.yml",
   magazin: "magazin.yml",
   "meldung-mail": "meldung-mail.yml",
+  newsletter: "newsletter.yml",
 } as const;
 export type WorkflowName = keyof typeof WORKFLOWS;
 

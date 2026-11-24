@@ -3,6 +3,7 @@
 // Link in der Mail ist die Adresse bestätigt. Die Antwort ist immer gleich – sie verrät nicht, ob eine Adresse
 // schon angemeldet ist.
 import { anmeldungPlanen, type Bestand } from "@/lib/newsletter";
+import { jobAnstossen } from "@/lib/job-anstoss";
 import { absenderIp, antwort, emailGueltig, schreibClient, text, zuGross, zuVieleAnfragen } from "@/lib/formulare";
 
 export async function POST(request: Request) {
@@ -56,5 +57,10 @@ export async function POST(request: Request) {
       return fehlgeschlagen();
     }
   }
+  // Bestätigungsmail sofort anstoßen (der 15-Minuten-Zeitplan von GitHub ist unzuverlässig); höchstens ein Lauf je
+  // 5 Minuten, der Job prüft NEWSLETTER_AKTIV selbst
+  // Auch bei erneutem Absenden einer Adresse, deren Mail noch aussteht (häufig: „kam nichts, nochmal probieren“)
+  const wartet = !!bestand && !bestand.bestaetigt_am && !bestand.bestaetigung_zugestellt_am;
+  if (plan === "anlegen" || plan === "erneut_senden" || wartet) jobAnstossen("newsletter", { aufgabe: "senden" });
   return antwort(200, { ok: true });
 }
