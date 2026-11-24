@@ -13,6 +13,7 @@ Seit Schritt T1 (Plan docs/plan-quellen-ausbau-2026-11-23.md, 5.1):
   bleibt bild_url leer (Plan 5.5.4).
 """
 import logging
+import re
 import os
 import time
 from datetime import date, timedelta
@@ -135,6 +136,9 @@ def _kategorie_erkennen(klassifizierungen: list[dict]) -> str:
 
 
 GEBIET = ("düsseldorf", "dusseldorf", "duesseldorf", "neuss", "ratingen")
+_ZUSATZANGEBOT = re.compile(
+    r"vip[- ]?(upgrade|package|paket|ticket upgrade)|no ticket included|kein ticket|ohne ticket|parkplatz|parking|"
+    r"\bparken\b|hotel ?package|merch(andise)? ?bundle", re.IGNORECASE)
 
 
 def _im_gebiet(stadt: str) -> bool:
@@ -159,6 +163,11 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
         titel = event.get("name", "").strip()
         if not titel:
             logger.warning("Event ohne Titel übersprungen.")
+            return None
+
+        # Zusatzangebote ohne eigenen Termin (Test 24.11.2026: „… | VIP Upgrades (no ticket included)“) – kein Event
+        if _ZUSATZANGEBOT.search(titel):
+            logger.debug("Ticketmaster: Zusatzangebot übersprungen: %s", titel)
             return None
 
         # Datum (Pflichtfeld)

@@ -123,6 +123,16 @@ class QuellenTest(unittest.TestCase):
         self.assertIsNotNone(mit_ort("Swiss Life Hall", "Neuss", "41460", "Am Hafen 1"))
         self.assertIsNotNone(mit_ort("Stadthalle", "Ratingen", "40878", "Schützenstr. 1"))
 
+    def test_zusatzangebote_sind_keine_events(self):
+        for titel in ("THE KEHLANI WORLD TOUR: EU & UK | VIP Upgrades (no ticket included)", "Parkplatz – Rea Garvey",
+                      "Konzert X - VIP Package"):
+            e = roh(1)
+            e["name"] = titel
+            self.assertIsNone(tm._event_parsen(e, date.today()), titel)
+        e = roh(1)
+        e["name"] = "Parkway Drive"
+        self.assertIsNotNone(tm._event_parsen(e, date.today()))
+
     def test_songkick_nicht_mehr_in_quellen(self):
         text = (WURZEL / "main.py").read_text(encoding="utf-8")
         self.assertNotIn("songkick.scrape", text)
