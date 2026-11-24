@@ -34,10 +34,13 @@ class Antwort:
 
 
 class FakeClient:
-    """Liefert je Monatsfenster zwei Seiten à SEITENGROESSE (bzw. weniger) und merkt sich die Parameter."""
+    """Liefert im ersten Monatsfenster zwei Seiten mit je zwei Events, sonst nichts; merkt sich die Parameter.
+    kaputt_ab: ab dem n-ten Fenster (0 = erstes) antwortet die API mit HTTP 500."""
 
-    def __init__(self):
+    def __init__(self, kaputt_ab=None):
         self.aufrufe = []
+        self.kaputt_ab = kaputt_ab
+        self.fenster = []
 
     def __enter__(self):
         return self
@@ -47,8 +50,12 @@ class FakeClient:
 
     def get(self, url, params=None, timeout=None):
         self.aufrufe.append(dict(params))
+        if params["startDateTime"] not in self.fenster:
+            self.fenster.append(params["startDateTime"])
+        if self.kaputt_ab is not None and self.fenster.index(params["startDateTime"]) >= self.kaputt_ab:
+            raise tm.httpx.TimeoutException("Zeitüberschreitung")
         seite = params["page"]
-        if params["startDateTime"].startswith(date.today().isoformat()):
+        if self.fenster.index(params["startDateTime"]) == 0:
             events = [roh(1000 * seite + i) for i in range(2)]
             return Antwort({"_embedded": {"events": events}, "page": {"totalPages": 2}})
         return Antwort({"page": {"totalPages": 0}})
@@ -58,7 +65,8 @@ class MonatsfensterTest(unittest.TestCase):
     def test_monate_bis_zum_ende(self):
         f = tm.monatsfenster(date(2026, 11, 24), date(2027, 11, 24))
         self.assertEqual(len(f), 13)
-        self.assertEqual(f[0], ("2026-11-24T00:00:00Z", "2026-11-30T23:59:59Z"))
+        # erstes Fenster zwei Stunden vor Mitternacht UTC (Event um 00:30 Ortszeit)
+        self.assertEqual(f[0], ("2026-11-23T22:00:00Z", "2026-11-30T23:59:59Z"))
         self.assertEqual(f[1], ("2026-12-01T00:00:00Z", "2026-12-31T23:59:59Z"))
         self.assertEqual(f[-1], ("2027-11-01T00:00:00Z", "2027-11-24T23:59:59Z"))
 
@@ -67,8 +75,8 @@ class MonatsfensterTest(unittest.TestCase):
 
 
 class ScrapeTest(unittest.TestCase):
-    def lauf(self, umgebung):
-        client = FakeClient()
+    def lauf(self, umgebung, kaputt_ab=None):
+        client = FakeClient(kaputt_ab)
         with mock.patch.dict(os.environ, umgebung, clear=False), \
                 mock.patch.object(tm.httpx, "Client", lambda **kw: client), mock.patch.object(tm.time, "sleep"):
             os.environ.pop("VORSCHAU_NOTAUS", None)
@@ -87,6 +95,12 @@ class ScrapeTest(unittest.TestCase):
         self.assertEqual((erste["geoPoint"], erste["radius"], erste["unit"]), (tm.GEOPUNKT, tm.RADIUS_KM, "km"))
         fenster = {a["startDateTime"] for a in client.aufrufe}
         self.assertGreaterEqual(len(fenster), 12)  # ein Fenster je Monat bis 365 Tage
+
+    def test_fehler_in_einem_fenster_behaelt_die_anderen(self):
+        events, client = self.lauf({"TICKETMASTER_API_KEY": "x"}, kaputt_ab=1)
+        self.assertEqual(len(events), 4)  # erstes Fenster gelesen, die gestörten übersprungen
+        # nach ABBRUCH_NACH_FEHLERN gestörten Fenstern in Folge wird nicht weiter gefragt
+        self.assertEqual(len(client.fenster), 1 + tm.ABBRUCH_NACH_FEHLERN)
 
     def test_bilder_nur_mit_freigabe(self):
         events, _ = self.lauf({"TICKETMASTER_API_KEY": "x", "TICKETMASTER_BILDER_OK": "1"})

@@ -791,6 +791,24 @@ Gebaut wie 4.1/4.2, Punkte 1–3 (Punkt 4 Nachziehen = N1, später):
 - Tests: `tests/test_ticketmaster.py` (7); Python gesamt 581 ok, Website 708 ok.
 - Rückweg: Commit zurücknehmen; Ticketmaster ohne Secret ist ohnehin aus.
 
+### Cursor-Prüfung der Umsetzung R1–T1 (24.11.2026) – Einarbeitung
+
+Urteil Cursor: R1 und R2 in Ordnung, Z1 und T1 nicht (je ein mittlerer Befund), dazu fünf geringe. Eingearbeitet:
+- **Z1, mittel – Oper las nur verlinkte Monate:** `scraper/tier2/oper_am_rhein.py` rechnet die Monats-URLs jetzt selbst
+  (`_monate_ab`, insgesamt `MONATE_VORAUS + 2` ab dem laufenden Monat), verlinkte Monate kommen dazu. Eine fehlende
+  oder leere Monatsseite zählt als leerer Monat; nach `LEERE_MONATE_STOPP = 2` leeren Monaten in Folge endet der Abruf.
+- **T1, mittel – ein API-Fehler verwarf alle Monate:** Ein fehlgeschlagenes Fenster wird übersprungen, die übrigen
+  bleiben; Warnung „Teilergebnis“ mit den Monaten. Nach `ABBRUCH_NACH_FEHLERN = 3` gestörten Fenstern in Folge endet
+  der Abruf (sonst kostet jedes Fenster drei Timeouts). Der Lauf-Report zeigt dann „ok“ mit der Warnung als Meldung –
+  ein eigener Status „Teilmenge“ wäre eine Änderung am Lauf-Report und ist nicht Teil von T1.
+- **T1, gering – Zeitzone:** Das erste Fenster beginnt am Vortag 22:00 UTC (Events kurz nach Mitternacht Ortszeit).
+- **Z1/T1, gering – Tests:** Oper ohne Navigationslinks, Stopp nach leeren Monaten, Notaus senkt `MONATE_VORAUS` beim
+  frischen Import (Oper und Schauspielhaus), Ticketmaster-Fehler in einem Fenster, Abbruch nach Fehlern in Folge.
+- **R1, gering – `rausgegangen_nachziehen.py` übergibt keinen Rang und keine Quellenliste:** bewusst nicht geändert,
+  das Skript läuft erst in N1; N1 übergibt Rang und Liste, bevor die „_“-Felder entfallen.
+- **Z1, gering – Laufzeit des ersten Laufs:** wird beobachtet; Notaus statt höherem Zeitlimit.
+- Python gesamt 585 Tests ok (Website unverändert, 708 ok).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

@@ -32,6 +32,8 @@ STANDARD_ADRESSE = "Heinrich-Heine-Allee 16a, 40213 Düsseldorf"
 # Weitere Monate werden über /spielplan/kalender/YYYY-MM/ abgerufen – so viele, wie der Zeitraum der Quelle
 # (config.vorschau_tage, Plan Quellen-Ausbau 5.2: 365 Tage, bei VORSCHAU_NOTAUS 60) braucht. Bis 24.11.2026 waren es 2.
 MONATE_VORAUS = max(2, vorschau_tage(QUELLE_NAME) // 30)
+# Nach so vielen leeren Monaten in Folge endet der veröffentlichte Spielplan – keine weiteren Anfragen
+LEERE_MONATE_STOPP = 2
 
 
 # ---------------------------------------------------------------------------
@@ -420,58 +422,46 @@ def _events_aus_html(html: str, heute: date, gesehene_ids: set[str]) -> list[dic
     return events
 
 
+def _monate_ab(heute: date, anzahl: int) -> list[str]:
+    """Die nächsten `anzahl` Kalendermonate ab dem laufenden als "JJJJ-MM"."""
+    monate, jahr, monat = [], heute.year, heute.month
+    for _ in range(anzahl):
+        monate.append(f"{jahr:04d}-{monat:02d}")
+        jahr, monat = (jahr + 1, 1) if monat == 12 else (jahr, monat + 1)
+    return monate
+
+
 def _naechste_monate_ermitteln(html_startseite: str, heute: date) -> list[str]:
     """
-    Ermittelt die URLs der nächsten Monate aus den Navigationslinks der Startseite.
+    URLs der weiteren Monate (/spielplan/kalender/JJJJ-MM/), die nicht schon auf der Startseite stehen.
 
-    Die Startseite enthält bereits den aktuellen und den nächsten Monat.
-    Für weitere Monate werden die Kalender-Navigationslinks ausgelesen.
+    Die Monate werden selbst gerechnet – ab dem laufenden, insgesamt MONATE_VORAUS + 2 (die Startseite enthält den
+    laufenden und den nächsten Monat). Bis 24.11.2026 kamen sie nur aus den Navigationslinks der Startseite; standen
+    dort weniger Links, blieb es bei zwei Monaten (Cursor-Prüfung R1–T1). Verlinkte Monate kommen zusätzlich dazu.
 
     Args:
         html_startseite: HTML der Spielplan-Startseite
         heute:           Heutiges Datum
 
     Returns:
-        Liste von Monats-URLs (z.B. ["https://...//spielplan/kalender/2026-04/", ...])
+        Liste von Monats-URLs in zeitlicher Reihenfolge
     """
     soup = BeautifulSoup(html_startseite, "html.parser")
 
-    # Alle Monats-URLs aus den Navigationslinks sammeln
-    monate_im_html: set[str] = set()
+    monate: set[str] = set(_monate_ab(heute, MONATE_VORAUS + 2))
     for a in soup.select("a[href]"):
-        href = a.get("href", "")
-        treffer = re.match(r"^/spielplan/kalender/(\d{4}-\d{2})/$", href)
-        if treffer:
-            monate_im_html.add(treffer.group(1))
+        treffer = re.match(r"^/spielplan/kalender/(\d{4}-\d{2})/$", a.get("href", ""))
+        if treffer and treffer.group(1) >= heute.strftime("%Y-%m"):
+            monate.add(treffer.group(1))
 
-    if not monate_im_html:
-        return []
-
-    # Bereits geladene Monate (der aktuelle und nächste sind in der Startseite)
-    aktuelle_monate = soup.select(".schedule__monthinfos[data-month]")
-    bereits_geladen: set[str] = {
-        el.get("data-month", "") for el in aktuelle_monate
-    }
-
-    # Zukünftige Monate nach heute sortieren
-    alle_monate_sortiert = sorted(
-        m for m in monate_im_html if m >= heute.strftime("%Y-%m")
-    )
-
-    # Monate, die noch nicht geladen wurden, bis zum Limit aufnehmen
-    neue_monate_urls: list[str] = []
-    zaehler = 0
-    for monat in alle_monate_sortiert:
-        if monat in bereits_geladen:
-            continue
-        if zaehler >= MONATE_VORAUS:
-            break
-        neue_monate_urls.append(
-            urljoin(BASE_URL, f"/spielplan/kalender/{monat}/")
-        )
-        zaehler += 1
-
-    return neue_monate_urls
+    # Bereits geladene Monate (der aktuelle und nächste stehen auf der Startseite)
+    bereits_geladen = {el.get("data-month", "") for el in soup.select(".schedule__monthinfos[data-month]")}
+    grenze = _monate_ab(heute, MONATE_VORAUS + 2)[-1]
+    return [
+        urljoin(BASE_URL, f"/spielplan/kalender/{monat}/")
+        for monat in sorted(monate)
+        if monat not in bereits_geladen and monat <= grenze
+    ]
 
 
 def scrape() -> list[dict]:
@@ -517,15 +507,19 @@ def scrape() -> list[dict]:
         logger.warning("Monatsnavigation konnte nicht ausgewertet werden: %s", fehler)
 
     # --- Schritt 3: Zusätzliche Monate abrufen ---
+    # Ein fehlender oder leerer Monat ist ein leerer Monat (Spielplan noch nicht veröffentlicht). Nach
+    # LEERE_MONATE_STOPP solchen Monaten in Folge wird nicht weiter angefragt.
+    leer_in_folge = 0
     for url in weitere_urls:
+        if leer_in_folge >= LEERE_MONATE_STOPP:
+            logger.info("Oper: %d Monate in Folge ohne Termine – Spielplan endet vor %s", leer_in_folge, url)
+            break
         try:
             html_monat = seite_abrufen(url, logger)
-            if html_monat is None:
-                logger.warning("Monatsseite konnte nicht abgerufen werden: %s", url)
-                continue
-            monat_events = _events_aus_html(html_monat, heute, gesehene_ids)
+            monat_events = _events_aus_html(html_monat, heute, gesehene_ids) if html_monat else []
             logger.info("Seite %s: %d neue Events", url, len(monat_events))
             events.extend(monat_events)
+            leer_in_folge = 0 if monat_events else leer_in_folge + 1
         except Exception as fehler:
             logger.error("Fehler beim Abrufen von %s: %s", url, fehler)
 

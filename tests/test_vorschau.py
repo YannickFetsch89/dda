@@ -98,6 +98,41 @@ class StrukturTest(unittest.TestCase):
         self.assertIn("KATEGORIEN_RUECKSTAND_BIS = date(2026, 12, 9)", text)
 
 
+class OperMonateTest(unittest.TestCase):
+    def test_monate_ohne_navigationslinks(self):
+        from scraper.tier2 import oper_am_rhein as oper
+        start = '<div class="schedule__monthinfos" data-month="2026-11"></div><div class="schedule__monthinfos" data-month="2026-12"></div>'
+        urls = oper._naechste_monate_ermitteln(start, date(2026, 11, 24))
+        self.assertEqual(len(urls), oper.MONATE_VORAUS)
+        self.assertTrue(urls[0].endswith("/spielplan/kalender/2027-01/"))
+
+    def test_stopp_nach_leeren_monaten(self):
+        from scraper.tier2 import oper_am_rhein as oper
+        seiten = {oper.SPIELPLAN_URL: "<html></html>"}
+        abrufe = []
+
+        def abrufen(url, _logger=None):
+            abrufe.append(url)
+            return seiten.get(url, "<html></html>")
+
+        with mock.patch.object(oper, "seite_abrufen", abrufen),                 mock.patch.object(oper, "_events_aus_html", lambda html, heute, ids: []):
+            self.assertEqual(oper.scrape(), [])
+        # Startseite + LEERE_MONATE_STOPP leere Monate, danach keine Anfragen mehr
+        self.assertEqual(len(abrufe), 1 + oper.LEERE_MONATE_STOPP)
+
+    def test_notaus_senkt_die_monate_beim_import(self):
+        import importlib
+        from scraper.tier2 import oper_am_rhein, schauspielhaus
+        try:
+            with mock.patch.dict(os.environ, {"VORSCHAU_NOTAUS": "1"}):
+                self.assertEqual(importlib.reload(schauspielhaus).MONATE_VORAUS, 3)
+                self.assertEqual(importlib.reload(oper_am_rhein).MONATE_VORAUS, 2)
+        finally:
+            os.environ.pop("VORSCHAU_NOTAUS", None)
+            importlib.reload(schauspielhaus)
+            importlib.reload(oper_am_rhein)
+
+
 class ClubPromptTest(unittest.TestCase):
     def test_nur_naechste_60_tage(self):
         from scraper.orte.clubs_profil import kalender_quelle

@@ -33,6 +33,9 @@ RADIUS_KM = 25
 SEITENGROESSE = 200
 MAX_TREFFER_JE_ABFRAGE = 1000
 WARTEZEIT = 2.0
+# So viele fehlgeschlagene Monatsfenster in Folge beenden den Abruf (API gestört – sonst kostet jedes Fenster
+# drei Versuche mit Timeout)
+ABBRUCH_NACH_FEHLERN = 3
 
 # Mapping Ticketmaster-Segmente → DiesDasDüsseldorf-Kategorien
 KATEGORIE_MAPPING = {
@@ -283,13 +286,19 @@ def bilder_erlaubt() -> bool:
 
 
 def monatsfenster(heute: date, ende: date) -> list[tuple[str, str]]:
-    """(startDateTime, endDateTime) je Kalendermonat von heute bis ende, im Format der API (UTC, ohne Millisekunden)."""
+    """
+    (startDateTime, endDateTime) je Kalendermonat von heute bis ende, im Format der API (UTC, ohne Millisekunden).
+    Das erste Fenster beginnt zwei Stunden vor Mitternacht UTC: Ein Event heute um 00:30 Ortszeit liegt in UTC noch
+    am Vortag und fiele sonst durch (Cursor-Prüfung R1–T1). Am Monatsrand überlappt nichts, die URL-Prüfung in
+    scrape() verhindert doppelte Events.
+    """
     fenster = []
     anfang = heute
     while anfang <= ende:
         naechster = (anfang.replace(day=1) + timedelta(days=32)).replace(day=1)
         bis = min(naechster - timedelta(days=1), ende)
-        fenster.append((f"{anfang.isoformat()}T00:00:00Z", f"{bis.isoformat()}T23:59:59Z"))
+        start = f"{(anfang - timedelta(days=1)).isoformat()}T22:00:00Z" if anfang == heute else f"{anfang.isoformat()}T00:00:00Z"
+        fenster.append((start, f"{bis.isoformat()}T23:59:59Z"))
         anfang = naechster
     return fenster
 
@@ -348,11 +357,25 @@ def scrape() -> list[dict]:
         "sort": "date,asc",
     }
     gesehene_urls: set[str] = set()
+    fehlgeschlagen: list[str] = []
+    in_folge = 0
 
     try:
         with httpx.Client(timeout=30) as client:
             for start, ende in monatsfenster(heute, enddatum):
-                rohe_events = _seiten_holen(client, {**basis, "startDateTime": start, "endDateTime": ende})
+                # Ein fehlgeschlagenes Fenster kostet nur diesen Monat, nicht die schon gelesenen (Cursor-Prüfung R1–T1)
+                try:
+                    rohe_events = _seiten_holen(client, {**basis, "startDateTime": start, "endDateTime": ende})
+                except Exception as fehler:
+                    logger.error("Ticketmaster: Fenster %s bis %s übersprungen: %s", start[:10], ende[:10], fehler)
+                    fehlgeschlagen.append(start[:7])
+                    in_folge += 1
+                    if in_folge >= ABBRUCH_NACH_FEHLERN:
+                        logger.error("Ticketmaster: %d Fenster in Folge ohne Antwort – Abbruch, API offenbar gestört",
+                                     in_folge)
+                        break
+                    continue
+                in_folge = 0
                 for roher_event in rohe_events:
                     url = roher_event.get("url", "")
                     if url and url in gesehene_urls:
@@ -369,6 +392,9 @@ def scrape() -> list[dict]:
     # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
+    if fehlgeschlagen:
+        logger.warning("Ticketmaster: %d Monatsfenster ohne Antwort (%s) – Teilergebnis",
+                       len(fehlgeschlagen), ", ".join(fehlgeschlagen))
     logger.info("Scraper %s fertig: %d Events gefunden.", QUELLE_NAME, len(events))
     return events
 
