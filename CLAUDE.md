@@ -88,11 +88,11 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 #### APIs (kostenlos, strukturiert)
 | Name | API-Docs | Auth |
 |---|---|---|
-| Ticketmaster | developer.ticketmaster.com | API Key |
+| Ticketmaster | developer.ticketmaster.com (Discovery API, je Monat bis 12 Monate, 25 km um Düsseldorf) | API Key (TICKETMASTER_API_KEY); Bilder nur mit TICKETMASTER_BILDER_OK=1 |
 | Eventbrite | eventbrite.com/platform/api | OAuth Token |
 | Meetup.com | meetup.com/api | API Key |
 | Resident Advisor (RA) | ra.co/api (inoffiziell) | Scraping-Fallback |
-| Songkick | songkick.com/developer (Metro Area ID: 28470) | API Key (SONGKICK_API_KEY) |
+| ~~Songkick~~ | songkick.com/developer | **Deaktiviert** (24.11.2026) – API nur noch gegen Lizenz, Nutzungsbedingungen verbieten Scraping |
 | ~~Bandsintown~~ | bandsintown.com | **Deaktiviert** – Cloudflare blockiert jeden Zugriff |
 
 ---

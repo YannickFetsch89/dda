@@ -24,6 +24,7 @@ const SCHALTER_TEXT: Record<string, string> = {
   MELDUNG_MAIL_AKTIV: "Mail an Melder nach Freigabe",
   ORTSSEITEN_MELDEN: "Ortsseiten an IndexNow melden",
   VORSCHAU_NOTAUS: "Notaus Zeitraum je Quelle (1 = alle Quellen nur 60 Tage, ab dem nächsten Scraper-Lauf)",
+  TICKETMASTER_BILDER_OK: "Ticketmaster-Bilder zeigen (erst nach schriftlicher Bestätigung durch Ticketmaster)",
 };
 
 function groesse(b: number): string {

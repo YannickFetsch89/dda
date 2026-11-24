@@ -1,12 +1,21 @@
 """
 ticketmaster.py – DiesDasDüsseldorf
-Scraper für die Ticketmaster Discovery API: Events in Düsseldorf
+Scraper für die Ticketmaster Discovery API: Events in Düsseldorf und Umgebung (Neuss, Ratingen).
 Erstellt: 2026-02-24
+
+Seit Schritt T1 (Plan docs/plan-quellen-ausbau-2026-11-23.md, 5.1):
+- Abfrage je Kalendermonat bis zum Zeitraum der Quelle (config.vorschau_ende, 365 Tage), Umkreis 25 km um
+  Düsseldorf (geoPoint), je Monat geblättert. Die API liefert je Abfrage höchstens 1.000 Treffer (size × page < 1000).
+  Den Rest (Köln …) entfernt pipeline/gebiet.py.
+- Mindestens 2 s zwischen Anfragen (Projektregel; die API erlaubt bis zu 5.000 Abfragen am Tag).
+- Bilder nur mit GitHub-Variable TICKETMASTER_BILDER_OK=1: Die API-Bedingungen verbieten, Ticketmaster als Bild-Host
+  zu nutzen; bis die schriftliche Bestätigung die Bildnutzung einschließt (docs/partner-anfragen-2026-11-24.md),
+  bleibt bild_url leer (Plan 5.5.4).
 """
 import logging
 import os
 import time
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 import httpx
@@ -17,6 +26,13 @@ logger = logging.getLogger(__name__)
 
 QUELLE_NAME = "Ticketmaster"
 API_URL = "https://app.ticketmaster.com/discovery/v2/events.json"
+# Mittelpunkt Düsseldorf als Geohash (51.2277, 6.7735) und Umkreis
+GEOPUNKT = "u1hg6jsq"
+RADIUS_KM = 25
+# Seitengröße (API-Höchstwert 200) und Grenze der API: size × page < 1000
+SEITENGROESSE = 200
+MAX_TREFFER_JE_ABFRAGE = 1000
+WARTEZEIT = 2.0
 
 # Mapping Ticketmaster-Segmente → DiesDasDüsseldorf-Kategorien
 KATEGORIE_MAPPING = {
@@ -184,9 +200,8 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
             logger.warning("Keine URL für Event '%s' – wird übersprungen.", titel)
             return None
 
-        # Bild-URL (optional)
-        bilder = event.get("images", [])
-        bild_url = _bild_url_ermitteln(bilder)
+        # Bild-URL (optional) – nur mit ausdrücklicher Freigabe (siehe Modulkopf)
+        bild_url = _bild_url_ermitteln(event.get("images", [])) if bilder_erlaubt() else None
 
         return {
             "titel": titel,
@@ -262,9 +277,47 @@ def _api_anfrage_mit_backoff(client: httpx.Client, params: dict) -> Optional[htt
     return None
 
 
+def bilder_erlaubt() -> bool:
+    """Ticketmaster-Bilder nur, wenn die Bildnutzung schriftlich bestätigt und TICKETMASTER_BILDER_OK=1 gesetzt ist."""
+    return os.getenv("TICKETMASTER_BILDER_OK", "").strip() == "1"
+
+
+def monatsfenster(heute: date, ende: date) -> list[tuple[str, str]]:
+    """(startDateTime, endDateTime) je Kalendermonat von heute bis ende, im Format der API (UTC, ohne Millisekunden)."""
+    fenster = []
+    anfang = heute
+    while anfang <= ende:
+        naechster = (anfang.replace(day=1) + timedelta(days=32)).replace(day=1)
+        bis = min(naechster - timedelta(days=1), ende)
+        fenster.append((f"{anfang.isoformat()}T00:00:00Z", f"{bis.isoformat()}T23:59:59Z"))
+        anfang = naechster
+    return fenster
+
+
+def _seiten_holen(client: httpx.Client, basis: dict) -> list[dict]:
+    """Alle Seiten einer Abfrage (höchstens MAX_TREFFER_JE_ABFRAGE Treffer), mit WARTEZEIT zwischen den Anfragen."""
+    roh: list[dict] = []
+    seite = 0
+    while (seite + 1) * SEITENGROESSE <= MAX_TREFFER_JE_ABFRAGE:
+        time.sleep(WARTEZEIT)
+        response = _api_anfrage_mit_backoff(client, {**basis, "size": SEITENGROESSE, "page": seite})
+        if response is None:
+            raise RuntimeError("Ticketmaster API-Anfrage endgültig fehlgeschlagen")
+        daten = response.json()
+        roh.extend(daten.get("_embedded", {}).get("events", []))
+        seiten = int(daten.get("page", {}).get("totalPages") or 0)
+        seite += 1
+        if seite >= seiten:
+            break
+    else:
+        logger.warning("Ticketmaster: mehr als %d Treffer im Fenster %s – Rest fehlt",
+                       MAX_TREFFER_JE_ABFRAGE, basis.get("startDateTime"))
+    return roh
+
+
 def scrape() -> list[dict]:
     """
-    Ruft Events aus der Ticketmaster Discovery API für Düsseldorf ab.
+    Ruft Events aus der Ticketmaster Discovery API ab – je Monat bis zum Zeitraum der Quelle.
 
     Returns:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
@@ -280,65 +333,40 @@ def scrape() -> list[dict]:
         )
         return []
 
-    events = []
+    events: list[dict] = []
     heute = date.today()
-    logger.info("Starte Scraper: %s", QUELLE_NAME)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
+    logger.info("Starte Scraper: %s (bis %s)", QUELLE_NAME, enddatum.isoformat())
 
-    params = {
+    basis = {
         "apikey": api_key,
-        "city": "Düsseldorf",
         "countryCode": "DE",
-        "size": 50,
+        "geoPoint": GEOPUNKT,
+        "radius": RADIUS_KM,
+        "unit": "km",
         "locale": "*",
         "sort": "date,asc",
     }
+    gesehene_urls: set[str] = set()
 
     try:
-        time.sleep(2)  # Rate Limiting
-
         with httpx.Client(timeout=30) as client:
-            response = _api_anfrage_mit_backoff(client, params)
-
-            if response is None:
-                logger.error("Ticketmaster API-Anfrage endgültig fehlgeschlagen.")
-                return []
-
-            try:
-                daten = response.json()
-            except Exception as e:
-                logger.error("Ticketmaster API-Antwort konnte nicht als JSON gelesen werden: %s", e)
-                return []
-
-        # Eingebettete Events extrahieren
-        eingebettet = daten.get("_embedded", {})
-        rohe_events = eingebettet.get("events", [])
-
-        if not rohe_events:
-            logger.info("Keine Events von der Ticketmaster API erhalten.")
-            return []
-
-        logger.info("%d Events von der Ticketmaster API empfangen.", len(rohe_events))
-
-        # Duplikate innerhalb eines Scraper-Laufs verhindern
-        gesehene_urls: set[str] = set()
-
-        for roher_event in rohe_events:
-            url = roher_event.get("url", "")
-            if url and url in gesehene_urls:
-                continue
-            if url:
-                gesehene_urls.add(url)
-
-            event = _event_parsen(roher_event, heute)
-            if event:
-                events.append(event)
-
+            for start, ende in monatsfenster(heute, enddatum):
+                rohe_events = _seiten_holen(client, {**basis, "startDateTime": start, "endDateTime": ende})
+                for roher_event in rohe_events:
+                    url = roher_event.get("url", "")
+                    if url and url in gesehene_urls:
+                        continue
+                    if url:
+                        gesehene_urls.add(url)
+                    event = _event_parsen(roher_event, heute)
+                    if event:
+                        events.append(event)
     except Exception as e:
         logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(e))
         return []
 
     # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
-    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     logger.info("Scraper %s fertig: %d Events gefunden.", QUELLE_NAME, len(events))

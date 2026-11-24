@@ -100,6 +100,10 @@ jobs:
           ORTSSEITEN_MELDEN: ${{ vars.ORTSSEITEN_MELDEN }}
           # Notaus Zeitraum je Quelle (Plan Quellen-Ausbau 7, Rückweg Z1): 1 = jede Quelle höchstens 60 Tage voraus
           VORSCHAU_NOTAUS: ${{ vars.VORSCHAU_NOTAUS }}
+          # Ticketmaster Discovery API (Plan Quellen-Ausbau T1); ohne Secret wird die Quelle übersprungen
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          # 1 erst, wenn Ticketmaster die Bildnutzung schriftlich bestätigt hat (Plan 5.5.4)
+          TICKETMASTER_BILDER_OK: ${{ vars.TICKETMASTER_BILDER_OK }}
           # Warn-Mail nach dem Lauf (Plan Admin-Dashboard 4.3, E8): dieselben SMTP-Secrets wie geburtstag.yml
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}

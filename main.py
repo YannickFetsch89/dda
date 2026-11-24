@@ -19,7 +19,7 @@ from scraper.tier1 import (
     meetup,
     resident_advisor,
     prinz,
-    songkick,
+    # songkick deaktiviert – API nur noch gegen Lizenz, Nutzungsbedingungen verbieten Scraping (Plan Quellen-Ausbau 5.1)
     allevents,
     # bandsintown deaktiviert – komplette Domain per Cloudflare-WAF blockiert (HTTP 403)
     # meinestadt deaktiviert – dauerhaft durch Akamai WAF blockiert (HTTP 403)
@@ -95,7 +95,6 @@ QUELLEN = [
     ("Meetup.com", 1, meetup.scrape),
     ("Resident Advisor", 1, resident_advisor.scrape),
     ("PRINZ.de Düsseldorf", 1, prinz.scrape),
-    ("Songkick", 1, songkick.scrape),
     ("AllEvents.in Düsseldorf", 1, allevents.scrape),
     # Tier 2: Venue-eigene Kalender
     ("Tonhalle Düsseldorf", 2, tonhalle.scrape),

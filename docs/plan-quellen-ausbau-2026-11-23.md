@@ -773,6 +773,23 @@ Gebaut wie 4.1/4.2, Punkte 1–3 (Punkt 4 Nachziehen = N1, später):
 - Abnahme (Abschnitt 7): nächster Lauf `status = erfolgreich` und unter 240 Minuten. Reißt es: GitHub-Variable
   `VORSCHAU_NOTAUS=1` setzen (wirkt ab dem nächsten Lauf, kein Deploy nötig).
 
+### T1 – Ticketing (24.11.2026, lokal gebaut)
+
+- `scraper/tier1/ticketmaster.py`: ein Abruf je Kalendermonat bis `vorschau_ende` (365 Tage, 13 Fenster), `countryCode=DE`,
+  `geoPoint` Düsseldorf (Geohash `u1hg6jsq`) + 25 km, je Fenster geblättert (200 je Seite, höchstens 1.000 Treffer – sonst
+  Warnung im Log), 2 s zwischen Anfragen. `bild_url` nur mit `TICKETMASTER_BILDER_OK=1` (GitHub-Variable, im
+  Technik-Panel sichtbar), sonst leer. Ohne `TICKETMASTER_API_KEY` wird die Quelle wie bisher übersprungen.
+- `scrape.yml`: `TICKETMASTER_API_KEY` (Secret) und `TICKETMASTER_BILDER_OK` (Variable) im `env`.
+- Songkick aus `main.py` `QUELLEN` entfernt (Modul bleibt), CLAUDE.md-Tabelle angepasst.
+- **Stagedates zurückgestellt (Rückfrage an den Auftraggeber):** robots.txt erlaubt alles, die Sitemap hat 835 Events
+  bundesweit, Eventseiten tragen JSON-LD. Aber (1) die Nutzungsbedingungen (`/terms`) sind nur per JavaScript lesbar und
+  deshalb ungelesen – der Plan verlangt sie vor der Aufnahme; (2) nur **1** der 835 URLs ist am Namen als Düsseldorf
+  erkennbar. Für den Ort müsste man jede Eventseite laden (erster Lauf ≈ 28 min, danach nur neue URLs). Rudas Studios
+  läuft schon über einen eigenen Scraper. Vorschlag: Stagedates erst mit V1 (JSON-LD-Baustein und Zwischenspeicher
+  wie bei VisitDüsseldorf), nachdem jemand die Bedingungen im Browser gelesen hat.
+- Tests: `tests/test_ticketmaster.py` (7); Python gesamt 581 ok, Website 708 ok.
+- Rückweg: Commit zurücknehmen; Ticketmaster ohne Secret ist ohnehin aus.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
