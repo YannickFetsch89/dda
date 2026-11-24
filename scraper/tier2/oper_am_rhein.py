@@ -11,13 +11,13 @@ Erstellt: 2026-02-24
 import logging
 import re
 import unicodedata
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende, vorschau_tage
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -29,8 +29,9 @@ STANDARD_ADRESSE = "Heinrich-Heine-Allee 16a, 40213 Düsseldorf"
 
 # Anzahl der zukünftigen Monate, die zusätzlich zur Startseite abgerufen werden.
 # Die Startseite enthält bereits den laufenden und den Folgemonat.
-# Weitere Monate werden über /spielplan/kalender/YYYY-MM/ abgerufen.
-MONATE_VORAUS = 2
+# Weitere Monate werden über /spielplan/kalender/YYYY-MM/ abgerufen – so viele, wie der Zeitraum der Quelle
+# (config.vorschau_tage, Plan Quellen-Ausbau 5.2: 365 Tage, bei VORSCHAU_NOTAUS 60) braucht. Bis 24.11.2026 waren es 2.
+MONATE_VORAUS = max(2, vorschau_tage(QUELLE_NAME) // 30)
 
 
 # ---------------------------------------------------------------------------
@@ -535,8 +536,8 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
     else:
-        # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
-        enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+        # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
+        enddatum = vorschau_ende(QUELLE_NAME, heute)
         events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info(
             "Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events)

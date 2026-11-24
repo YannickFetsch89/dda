@@ -6,12 +6,12 @@ Erstellt: 2026-02-24
 import logging
 import os
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 import httpx
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 
 logger = logging.getLogger(__name__)
 
@@ -337,8 +337,8 @@ def scrape() -> list[dict]:
         logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(e))
         return []
 
-    # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     logger.info("Scraper %s fertig: %d Events gefunden.", QUELLE_NAME, len(events))

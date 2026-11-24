@@ -80,7 +80,57 @@ KATEGORIEN = [
 RATE_LIMIT_SEKUNDEN = 2  # Mindestwartezeit zwischen Requests
 MAX_RETRIES = 3
 BACKOFF_FAKTOR = 2  # Exponentielles Backoff
-SCRAPER_VORSCHAU_TAGE = 60  # Wie viele Tage in die Zukunft Events gesammelt werden (Website zeigt ebenfalls 60)
+SCRAPER_VORSCHAU_TAGE = 60  # Fallback: Aggregatoren und Rausgegangen. Name bleibt für Altcode.
+
+# Zeitraum je Quelle (Plan docs/plan-quellen-ausbau-2026-11-23.md, 5.2, Q7, Schritt Z1). Schlüssel sind die
+# Anzeigenamen aus main.py QUELLEN UND jede abweichende QUELLE_NAME eines Moduls (beide mit demselben Fenster); ein
+# Test prüft, dass jeder Name hier steht. Die Scraper rufen vorschau_ende(QUELLE_NAME, heute).
+VORSCHAU_LANG = 365     # große Häuser, Sport, Messe, Ticketverkauf
+VORSCHAU_MITTEL = 120   # übrige Häuser (Tier 2/3) und VisitDüsseldorf
+VORSCHAU_KURZ = SCRAPER_VORSCHAU_TAGE  # Aggregatoren, Portale, Rausgegangen
+VORSCHAU_TAGE: dict[str, int] = {
+    # 365
+    **{name: VORSCHAU_LANG for name in (
+        "Ticketmaster", "Eventim", "Reservix", "ADticket", "Stagedates",
+        "d-live", "Mitsubishi Electric HALLE", "Capitol Theater Düsseldorf", "Tonhalle Düsseldorf",
+        "Deutsche Oper am Rhein", "Düsseldorfer Schauspielhaus", "Kom(m)ödchen Düsseldorf",
+        "Messe Düsseldorf", "Fortuna Düsseldorf", "DEG Eishockey Düsseldorf", "Kunstsammlung NRW (K20/K21)",
+    )},
+    # 120
+    **{name: VORSCHAU_MITTEL for name in (
+        "VisitDüsseldorf", "VisitDüsseldorf Führungen",
+        "zakk", "Kunstpalast Düsseldorf", "NRW-Forum Düsseldorf", "FFT Düsseldorf", "Stahlwerk Düsseldorf",
+        "Rudas Studios Düsseldorf", "Kulturschlachthof R25", "Salon des Amateurs", "Pitcher Rock HQ",
+        "Kunsthalle Düsseldorf", "Filmmuseum Düsseldorf", "Stadtbüchereien Düsseldorf", "Tanzhaus NRW",
+        "Jazz-Schmiede Düsseldorf", "STARTPLATZ Düsseldorf",
+        "Parkrun Volksgarten Düsseldorf", "Sport im Park Düsseldorf", "EKŌ-Haus der Japanischen Kultur",
+        "Classic Remise Düsseldorf", "Classic Remise", "Stadtstrand Düsseldorf", "IHK Düsseldorf",
+        "StartupDorf Meetup", "Street Food Thursday", "Street Food Thursday Düsseldorf", "Kasematten Düsseldorf",
+        "Auf ins Viertel", "Kleine Weihnachtsmärkte", "Kleine Weihnachtsmärkte (Redaktion)", "Spontacts Düsseldorf",
+    )},
+    # 60
+    **{name: VORSCHAU_KURZ for name in (
+        "Kulturportal Düsseldorf", "Meetup.com", "Resident Advisor", "PRINZ.de Düsseldorf", "Songkick",
+        "AllEvents.in Düsseldorf", "Rausgegangen", "Eventbrite", "eventfinder.de", "Bandsintown", "meinestadt.de",
+    )},
+}
+
+
+def vorschau_tage(quelle: str, tier: int | None = None) -> int:
+    """
+    Wie viele Tage voraus eine Quelle Events sammelt: Tabelle VORSCHAU_TAGE, sonst 120 für Tier 2/3 und 60 für Tier 1.
+    Notaus (Plan 7, Rückweg): Umgebungsvariable VORSCHAU_NOTAUS=1 begrenzt jede Quelle auf 60 Tage.
+    """
+    tage = VORSCHAU_TAGE.get(quelle) or (VORSCHAU_MITTEL if tier in (2, 3) else VORSCHAU_KURZ)
+    if os.getenv("VORSCHAU_NOTAUS", "").strip() == "1":
+        tage = min(tage, SCRAPER_VORSCHAU_TAGE)
+    return tage
+
+
+def vorschau_ende(quelle: str, heute, tier: int | None = None):
+    """Letzter Tag, bis zu dem eine Quelle Events übernimmt (heute + vorschau_tage); heute ist date oder datetime."""
+    from datetime import timedelta
+    return heute + timedelta(days=vorschau_tage(quelle, tier))
 
 # --- Scheduler ---
 SCHEDULER_UHRZEIT = "06:00"  # Täglicher Start der Pipeline

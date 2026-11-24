@@ -31,7 +31,7 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.datum import MONAT_KURZ_MAP
 from scraper.utils.http_client import seite_abrufen
 from scraper.utils.ra_venue import ra_venue_scrapen
@@ -291,7 +291,7 @@ def scrape() -> list[dict]:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     quellen: list[tuple[str, list[dict]]] = []

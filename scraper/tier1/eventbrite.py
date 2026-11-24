@@ -6,12 +6,12 @@ Erstellt: 2026-02-24
 import json
 import logging
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -272,9 +272,9 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
 
-    # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
+    # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))

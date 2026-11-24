@@ -217,6 +217,7 @@ Grundregeln:
 UNTERSEITE = re.compile(r"about|ueber|über|club|location|info|faq|tuer|tür|dresscode|programm|events?|kalender|"
                         r"party|partys|reihen|floors?|geschichte|history|story", re.IGNORECASE)
 MAX_QUELLE = 6000       # Zeichen je Quelle
+PROMPT_TAGE = 60        # Kalender-Zeilen im Prompt nur bis heute + 60 (Plan Quellen-Ausbau 5.3)
 MAX_UNTERSEITEN = 3
 MAX_SUCHSEITEN = 3
 
@@ -377,9 +378,11 @@ def such_quellen(client, ort: dict, website: str | None) -> list[tuple[str, str]
 
 
 def kalender_quelle(events: list[dict]) -> str:
-    """Unsere Events an diesem Ort als Quelltext (eine Zeile je Event)."""
+    """Unsere Events an diesem Ort als Quelltext (eine Zeile je Event) – nur bis heute + PROMPT_TAGE (Plan
+    Quellen-Ausbau 5.3: sonst behielten die letzten 60 Zeilen die fernsten Termine statt der nächsten)."""
+    grenze = (date.today() + timedelta(days=PROMPT_TAGE)).isoformat()
     zeilen = []
-    for e in sorted(events, key=lambda e: e["datum"]):
+    for e in sorted((e for e in events if (e.get("datum") or "") <= grenze), key=lambda e: e["datum"]):
         kurz = re.sub(r"\s+", " ", (e.get("beschreibung") or ""))[:160]
         zeilen.append(f"{e['datum']} | {e['titel']} | {e['kategorie']} | {kurz}")
     return "\n".join(zeilen[-60:])

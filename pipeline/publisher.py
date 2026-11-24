@@ -7,7 +7,7 @@ Erstellt: 2026-02-24
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 from dotenv import load_dotenv
@@ -17,6 +17,9 @@ from database.client import get_supabase_client
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Gepostet werden nur Events der nächsten Tage (Plan Quellen-Ausbau 5.3, Schritt Z1)
+INSTAGRAM_TAGE = 60
 
 # Instagram Graph API Basis-URL
 INSTAGRAM_API_URL = "https://graph.facebook.com/v21.0"
@@ -283,6 +286,9 @@ def posten(limit: int = 5) -> int:
             .select("*")
             .eq("status", "aufbereitet")
             .eq("abgelehnt", False)
+            # Nur Events der nächsten Tage posten (Plan Quellen-Ausbau 5.3): Top/Highlight/Tipp eines Fern-Events erst,
+            # wenn es in diesem Fenster liegt
+            .lte("datum", (date.today() + timedelta(days=INSTAGRAM_TAGE)).isoformat())
             .order("top_event_des_monats", desc=True)
             .order("highlight_der_woche", desc=True)
             .order("tipp_des_tages", desc=True)

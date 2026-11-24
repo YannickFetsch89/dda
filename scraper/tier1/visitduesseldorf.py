@@ -6,11 +6,11 @@ Erstellt: 2026-02-24
 """
 import logging
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 from urllib.parse import urljoin
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 
 from bs4 import BeautifulSoup
 
@@ -247,8 +247,8 @@ def _playwright_scrape() -> list[dict]:
             QUELLE_NAME,
         )
 
-    # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     return events

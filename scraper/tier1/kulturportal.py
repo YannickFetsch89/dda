@@ -12,7 +12,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.datum import datum_parsen as _datum_parsen, uhrzeit_parsen as _uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
@@ -335,7 +335,7 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
 
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))

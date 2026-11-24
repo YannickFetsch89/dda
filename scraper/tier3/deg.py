@@ -24,14 +24,14 @@ Erstellt: 2026-03-06 · Überarbeitet: 2026-11-04 (Domainwechsel, neues HTML)
 import asyncio
 import logging
 import re
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.datum import datum_parsen
 
 logger = logging.getLogger(__name__)
@@ -267,7 +267,7 @@ async def scrape() -> list[dict]:
         Liste von Event-Dicts (nur Heimspiele) im DiesDasDüsseldorf Standard-Format.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     events: list[dict] = []

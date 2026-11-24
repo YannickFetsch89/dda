@@ -39,7 +39,7 @@ from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.datum import uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
@@ -348,7 +348,7 @@ async def scrape() -> list[dict]:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     html = None

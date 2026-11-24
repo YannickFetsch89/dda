@@ -80,6 +80,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Bis zu diesem Tag kategorisiert der Lauf 1.500 statt 300 Events (Plan Quellen-Ausbau 5.3, Q13: zwei Wochen nach Z1)
+KATEGORIEN_RUECKSTAND_BIS = date(2026, 12, 9)
+
 # Alle Quellen in Ausführungsreihenfolge: (Anzeigename, Tier, scrape-Funktion).
 # Der Anzeigename erscheint so im Log und im Scraper-Report des Dashboards –
 # bei Umbenennung reißt dort der Verlauf der Quelle ab.
@@ -291,8 +294,10 @@ async def _schritte_ausfuehren(report: LaufReport):
     # Schritt 3: Kategorisierung
     logger.info("--- Schritt 3: Kategorisierung ---")
     from pipeline import categorizer
-    # 300 pro Lauf: bei 60 Tagen Vorschau und Lauf alle 3 Tage kommen deutlich mehr neue Events
-    anzahl_kategorisiert = categorizer.kategorisieren(limit=300)
+    # 300 pro Lauf: bei 60 Tagen Vorschau und Lauf alle 3 Tage kommen deutlich mehr neue Events. Nach der Umstellung auf
+    # bis zu 365 Tage je Quelle (Plan Quellen-Ausbau 5.3, Q13) zwei Wochen lang 1.500, um den Rückstand abzubauen.
+    limit_kategorien = 1500 if date.today() <= KATEGORIEN_RUECKSTAND_BIS else 300
+    anzahl_kategorisiert = categorizer.kategorisieren(limit=limit_kategorien)
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
     report.kennzahl(kategorisiert=anzahl_kategorisiert)
 

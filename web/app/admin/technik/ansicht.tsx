@@ -23,6 +23,7 @@ const SCHALTER_TEXT: Record<string, string> = {
   NEWSLETTER_AKTIV: "Newsletter-Bestätigung",
   MELDUNG_MAIL_AKTIV: "Mail an Melder nach Freigabe",
   ORTSSEITEN_MELDEN: "Ortsseiten an IndexNow melden",
+  VORSCHAU_NOTAUS: "Notaus Zeitraum je Quelle (1 = alle Quellen nur 60 Tage, ab dem nächsten Scraper-Lauf)",
 };
 
 function groesse(b: number): string {

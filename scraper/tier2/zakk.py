@@ -31,13 +31,13 @@ Erstellt: 2026-02-24
 """
 import logging
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Optional
 from urllib.parse import urljoin, urlparse, parse_qs
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
 from scraper.utils.datum import datum_entfernen  # noqa: E402
 
@@ -539,8 +539,8 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
     else:
-        # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
-        enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+        # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
+        enddatum = vorschau_ende(QUELLE_NAME, heute)
         events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))
 

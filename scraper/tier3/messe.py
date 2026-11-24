@@ -16,13 +16,13 @@ import asyncio
 import json
 import logging
 import re
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 from urllib.parse import urljoin
 
 from playwright.async_api import async_playwright
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 
 logger = logging.getLogger(__name__)
@@ -247,7 +247,7 @@ async def scrape() -> list[dict]:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     html = None

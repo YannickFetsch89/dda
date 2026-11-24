@@ -23,12 +23,12 @@ Erstellt: 2026-03-05
 import json
 import logging
 import re
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
 
 logger = logging.getLogger(__name__)
@@ -200,7 +200,7 @@ def scrape() -> list[dict]:
         Leere Liste bei Fehler.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     events: list[dict] = []

@@ -11,10 +11,10 @@ Erstellt: 2026-03-05
 """
 import logging
 import re
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def scrape() -> list[dict]:
     from playwright.sync_api import sync_playwright
 
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     rohdaten = []

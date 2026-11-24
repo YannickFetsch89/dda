@@ -13,12 +13,12 @@ Erstellt: 2026-04-02
 import logging
 import os
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 import httpx
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,7 @@ def scrape() -> list[dict]:
     heute = date.today()
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     url = f"{API_BASE_URL}/metro_areas/{METRO_AREA_ID}/calendar.json"
 
     params = {

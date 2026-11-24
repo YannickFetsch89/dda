@@ -10,13 +10,13 @@ Erstellt: 2026-03-05
 """
 import logging
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 from urllib.parse import urljoin
 
 import httpx
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ def ra_venue_scrapen(
         Leere Liste bei Fehler oder keine Events.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(quelle_name, heute)
     logger.info("Starte Scraper: %s (via RA Venue %d)", quelle_name, ra_venue_id)
 
     alle_events: list[dict] = []

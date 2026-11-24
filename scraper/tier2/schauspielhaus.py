@@ -20,7 +20,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende, vorschau_tage
 from scraper.utils.http_client import seite_abrufen
 from scraper.utils.datum import datum_entfernen  # noqa: E402
 
@@ -43,8 +43,9 @@ def adresse_fuer(ort: str | None) -> str:
     return ADRESSE_CENTRAL if re.search(r"^central\b|\bim central\b", ort or "", re.I) else ADRESSE_STANDARD
 KATEGORIE_STANDARD = "kultur"
 
-# Anzahl Monate voraus, die gescrapt werden (aktueller Monat + 5 weitere)
-MONATE_VORAUS = 6
+# Anzahl Monate, die gescrapt werden (aktueller Monat + weitere), passend zum Zeitraum der Quelle
+# (config.vorschau_tage, Plan Quellen-Ausbau 5.2: 365 Tage → 13 Monate, bei VORSCHAU_NOTAUS 60 → 3). Bis 24.11.2026: 6.
+MONATE_VORAUS = vorschau_tage(QUELLE_NAME) // 30 + 1
 
 # Bekannte Spielstätten des Schauspielhauses für Ort-Normalisierung
 SPIELSTAETTEN = {
@@ -1133,8 +1134,8 @@ def scrape() -> list[dict]:
             QUELLE_NAME,
         )
     else:
-        # Vorschau-Fenster: Events weiter als SCRAPER_VORSCHAU_TAGE in der Zukunft ausfiltern
-        enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+        # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern
+        enddatum = vorschau_ende(QUELLE_NAME, heute)
         alle_events = [e for e in alle_events if date.fromisoformat(e["datum"]) <= enddatum]
         logger.info(
             "Scraper %s fertig: %d Events gefunden",

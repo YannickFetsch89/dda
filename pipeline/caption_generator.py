@@ -7,7 +7,7 @@ Erstellt: 2026-02-24
 import logging
 import os
 import time
-from datetime import date
+from datetime import date, timedelta
 
 import anthropic
 from dotenv import load_dotenv
@@ -17,6 +17,9 @@ from database.client import get_supabase_client
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Captions nur für Events der nächsten Tage (Plan Quellen-Ausbau 5.3, Schritt Z1)
+INSTAGRAM_TAGE = 60
 
 # Maximale Caption-Länge laut Instagram-Richtlinien
 MAX_CAPTION_LAENGE = 2200
@@ -213,6 +216,8 @@ def captions_generieren(limit: int = 10) -> int:
             # "" = kategorisiert, aber noch ohne Quellentext (seit 12.11.2026) – erst Caption, wenn ein Text da ist;
             # Events ohne Text bleiben „neu“, damit ein späterer Quellentext die Caption auslöst
             .neq("beschreibung", "")
+            # Instagram bleibt nah (Plan Quellen-Ausbau 5.3): keine Caption für Events hinter Tag 60
+            .lte("datum", (date.today() + timedelta(days=INSTAGRAM_TAGE)).isoformat())
             .limit(limit)
             .execute()
         )

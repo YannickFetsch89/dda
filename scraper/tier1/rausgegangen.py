@@ -20,7 +20,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +321,7 @@ def scrape(ziel_datum: Optional[date] = None, html: Optional[str] = None) -> lis
         if event:
             events.append(event)
 
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))

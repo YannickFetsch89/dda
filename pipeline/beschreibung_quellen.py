@@ -451,14 +451,28 @@ def probe(anzahl: int) -> None:
     bericht_schreiben(ergebnisse)
 
 
+# Beschreibungen nur für die nächsten Tage (Plan Quellen-Ausbau 5.3, Q14): Fern-Events bekommen ihren Text, sobald sie
+# in dieses Fenster rutschen – sonst risse der Lauf das Workflow-Timeout (Schritt 3b dauerte am 21.11. schon 2,5 h).
+BESCHREIBUNG_TAGE = 60
+# Ausnahme: so viele Fern-Events mit Rang 1–2 (Haus, Ticketverkauf) je Lauf, nach Datum – im selben Zeitbudget
+FERN_BESCHREIBUNGEN = 100
+
+
+def _fenster_ende():
+    """Letzter Tag des Beschreibungs-Fensters (heute + BESCHREIBUNG_TAGE) als ISO-Datum."""
+    from datetime import date, timedelta
+    return (date.today() + timedelta(days=BESCHREIBUNG_TAGE)).isoformat()
+
+
 def offene_rausgegangen_events(db, limit: int) -> list[dict]:
-    """Künftige Rausgegangen-Events, für die noch keine Beschreibungsquelle gesucht wurde (früheste zuerst)."""
+    """Rausgegangen-Events der nächsten BESCHREIBUNG_TAGE, für die noch keine Beschreibungsquelle gesucht wurde."""
     from datetime import date
 
     antwort = (
         db.table("events")
         .select("id,titel,ort,adresse,datum,uhrzeit,slug,beschreibung,quelle_name,quelle_url")
         .gte("datum", date.today().isoformat())
+        .lte("datum", _fenster_ende())
         .is_("beschreibung_gesucht_am", "null")
         # Feldschutz (Plan Admin-Dashboard 4.4 Teil A): von der Redaktion geschriebene Beschreibung nicht ersetzen
         .not_.contains("redaktion_felder", ["beschreibung"])
@@ -589,19 +603,29 @@ def ersetzen_erlaubt(alt: str | None, neu: str) -> bool:
     return bool(neu.strip()) and (len(alt) < KURZ or len(neu.strip()) > len(alt))
 
 
-def offene_veranstalter_events(db) -> list[dict]:
+def offene_veranstalter_events(db, fern: bool = False) -> list[dict]:
     """
     Künftige Events, die nicht von Rausgegangen stammen (dort ist die Detailseite gesperrt), eine eigene Event-URL
     haben, noch keinen Quellentext tragen und noch nicht gesucht wurden.
+    fern=False: die nächsten BESCHREIBUNG_TAGE; fern=True: danach, nur Rang 1–2 (Haus, Ticketverkauf), höchstens
+    FERN_BESCHREIBUNGEN (Plan Quellen-Ausbau 5.3, Q14).
     """
-    from datetime import date
+    from datetime import date, timedelta
 
+    from pipeline.quellen_rang import TICKETVERKAUF, rang_gespeichert
+
+    ab = (date.today() + timedelta(days=BESCHREIBUNG_TAGE + 1)).isoformat() if fern else date.today().isoformat()
     events, start = [], 0
     while True:
-        seite = (
+        abfrage = (
             db.table("events")
             .select("id,titel,ort,datum,uhrzeit,slug,beschreibung,quelle_name,quelle_url")
-            .gte("datum", date.today().isoformat())
+            .gte("datum", ab)
+        )
+        if not fern:
+            abfrage = abfrage.lte("datum", _fenster_ende())
+        seite = (
+            abfrage
             .eq("abgelehnt", False)
             .is_("beschreibung_gesucht_am", "null")
             # Feldschutz (Plan Admin-Dashboard 4.4 Teil A)
@@ -614,8 +638,13 @@ def offene_veranstalter_events(db) -> list[dict]:
             .range(start, start + 999)
             .execute()
         ).data or []
-        events += seite
         start += 1000
+        if fern:
+            events += [e for e in seite if rang_gespeichert(e.get("quelle_name"), e.get("quelle_url")) <= TICKETVERKAUF]
+            if len(events) >= FERN_BESCHREIBUNGEN:
+                return events[:FERN_BESCHREIBUNGEN]
+        else:
+            events += seite
         if len(seite) < 1000:
             return events
 
@@ -687,7 +716,8 @@ def veranstalter_nachziehen(max_stuecke: int = 150, sicherung: bool = False, pro
     from database.client import get_supabase_client
 
     db = get_supabase_client()
-    stuecke = stuecke_bilden(offene_veranstalter_events(db))
+    # Nahe Events zuerst, danach höchstens FERN_BESCHREIBUNGEN ferne (Rang 1–2) – alles im selben Zeitbudget
+    stuecke = stuecke_bilden(offene_veranstalter_events(db)) + stuecke_bilden(offene_veranstalter_events(db, fern=True))
     sammel = sammel_pfade(alle_event_seiten(db))
     if probe:
         # Breite Stichprobe: je Quelle höchstens zwei Stücke

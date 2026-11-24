@@ -13,13 +13,13 @@ Erstellt: 2026-03-05
 import logging
 import re
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 import httpx
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.http_client import STANDARD_HEADERS
 
 logger = logging.getLogger(__name__)
@@ -251,7 +251,7 @@ def _scrape_graphql(heute: date) -> list[dict]:
         "Referer": SUCHE_URL,
     }
 
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
 
     gql_payload = {
         "query": GQL_QUERY,
@@ -355,7 +355,7 @@ def scrape() -> list[dict]:
         Liste von Event-Dicts im DiesDasDüsseldorf Standard-Format.
     """
     heute = date.today()
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     logger.info("Starte Scraper: %s", QUELLE_NAME)
 
     events = _scrape_graphql(heute)
@@ -364,7 +364,7 @@ def scrape() -> list[dict]:
     if not events:
         logger.warning("Meetup GraphQL lieferte keine Events")
 
-    # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE) anwenden
+    # Vorschau-Fenster (vorschau_ende, Zeitraum je Quelle) anwenden
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
     logger.info("Scraper %s fertig: %d Events", QUELLE_NAME, len(events))
     return events

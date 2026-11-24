@@ -98,6 +98,8 @@ jobs:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           # Ortsseiten (Plan Locations 3.11): 1 = neue/geänderte /orte-URLs nach dem Lauf an IndexNow melden
           ORTSSEITEN_MELDEN: ${{ vars.ORTSSEITEN_MELDEN }}
+          # Notaus Zeitraum je Quelle (Plan Quellen-Ausbau 7, Rückweg Z1): 1 = jede Quelle höchstens 60 Tage voraus
+          VORSCHAU_NOTAUS: ${{ vars.VORSCHAU_NOTAUS }}
           # Warn-Mail nach dem Lauf (Plan Admin-Dashboard 4.3, E8): dieselben SMTP-Secrets wie geburtstag.yml
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}

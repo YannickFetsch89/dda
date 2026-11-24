@@ -9,13 +9,13 @@ einem ehemaligen Straßenbahndepot. Musicals, Shows, Comedy-Gastspiele.
 Erstellt: 2026-04-02
 """
 import logging
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from config import SCRAPER_VORSCHAU_TAGE
+from config import vorschau_ende
 from scraper.utils.datum import datum_parsen, uhrzeit_parsen
 from scraper.utils.http_client import seite_abrufen
 
@@ -247,8 +247,8 @@ def scrape() -> list[dict]:
         logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(fehler))
         return []
 
-    # Vorschau-Fenster (SCRAPER_VORSCHAU_TAGE)
-    enddatum = heute + timedelta(days=SCRAPER_VORSCHAU_TAGE)
+    # Vorschau-Fenster (vorschau_ende, Zeitraum je Quelle)
+    enddatum = vorschau_ende(QUELLE_NAME, heute)
     events = [e for e in events if date.fromisoformat(e["datum"]) <= enddatum]
 
     logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))

@@ -746,6 +746,33 @@ Gebaut wie 4.1/4.2, Punkte 1–3 (Punkt 4 Nachziehen = N1, später):
 - Tests: `tests/test_quellen_liste.py` (13); Python gesamt 562 ok, Website 708 ok.
 - Rückweg: Commit zurücknehmen; die Spalten bleiben liegen und stören nicht.
 
+### Z1 – Zeitraum je Quelle (24.11.2026, lokal gebaut)
+
+- `config.py`: `VORSCHAU_TAGE` (Anzeigenamen und abweichende `QUELLE_NAME`, 365/120/60 nach Q7), `vorschau_tage(quelle,
+  tier)`, `vorschau_ende(quelle, heute, tier)`; Notaus über `VORSCHAU_NOTAUS=1` (jede Quelle höchstens 60 Tage).
+- Alle 48 Scraper-Dateien rufen `vorschau_ende(QUELLE_NAME, heute)` (`ra_venue.py` mit dem übergebenen `quelle_name`);
+  `SCRAPER_VORSCHAU_TAGE` kommt in `scraper/` nicht mehr vor. Die Tabelle enthält jeden `QUELLE_NAME` mit demselben
+  Fenster wie sein Anzeigename (Test), deshalb reicht der Modulname.
+- Seiten-Grenzen: Oper `MONATE_VORAUS` 2 → `vorschau_tage // 30` (12 Zusatzmonate, mit Startseite 14), Schauspielhaus
+  6 → `vorschau_tage // 30 + 1` (13); beide folgen dem Notaus. Ohne Änderung, weil sie schon das ganze Programm laden:
+  d.live und Mitsubishi-Halle (`total=9999`), Tonhalle (Webshop-Liste), Capitol (Übersichtsseite), Kom(m)ödchen
+  (Spielplan-Seite über unseren Server), Fortuna/DEG (Saison-Spielplan), Messe (Messeliste), Kunstsammlung
+  (Ausstellungen; Führungen folgen in V0). RA-Häuser bleiben bei 5 Seiten, Ticketmaster bei einer Seite (T1).
+- Beschreibungen (`pipeline/beschreibung_quellen.py`): `BESCHREIBUNG_TAGE = 60` als Obergrenze in
+  `offene_rausgegangen_events` und `offene_veranstalter_events`; Fern-Block `offene_veranstalter_events(db, fern=True)`
+  ab Tag 61, nur Rang 1–2, höchstens `FERN_BESCHREIBUNGEN = 100`, nach den nahen Stücken im selben Zeitbudget.
+- Captions und Publisher: `INSTAGRAM_TAGE = 60` als Obergrenze in beiden Abfragen. Club-Prompt: `kalender_quelle`
+  nimmt nur Termine bis heute + 60 (`PROMPT_TAGE`).
+- Kategorisierung: 1.500 statt 300 bis einschließlich 09.12.2026 (`KATEGORIEN_RUECKSTAND_BIS` in `main.py`), danach
+  automatisch wieder 300.
+- `VORSCHAU_NOTAUS` im `env` von `scrape.yml`, in `SCHALTER` (`web/lib/admin/github.ts`) und mit Text im Technik-Panel.
+- Tests: `tests/test_vorschau.py` (12); Python gesamt 574 ok, Website 708 ok.
+- Sichtbar schon vor W1: Eventseiten ferner Events (einzeln über `eventLaden`) und die Ortsseiten (laden über `ort_id`
+  ohne Datumsgrenze, zeigen die nächsten 60 Termine). Noch nicht kategorisierte ferne Events erscheinen dort bis zur
+  Kategorisierung als „sonstiges“ – betrifft nur Häuser, deren nächste 60 Termine schon über Tag 60 hinausreichen.
+- Abnahme (Abschnitt 7): nächster Lauf `status = erfolgreich` und unter 240 Minuten. Reißt es: GitHub-Variable
+  `VORSCHAU_NOTAUS=1` setzen (wirkt ab dem nächsten Lauf, kein Deploy nötig).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
