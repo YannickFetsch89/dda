@@ -31,7 +31,7 @@ Wer ein fremdes Event als Besucher gemeldet hat, liest „dieses Event“ bzw. �
 **Formular, Danke-Meldung nach dem Absenden:** „… Sobald dein Event online ist, schicken wir dir den Link per E-Mail; bei Rückfragen melden wir uns ebenfalls per E-Mail.“
 **Formular, Kontaktfeld:** „Wird nicht veröffentlicht. An diese Adresse schicken wir dir auch den Link, sobald dein Event online ist.“
 
-**Datenschutzerklärung, Abschnitt 12 (neu):** „Die Kontaktdaten nutzen wir für Rückfragen zu Ihrer Meldung und für eine einmalige E-Mail, sobald das Event veröffentlicht ist (mit dem Link zum Event und einem Hinweis auf unser kostenloses Nutzerkonto); sie werden nicht veröffentlicht. Diese E-Mail versenden wir über den Mailserver unseres Hosting-Anbieters (Abschnitt 3).“ (bisher: „Die Kontaktdaten nutzen wir nur für Rückfragen zu Ihrer Meldung; sie werden nicht veröffentlicht.“)
+**Datenschutzerklärung, Abschnitt 12 (neu):** „Die Kontaktdaten nutzen wir für Rückfragen zu Ihrer Meldung und für eine einmalige E-Mail, sobald das Event veröffentlicht ist und noch bevorsteht (mit dem Link zum Event und einem Hinweis auf unser kostenloses Nutzerkonto); sie werden nicht veröffentlicht. Diese E-Mail versenden wir über den Mailserver unseres Hosting-Anbieters (Abschnitt 3).“ (bisher: „Die Kontaktdaten nutzen wir nur für Rückfragen zu Ihrer Meldung; sie werden nicht veröffentlicht.“)
 
 **Datenschutzerklärung, Abschnitt 3 (Mailserver), ergänzt:** „… sowie die Mitteilung, dass ein von Ihnen gemeldetes Event veröffentlicht ist (Abschnitt 12).“
 
