@@ -484,11 +484,14 @@ def offene_rausgegangen_events(db, limit: int) -> list[dict]:
     return antwort.data or []
 
 
-def beschreibungen_nachziehen(limit: int = 40, sicherung: bool = False) -> int:
+def beschreibungen_nachziehen(limit: int = 40, sicherung: bool = False, max_sekunden: int | None = None) -> int:
     """
     Sucht für Rausgegangen-Events eine Veranstalter-Quelle und ersetzt die Beschreibung, wenn der neue Text
     alle Prüfungen besteht. Ohne Fund bleibt der bisherige Text. Jedes bearbeitete Event bekommt
     beschreibung_gesucht_am, damit es nicht erneut gesucht wird.
+    max_sekunden: Zeitbudget im Scraper-Lauf – danach aufhören, der Rest kommt im nächsten Lauf (die Events
+    behalten kein beschreibung_gesucht_am). Cursor-Prüfung 24.11.2026: ohne Budget konnten 1000 × ~25 s allein das
+    Workflow-Limit von 240 Minuten sprengen.
 
     Returns:
         Anzahl der Events mit neuer Beschreibung
@@ -507,7 +510,11 @@ def beschreibungen_nachziehen(limit: int = 40, sicherung: bool = False) -> int:
     webseiten, cache = orte_webseiten(), _cache_laden()
     sicherungsdatei = ORDNER / f"sicherung_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
     neu = 0
+    beginn = time.monotonic()
     for nr, event in enumerate(events, 1):
+        if max_sekunden and time.monotonic() - beginn > max_sekunden:
+            logger.info("Beschreibungen (Rausgegangen): Zeitbudget erreicht nach %d von %d Events", nr - 1, len(events))
+            break
         logger.info("Beschreibung [%d/%d]: %s (%s)", nr, len(events), event["titel"][:50], event.get("ort"))
         try:
             eintrag = event_bearbeiten(client, event, webseiten, cache)

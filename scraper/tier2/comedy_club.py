@@ -21,7 +21,7 @@ from urllib.parse import quote
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
-from scraper.utils.ticket_link import ticket_link
+from scraper.utils.ticket_link import ticket_link_haus
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ def _ticket_url(show: dict) -> Optional[str]:
     for t in show.get("ticket_details") or []:
         url = str((t or {}).get("external_url") or "").strip()
         if url and (t or {}).get("active", True):
-            return ticket_link(url) or (url if url.startswith("https://") else None)
+            return ticket_link_haus(url)
     return None
 
 

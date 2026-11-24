@@ -37,7 +37,6 @@ MAX_NEU_JE_LAUF = 150
 # Seite ohne lesbaren Termin (leere Hülle, Bot-Seite …): so oft versuchen, dann erst wieder, wenn sie aus der Sitemap
 # fällt (Cursor-Prüfung V1)
 MAX_FEHLVERSUCHE = 2
-STAEDTE = ("düsseldorf", "dusseldorf", "duesseldorf", "neuss", "ratingen")
 _SLUG_DATUM = re.compile(r"-(\d{8})-[A-Za-z0-9]+/?$")
 
 
@@ -76,8 +75,9 @@ def urls_im_fenster(sitemap: str, heute: date, enddatum: date) -> dict[str, date
 
 
 def ist_im_gebiet(termin: dict) -> bool:
-    text = f"{termin.get('adresse') or ''} {termin.get('ort') or ''}".lower()
-    return any(stadt in text for stadt in STAEDTE)
+    """PLZ entscheidet, sonst die Stadt als ganzes Wort – „Neusser Straße“ in Köln zählt nicht (Cursor-Prüfung 24.11.)."""
+    from pipeline.gebiet import adresse_im_gebiet
+    return adresse_im_gebiet(termin.get("adresse") or "", termin.get("ort") or "")
 
 
 def event_aus_termin(t: dict) -> dict:

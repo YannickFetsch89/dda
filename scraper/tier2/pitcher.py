@@ -30,6 +30,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
+from scraper.utils.ticket_link import ticket_link_haus
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,8 @@ def _ticket_url(eintrag: dict) -> Optional[str]:
         if eintrag.get("external_ticket_sales_enabled") is False:
             return None
         url = str(eintrag.get("external_ticket_url") or "").strip()
-        if url.startswith(("http://", "https://")) and "rausgegangen." not in url:
-            return url
+        if ticket_link_haus(url):  # Sperrliste: PayPal, Rausgegangen, soziale Netzwerke … (Cursor-Prüfung 24.11.)
+            return ticket_link_haus(url)
     except Exception as fehler:  # Ticket-Link ist Zusatz – darf das Event nie verhindern
         logger.debug("Pitcher: Ticket-Link nicht lesbar: %s", fehler)
     return None

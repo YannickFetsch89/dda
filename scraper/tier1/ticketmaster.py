@@ -135,15 +135,15 @@ def _kategorie_erkennen(klassifizierungen: list[dict]) -> str:
         return "sonstiges"
 
 
-GEBIET = ("düsseldorf", "dusseldorf", "duesseldorf", "neuss", "ratingen")
 _ZUSATZANGEBOT = re.compile(
     r"vip[- ]?(upgrade|package|paket|ticket upgrade)|no ticket included|kein ticket|ohne ticket|parkplatz|parking|"
     r"\bparken\b|hotel ?package|merch(andise)? ?bundle", re.IGNORECASE)
 
 
 def _im_gebiet(stadt: str) -> bool:
-    """Liegt die Stadt des Veranstaltungsorts in Düsseldorf, Neuss oder Ratingen?"""
-    return any(g in stadt.lower() for g in GEBIET)
+    """Liegt die Stadt des Veranstaltungsorts in Düsseldorf, Neuss oder Ratingen? (ganzes Wort)"""
+    from pipeline.gebiet import stadt_im_gebiet
+    return stadt_im_gebiet(stadt)
 
 
 def _event_parsen(event: dict, heute: date) -> Optional[dict]:
@@ -204,12 +204,17 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
         # Gebiet: Der Umkreis von 25 km reicht bis Duisburg, Krefeld, Haan … (Test 24.11.2026: 98 von 161 Events im
         # Theater am Marientor, Duisburg). Nur Orte in Düsseldorf, Neuss und Ratingen – an der Stadt des Veranstaltungsorts.
         stadt = ((venue.get("city") or {}).get("name") or "").strip()
+        plz = (venue.get("postalCode") or "").strip()
         if stadt and not _im_gebiet(stadt):
             return None
+        # Ohne Stadt entscheidet die PLZ; fehlt auch die, bleibt das Event draußen (Cursor-Prüfung 24.11.2026)
+        if not stadt:
+            from pipeline.gebiet import plz_im_gebiet
+            if not plz_im_gebiet(plz):
+                return None
 
         # Adresse (optional): Straße, PLZ Stadt – mit PLZ/Stadt greift auch der Gebietsfilter der Pipeline
         strasse = ((venue.get("address") or {}).get("line1") or "").strip()
-        plz = (venue.get("postalCode") or "").strip()
         ort_teil = " ".join(x for x in (plz, stadt) if x)
         adresse = ", ".join(x for x in (strasse, ort_teil) if x) or None
 
@@ -249,7 +254,7 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
         }
 
     except Exception as e:
-        logger.error("Fehler beim Parsen eines Ticketmaster-Events: %s", str(e))
+        logger.error("Fehler beim Parsen eines Ticketmaster-Events: %s", ohne_schluessel(e))
         return None
 
 
@@ -295,13 +300,32 @@ def _api_anfrage_mit_backoff(client: httpx.Client, params: dict) -> Optional[htt
             if versuch < len(wartezeiten):
                 time.sleep(wartezeit)
         except httpx.HTTPStatusError as e:
-            logger.error(
-                "HTTP Fehler %s bei der Ticketmaster API: %s",
-                e.response.status_code, str(e)
-            )
+            # Nur der Status – die Meldung von httpx enthält die URL mit dem Schlüssel
+            logger.error("HTTP Fehler %s bei der Ticketmaster API", e.response.status_code)
             return None
 
     return None
+
+
+_SCHLUESSEL_MUSTER = re.compile(r"(apikey=)[^&\s'\"]+", re.IGNORECASE)
+
+
+def ohne_schluessel(text: object) -> str:
+    """Text ohne API-Schlüssel – httpx-Fehlermeldungen enthalten die ganze URL mit ?apikey=… (Cursor-Prüfung 24.11.)."""
+    return _SCHLUESSEL_MUSTER.sub(r"\1***", str(text))
+
+
+class _SchluesselFilter(logging.Filter):
+    """Entfernt den Schlüssel auch aus den „HTTP Request: GET …“-Zeilen von httpx (Lauf-Log, Artefakte)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if "apikey=" in str(record.msg) or any("apikey=" in str(a) for a in (record.args or ())):
+            record.msg = ohne_schluessel(record.getMessage())
+            record.args = None
+        return True
+
+
+logging.getLogger("httpx").addFilter(_SchluesselFilter())
 
 
 def bilder_erlaubt() -> bool:
@@ -391,7 +415,8 @@ def scrape() -> list[dict]:
                 try:
                     rohe_events = _seiten_holen(client, {**basis, "startDateTime": start, "endDateTime": ende})
                 except Exception as fehler:
-                    logger.error("Ticketmaster: Fenster %s bis %s übersprungen: %s", start[:10], ende[:10], fehler)
+                    logger.error("Ticketmaster: Fenster %s bis %s übersprungen: %s", start[:10], ende[:10],
+                                 ohne_schluessel(fehler))
                     fehlgeschlagen.append(start[:7])
                     in_folge += 1
                     if in_folge >= ABBRUCH_NACH_FEHLERN:
@@ -410,7 +435,7 @@ def scrape() -> list[dict]:
                     if event:
                         events.append(event)
     except Exception as e:
-        logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, str(e))
+        logger.error("Scraper %s fehlgeschlagen: %s", QUELLE_NAME, ohne_schluessel(e))
         return []
 
     # Vorschau-Fenster: Events hinter dem Zeitraum der Quelle (vorschau_ende) ausfiltern

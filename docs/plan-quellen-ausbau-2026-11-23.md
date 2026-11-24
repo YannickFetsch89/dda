@@ -916,6 +916,87 @@ Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
 - **Für P2 merken:** Manche Häuser hängen eigene Partner-Kennungen an (Savoy: `?affiliate=SAV&utm_…`). `tickets.ts`
   muss beim Bau des Partner-Links fremde Kennungen ersetzen, nicht doppelt anhängen.
 
+### N1 – Bestand auf Rang umhängen (24.11.2026, lokal gebaut)
+
+- `pipeline/quellen_nachziehen.py` (Nachfolger von `rausgegangen_nachziehen.py`, das als dünner Aufruf bleibt und
+  `_rausgegangen_eintraege` für `beschreibung_quellen.stichprobe` behält).
+- Scrapt alle Quellen außer Rausgegangen und den im Admin abgeschalteten über den Lauf-Report (ohne `starten()`,
+  also ohne Zeile in `scraper_laeufe`), damit jedes Event `_scraper`/`_tier` und damit seinen Rang trägt. Danach
+  Gebietsfilter und Deduplizierung wie im täglichen Lauf.
+- Lädt alle künftigen Zeilen mit Rang ≥ 2 (mit `quellen` und `ticket_url`), sucht je Zeile die passenden gescrapten
+  Events (Titel+Ort, Slug oder ähnlich, gleiche/fehlende Uhrzeit) und nimmt das mit dem besten Rang. Die Änderung
+  baut `_anreicherungs_update_bauen` mit Rang und Quellenliste – also dieselben Grenzen wie beim Speichern. Ein
+  Sicherheitsnetz verwirft leere Werte im Update.
+- Ohne Spalte `ticket_url` bricht das Skript ab (N1 erst nach P1).
+- `--schreiben` sichert vorher alle geänderten Felder; `--zuruecksetzen <Sicherung>` spielt sie zurück.
+- Hinweis: Seit R1 hängt auch jeder tägliche Lauf die Events um, die er wieder findet. Der Lauf am 24.11. hat wegen
+  der fehlenden Spalte nichts gespeichert, deshalb wirkt N1 jetzt drei Tage früher als der Lauf am 27.11.
+- **Ausgeführt 24.11.2026** (OK des Auftraggebers): Probelauf 651 künftige Zeilen mit Rang ≥ 2 (3: 350, 4: 155,
+  5: 146), 55 Quellenwechsel (43 aufs Haus), 301 Zeilen mit Änderungen. `--schreiben`: 300 geschrieben, 1 Fehler –
+  „MOTORJESUS“ 02.01.2027 (AllEvents, 18:00) kollidiert mit der vorhandenen Pitcher-Zeile (19:00) am Unique-Index
+  `titel, datum, ort, uhrzeit`; das ist eine Dublette für die Dubletten-Vorschläge im Admin, kein Fehler im Skript.
+  Sicherung `data/quellen_nachziehen/sicherung_20261124_215537.json` (lokal im Worktree DD-quellen). Danach je Rang
+  (künftig, nicht abgelehnt): 1: 991, 3: 350, 4: 129, 5: 128.
+
+### W2 – Ausblick, Startseiten-Box, Ticket-Button, Ortswebsite (24.11.2026, lokal gebaut, Browser-Prüfung offen)
+
+- `/ausblick` war im Repo noch frei (geprüft 24.11.). `web/lib/ausblick.ts`: Fernpool (Tag 61–365) gefiltert auf Rang
+  1–2 (`rangGespeichert` ≤ `TICKETVERKAUF`), Orte mit Ortsseite (aktive Spielstätten über `ort_id`), ohne Absagen,
+  nach Datum. `web/app/ausblick/page.tsx`: Liste nach Monaten, Filter-Chips je Kategorie (`?kategorie=`, dann noindex;
+  leere Seite ebenfalls noindex), Titel „Ausblick: Große Events in Düsseldorf bis <Monat Jahr>“, JSON-LD-Liste.
+- `ort_id` steht jetzt in `SPALTEN_BASIS` und in `normalisieren()` (bisher nur im Ortsprogramm geladen).
+- Startseite: `AusblickStartBox` (6 Einträge, eigene Suspense-Grenze, ohne Einträge nichts) über dem Magazin.
+- Navigation (Menü bei den Event-Links), Sitemap (feste Seiten), Proxy: `/ausblick` in Matcher **und** Bremse.
+- Eventseite: zweiter Button „Tickets“ (`web/lib/ticket-button.ts`, `ticketZiel`): `ticket_url` des Hauses, sonst
+  Rang-2-Quelle aus `quellen` (eigene gecachte Abfrage nur, wenn kein `ticket_url`); kein Button, wenn die Hauptquelle
+  selbst Rang 2 ist oder das Ziel gleich dem Haupt-Button wäre; nur kommende, nicht abgesagte Events. `rel="noopener"`,
+  ohne Stern – Partner-Kennung, „Tickets*“ und `rel="sponsored"` kommen mit P2.
+- „Website von <Ort>“ (4.4): nur bei Hauptquelle Rang 5 (Rausgegangen) und `orte.webseite` über `ort_id`, über dem
+  Quellenhinweis.
+- JSON-LD `offers.url`: `ticket_url`, sonst `quelle_url` – immer die echte URL.
+- Tests `web/tests/ausblick-tickets.test.ts`. Browser-Prüfung zusammen mit W1 nach dem Lauf am 27.11. (Turbopack läuft
+  im Worktree nicht mit dem verlinkten node_modules; außerdem fehlen bis dahin die fernen Events).
+
+### P2 – Partner-Links (24.11.2026, lokal gebaut, Schalter aus)
+
+- `web/lib/tickets.ts`: Anbieter nur an den Hauptdomains (eventim.de, reservix.de, adticket.de, ticketmaster.de,
+  tiqets.com, getyourguide.de/.com). Shops auf Subdomains, Eventim Light und Webshops der Häuser bleiben normale Links.
+  Awin-Deeplink mit den Programmen 11388/31293/18490 und `AWIN_PUBLISHER_ID`. Ticketmaster nur mit
+  `TICKETMASTER_PARTNER_OK=1` **und** einer Impact-Vorlage `TICKETMASTER_PARTNER_VORLAGE` (mit `{url}`). Tiqets
+  `partner=`, GetYourGuide `partner_id=`. Fremde Kennungen des Hauses (`affiliate`, `utm_*`, `ref` …) werden vor dem
+  Partner-Link entfernt. Ohne `PARTNERLINKS_AKTIV=1` oder ohne Kennung: normaler Link.
+- Eventseite: Ticket-Button und – wenn die Hauptquelle selbst Rang 2 ist – der Haupt-Button laufen über
+  `partnerLink`. Partner-Link → Text mit „*“, `rel="sponsored noopener"`, darunter der Hinweis mit Link auf
+  `/ueber#partner-links`. JSON-LD bleibt die echte URL.
+- `/ueber` (Abschnitt „Partner-Links“, du) und Datenschutzerklärung (Punkt in Abschnitt 9, Sie, ohne Umnummerierung)
+  erscheinen nur, wenn ein Programm wirklich Links umbaut, und nennen nur diese Programme
+  (`web/components/partner-links.tsx`). Texte zur Freigabe: `docs/partner-links-texte-2026-11-24.md`.
+- Deploy schreibt `PARTNERLINKS_AKTIV`, `TICKETMASTER_PARTNER_OK`, `AWIN_PUBLISHER_ID`, `TICKETMASTER_PARTNER_VORLAGE`,
+  `TIQETS_PARTNER_ID`, `GYG_PARTNER_ID` bei jedem Deploy ausdrücklich in `web/.env.local` (ohne sed). Admin → Technik
+  zeigt `PARTNERLINKS_AKTIV` und `TICKETMASTER_PARTNER_OK`.
+- Reihenfolge zum Einschalten: Anwalt gibt die Texte frei → Kennungen setzen → `PARTNERLINKS_AKTIV=1` → Deploy.
+
+### Cursor-Prüfung der Scraper-Neubauten (24.11.2026, nach T1-Fixes) – Einarbeitung
+
+Cursor: 776 Tests grün, nicht abnahmefähig wegen zwei mittlerer Befunde; dazu drei geringe. Alle fünf eingearbeitet:
+1. **mittel – Ticketmaster-Schlüssel im Log:** httpx-Fehlermeldungen enthalten die URL mit `?apikey=`. Jetzt loggt
+   der HTTP-Fehler nur den Status, alle anderen Fehlermeldungen laufen durch `ohne_schluessel()`, und ein Filter am
+   Logger `httpx` ersetzt den Schlüssel auch in den „HTTP Request“-Zeilen durch `***`.
+2. **mittel – Zeitbudget Schritt 3b:** `beschreibungen_nachziehen` hat jetzt `max_sekunden` (2.400 s), Veranstalter
+   4.200 s statt 5.400 s. Rechnung: Scraper inkl. neuer Quellen ~60 min, KI/Speichern ~30 min, Beschreibungen
+   40 + 70 min → unter 200 der 240 Workflow-Minuten. Das Workflow-Limit bleibt.
+3. **gering – Rückfall bei Ticket-Links:** neuer Baustein `ticket_link_haus()` (scraper/utils/ticket_link.py) für
+   Felder/Buttons, die das Haus selbst als Ticketverkauf kennzeichnet: bekannte Anbieter wie bisher, andere
+   http(s)-Hosts nur ohne Sperrliste (Rausgegangen, PayPal, Facebook/Instagram, WhatsApp, Google-Formulare,
+   mailto/javascript), unbekannte Hosts im Debug-Log. Genutzt von Stadt Ratingen, Comedy Club, d.live, Mitsubishi,
+   Pitcher, NRW-Forum und DEG.
+4. **gering – Stagedates „Neusser Straße“:** `ist_im_gebiet` nutzt `pipeline.gebiet.adresse_im_gebiet`: eine PLZ
+   entscheidet, sonst die Stadt als ganzes Wort (`stadt_im_gebiet`).
+5. **gering – Ticketmaster ohne Stadt:** Fehlt `venue.city`, bleibt ein Event nur mit PLZ im Gebiet
+   (`plz_im_gebiet`); die Stadtprüfung nutzt ebenfalls das ganze Wort.
+
+Tests: `tests/test_cursor_scraper_2026_11_24.py` (9), Python gesamt 785 ok.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

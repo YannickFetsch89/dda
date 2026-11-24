@@ -16,7 +16,8 @@ def roh(nr: int, tage: int = 10, bilder: bool = True) -> dict:
     return {
         "name": f"Konzert {nr}", "url": f"https://www.ticketmaster.de/event/{nr}",
         "dates": {"start": {"localDate": tag, "localTime": "20:00:00"}},
-        "_embedded": {"venues": [{"name": "Mitsubishi Electric HALLE", "address": {"line1": "Siegburger Str. 15"}}]},
+        "_embedded": {"venues": [{"name": "Mitsubishi Electric HALLE", "address": {"line1": "Siegburger Str. 15"},
+                                  "city": {"name": "Düsseldorf"}, "postalCode": "40591"}]},
         "classifications": [{"segment": {"name": "Music"}}],
         "images": [{"ratio": "16_9", "width": 1024, "url": f"https://s1.ticketm.net/{nr}.jpg"}] if bilder else [],
     }

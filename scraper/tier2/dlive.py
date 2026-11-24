@@ -40,6 +40,7 @@ from typing import Optional
 import httpx
 
 from config import vorschau_ende
+from scraper.utils.ticket_link import ticket_link_haus
 
 logger = logging.getLogger(__name__)
 
@@ -202,8 +203,8 @@ def _ticket_url(api_event: dict) -> Optional[str]:
             if "tickets-conversion" not in str(link.get("class") or "").split():
                 continue
             url = str(link.get("url") or "").strip()
-            if url.startswith(("http://", "https://")) and "rausgegangen." not in url:
-                return url
+            if ticket_link_haus(url):  # Sperrliste: PayPal, Rausgegangen, soziale Netzwerke … (Cursor-Prüfung 24.11.)
+                return ticket_link_haus(url)
     except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
         logger.debug("Ticket-Link nicht lesbar: %s", fehler)
     return None

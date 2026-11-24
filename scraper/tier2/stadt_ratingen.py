@@ -35,7 +35,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
-from scraper.utils.ticket_link import ticket_link
+from scraper.utils.ticket_link import ticket_link_haus
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ def _details_aus_html(html: str) -> dict:
     ticket = soup.select_one("a.event-ticketlink[href]")
     if ticket:
         href = ticket["href"].strip()
-        ergebnis["ticket_url"] = ticket_link(href) or (href if href.startswith(("https://", "http://")) else None)
+        ergebnis["ticket_url"] = ticket_link_haus(href)
     block = soup.select_one(".event-location")
     if block:
         ergebnis["ort"] = _text(block.select_one("h3")) or None

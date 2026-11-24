@@ -365,9 +365,12 @@ async def _schritte_ausfuehren(report: LaufReport):
         # Alle offenen Termine je Lauf (Auftraggeber 20.11.2026: „Beschreibungen sollen immer mitgenommen werden“);
         # vorher 40 Rausgegangen-Events und 10 Minuten für Veranstalter – der Rückstand wuchs. Die Grenzen hier sind
         # nur Schutz gegen Hänger, das Zeitlimit des Workflows (.github/workflows/scrape.yml) ist darauf abgestimmt.
-        beschreibungen_nachziehen(limit=1000)
-        # Veranstalter-Events: Text aus der eigenen Event-Seite, ein Text pro Stück (Zeitbudget 90 Minuten)
-        veranstalter_nachziehen(max_stuecke=2000, max_sekunden=5400)
+        # Zeitbudgets (Cursor-Prüfung 24.11.2026): Scraper inkl. der neuen Quellen rund 60 Minuten, KI-Schritte und
+        # Speichern rund 30 Minuten, dazu 40 + 70 Minuten Beschreibungen → unter 200 der 240 Minuten des Workflows.
+        # Was liegen bleibt, kommt im nächsten Lauf dran.
+        beschreibungen_nachziehen(limit=1000, max_sekunden=2400)
+        # Veranstalter-Events: Text aus der eigenen Event-Seite, ein Text pro Stück
+        veranstalter_nachziehen(max_stuecke=2000, max_sekunden=4200)
     except Exception as e:
         logger.error("Beschreibungen aus Veranstalter-Quellen fehlgeschlagen: %s", e)
 

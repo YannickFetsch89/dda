@@ -33,6 +33,7 @@ from bs4 import BeautifulSoup
 
 from config import vorschau_ende
 from scraper.utils.datum import datum_parsen
+from scraper.utils.ticket_link import ticket_link_haus
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +257,7 @@ def _game_center_auswerten(html: str) -> dict:
     if ticket:
         href = ticket["href"].strip()
         # Ticket-Button des Game Centers (Plan Quellen-Ausbau 5.5.2, P1) – nur vollständige Adressen übernehmen
-        ergebnis["ticket_url"] = urljoin(LISTE_URL, href) if not href.startswith(("mailto:", "javascript:", "#")) else None
+        ergebnis["ticket_url"] = ticket_link_haus(href, LISTE_URL)
 
     return ergebnis
 

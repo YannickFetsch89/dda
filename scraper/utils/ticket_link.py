@@ -11,9 +11,12 @@ ticket_link(url, basis)   → absolute URL, wenn sie zu einem Ticketverkauf füh
 ticket_link_aus(element, basis) → erster Ticket-Link unter einem BeautifulSoup-Element
 anbieter(url)             → Anzeigename des Anbieters („Eventim“, „Reservix“ … oder „eigener Shop“) für die Kennzahl
 """
+import logging
 import re
 from typing import Optional
 from urllib.parse import urljoin, urlparse
+
+logger = logging.getLogger(__name__)
 
 # Domain (ohne „www.“, Endung zählt mit) → Anbieter. Reihenfolge egal; Subdomains zählen mit (nachtresidenz.ticket.io).
 ANBIETER: dict[str, str] = {
@@ -105,3 +108,32 @@ def ticket_link_aus(element, basis: Optional[str] = None) -> Optional[str]:
         if treffer:
             return treffer
     return None
+
+
+# Nie ein Ticket-Link, auch wenn das Haus ihn als Ticket-Button kennzeichnet (Cursor-Prüfung 24.11.2026)
+GESPERRT = ("rausgegangen.de", "paypal.com", "paypal.me", "facebook.com", "fb.me", "instagram.com", "wa.me",
+            "docs.google.com", "forms.gle")
+
+
+def ticket_link_haus(url: Optional[str], basis: Optional[str] = None) -> Optional[str]:
+    """
+    Ticket-Link aus einem Feld oder Button, den das Haus SELBST als Ticketverkauf kennzeichnet (d.live
+    „tickets-conversion“, Stadt Ratingen a.event-ticketlink, Pitcher external_ticket_url, DEG Game-Center-Button …).
+    Bekannte Anbieter und eigene Shops wie ticket_link(); andere http(s)-Hosts werden übernommen und im Log genannt –
+    aber nie PayPal, Rausgegangen, soziale Netzwerke, Formulare, mailto/javascript.
+    """
+    if not url or not isinstance(url, str):
+        return None
+    url = url.strip()
+    if url.lower().startswith(("mailto:", "tel:", "javascript:", "#")):
+        return None
+    absolut = urljoin(basis, url) if basis else url
+    if not absolut.startswith(("http://", "https://")):
+        return None
+    host = _host(absolut)
+    if not host or any(host == g or host.endswith("." + g) for g in GESPERRT):
+        return None
+    if anbieter(absolut):
+        return absolut
+    logger.debug("Ticket-Link mit unbekanntem Anbieter übernommen: %s", host)
+    return absolut

@@ -107,6 +107,32 @@ _ABSCHNITT = re.compile(
 )
 
 
+# Stadtname als ganzes Wort: „Neuss“ ja, „Neusser Straße“ nein (Cursor-Prüfung 24.11.2026)
+_GEBIET_WORT = re.compile(r"(?<![\w-])(D(?:ü|ue|u)sseldorf|Neuss|Ratingen)(?![\w-])", re.I)
+
+
+def plz_im_gebiet(plz: str) -> bool:
+    """Liegt eine fünfstellige PLZ in Düsseldorf, Neuss oder Ratingen?"""
+    return bool(re.fullmatch(r"\d{5}", (plz or "").strip())) and any(a <= int(plz) <= b for a, b in PLZ_BEREICHE)
+
+
+def stadt_im_gebiet(text: str) -> bool:
+    """Nennt der Text Düsseldorf, Neuss oder Ratingen als ganzes Wort?"""
+    return bool(_GEBIET_WORT.search(text or ""))
+
+
+def adresse_im_gebiet(adresse: str, ort: str = "") -> bool:
+    """
+    Für Quellen aus einem größeren Umkreis (Stagedates, Ticketmaster): Steht eine PLZ in der Adresse, entscheidet sie.
+    Sonst muss die Stadt (letzter Abschnitt der Adresse, dann der Ortsname) als ganzes Wort im Gebiet liegen.
+    """
+    plzs = _PLZ.findall(adresse or "")
+    if plzs:
+        return plz_im_gebiet(plzs[-1])
+    letzter = (adresse or "").split(",")[-1]
+    return stadt_im_gebiet(letzter) or stadt_im_gebiet(ort)
+
+
 def _norm(t: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\wäöüß ]+", " ", t.lower())).strip()
 

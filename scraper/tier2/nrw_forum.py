@@ -16,7 +16,7 @@ from typing import Optional
 from urllib.parse import urljoin
 
 from config import vorschau_ende
-from scraper.utils.ticket_link import ticket_link
+from scraper.utils.ticket_link import ticket_link, ticket_link_haus
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +111,8 @@ def _ticket_url(href: Optional[str]) -> Optional[str]:
         if url:
             return url
         absolut = urljoin(BASE_URL + "/", href.strip())
-        if absolut.startswith(("http://", "https://")) and "/shop/" in absolut and "rausgegangen." not in absolut:
-            return absolut
+        if "/shop/" in absolut and ticket_link_haus(absolut):
+            return ticket_link_haus(absolut)
     except Exception as fehler:  # Ticket-Link ist Zusatz – darf den Termin nie verhindern
         logger.debug("NRW-Forum: Ticket-Link nicht lesbar: %s", fehler)
     return None
