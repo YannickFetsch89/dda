@@ -160,6 +160,32 @@ def _freigeben(db, z: dict) -> None:
         logger.error(f"Newsletter-Bestätigung: Freigeben gescheitert ({type(e).__name__})")
 
 
+LEERRAUM = " \r\n\t"  # dieselben Zeichen wie tr -d in deploy.yml
+
+
+def token_schluessel(roh: Optional[str]) -> tuple[str, int]:
+    """
+    Schlüssel wie auf der Website: deploy.yml schreibt NEWSLETTER_TOKEN_SCHLUESSEL ohne JEDEN Leerraum
+    (tr -d ' \r\n\t', Reparatur vom 23.11.2026). Hier vorher nur strip() → steckte ein Zeilenumbruch mitten im
+    Secret, rechneten Job und Website mit verschiedenen Schlüsseln und jeder Bestätigungslink war ungültig
+    (Livetest 24.11.2026). Rückgabe: Schlüssel und Zahl der entfernten Zeichen IM Wert (fürs Log, ohne den Wert).
+    """
+    wert = roh or ""
+    innen = sum(1 for z in wert.strip() if z in LEERRAUM)
+    return "".join(z for z in wert if z not in LEERRAUM), innen
+
+
+def _schluessel() -> str:
+    schluessel, innen = token_schluessel(os.getenv("NEWSLETTER_TOKEN_SCHLUESSEL"))
+    if not schluessel:
+        raise SystemExit("Umgebungsvariable NEWSLETTER_TOKEN_SCHLUESSEL fehlt")
+    if innen:
+        logger.warning(f"Newsletter-Bestätigung: {innen} Leerzeichen/Zeilenumbrüche mitten im Schlüssel entfernt "
+                       "(wie die Website) – Secret bei Gelegenheit ohne Umbruch neu speichern")
+    logger.info(f"Newsletter-Bestätigung: Schlüssel mit {len(schluessel)} Zeichen")
+    return schluessel
+
+
 def _umgebung(name: str) -> str:
     wert = os.getenv(name, "").strip()
     if not wert:
@@ -183,7 +209,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         if not a.an:
             raise SystemExit("test braucht --an ADRESSE")
         # Links mit einer ID, die es nicht gibt (die Seiten zeigen dann „ungültig oder abgelaufen“)
-        l = links("00000000-0000-4000-8000-000000000000", _umgebung("NEWSLETTER_TOKEN_SCHLUESSEL"))
+        l = links("00000000-0000-4000-8000-000000000000", _schluessel())
         with _versender() as v:
             v.senden(mail_bauen(a.an, l))
         logger.info("Newsletter-Bestätigung: Testmail gesendet, nichts in der Datenbank geändert")
@@ -196,13 +222,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         offen = (db.table("newsletter_anmeldungen").select("id", count="exact")
                  .is_("bestaetigt_am", "null").is_("bestaetigung_zugestellt_am", "null").lt("mails_gesendet", 3)
                  .limit(1).execute().count) or 0
+        _schluessel()  # nur fürs Log: Länge und ob etwas entfernt werden musste
         logger.info(f"Newsletter-Bestätigung Probelauf: {offen} Anmeldungen warten auf die Mail, nichts gesendet")
         return 0
 
     if os.getenv("NEWSLETTER_AKTIV", "") != "1":
         logger.info("Newsletter-Bestätigung: NEWSLETTER_AKTIV ist nicht 1 – kein Versand")
         return 0
-    schluessel = _umgebung("NEWSLETTER_TOKEN_SCHLUESSEL")
+    schluessel = _schluessel()
     zahlen = versenden(db, _versender, schluessel)
     geloescht = db.rpc("newsletter_aufraeumen", {}).execute().data or 0
     logger.info(f"Newsletter-Bestätigung: {zahlen['beansprucht']} beansprucht, {zahlen['gesendet']} gesendet, "

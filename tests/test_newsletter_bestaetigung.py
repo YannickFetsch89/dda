@@ -23,6 +23,20 @@ class Tokens(unittest.TestCase):
         self.assertIn("/api/newsletter/abmelden/", l["one_click"])
 
 
+class Schluessel(unittest.TestCase):
+    """Livetest 24.11.2026: Bestätigungslinks ungültig. deploy.yml entfernt für die Website JEDEN Leerraum aus dem
+    Secret (tr -d ' \\r\\n\\t'), der Job muss denselben Schlüssel rechnen."""
+
+    def test_umbruch_mitten_im_secret_wie_website(self):
+        schluessel, innen = nb.token_schluessel("testschl\nuessel\n")
+        self.assertEqual((schluessel, innen), ("testschluessel", 1))
+        self.assertEqual(nb.token(ID, nb.ZWECK_BESTAETIGEN, schluessel), f"{ID}.fsGeRv_rV1jKlVNHfzGT4pIANAPYL-BZMiTKbOt0FL0")
+
+    def test_sauberes_secret_unveraendert(self):
+        self.assertEqual(nb.token_schluessel(" testschluessel\r\n"), ("testschluessel", 0))
+        self.assertEqual(nb.token_schluessel(None), ("", 0))
+
+
 class Mail(unittest.TestCase):
     def test_kopfzeilen_und_inhalt(self):
         m = nb.mail_bauen("person@example.org", nb.links(ID, S))
