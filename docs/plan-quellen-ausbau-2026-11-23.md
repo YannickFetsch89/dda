@@ -90,7 +90,7 @@ Website:
 |---|---|---|---|
 | Q1 | Rangfolge der Quellen | Haus 1 · Ticketverkauf 2 · offizielle Portale 3 · Aggregatoren 4 · Rausgegangen 5; besserer Rang wird Hauptquelle, auch nachträglich | 4.1, 4.2 |
 | Q2 | Alle Quellen eines Events speichern (`events.quellen`) | ja | 4.3 |
-| Q3 | Events, die nur Rausgegangen kennt | behalten; Knopf weiter auf Rausgegangen, zusätzlich „Website von <Ort>“ (a) | 4.4 |
+| Q3 | Events, die nur Rausgegangen kennt | behalten; Button weiter auf Rausgegangen, zusätzlich „Website von <Ort>“ (a) | 4.4 |
 | Q4 | Rausgegangen-Event an einem Ort mit eigenem Scraper, ohne Treffer | behalten und als Lücke melden (a) | 4.5 |
 | Q5 | Wann Rausgegangen abschalten? | nicht in diesem Plan; Kennzahl „nur Rausgegangen < 5 % über drei Läufe“ als Signal | 4.6 |
 | Q6 | Ticketing | Ticketmaster, Eventim, Reservix, ADticket, Stagedates ja; Songkick nein (**Auftraggeber 24.11.: alle Partner-Anbieter anbinden**) | 5.1, 5.5 |
@@ -245,7 +245,7 @@ Unbekannte `quelle_name` (neuer Scraper ohne Eintrag) → Rang 1, wenn der Scrap
 3. **Dubletten-Vorschläge** (`dubletten_sql.paare_finden`, `vorschlaege.py`): Sortierung „Status-Zusatz, Rang, älterer Eintrag“ statt „Status-Zusatz, Aggregator, älterer Eintrag“. Behalten wird also der Eintrag mit dem besseren Rang.
 4. **Einmaliges Nachziehen** (`rausgegangen_nachziehen.py`): wird auf den Rang umgestellt und heißt dann `pipeline/quellen_nachziehen.py` (altes Modul bleibt als dünner Aufruf, damit Doku-Verweise stimmen). Lauf nach jedem größeren Schritt in Abschnitt 7, erst als Probelauf (Bericht), dann `--schreiben` mit OK.
 
-Abstimmung mit dem Admin-Plan: `database/client.py` und `pipeline/vorschlaege.py` sind dort gerade in Arbeit (Stufen 1d/2). Schritt R1 (Abschnitt 7) wird erst begonnen, wenn die laufende Admin-Stufe gepusht ist, und baut auf dem dann aktuellen Stand auf.
+Abstimmung mit dem Admin-Plan: Der Admin-Plan ist seit 24.11. komplett live (Stufe 6, `3f6a7ab`). Er hat `database/client.py` (Feldschutz `redaktion_felder`), `pipeline/vorschlaege.py` (Dubletten-, Gebiets- und Orte-Vorschläge) und „Quellen an/aus“ (Stufe 5b, `3333855`) eingeführt. R1 baut auf diesem Stand auf und muss alle drei berücksichtigen.
 
 ### 4.3 Alle Quellen eines Events merken (Q2)
 
@@ -261,8 +261,8 @@ SQL (`database/quellen_spalte_<datum>.sql`, führt der Auftraggeber **vor** dem 
 ### 4.4 Was mit Events passiert, die nur Rausgegangen kennt (Q3)
 
 Vorschlag: **behalten**, aber
-- Der Hauptknopf „Zum Termin“ zeigt weiter auf die Rausgegangen-Seite (sie ist die einzige Seite mit Ticket-/Detailinfos zu genau diesem Termin). **Zusätzlich**, wenn der Ort in `orte` eine `webseite` hat: Link „Website von <Ort>“ über dem Quellenhinweis.
-- Alternative Q3-b: Hauptknopf auf die Website des Ortes, Rausgegangen nur als kleiner Hinweis „gefunden bei Rausgegangen“. Nachteil: Die Ortswebsite nennt den Termin oft nicht; Nutzer finden nichts.
+- Der Haupt-Button „Zum Termin“ zeigt weiter auf die Rausgegangen-Seite (sie ist die einzige Seite mit Ticket-/Detailinfos zu genau diesem Termin). **Zusätzlich**, wenn der Ort in `orte` eine `webseite` hat: Link „Website von <Ort>“ über dem Quellenhinweis.
+- Alternative Q3-b: Haupt-Button auf die Website des Ortes, Rausgegangen nur als kleiner Hinweis „gefunden bei Rausgegangen“. Nachteil: Die Ortswebsite nennt den Termin oft nicht; Nutzer finden nichts.
 
 ### 4.5 Rausgegangen-Events an Orten mit eigener Quelle (Q4)
 
@@ -430,7 +430,7 @@ Events > 60 Tage zeigen auf Karten und Eventseite ein kleines Label mit Monat un
 
 ### 6.3 Quell-Link auf der Eventseite (`web/app/event/[kategorie]/[slug]/page.tsx:282–300`)
 
-- Hauptknopf „Zum Termin“ → `quelle_url` (ist nach Abschnitt 4 immer die beste Quelle).
+- Haupt-Button „Zum Termin“ → `quelle_url` (ist nach Abschnitt 4 immer die beste Quelle).
 - **Neu:** zweiter Button „Tickets“ nach den Regeln in 5.5.3 (`ticket_url` des Hauses, sonst Rang-2-Quelle aus `quellen`). Ohne beide Angaben entfällt der Button.
 - Rausgegangen-Events: siehe 4.4.
 - „Quelle: …“ bleibt wie heute die Hauptquelle.
@@ -529,14 +529,12 @@ Antworten des Auftraggebers vom 24.11.2026:
 
 ---
 
-## Anhang A: Cursor-Prüf-Prompt (dritte Fassung des Plans)
+## Anhang A: Prüfliste für die Cursor-Runden
+
+Die Prüfschleife steht in Anhang B. Diese Liste ist der Mindestumfang der ersten Runde.
 
 ```
-Prüfe den Plan `docs/plan-quellen-ausbau-2026-11-23.md` (Quellen-Ausbau: Venues direkt, Rausgegangen zuletzt,
-Ticketing mit bis zu 12 Monaten Vorlauf, Partner-Links mit Provision) gegen den tatsächlichen Code im Repo. Ändere keinen Code und keinen
-Plan – nur Befunde.
-
-Prüfe bitte:
+Prüfe mindestens:
 1. Abschnitt 1.3/4.2: Stimmt die Beschreibung des heutigen Vorrangs (pipeline/deduplication.py `_events_mergen`,
    database/client.py `_anreicherungs_update_bauen`, pipeline/dubletten_sql.py `paare_finden`,
    pipeline/vorschlaege.py, pipeline/rausgegangen_nachziehen.py)? Gibt es weitere Stellen, die Quellen
@@ -566,12 +564,32 @@ Prüfe bitte:
    (5.5.3) eindeutig, und gibt es Stellen außer der Eventseite, die `quelle_url` als Kauf-Link zeigen (Karten,
    Merkliste, Konto, Mails, Magazin), an denen Partner-Links ungewollt auftauchen oder fehlen?
 8. Widersprüche zwischen den Abschnitten, fehlende Tests, Reihenfolge der Schritte in Abschnitt 7 (insbesondere
-   Konflikte mit dem laufenden Admin-Plan docs/plan-admin-dashboard-2026-11-23.md, der dieselben Dateien ändert).
+   Zusammenspiel mit dem inzwischen kompletten Admin-Bereich docs/plan-admin-dashboard-2026-11-23.md:
+   Feldschutz, Vorschläge, „Quellen an/aus“ aus Stufe 5b).
 
-Ausgabe je Befund: Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile) · Befund ·
-Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die Entscheidungen Q1–Q22
-trifft der Auftraggeber; sie sind nicht Gegenstand der Prüfung, wohl aber ihre technische Umsetzbarkeit.
 ```
+
+## Anhang B: Prüfschleife Cursor ↔ Claude (ab 24.11.2026)
+
+Ablauf (Wunsch des Auftraggebers vom 24.11.): Cursor prüft den kompletten Plan kritisch gegen den Code und **ändert den Plan selbst**. Danach meldet Cursor die Änderungen, der Auftraggeber gibt die Meldung an Claude weiter, Claude prüft jede Änderung gegen den Code und nimmt sie an, passt sie an oder nimmt sie mit Begründung zurück. Das geht hin und her, bis eine Runde keine kritischen und keine mittleren Befunde mehr ergibt und beide Seiten zustimmen.
+
+Regeln für beide Seiten:
+- Arbeitsordner ist der Worktree `C:\Claude_DDD\DD-quellen` (Branch `claude/plan-quellen-ausbau`, auf dem Stand von origin). Den Hauptordner `C:\Claude_DDD\DD` nicht anfassen; dort liegen offene Änderungen anderer Sessions.
+- Geändert werden nur diese Plan-Datei und `docs/partner-anfragen-2026-11-24.md`. Kein Code, kein SQL ausführen, kein Commit, kein Push. Claude committet nach seiner Prüfung, gepusht wird erst mit OK des Auftraggebers.
+- Die Entscheidungen Q1–Q22 hat der Auftraggeber getroffen. Sie werden nicht still geändert. Trägt eine technisch nicht, kommt sie als „Rückfrage an den Auftraggeber“ in die Runde.
+- Jede Tatsachenbehauptung über den Code mit `Datei:Zeile` belegen. Keine Zahlen erfinden; Unbekanntes als offen kennzeichnen.
+- Sprache: Deutsch, Projektbegriffe wie im Plan, „Button“ statt „Knopf“, Nutzertexte per du, Datenschutzerklärung per Sie.
+
+Protokoll je Runde (wird unten angehängt):
+
+| Runde | Wer | Nr. | Schweregrad | Abschnitt | Befund | Änderung im Plan | Status |
+|---|---|---|---|---|---|---|---|
+
+Status-Werte: `geändert` (Cursor) · `angenommen` / `angepasst` / `zurückgenommen` (Claude, mit Begründung) · `Rückfrage Auftraggeber`.
+
+### Runden
+
+(noch keine)
 
 ## Prüfhistorie
 
@@ -579,3 +597,4 @@ trifft der Auftraggeber; sie sind nicht Gegenstand der Prüfung, wohl aber ihre 
 - 24.11.2026: Antworten des Auftraggebers eingearbeitet (10), Provisions-Recherche (5.4), Namensvorschläge (6.4), Q18–Q19 neu
 - 24.11.2026: dritte Fassung – Auftraggeber: alle Partner-Anbieter anbinden → 5.5, Q19–Q22, Schritte A1/P1/T2/T3/P2, Tests, Risiken
 - 24.11.2026: dritte Fassung vom Auftraggeber freigegeben. Cursor-Prüfung (Anhang A) steht noch aus; Empfehlung: vor Schritt R1.
+- 24.11.2026: Worktree auf origin (3f6a7ab, Admin-Plan komplett) gesetzt; Anhang A zur Prüfliste, Anhang B Prüfschleife Cursor ↔ Claude; „Knopf“ → „Button“
