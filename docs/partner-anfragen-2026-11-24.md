@@ -21,7 +21,7 @@ Zum Plan `docs/plan-quellen-ausbau-2026-11-23.md`, Abschnitt 5.5.1. Entwürfe vo
 > writing that combining Discovery API data with affiliate links from the Impact program is permitted for us?
 >
 > Planned use:
-> - event title, date, venue, image and link on our event pages, refreshed every three days, no ticket sales on our
+> - event title, date, venue and link on our event pages, refreshed every three days, no ticket sales on our
 >   side and no price comparison;
 > - a clearly marked "Tickets" button with the affiliate link;
 > - removal within 24 hours on request.
