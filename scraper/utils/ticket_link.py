@@ -69,6 +69,15 @@ def _host(url: str) -> str:
         return ""
 
 
+def _mit_benutzer(url: str) -> bool:
+    """„https://www.eventim.de@evil.com/“ führt zu evil.com – solche Adressen nie übernehmen (Cursor-Prüfung)."""
+    try:
+        teile = urlparse(url)
+        return bool(teile.username or teile.password)
+    except ValueError:
+        return True
+
+
 def _anbieter_domain(host: str) -> Optional[str]:
     """Passende Domain aus ANBIETER für einen Host (auch Subdomains), sonst None."""
     for domain in ANBIETER:
@@ -96,7 +105,7 @@ def ticket_link(url: Optional[str], basis: Optional[str] = None) -> Optional[str
     if url.startswith(("mailto:", "tel:", "javascript:", "#")):
         return None
     absolut = urljoin(basis, url) if basis else url
-    if not absolut.startswith(("http://", "https://")):
+    if not absolut.startswith(("http://", "https://")) or _mit_benutzer(absolut):
         return None
     return absolut if anbieter(absolut) else None
 
@@ -130,7 +139,7 @@ def ticket_link_haus(url: Optional[str], basis: Optional[str] = None) -> Optiona
     if url.lower().startswith(("mailto:", "tel:", "javascript:", "#")):
         return None
     absolut = urljoin(basis, url) if basis else url
-    if not absolut.startswith(("http://", "https://")):
+    if not absolut.startswith(("http://", "https://")) or _mit_benutzer(absolut):
         return None
     host = _host(absolut)
     if not host or any(host == g or host.endswith("." + g) for g in GESPERRT):

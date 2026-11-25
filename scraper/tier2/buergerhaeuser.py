@@ -217,8 +217,10 @@ def _daten_aus_zeile(zeile: str) -> tuple[list[date], str]:
     daten: list[date] = []
     for treffer in _DATUMSLISTE.finditer(zeile):
         jahr = int(treffer.group(4))
+        letzter_monat = int(treffer.group(3))
         for t, m in _TAG_MONAT.findall(treffer.group(1) or ""):
-            d = _datum(int(t), int(m), jahr)
+            # „28.12., 4.1.2027“: ein Monat nach dem letzten Datum liegt im Vorjahr (Cursor-Prüfung Welle C)
+            d = _datum(int(t), int(m), jahr - 1 if int(m) > letzter_monat else jahr)
             if d:
                 daten.append(d)
         d = _datum(int(treffer.group(2)), int(treffer.group(3)), jahr)

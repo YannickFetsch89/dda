@@ -181,7 +181,9 @@ def scrape() -> list[dict]:
             # Nur Termine mit gelesener Detailseite: erst dort steht der Ort – ohne sie bekäme ein Campus-Termin die
             # Adresse am Schadowplatz (Cursor-Prüfung V2). MAX_DETAILS begrenzt die Abrufe, nicht die Ortsprüfung.
             if i >= MAX_DETAILS:
-                logger.info("HdU: Obergrenze von %d Detailseiten erreicht – restliche Termine im nächsten Lauf", MAX_DETAILS)
+                # Die Liste ist chronologisch: spätere Termine kommen dran, sobald sie unter die nächsten MAX_DETAILS rücken
+                logger.warning("HdU: Obergrenze von %d Detailseiten erreicht – %d spätere Termine in diesem Lauf nicht übernommen",
+                               MAX_DETAILS, len(roh) - i)
                 break
             detail = seite_abrufen(event["quelle_url"], logger, wartezeit=WARTEZEIT)
             if not detail:
