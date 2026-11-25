@@ -32,7 +32,7 @@ class TestLvrCromford(unittest.TestCase):
             self.assertEqual(e["ort"], "LVR-Industriemuseum Textilfabrik Cromford")
             self.assertEqual(e["adresse"], "Cromforder Allee 24, 40878 Ratingen")
             self.assertTrue(e["quelle_url"].startswith("https://www.lvr.de/industriemuseum/textilfabrik-cromford/"))
-            self.assertEqual(e["ticket_url"], "https://www.shop.industriemuseum.lvr.de")
+            self.assertIsNone(e["ticket_url"])  # nur Shop-Startseite, kein Link je Termin
             self.assertTrue(e["bild_url"].startswith("https://lvr.gomus.de/"))
             self.assertIsNone(e["beschreibung"])
             self.assertEqual(e["quelle_name"], "LVR-Industriemuseum Cromford")

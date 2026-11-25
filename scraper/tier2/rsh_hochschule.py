@@ -49,8 +49,8 @@ MAX_DETAILS = 100
 
 # Säle und Räume der Hochschule selbst (leerer Ort = Hochschule)
 _HAUS_RAEUME = re.compile(
-    r"partika|kammermusiksaal|ensembleraum|campus der hochschule|studio transmediale|schumann hochschule|"
-    r"\bhochschule\b|fischerstra|tonstudio|orgelsaal|raum [a-z]?_?\d", re.I)
+    r"partika|kammermusiksaal|ensembleraum|campus der hochschule|studio transmediale|schumann[- ]hochschule|"
+    r"fischerstra|tonstudio|orgelsaal|raum [a-z]?_?\d", re.I)  # nicht das bloße Wort „Hochschule“ (Köln …), Cursor V2
 
 # Bekannte Orte in Düsseldorf: Suchmuster → (Ort in der Schreibweise der Ortstabelle, Adresse).
 # Reihenfolge zählt (erster Treffer gewinnt).

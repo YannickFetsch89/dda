@@ -1035,8 +1035,14 @@ Filmwerkstatt 6, Ratinger Hof 20, Boston Club 3, Craft Studio 73, OSLM 21, RLT 1
 LVR 6), davon 167 mit Ticket-Link; Laufzeit zusammen 11,9 Minuten (HdU 5,6 min wegen Crawl-delay, RSH 3 min). Deshalb
 Veranstalter-Beschreibungen 3.600 statt 4.200 s (main.py), damit der Lauf unter 200 Minuten bleibt.
 
-Offen zur Prüfung durch den Auftraggeber: Adresse Globe Neuss (Hammer Landstraße 2), Bilder des LVR von lvr.gomus.de
-(Ticketsystem des LVR – als Website des Hauses gewertet), Ratinger-Hof-Bilder von concertteam.de (Betreiber). Tests
+Adresse Globe Neuss (Hammer Landstraße 2) vom Auftraggeber bestätigt (25.11.). Bilder des LVR von lvr.gomus.de
+(Ticketsystem des LVR) und des Ratinger Hofs von concertteam.de (Betreiber) gelten als Website des Hauses.
+
+Cursor-Prüfung V2 (25.11.2026): deploybar, drei geringe Befunde, alle behoben – Haus der Universität nimmt nur Termine
+mit gelesener Detailseite (sonst bekäme ein Campus-Termin die Adresse am Schadowplatz; `MAX_DETAILS` begrenzt nur die
+Abrufe); LVR Cromford ohne `ticket_url` (nur Shop-Startseite, kein Link je Termin); RSH wertet nur eigene Säle,
+„Schumann-Hochschule“ und Fischerstraße als Haus, nicht das bloße Wort „Hochschule“. Tests
+`tests/test_cursor_v2_2026_11_25.py`. Tests
 876 Python ok.
 
 ## Prüfhistorie

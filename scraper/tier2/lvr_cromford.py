@@ -36,7 +36,6 @@ from zoneinfo import ZoneInfo
 
 from config import vorschau_ende
 from scraper.utils.http_client import seite_abrufen
-from scraper.utils.ticket_link import ticket_link
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +120,8 @@ def _termine_aus_json(daten: dict, heute: date, enddatum: date) -> list[dict]:
             "preis": None,
             "quelle_name": QUELLE_NAME,
             "quelle_url": KALENDER_URL,
-            "ticket_url": ticket_link(hit.get("url")),
+            # Kein Ticket-Link: Der Kalender nennt nur die Startseite des Shops, keinen Link je Termin (Cursor-Prüfung V2)
+            "ticket_url": None,
             "bild_url": _eigenes_bild(bild.get("article_3x2")),
             "bild_generiert": False,
             "status": "neu",

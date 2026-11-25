@@ -178,14 +178,21 @@ def scrape() -> list[dict]:
             if schluessel in gesehen:
                 continue
             gesehen.add(schluessel)
-            if i < MAX_DETAILS:
-                detail = seite_abrufen(event["quelle_url"], logger, wartezeit=WARTEZEIT)
-                if detail:
-                    try:
-                        if not _details_ergaenzen(event, detail):
-                            continue
-                    except Exception as fehler:
-                        logger.warning("HdU: Detailseite nicht lesbar (%s): %s", event["quelle_url"], fehler)
+            # Nur Termine mit gelesener Detailseite: erst dort steht der Ort – ohne sie bekäme ein Campus-Termin die
+            # Adresse am Schadowplatz (Cursor-Prüfung V2). MAX_DETAILS begrenzt die Abrufe, nicht die Ortsprüfung.
+            if i >= MAX_DETAILS:
+                logger.info("HdU: Obergrenze von %d Detailseiten erreicht – restliche Termine im nächsten Lauf", MAX_DETAILS)
+                break
+            detail = seite_abrufen(event["quelle_url"], logger, wartezeit=WARTEZEIT)
+            if not detail:
+                logger.info("HdU: Detailseite nicht erreichbar, Termin ausgelassen: %s", event["quelle_url"])
+                continue
+            try:
+                if not _details_ergaenzen(event, detail):
+                    continue
+            except Exception as fehler:
+                logger.warning("HdU: Detailseite nicht lesbar, Termin ausgelassen (%s): %s", event["quelle_url"], fehler)
+                continue
             events.append(event)
         logger.info("Scraper %s fertig: %d Events gefunden", QUELLE_NAME, len(events))
         return events
