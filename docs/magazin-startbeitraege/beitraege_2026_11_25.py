@@ -142,7 +142,8 @@ FAMILIE = {
     "gueltig_von": date(2026, 12, 1),
     "gueltig_bis": date(2026, 12, 31),
     "naechste_pruefung": date(2026, 12, 8),
-    "ort_slugs": ["weihnachtsmarkt-gerresheim", "weihnachtszauber-areal-boehler-heerdt"],
+    "ort_slugs": ["weihnachtsmarkt-gerresheim", "weihnachtszauber-areal-boehler-heerdt", "maerchen-markt-stadtmitte",
+                  "weihnachtszeit-nordstrasse-pempelfort"],
     "quellen": [
         {"titel": "dies.das.düsseldorf: Familienevents", "url": "https://diesdas.events/kategorie/familie", "abgerufen_am": "2026-11-25"},
         {"titel": "dies.das.düsseldorf: Weihnachtsmärkte", "url": "https://diesdas.events/guides/weihnachtsmaerkte", "abgerufen_am": "2026-11-25"},
@@ -228,7 +229,28 @@ FAMILIE = {
         {"ueberschrift": "Noch mehr Ideen für Familien", "text_md": (
             "Das waren unsere zehn Tipps – im Kalender gibt es noch viel mehr: Kindertheater, Kreativworkshops, "
             "Nikolausaktionen und Familienbrunch. Alle Termine findet ihr gesammelt unter [Familie](/kategorie/familie), "
-            "und was am Wochenende los ist, steht in unserem [Wochenend-Programm](/wochenende).\n\n"
+            "und was am Wochenende los ist, steht in unserem [Wochenend-Programm](/wochenende)."
+        )},
+        {"ueberschrift": "Zum Schluss: Weihnachtsmärkte mit Kindern", "text_md": (
+            "Ein Weihnachtsmarkt gehört für viele Familien einfach zum Dezember – und in Düsseldorf und Umgebung gibt es "
+            "einige, die für Kinder besonders viel zu bieten haben. Neben Gerresheim lohnen sich diese Märkte:\n\n"
+            "- **Märchen-Markt am Schadowplatz:** Auf den Hütten erzählen Schattenrisse bekannte deutsche Märchen neu, "
+            "manche Figuren bewegen sich sogar im Lichtspiel. Wer mit Kindern durch die Innenstadt bummelt, kann hier "
+            "Märchen raten.\n"
+            "- **Riesenrad auf dem Burgplatz:** Aus den geschlossenen, beheizbaren Gondeln geht der Blick über Altstadt, "
+            "Rhein und die beleuchteten Märkte – auch bei Wind und Kälte ein Erlebnis.\n"
+            "- **Kö on Ice:** Auf der Eisbahn an der Königsallee wird auf echtem Eis gelaufen, Schlittschuhe können vor Ort "
+            "geliehen werden, Helme gibt es auf Nachfrage.\n"
+            "- **Weihnachtszeit Nordstraße:** Jeder Montag ist Kids-Day mit Kasperletheater und vergünstigtem Kinderkarussell, "
+            "der dritte Advent ist Familientag.\n"
+            "- **Benrather Weihnachtsdörfchen:** Am Nikolaustag schaut der Nikolaus vorbei – für Kinder ein Höhepunkt.\n"
+            "- **Ratinger Weihnachtsmarkt:** In der Mitte des Marktplatzes dreht sich ein Karussell mit Helikopter, Rennauto "
+            "und Motorrad, und bis zum vierten Advent spielt der Kasperl auf der Marktbühne.\n\n"
+            "Die Öffnungszeiten unterscheiden sich von Markt zu Markt, manche öffnen nur an den Wochenenden. Unser "
+            "Weihnachtsmarkt-Guide zeigt für jeden Tag, welche Märkte geöffnet haben – und mit den Filtern für Karussell und "
+            "Puppenbühne findet ihr schnell die Märkte, auf denen Kinder am meisten Spaß haben.\n\n"
+            "{{ort:maerchen-markt-stadtmitte}}\n\n"
+            "{{ort:weihnachtszeit-nordstrasse-pempelfort}}\n\n"
             "{{guide:weihnachtsmaerkte}}"
         )},
     ],

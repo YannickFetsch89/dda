@@ -44,6 +44,12 @@ def main() -> int:
         p = pruefen(e, b["rubrik"], von, bis, [{"id": i, "pfad": ""} for i in ids], b["hero_bild"])
         p["lauf"] = "claude-code-session"
         woerter = len("\n".join(a["text_md"] for a in b["abschnitte"]).split())
+        # Wie die Admin-Prüfung (web/lib/admin/magazin-pruefung.ts, teilen()): ohne Einbettungszeilen und Überschriften
+        streng = len(" ".join(z for z in md.splitlines() if not z.strip().startswith(("{{", "#"))).split())
+        if streng < 600:
+            p["punkte"].append(f"(d) Text hat nach Admin-Zählung nur {streng} Wörter (600–1800)")
+            p["ergebnis"] = "rot"
+        woerter = f"{woerter} (Admin-Zählung {streng})"
         print(f"{b['slug']}: Prüfung {p['ergebnis']}, {woerter} Wörter, {len(ids)} Events, Titel {len(b['titel'])}, "
               f"Teaser {len(b['teaser'])}, SEO-Titel {len(b['seo_titel'] or '')}")
         for punkt in p["punkte"]:
