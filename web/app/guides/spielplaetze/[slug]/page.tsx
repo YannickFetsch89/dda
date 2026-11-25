@@ -77,9 +77,6 @@ function status(e: Eintrag | undefined): "ja" | "nein" | "teilweise" | null {
   return e.wert;
 }
 
-/** Hinweis bei Geräten aus der KI-Erkennung (Auftraggeber 25.11.2026) */
-const KI_HINWEIS: Record<string, string> = { foto_ki: "auf Besucherfotos erkannt", luftbild_ki: "aus Luftbild" };
-
 function Ausstattung({ sp }: { sp: SpielplatzDaten }) {
   const a = sp.ausstattung ?? {};
   const neben = NEBENGERAETE.filter((g) => status(a[g.wert]) === "ja");
@@ -95,9 +92,6 @@ function Ausstattung({ sp }: { sp: SpielplatzDaten }) {
               <Icon name={s === "ja" ? "check_circle" : s === "nein" ? "cancel" : "help"} className="sp-ausstattung__status" />
               <span className="sp-ausstattung__name">{g.label}<span className="sr-only">: {s ? label[s] : "keine Angabe"}</span></span>
               {!s && <span className="sp-ausstattung__offen" aria-hidden>keine Angabe</span>}
-              {s === "ja" && KI_HINWEIS[a[g.wert]?.quelle ?? ""] && (
-                <span className="sp-ausstattung__offen">{KI_HINWEIS[a[g.wert]!.quelle!]}</span>
-              )}
               <span title={g.label}><Icon name={g.icon} className="sp-ausstattung__icon" /></span>
             </li>
           );
@@ -329,9 +323,6 @@ export default async function SpielplatzDetail(props: Props) {
             </p>
             {sp.osm?.id && (
               <p>Ausstattung teils aus <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a></p>
-            )}
-            {Object.values(sp.ausstattung ?? {}).some((e) => e?.quelle === "foto_ki" || e?.quelle === "luftbild_ki") && (
-              <p>Einige Geräte wurden automatisch auf Besucherfotos bzw. im Luftbild (© Geobasis NRW) erkannt.</p>
             )}
             <p>Angaben ohne Gewähr. Geräte können umgebaut oder gesperrt sein.</p>
           </div>
