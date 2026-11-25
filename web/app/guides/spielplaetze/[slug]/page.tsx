@@ -1,5 +1,5 @@
 // Guide-Detail Spielplatz (Design-Handoff v2, Ansicht 25; Plan docs/plan-spielplaetze-2026-11-12.md, 5.3)
-// Name, Profil, Ausstattung und Notfallnummer stehen außerhalb jeder Suspense-Grenze (erste HTML-Antwort);
+// Name, Profil und Ausstattung stehen außerhalb jeder Suspense-Grenze (erste HTML-Antwort);
 // Cafés und Familien-Events in der Nähe werden nachgeladen.
 // Indexierbar nur mit Profil-Beschreibung und ≥ 2 belegten Geräten (5.4), sonst noindex ohne Canonical.
 export const instant = false;
@@ -46,7 +46,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return seitenMetadaten({
     pfad: spielplatzPfad(ort),
     titel: spielplatzTitel(ort),
-    beschreibung: kurzBeschreibung(sp.beschreibung, 160) ?? `${typInfo(ort).label} ${ortText}: Lage, Größe, Notfallnummer`,
+    beschreibung: kurzBeschreibung(sp.beschreibung, 160) ?? `${typInfo(ort).label} ${ortText}: Lage, Größe, Ausstattung`,
     bild: ortBildUrl(ort) ?? undefined,
     noindex: !ortIndexierbar(ort),
   });
@@ -124,25 +124,6 @@ function Extras({ sp }: { sp: SpielplatzDaten }) {
   );
 }
 
-/** Stand der Angaben (3.2): Sichtung vor Ort hat Vorrang, dann Profil, dann Datenstand der Stadt. */
-function stand(sp: SpielplatzDaten): { text: string; datum: string | null } {
-  const sichtungen = [...Object.values(sp.ausstattung ?? {}), ...Object.values(sp.extras ?? {})]
-    .filter((e) => e?.quelle === "sichtung" && e.stand).map((e) => e.stand!).sort();
-  const letzte = sichtungen.at(-1);
-  if (letzte) return { text: `vor Ort geprüft (${datumText(letzte)})`, datum: letzte };
-  const datum = sp.profil_stand ?? sp.profil?.datum ?? sp.datenstand ?? null;
-  return { text: datum ? datumText(datum) : "unbekannt", datum };
-}
-
-const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-
-/** „13.11.2026“ aus einem ISO-Datum oder Zeitstempel, „Mai 2026“ aus einem Monat (Profil-Stand „2026-05“) */
-function datumText(iso: string): string {
-  const [j, m, t] = iso.slice(0, 10).split("-");
-  if (j && m && t) return `${t}.${m}.${j}`;
-  if (j && m && MONATE[Number(m) - 1]) return `${MONATE[Number(m) - 1]} ${j}`;
-  return iso;
-}
 
 function domain(url: string): string {
   try {
@@ -152,20 +133,29 @@ function domain(url: string): string {
   }
 }
 
+/** Cafés in der Nähe (Auftraggeber 25.11.2026): die drei nächsten im Umkreis von 2 km statt zwei im Umkreis von 1 km */
+const CAFES_ANZAHL = 3;
+const CAFES_UMKREIS_M = 2000;
+
+/** „300 m“, „300 m und 1,2 km“, „300 m, 800 m und 1,2 km“ */
+function aufzaehlung(teile: string[]): string {
+  return teile.length < 2 ? (teile[0] ?? "") : `${teile.slice(0, -1).join(", ")} und ${teile.at(-1)}`;
+}
+
 async function Cafes({ ort }: { ort: DddOrt }) {
   if (ort.latitude == null || ort.longitude == null) return null;
   const p = { lat: ort.latitude, lng: ort.longitude };
   const cafes = (await orteLaden("cafe"))
     .filter((o) => o.typ === "cafe" && o.latitude != null && o.longitude != null)
     .map((o) => ({ o, m: entfernungM(p, { lat: o.latitude!, lng: o.longitude! }) }))
-    .filter((x) => x.m <= 1000)
+    .filter((x) => x.m <= CAFES_UMKREIS_M)
     .sort((a, b) => a.m - b.m)
-    .slice(0, 2);
+    .slice(0, CAFES_ANZAHL);
   if (!cafes.length) return null;
   return (
     <section className="sp-naehe__block sp-naehe__cafes">
       <h3 className="sp-naehe__titel"><span className="sp-naehe__kreis" aria-hidden><Icon name="local_cafe" /></span>Cafés in der Nähe</h3>
-      <p className="muted sp-naehe__zusatz">Perfekt für einen Kaffee danach · {cafes.map((c) => entfernungText(c.m)).join(" und ")} entfernt</p>
+      <p className="muted sp-naehe__zusatz">Perfekt für einen Kaffee danach · {aufzaehlung(cafes.map((c) => entfernungText(c.m)))} entfernt</p>
       <div className="gd-grid sp-naehe__grid" role="list">
         {cafes.map((c) => <OrtKarte key={c.o.id} o={c.o} />)}
       </div>
@@ -225,8 +215,6 @@ export default async function SpielplatzDetail(props: Props) {
   const saison = saisonHinweis(sp);
   const groesse = groesseText(sp);
   const teilBereiche = bereiche(sp);
-  const angaben = stand(sp);
-  const haftungsStand = sp.profil_stand ?? sp.datenstand ?? null; // 6.5: Profil-Stand bzw. Datenstand der Stadt
   const quellen = (sp.profil?.quellen ?? []).filter((u) => /^https:\/\//.test(u)).slice(0, 6);
   const kanonischerSt = kanonischerStadtteil(ort.stadtteil);
 
@@ -293,19 +281,8 @@ export default async function SpielplatzDetail(props: Props) {
             {saison && <InfoZeile icon="water_drop" l1={saison.text} l2={saison.label} />}
           </section>
 
-          {sp.notfallnummer && (
-            <div className="sp-notfall" role="note">
-              <Icon name="emergency" className="sp-notfall__icon" />
-              <p>
-                <strong>Notfallnummer {sp.notfallnummer}</strong> – das ist keine Telefonnummer. Im Notfall die 112 wählen und
-                diese Nummer nennen; sie steht auch auf dem Schild am Spielplatz.
-                <span className="muted sp-notfall__quelle"> Quelle: Stadt Düsseldorf</span>
-              </p>
-            </div>
-          )}
-
+          {/* Notfallnummer und „Stand der Angaben“ entfernt (Auftraggeber 25.11.2026) */}
           <div className="sp-stand muted">
-            <p><b>Stand der Angaben:</b> {angaben.text}</p>
             <p>
               <b>Quellen:</b>{" "}
               {sp.quelle_url ? <a href={sp.quelle_url} target="_blank" rel="noopener noreferrer">Spielplatzdaten der Landeshauptstadt Düsseldorf</a> : sp.quelle === "abenteuer" ? "Angaben des Trägers" : "Spielplatzdaten der Landeshauptstadt Düsseldorf"}
@@ -316,7 +293,7 @@ export default async function SpielplatzDetail(props: Props) {
             {sp.osm?.id && (
               <p>Ausstattung teils aus <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a></p>
             )}
-            <p>Angaben ohne Gewähr, Stand {haftungsStand ? datumText(haftungsStand) : "unbekannt"}. Geräte können umgebaut oder gesperrt sein.</p>
+            <p>Angaben ohne Gewähr. Geräte können umgebaut oder gesperrt sein.</p>
           </div>
         </div>
 

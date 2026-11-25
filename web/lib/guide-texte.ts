@@ -387,7 +387,7 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
         titel: "Woher die Angaben kommen",
         absaetze: [
           "Grundlage ist die Liste der städtischen Spielplätze, die Düsseldorf als offene Daten veröffentlicht – mit Lage, " +
-            "Größe und der Notfallnummer jedes Platzes. Was dort steht, haben wir um Angaben aus OpenStreetMap und aus " +
+            "Größe jedes Platzes. Was dort steht, haben wir um Angaben aus OpenStreetMap und aus " +
             "öffentlichen Quellen wie Stadtteil- und Familienportalen ergänzt. Jedes Gerät, jedes Extra und jede " +
             "Altersangabe auf einer Spielplatz-Seite stützt sich auf so einen Beleg. Wo nichts belegt ist, steht „keine " +
             "Angabe“ – das heißt nicht, dass etwas fehlt. Eine Altersgruppe, die wir nur aus den Geräten ableiten, ist als " +
@@ -454,8 +454,8 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
         frage: "Was bedeutet die Nummer auf dem Spielplatzschild?",
         antwort:
           "Die vierstellige Nummer auf dem Schild ist eine Notfallnummer der Stadt, keine Telefonnummer. Im Notfall " +
-          "wählt ihr die 112 und nennt diese Nummer – dann weiß die Leitstelle sofort, wo der Spielplatz liegt. Auf jeder " +
-          "[Spielplatz-Seite](/guides/spielplaetze) steht die Nummer des Platzes.",
+          "wählt ihr die 112 und nennt diese Nummer – dann weiß die Leitstelle sofort, wo der Spielplatz liegt. Alle Plätze " +
+          "findet ihr auf unserer [Spielplatz-Karte](/guides/spielplaetze).",
       },
       {
         frage: "Gibt es rollstuhlgerechte Spielplätze?",

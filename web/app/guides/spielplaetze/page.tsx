@@ -33,7 +33,7 @@ type SP = Record<string, string | string[] | undefined>;
 
 const TITEL = "Spielplätze in Düsseldorf";
 const BESCHREIBUNG =
-  "Alle öffentlichen Spielplätze in Düsseldorf auf einer Karte – mit Altersgruppe, Ausstattung, Wasser- und Waldspielplätzen, Abenteuerspielplätzen und der Notfallnummer jedes Platzes.";
+  "Alle öffentlichen Spielplätze in Düsseldorf auf einer Karte – mit Altersgruppe, Ausstattung, Wasser- und Waldspielplätzen, und Abenteuerspielplätzen.";
 
 export async function generateMetadata(props: { searchParams: Promise<SP> }): Promise<Metadata> {
   const gefiltert = hatParameter(await props.searchParams);
@@ -58,7 +58,7 @@ function Hero({ anzahl }: { anzahl: number }) {
           <span aria-current="page">Spielplätze</span>
         </nav>
         <h1 className="d">{TITEL}</h1>
-        <p>{anzahl ? `${zahl(anzahl)} Spielplätze – mit Alter, Ausstattung und Notfallnummer` : "Bald verfügbar"}</p>
+        <p>{anzahl ? `${zahl(anzahl)} Spielplätze – mit Alter, Ausstattung und Cafés in der Nähe` : "Bald verfügbar"}</p>
       </div>
     </section>
   );
