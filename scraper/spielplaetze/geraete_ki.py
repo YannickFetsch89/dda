@@ -40,6 +40,7 @@ MAX_FOTOS = 10
 SCHWELLE = 0.8
 SCHWELLE_STRENG = {"karussell": 0.95, "wasserspiel": 0.95}
 LUFT_MERKMALE = {"sandkasten", "fussball", "basketball", "tischtennis"}
+PARALLEL = 4
 KOSTEN_JE_PLATZ = 0.065  # USD, Pilot 25.11.2026: 2,57 $ für 40 Plätze (Fotos + Luftbild)
 WMS = "https://www.wms.nrw.de/geobasis/wms_nw_dop"
 
@@ -142,7 +143,9 @@ def luftbild(lat: float, lon: float) -> bytes | None:
 
 
 def _bild(daten: bytes) -> dict:
-    return {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(daten).decode()}}
+    """Bild-Block; Typ aus den ersten Bytes (manche Google-Vorschaubilder sind PNG trotz .jpg)."""
+    typ = "image/png" if daten[1:4] == b"PNG" else "image/webp" if daten[8:12] == b"WEBP" else "image/jpeg"
+    return {"type": "image", "source": {"type": "base64", "media_type": typ, "data": base64.b64encode(daten).decode()}}
 
 
 def fragen(client, system: str, bilder: list[dict], text: str) -> dict | None:
@@ -178,9 +181,13 @@ def erkennen(dry_run: bool) -> None:
         return
     import anthropic
 
+    from concurrent.futures import ThreadPoolExecutor
+
     client = anthropic.Anthropic()
     CACHE.mkdir(parents=True, exist_ok=True)
-    for i, z in enumerate(offen, 1):
+
+    def ein_platz(nr_z: tuple[int, dict]) -> None:
+        i, z = nr_z
         fotos = fotos_des_platzes(z["id"])
         ergebnis: dict = {"name": z["name"], "fotos_anzahl": len(fotos), "fotos": None, "luft": None}
         if fotos:
@@ -191,9 +198,13 @@ def erkennen(dry_run: bool) -> None:
             ergebnis["luft"] = fragen(client, SYSTEM_LUFT, [_bild(lb)], f"Spielplatz: {z['name']}. Mittelpunkt in der Bildmitte.")
         if (fotos and ergebnis["fotos"] is None) or (lb and ergebnis["luft"] is None):
             logger.error("[%d/%d] %s: Abfrage unvollständig – wird beim nächsten Lauf wiederholt", i, len(offen), z["name"])
-            continue
+            return
         (CACHE / f"{z['id']}.json").write_text(json.dumps(ergebnis, ensure_ascii=False, indent=1), encoding="utf-8")
         logger.info("[%d/%d] %s: %d Fotos, Luftbild %s", i, len(offen), z["name"], len(fotos), "ja" if lb else "nein")
+
+    # Vier Plätze gleichzeitig: einzeln dauert ein Platz rund 40 Sekunden (zwei KI-Abfragen + Luftbild)
+    with ThreadPoolExecutor(max_workers=PARALLEL) as pool:
+        list(pool.map(ein_platz, enumerate(offen, 1)))
 
 
 def sql_schreiben() -> None:
