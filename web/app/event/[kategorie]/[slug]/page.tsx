@@ -31,6 +31,7 @@ import { eventOrtLink, ortZeileLaden } from "@/lib/spielstaetten-daten";
 import { eventQuellenLaden, ortWebsite, ticketZiel } from "@/lib/ticket-button";
 import { RAUSGEGANGEN, TICKETVERKAUF, rangGespeichert } from "@/lib/quellen-rang";
 import { partnerLink } from "@/lib/tickets";
+import { PartnerHinweis } from "@/components/partner-links";
 import { ortPfad } from "@/components/ort-karten";
 import { Krumen } from "@/components/landing";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
@@ -298,21 +299,17 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
             {haupt && !abgelaufen && (
               <a className="btn btn--gold btn--gross btn--block" href={haupt.url} target="_blank" rel={haupt.partner ? "sponsored noopener" : "noopener"}>
                 {eigenerTerminLink && e.uhrzeit ? `Zum Termin um ${e.uhrzeit} Uhr` : "Zur Veranstalter-Seite"}
-                {haupt.partner ? "*" : ""}
                 <Icon name="open_in_new" />
               </a>
             )}
             {tickets && (
               <a className="btn btn--outline btn--gross btn--block" href={tickets.url} target="_blank" rel={tickets.partner ? "sponsored noopener" : "noopener"}>
-                {tickets.partner ? "Tickets*" : "Tickets"}
+                Tickets
                 <Icon name="confirmation_number" />
               </a>
             )}
             {mitPartner && (
-              <p className="partner-hinweis">
-                *Partner-Link: Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich.{" "}
-                <Link href="/ueber#partner-links">Mehr dazu</Link>
-              </p>
+              <PartnerHinweis />
             )}
             {/* Abgelaufen: kein Ticket-Button mehr, nur ein schlichter Verweis auf den Original-Eintrag */}
             {e.quelle_url && abgelaufen && (

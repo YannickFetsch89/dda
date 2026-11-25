@@ -25,7 +25,7 @@ export function PartnerLinksUeber() {
       <span className="overline overline--gold">Transparenz</span>
       <h2 className="d ue-h2">Partner-Links</h2>
       <p>
-        Manche Ticket-Buttons auf unseren Eventseiten sind Partner-Links. Du erkennst sie am Sternchen: „Tickets*“. Kaufst
+        Manche Ticket-Buttons auf unseren Eventseiten sind Partner-Links. Du erkennst sie am Hinweis „Partnerlink“. Kaufst
         du über so einen Link ein Ticket, bekommen wir vom Anbieter eine kleine Provision. Für dich ändert sich nichts –
         der Preis bleibt gleich.
       </p>
@@ -56,7 +56,7 @@ export function PartnerLinksDatenschutz() {
   return (
     <li id="partner-links">
       <b>Partner-Links zu Ticketanbietern:</b> Einige Ticket-Buttons auf Event-Seiten sind Partner-Links, gekennzeichnet
-      mit einem Sternchen („Tickets*“). Sie führen zu {aufzaehlung(alle)}
+      mit dem Hinweis „Partnerlink“. Sie führen zu {aufzaehlung(alle)}
       {netzwerke.length ? `; vermittelt werden sie über die Partnernetzwerke ${aufzaehlung(netzwerke)}` : ""}. Beim
       Aufruf unserer Seiten wird keine Verbindung zu diesen Anbietern aufgebaut; wir setzen dafür keine Cookies und
       erfassen keine Klicks. Erst wenn Sie auf einen solchen Link klicken, werden Sie
@@ -68,5 +68,25 @@ export function PartnerLinksDatenschutz() {
       Person. Rechtsgrundlage für das Bereitstellen der Links ist unser berechtigtes Interesse an der Finanzierung
       dieses Angebots (Art. 6 Abs. 1 lit. f DSGVO).
     </li>
+  );
+}
+
+/**
+ * Kennzeichnung direkt am Button (Entscheidung des Auftraggebers 25.11.2026): nur „Partnerlink“ und ein „i“, das die
+ * Erklärung als Tooltip zeigt. Ohne JavaScript: <details> öffnet per Tippen (Handy), per Maus zusätzlich beim
+ * Darüberfahren (CSS), per Tastatur mit Enter.
+ */
+export function PartnerHinweis() {
+  return (
+    <div className="partner-hinweis">
+      <span>Partnerlink</span>
+      <details className="partner-info">
+        <summary aria-label="Was ist ein Partnerlink?">i</summary>
+        <span className="partner-info__text" role="note">
+          Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich.{" "}
+          <a href="/ueber#partner-links">Mehr dazu</a>
+        </span>
+      </details>
+    </div>
   );
 }

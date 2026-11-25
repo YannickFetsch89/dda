@@ -1,6 +1,7 @@
 # Partner-Links – Texte zur Freigabe durch den Anwalt (Plan Quellen-Ausbau 5.5.5, Schritt P2)
 
-Stand 24.11.2026. Die Texte stehen im Code (`web/components/partner-links.tsx`, Eventseite
+Stand 24.11.2026. **Freigabe:** Abschnitt (2) und (3) vom Anwalt freigegeben (Mitteilung des Auftraggebers
+25.11.2026); (1) in der geänderten Form unten nach Entscheidung des Auftraggebers. Die Texte stehen im Code (`web/components/partner-links.tsx`, Eventseite
 `web/app/event/[kategorie]/[slug]/page.tsx`) und erscheinen **erst**, wenn die GitHub-Variable `PARTNERLINKS_AKTIV=1`
 gesetzt ist und mindestens eine Partner-Kennung hinterlegt ist. Sie nennen automatisch nur die Programme, die wirklich
 aktiv sind. Unten die Fassung, wenn **alle** Programme aktiv sind.
@@ -22,16 +23,17 @@ Datenschutzerklärung. Änderungswünsche bitte direkt im Text markieren.
 
 ## (1) Kennzeichnung am Button (Eventseite, du)
 
-Button „Tickets\*“ (bzw. „Zur Veranstalter-Seite\*“, wenn die Hauptquelle selbst ein Ticketanbieter ist), direkt
-darunter klein:
+**Geändert 25.11.2026 auf Wunsch des Auftraggebers** (er trägt ein etwaiges rechtliches Risiko; Vorbild andere
+Websites): Der Button heißt wie bisher „Tickets“ bzw. „Zur Veranstalter-Seite“, ohne Sternchen. Direkt darunter steht
+klein „Partnerlink“ mit einem „i“. Tippen oder Darüberfahren zeigt als Tooltip:
 
-> \*Partner-Link: Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich. [Mehr dazu](/ueber#partner-links)
+> Kaufst du darüber, bekommen wir eine Provision. Der Preis bleibt gleich. [Mehr dazu](/ueber#partner-links)
 
 ## (2) Abschnitt „Partner-Links“ auf /ueber (du)
 
 > **Partner-Links**
 >
-> Manche Ticket-Buttons auf unseren Eventseiten sind Partner-Links. Du erkennst sie am Sternchen: „Tickets\*“. Kaufst
+> Manche Ticket-Buttons auf unseren Eventseiten sind Partner-Links. Du erkennst sie am Hinweis „Partnerlink“. Kaufst
 > du über so einen Link ein Ticket, bekommen wir vom Anbieter eine kleine Provision. Für dich ändert sich nichts – der
 > Preis bleibt gleich.
 >
@@ -46,7 +48,7 @@ darunter klein:
 ## (3) Datenschutzerklärung, Abschnitt 9 „Externe Inhalte und Drittanbieter“, neuer Punkt (Sie)
 
 > **Partner-Links zu Ticketanbietern:** Einige Ticket-Buttons auf Event-Seiten sind Partner-Links, gekennzeichnet mit
-> einem Sternchen („Tickets\*“). Sie führen zu Eventim, Reservix, ADticket, Ticketmaster, Tiqets und GetYourGuide;
+> dem Hinweis „Partnerlink“. Sie führen zu Eventim, Reservix, ADticket, Ticketmaster, Tiqets und GetYourGuide;
 > vermittelt werden sie über die Partnernetzwerke Awin (AWIN AG, Berlin) für Eventim, Reservix und ADticket und Impact
 > (Impact Tech, Inc., USA) für Ticketmaster. Beim Aufruf unserer Seiten wird keine Verbindung zu diesen Anbietern
 > aufgebaut; wir setzen dafür keine Cookies und erfassen keine Klicks. Erst wenn Sie auf einen solchen Link klicken,

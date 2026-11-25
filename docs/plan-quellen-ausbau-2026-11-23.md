@@ -975,6 +975,10 @@ Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
   `TIQETS_PARTNER_ID`, `GYG_PARTNER_ID` bei jedem Deploy ausdrücklich in `web/.env.local` (ohne sed). Admin → Technik
   zeigt `PARTNERLINKS_AKTIV` und `TICKETMASTER_PARTNER_OK`.
 - Reihenfolge zum Einschalten: Anwalt gibt die Texte frei → Kennungen setzen → `PARTNERLINKS_AKTIV=1` → Deploy.
+- **25.11.2026:** Texte für /ueber und Datenschutz vom Anwalt freigegeben (Mitteilung des Auftraggebers). Kennzeichnung
+  am Button auf Wunsch des Auftraggebers geändert (er trägt das Risiko): kein Sternchen mehr, darunter nur
+  „Partnerlink“ mit „i“-Tooltip (`PartnerHinweis` in `web/components/partner-links.tsx`, `<details>` ohne JavaScript,
+  auf Geräten mit Maus auch beim Darüberfahren). Im Browser geprüft (lokal mit Testkennung).
 
 ### Cursor-Prüfung der Scraper-Neubauten (24.11.2026, nach T1-Fixes) – Einarbeitung
 
