@@ -379,7 +379,8 @@ async def _schritte_ausfuehren(report: LaufReport):
     # 300 pro Lauf: bei 60 Tagen Vorschau und Lauf alle 3 Tage kommen deutlich mehr neue Events. Nach der Umstellung auf
     # bis zu 365 Tage je Quelle (Plan Quellen-Ausbau 5.3, Q13) zwei Wochen lang 1.500, um den Rückstand abzubauen.
     limit_kategorien = 1500 if date.today() <= KATEGORIEN_RUECKSTAND_BIS else 300
-    anzahl_kategorisiert = categorizer.kategorisieren(limit=limit_kategorien)
+    # Zeitbudget 30 min (Lauf 25.11.2026: 1.000 Events ≈ 27 min; der ganze Lauf brauchte 234 von 240 min)
+    anzahl_kategorisiert = categorizer.kategorisieren(limit=limit_kategorien, max_sekunden=1800)
     logger.info("Kategorisierung: %d Events verarbeitet", anzahl_kategorisiert)
     report.kennzahl(kategorisiert=anzahl_kategorisiert)
 

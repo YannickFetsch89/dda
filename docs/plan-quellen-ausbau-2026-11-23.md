@@ -1098,6 +1098,30 @@ mit echten fernen Events**. Zwei mittlere und drei geringe Befunde, alle behoben
    das Vorjahr.
 Tests: `tests/test_cursor_gesamt_2026_11_25.py`, `web/tests/tickets.test.ts` (Benutzername); Python 913, Web 732 ok.
 
+### Volllauf 25.11.2026 und Fixes danach (lokal gebaut)
+
+Manueller Volllauf 45611523099 auf b64852a: erfolgreich, aber **234 von 240 min** (Scraper 55, DB 37,
+Kategorisierung 27, Beschreibungen 100 – beide Budgets voll, Captions 7). Bestand künftig 1.529 → 5.102; Rang 1
+964 → 3.334, nur Rausgegangen 110 → 290 (langer Rest, 183 Orte), ab Tag 61 0 → 1.976, mit `ticket_url` 12 → 1.282.
+Auswertung im Notizordner (`volllauf-2026-11-25.md`). Der Auftraggeber wartet den nächsten Lauf ab, bevor die
+Beschreibungs-Budgets gekürzt werden (erster Lauf mit 12 Monaten schrieb ungewöhnlich viele neue Events).
+Website W1/W2/P2 (aus) + Cockpit + Ausblick-Eingrenzung LIVE d51cbf8.
+
+Vier Fixes aus der Durchsicht:
+1. **Ticketmaster-Parkangebote am Ort:** „Muse …“ im Ort „Tiefgarage PSD BANK DOME“ war ein Parkticket. `_PARKORT`
+   (Ort beginnt mit Tiefgarage/Parkhaus/Parkplatz/Parkdeck/Parking) → kein Event.
+2. **Doppel nach Titeländerung:** „Lichterkinder // Live - Millionen Sterne Tour 2026“ (Bestand) und „Lichterkinder“
+   (neu, gleiche Seite der Mitsubishi Electric Halle, 15:30) – Schritt 1 (gleicher Titel) und 3 (Ähnlichkeit) griffen
+   nicht. Neuer **Schritt 2b** in `events_speichern`: gleiche Quell-Adresse (`quelle_url` oder eine URL aus `quellen`)
+   am selben Tag zur selben Uhrzeit, nur bei genau einem Treffer (`gleiche_quell_url`). Das vorhandene Doppel am
+   28.11. bleibt stehen (Termin ist in drei Tagen vorbei).
+3. **VIP-Preis:** VisitDüsseldorf nennt bei „Bullet For My Valentine“ nur 304,90 € (VIP-Paket). Ein einzelner Preis
+   ohne „ab“ über `EINZELPREIS_HOECHSTENS` = 200 € wird nicht übernommen.
+4. **Kategorisierung:** „max. 1500“, aber PostgREST liefert je Abfrage höchstens 1.000 Zeilen. Jetzt seitenweise
+   (`range`, sortiert nach Datum und id) und mit **Zeitbudget 30 min** (`max_sekunden=1800`), damit der Lauf nicht
+   länger wird als heute.
+Tests: `tests/test_lauf_2026_11_25_fixes.py` (16); Python 929 ok.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

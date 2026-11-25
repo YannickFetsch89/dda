@@ -140,6 +140,11 @@ _ZUSATZANGEBOT = re.compile(
     r"\bparken\b|hotel ?package|merch(andise)? ?bundle", re.IGNORECASE)
 
 
+# Parkangebote als eigener „Veranstaltungsort“ (Lauf 25.11.2026: „Muse – The Wow! Signal Europa Tour“ im Ort
+# „Tiefgarage PSD BANK DOME“) – der Titel ist der des Konzerts, nur der Ort verrät das Parkticket
+_PARKORT = re.compile(r"^\s*(tiefgarage|parkhaus|parkplatz|parkdeck|parking)\b", re.IGNORECASE)
+
+
 def _im_gebiet(stadt: str) -> bool:
     """Liegt die Stadt des Veranstaltungsorts in Düsseldorf, Neuss oder Ratingen? (ganzes Wort)"""
     from pipeline.gebiet import stadt_im_gebiet
@@ -199,6 +204,9 @@ def _event_parsen(event: dict, heute: date) -> Optional[dict]:
         ort = venue.get("name", "").strip()
         if not ort:
             logger.warning("Kein Ort für Event '%s' – wird übersprungen.", titel)
+            return None
+        if _PARKORT.search(ort):
+            logger.debug("Ticketmaster: Parkangebot übersprungen: %s (%s)", titel, ort)
             return None
 
         # Gebiet: Der Umkreis von 25 km reicht bis Duisburg, Krefeld, Haan … (Test 24.11.2026: 98 von 161 Events im

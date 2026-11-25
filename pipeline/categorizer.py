@@ -8,6 +8,7 @@ import logging
 import os
 import time
 from datetime import date
+from typing import Optional
 
 import anthropic
 from dotenv import load_dotenv
@@ -151,14 +152,16 @@ WIEDERKEHREND: ja/nein"""
         return None, None, None
 
 
-def kategorisieren(limit: int = 10) -> int:
+def kategorisieren(limit: int = 10, max_sekunden: Optional[float] = None) -> int:
     """
     Lädt Events mit status='neu' aus Supabase und kategorisiert sie mit Claude Haiku.
     Aktualisiert Beschreibung und ggf. korrigierte Kategorie in Supabase.
     Status bleibt 'neu' – Kategorisierung ist kein eigener Status-Schritt.
 
     Args:
-        limit: Maximale Anzahl zu verarbeitender Events
+        limit: Maximale Anzahl zu verarbeitender Events (seitenweise geladen – PostgREST liefert je Abfrage
+            höchstens 1.000 Zeilen; Lauf 25.11.2026: „max. 1500“, aber nur 1.000 geladen)
+        max_sekunden: Zeitbudget; danach hören die KI-Aufrufe auf, der Rest kommt im nächsten Lauf
 
     Returns:
         Anzahl erfolgreich verarbeiteter Events
@@ -179,18 +182,28 @@ def kategorisieren(limit: int = 10) -> int:
 
     # Events mit status='neu' laden (inkl. datum_bis für Signal-1-Erkennung)
     try:
-        ergebnis = (
-            db.table("events")
-            .select("id, titel, ort, datum, datum_bis, preis, kategorie, redaktion_felder")
-            .eq("status", "neu")
-            .is_("beschreibung", "null")
-            # Nächste Events zuerst, vergangene nicht mehr kategorisieren
-            .gte("datum", date.today().isoformat())
-            .order("datum")
-            .limit(limit)
-            .execute()
-        )
-        events = ergebnis.data
+        events: list[dict] = []
+        seite = 1000
+        while len(events) < limit:
+            von = len(events)
+            bis = min(von + seite, limit) - 1
+            ergebnis = (
+                db.table("events")
+                .select("id, titel, ort, datum, datum_bis, preis, kategorie, redaktion_felder")
+                .eq("status", "neu")
+                .is_("beschreibung", "null")
+                # Nächste Events zuerst, vergangene nicht mehr kategorisieren; id als zweiter Schlüssel,
+                # damit die Seiten bei gleichem Datum stabil bleiben
+                .gte("datum", date.today().isoformat())
+                .order("datum")
+                .order("id")
+                .range(von, bis)
+                .execute()
+            )
+            teil = ergebnis.data or []
+            events.extend(teil)
+            if len(teil) < bis - von + 1:
+                break
     except Exception as e:
         logger.error("Fehler beim Laden der Events aus Supabase: %s", str(e))
         return 0
@@ -202,8 +215,13 @@ def kategorisieren(limit: int = 10) -> int:
     logger.info("%d Events zur Kategorisierung geladen", len(events))
 
     verarbeitet = 0
+    start = time.monotonic()
 
-    for event in events:
+    for nummer, event in enumerate(events):
+        if max_sekunden is not None and time.monotonic() - start > max_sekunden:
+            logger.info("Kategorisierung: Zeitbudget erreicht nach %d von %d Events – Rest im nächsten Lauf",
+                        nummer, len(events))
+            break
         event_id = event.get("id")
         titel = event.get("titel", "?")
 

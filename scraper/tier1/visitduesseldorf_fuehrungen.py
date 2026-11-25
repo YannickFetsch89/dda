@@ -179,12 +179,19 @@ def _treffpunkt(event: dict) -> tuple[str, Optional[str]]:
     return (ort or "Treffpunkt laut Visit Düsseldorf"), adresse
 
 
+EINZELPREIS_HOECHSTENS = 200
+
+
 def _preis(event: dict) -> Optional[str]:
     preis = event.get("price") or {}
     if preis.get("freeEntry"):
         return "kostenlos"
     werte = [p.get("price") for p in preis.get("marketingPrices") or [] if isinstance(p.get("price"), (int, float))]
     if not werte:
+        return None
+    # Ein einzelner, sehr hoher Preis ist meist ein VIP-Paket, kein Eintritt (Lauf 25.11.2026: „Bullet For My
+    # Valentine“ nur mit 304,90 €) – dann lieber keinen Preis, das Haus oder eine andere Quelle ergänzt ihn
+    if len(werte) == 1 and not preis.get("marketingPricePrefix") and werte[0] > EINZELPREIS_HOECHSTENS:
         return None
     betrag = f"{min(werte):.2f}".replace(".", ",").replace(",00", "") + " €"
     return f"ab {betrag}" if len(werte) > 1 or preis.get("marketingPricePrefix") else betrag
