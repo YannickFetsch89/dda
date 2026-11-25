@@ -103,3 +103,10 @@ immer direkt als Secret in GitHub eintragen, nie in den Chat.
    vorhandenen Ticket-Buttons.
 2. Ticketmaster/Impact parallel anstoßen (dauert wegen der schriftlichen Bestätigung).
 3. Reservix-API, Tiqets, GetYourGuide → daraus baue ich T2 und T3.
+
+## Stand der Anmeldungen
+
+- **25.11.2026:** Awin angemeldet, Bewerbungen bei eventim DE, Reservix und ADticket laufen. Impact/Ticketmaster
+  angemeldet, Bewerbung in Prüfung. Tiqets angemeldet, Bewerbung in Prüfung. **GetYourGuide fertig:** Partner-ID
+  `MDZIQUO` (→ Variable `GYG_PARTNER_ID`), **Bilder dürfen verwendet werden** (gilt für T3: `bild_url` aus der
+  GetYourGuide-API erlaubt). Reservix-API-Mail noch offen (optional, siehe Abschnitt 3).
