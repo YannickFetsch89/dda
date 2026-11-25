@@ -1,7 +1,6 @@
 // Seitenrahmen: Header, Kategorie-Leiste, Footer
 import Link from "next/link";
 import { KopfNav, ThemeToggle } from "./client";
-import { DatumPill } from "./datum-waehler";
 import { Icon } from "./karten";
 import { KATEGORIEN, katStil } from "@/lib/kategorien";
 import { eventPoolLaden } from "@/lib/daten";
@@ -28,19 +27,36 @@ export function Kopf() {
     <header className="kopf">
       <div className="container kopf__inner">
         <Wortmarke />
+        {/* Suchfeld nur auf breiten Bildschirmen (ab 1600 px); darunter die Lupe rechts (Auftraggeber 25.11.2026).
+            Den Zeitraum wählt man über „Heute“, „Wochenende“ und den Kalender auf „Entdecken“. */}
         <form className="kopf__suche" action="/entdecken" role="search">
           <Icon name="search" />
           <label className="sr-only" htmlFor="kopf-suche">
             Suche
           </label>
           <input id="kopf-suche" name="q" type="search" placeholder="Events, Orte, Künstler …" />
-          <DatumPill />
         </form>
         <KopfNav />
         <div className="kopf__aktionen">
           <Link href="/entdecken#suche" className="icon-btn nur-mobil" aria-label="Suche">
             <Icon name="search" />
           </Link>
+          {/* 1200–1599 px: Lupe klappt ein breites Suchfeld unter dem Kopf auf */}
+          <details className="kopf__suchklappe">
+            <summary className="icon-btn" aria-label="Suche">
+              <Icon name="search" />
+            </summary>
+            <div className="kopf__suchpanel">
+              <form className="container kopf__suchpanel-form" action="/entdecken" role="search">
+                <Icon name="search" />
+                <label className="sr-only" htmlFor="kopf-suche-klappe">
+                  Suche
+                </label>
+                <input id="kopf-suche-klappe" name="q" type="search" placeholder="Events, Orte, Künstler …" />
+                <button type="submit" className="btn btn--navy">Suchen</button>
+              </form>
+            </div>
+          </details>
           <span className="nur-desktop">
             <ThemeToggle />
           </span>
@@ -49,14 +65,19 @@ export function Kopf() {
           </Link>
           {/* Immer „Mein Konto“: Der Kopf ist statisch, ein wechselnder Text würde nach dem Laden flackern (Plan 7.3).
               Mobil und am Desktop sichtbar, mobil rechts neben der Suche (17.11.2026). */}
+          {/* Mobil das Personen-Symbol, am Desktop der Hauptbutton „mein.düsseldorf“ (Auftraggeber 25.11.2026).
+              „Event melden“ steht dafür im Footer und im Mobilmenü. */}
           {kontenAktiv() && (
-            <Link href="/konto" className="icon-btn" aria-label="Mein Konto" title="Mein Konto">
-              <Icon name="person" />
-            </Link>
+            <>
+              <Link href="/konto" className="icon-btn nur-mobil" aria-label="Mein Konto" title="Mein Konto">
+                <Icon name="person" />
+              </Link>
+              <Link href="/konto" className="btn btn--gold kopf__konto nur-desktop" title="Mein Konto">
+                <Icon name="person" />
+                mein.düsseldorf
+              </Link>
+            </>
           )}
-          <Link href="/event-melden" className="btn btn--gold nur-desktop">
-            Event melden
-          </Link>
           <details className="menue nur-mobil">
             <summary className="icon-btn" aria-label="Menü">
               <Icon name="menu" />

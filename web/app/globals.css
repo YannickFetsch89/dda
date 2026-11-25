@@ -127,6 +127,24 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .kopf__aktionen { gap: 6px; }
   .kopf__suche { min-width: 0; }
 }
+/* Kopf auf 13-/15-Zoll-Laptops (Auftraggeber 25.11.2026): Suchfeld erst ab 1600 px, darunter die Lupe mit
+   aufklappendem Suchfeld; Hauptbutton „mein.düsseldorf“; Kategorienzahlen erst ab 1600 px */
+.kopf__suchklappe { display: none; }
+.kopf__suchklappe > summary { list-style: none; cursor: pointer; }
+.kopf__suchklappe > summary::-webkit-details-marker { display: none; }
+.kopf:has(.kopf__suchklappe[open]) { position: relative; z-index: 70; }
+.kopf__suchpanel { position: absolute; left: 0; right: 0; top: 100%; background: var(--ddd-surface); border-top: 1px solid var(--ddd-border); border-bottom: 1px solid var(--ddd-border); box-shadow: var(--sh-m); padding: 14px 0; }
+.kopf__suchpanel-form { display: flex; align-items: center; gap: 12px; }
+.kopf__suchpanel-form > .icon { color: var(--ddd-text-muted); font-size: 24px; }
+.kopf__suchpanel-form input { flex: 1; min-width: 0; height: 48px; border: 1px solid var(--ddd-border); border-radius: var(--r-pill); background: var(--ddd-bg); padding: 0 18px; font-size: 16px; color: var(--ddd-text); outline: none; }
+.kopf__suchpanel-form input:focus { border-color: var(--ddd-gold); }
+.kopf__suchpanel-form .btn { height: 48px; }
+.kopf__konto { gap: 8px; white-space: nowrap; }
+.kopf__konto .icon { font-size: 20px; }
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .kopf__suchklappe { display: block; }
+  .kopf__suche { display: none !important; }
+}
 @media (min-width: 1200px) and (max-width: 1379px) {
   .kopf__inner { gap: 16px; }
   .kopf__suche .datum-pill { display: none; }
@@ -201,6 +219,17 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .katitem--gratis { flex: 0 0 auto; background: var(--ddd-free-bg); color: var(--ddd-free-fg); font-weight: 700; padding: 6px 14px; }
   .katitem--gratis .katitem__kreis { width: auto; height: auto; background: none; color: inherit; }
   .katitem--gratis .katitem__anzahl { display: none; }
+}
+/* Desktop (Auftraggeber 25.11.2026): ohne Zahlen, Chips so breit wie ihr Name (kein „Stadtf…“) und etwas
+   kompakter; reicht der Platz nicht, scrollt die Leiste waagerecht. Gilt für alle Breiten ab 1200 px, weil die
+   Leiste auf die Inhaltsbreite begrenzt ist und auch auf großen Bildschirmen sonst Namen abschneidet. */
+@media (min-width: 1200px) {
+  .katleiste__inner { overflow-x: auto; gap: 4px; }
+  .katitem { flex: 1 0 auto; gap: 6px; padding: 5px 10px 5px 5px; }
+  .katitem__name { overflow: visible; text-overflow: clip; }
+  .katitem__kreis { width: 26px; height: 26px; }
+  .katitem__kreis .icon { font-size: 15px; }
+  .katitem__anzahl { display: none; }
 }
 
 /* ---------- Tab-Bar mobil ---------- */

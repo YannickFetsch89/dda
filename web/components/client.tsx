@@ -381,7 +381,7 @@ const NAV = [
   { href: "/wochenende", label: "Wochenende" },
   // Magazin (Plan Redaktion 5.9, E10): eigener Punkt hinter „Wochenende“
   ...(MAGAZIN_VERLINKT ? [{ href: "/magazin", label: "Magazin" }] : []),
-  { href: "/stadtteile", label: "Karte" },
+  // „Karte“ steht seit 25.11.2026 im Guides-Menü („Stadtteile & Karte“), damit der Kopf auf 13-Zoll-Laptops passt
 ];
 
 export const GUIDE_LINKS = [
@@ -416,7 +416,7 @@ function KopfNavListe({ pfad }: { pfad: string | null }) {
       ))}
       {/* Guides: Übersicht und die fertigen Hubs als Aufklappmenü */}
       <details className="kopf__guides">
-        <summary className={istAktiv(pfad, "/guides") ? "is-aktiv" : ""}>
+        <summary className={istAktiv(pfad, "/guides") || istAktiv(pfad, "/stadtteile") ? "is-aktiv" : ""}>
           Guides<span className="icon" aria-hidden data-icon="expand_more" />
         </summary>
         <div className="kopf__guides-menue">
@@ -425,6 +425,9 @@ function KopfNavListe({ pfad }: { pfad: string | null }) {
               <span className="icon" aria-hidden data-icon={g.icon} />{g.label}
             </Link>
           ))}
+          <Link href="/stadtteile" aria-current={pfad === "/stadtteile" ? "page" : undefined}>
+            <span className="icon" aria-hidden data-icon="map" />Stadtteile &amp; Karte
+          </Link>
         </div>
       </details>
     </nav>
@@ -448,11 +451,18 @@ export function DetailsVerhalten() {
     const taste = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((d) => (d.open = false));
     };
+    // Such-Klappe im Kopf (1200–1599 px): beim Aufklappen gleich ins Suchfeld springen
+    const umschalten = (ev: Event) => {
+      const d = ev.target as HTMLDetailsElement;
+      if (d.open && d.classList?.contains("kopf__suchklappe")) d.querySelector<HTMLInputElement>("input[type=search]")?.focus();
+    };
     document.addEventListener("click", klick);
     document.addEventListener("keydown", taste);
+    document.addEventListener("toggle", umschalten, true); // toggle steigt nicht auf → Capture
     return () => {
       document.removeEventListener("click", klick);
       document.removeEventListener("keydown", taste);
+      document.removeEventListener("toggle", umschalten, true);
     };
   }, []);
   return null;
