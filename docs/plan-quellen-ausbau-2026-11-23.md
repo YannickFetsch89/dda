@@ -1049,7 +1049,7 @@ Abrufe); LVR Cromford ohne `ticket_url` (nur Shop-Startseite, kein Link je Termi
 `tests/test_cursor_v2_2026_11_25.py`. Tests
 876 Python ok.
 
-### Welle C – Auswertung (25.11.2026, nur Prüfung, noch nicht gebaut)
+### Welle C – Auswertung und Bau (25.11.2026, lokal gebaut)
 
 - **Lücken nach N1:** nur noch 110 von 1.529 künftigen Events ausschließlich bei Rausgegangen (7 %), verteilt auf viele
   kleine Orte (höchstens 6 je Ort: hi sunny, UFA-Palast, Maxhaus, BrauArt, Cuvée …). Daraus lohnt keine eigene Welle.
@@ -1065,6 +1065,12 @@ Abrufe); LVR Cromford ohne `ticket_url` (nur Shop-Startseite, kein Link je Termi
   Storage Museum (robots.txt HTTP 500 = gesperrt); Einstein Boulderhalle (Kalender bei vertical-life, robots sperrt);
   Das Dazwischen, Sponk, ausARTen, Studio Brick (keine datierten Termine/nur JS); ASG-Bildungsforum (Kursprogramm);
   Berger Kirche, Henkel-Saal (keine eigene Programmseite).
+
+**Welle C gebaut (25.11.2026, Freigabe Auftraggeber):** `scraper/tier2/buergerhaeuser.py` („Bürgerhäuser Düsseldorf“, drei
+Vorlagen der Stadt-Seiten: Reisholz, Bilk, Salzmannbau, Kulturhaus Süd/Garath; Benrath, Eller, Gerresheim, Wersten ohne
+Veranstaltungsseite), `comedy_fuer_freunde.py` (JSON-LD + sichtbare Liste – das JSON-LD nennt eine Stunde zu spät, Uhrzeit
+aus der Liste; Weezevent-Link nur aus dem HTML, Widget nie abgerufen), `heine_haus.py` (Startseite, „Außer Haus“
+weggelassen). Live-Probe mit 120 Tagen: 46 + 1 + 2 Termine, 0,5 Minuten. Alle Rang 1, Fenster 120. Tests 910 ok.
 
 ## Prüfhistorie
 
