@@ -72,7 +72,8 @@ export const TYPEN: { wert: SpielplatzTyp; label: string; mehrzahl: string; icon
 ];
 /** Chips für Geräte und Extras erst ab so vielen sichtbaren Plätzen mit Beleg (E11) */
 export const CHIP_SCHWELLE = 5;
-const BELEG_QUELLEN = ["osm", "zitat", "sichtung"];
+// foto_ki/luftbild_ki: KI-Erkennung auf Besucherfotos bzw. NRW-Luftbild ab Konfidenz 0,8 (Auftraggeber 25.11.2026)
+const BELEG_QUELLEN = ["osm", "zitat", "sichtung", "foto_ki", "luftbild_ki"];
 
 // ---------- Profil lesen ----------
 
