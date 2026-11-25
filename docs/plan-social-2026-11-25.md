@@ -1,0 +1,356 @@
+# Plan: Automatische Posts auf Instagram und Facebook – erste Fassung, 25.11.2026
+
+**Status:** ENTWURF zur Freigabe. Gebaut wird erst nach der Freigabe.
+**Kanäle:** Instagram (Business-Konto, mit der Facebook-Seite verknüpft) und Facebook-Seite [facebook.com/dies.das.duesseldorf](https://www.facebook.com/dies.das.duesseldorf).
+**Grundlage:** `CLAUDE.md` (Phase 1: Instagram-Pipeline), Platzhalter im Admin-Plan (`docs/plan-admin-dashboard-2026-11-23.md`, Abschnitte 1.4 und 4.8, Frage Q7). Diesen Plan hat der Admin-Plan als „eigener Plan Instagram-Posting“ vorgemerkt.
+
+---
+
+## 1. Ausgangslage (Bestand am 25.11.2026, Stand origin dd63059)
+
+| Baustein | Zustand | Was damit passiert |
+|---|---|---|
+| `pipeline/publisher.py` | Graph API v21.0. Kann nur Einzelbild-Feed-Posts (`image_url` + Caption). **Hat nie gepostet:** `INSTAGRAM_ACCESS_TOKEN`/`INSTAGRAM_ACCOUNT_ID` fehlen in `scrape.yml`. Setzt `events.status` auf `gepostet`/`fehler` und mischt damit Posten in den Event-Status. Wird in `main.py` als Schritt 5 aufgerufen. | **entfernen** (Schritt 1). Der Zwei-Schritt-Ablauf (Container anlegen → veröffentlichen) wird im neuen Code in TypeScript nachgebaut. |
+| `pipeline/caption_generator.py` | Schreibt in jedem Scraper-Lauf bis zu 50 Captions mit `claude-sonnet-4-6` in `events.instagram_caption` und setzt `status` von `neu` auf `aufbereitet`. **Niemand nutzt sie**, sie kosten nur Geld (Q7 im Admin-Plan). | **entfernen** (Schritt 1). Der Prompt dient als Vorlage. Der Kategorisierer lädt nur `status = neu` **mit leerer Beschreibung** (`categorizer.py:183–189`), der Wegfall ändert dort also nichts. Die Website filtert nicht nach `status`. |
+| `test_instagram.py` | Hilfsskript: Account-ID über `/me/accounts` ermitteln. | wird durch `tools/meta_pruefen.py` ersetzt (Schritt 0). |
+| `visual/` (brand.py, image_renderer.py, image_generator.py, reel_renderer.py), `assets/templates/`, DALL-E 3, Canva-Vorlagen, ffmpeg-Reels | **Gibt es nicht.** Steht nur in `CLAUDE.md`. `openai` steht in `requirements.txt`, wird aber nirgends importiert. | `CLAUDE.md` und `requirements.txt` aufräumen (Schritt 1). |
+| Spalten `events.instagram_caption`, `events.instagram_location_id`, `events.gepostet_am`, Status `aufbereitet/gepostet` | `post_typ` steht nur in `CLAUDE.md`, nicht im Schema. | bleiben vorerst stehen (unschädlich). Löschen in einem späteren Aufräum-SQL. |
+| Admin | Menüpunkt „Instagram“ mit Hinweis „eigener Plan“ (`web/app/admin/rahmen.tsx:17`). Tabelle `instagram_posts` im Admin-Plan 4.8 nur vorgemerkt, nicht angelegt. | wird „Social“ (Abschnitt 8). |
+| Datenschutzerklärung | Die Abschnitte „Instagram und Facebook (Meta)“ und „Instagram Graph API (automatisches Posting)“ gibt es schon (`web/app/datenschutz/page.tsx:192–224`), inklusive Art. 26 (Seiten-Insights). | kleine Anpassung (Abschnitt 10). |
+| `web/lib/seo.ts:44` | `sameAs` mit Instagram ist auskommentiert, „bis Instagram aktiv bespielt wird“. | einschalten nach dem Livegang. |
+| Marke | Logos `web/public/logo/*.svg`, Farben Navy `#1b2540` und Gold `#c9a84c`, Schriften DM Serif Display und Inter, eigene KI-Symbolbilder `web/public/fallback/` (`docs/fallback-bilder.md`). | Grundlage der Folien. |
+| Muster im Projekt | Auswahl über eine Website-Route mit Job-Schlüssel (Magazin `api/magazin/auswahl`, Geburtstag `api/intern/geburtstag-tipps`); Job-Anstoß aus der Website (`web/lib/job-anstoss.ts`); Supabase Storage (`event-bilder`); `sharp` im Web-Paket. | wiederverwenden. |
+
+**Wichtig für den Takt:** Zeitpläne in GitHub Actions sind unzuverlässig. Die Magazin-Wochenvorschau kam am Freitag um 23:58 statt um 18 Uhr, und der 15-Minuten-Zeitplan der Newsletter-Bestätigung lief am 24.11. gar nicht (`web/lib/job-anstoss.ts:1–3`). Feste Postzeiten können deshalb nicht an einem GitHub-Zeitplan hängen (E9).
+
+---
+
+## 2. Entscheidungen des Auftraggebers (25.11.2026)
+
+| Nr. | Entscheidung |
+|---|---|
+| S1 | **Formate:** Karussell, tägliche Story, Feed-Einzeltipp **und Reels gleich zum Start**. |
+| S2 | **Freigabe:** Feed-Posts, Karussells und Reels brauchen eine Freigabe im Admin. **Stories laufen automatisch** (mit Notaus). |
+| S3 | **Bilder:** eigene Grafiken im Markenstil und eigene KI-Symbolbilder (gekennzeichnet), **dazu Veranstalterfotos, wenn das Haus schriftlich zugestimmt hat** (Liste im Admin). |
+| S4 | **Meta:** Das Instagram-Business-Konto existiert und ist mit der Facebook-Seite verknüpft. |
+
+---
+
+## 3. Vorschläge zur Bestätigung
+
+| Nr. | Frage | Vorschlag |
+|---|---|---|
+| E1 | Datenmodell | **Eigene Tabellen** `social_posts`, `social_einstellungen` und `bild_erlaubnisse` (Abschnitt 7). `events.status` wird für Social nicht mehr benutzt. Ein Post kennt seine Events über `event_ids uuid[]`. |
+| E2 | Wochenplan und Zeiten (Europe/Berlin) | **Story täglich 08:30** „Heute in Düsseldorf“. **Di 18:00** Feed-Einzeltipp „Tipp der Woche“. **Do 17:00** Karussell „Wochenende in Düsseldorf“. **Fr 12:00** Reel zum Wochenende. **So 18:00** Karussell „Deine Woche“ aus der Magazin-Wochenvorschau. **Am 1. jedes Monats um 18:00** Karussell „Top-Events im <Monat>“ aus den Monats-Tipps. Das sind 4 Feed-Posts in der Woche plus 7 Stories. Der Plan steht als JSON in `social_einstellungen.wochenplan` und lässt sich ohne Deploy ändern. |
+| E3 | Auswahl der Events | Rechnet die Website. Eine interne Route `POST /api/intern/social-auswahl` nutzt dieselbe Logik wie Startseite und Magazin, damit Social nie etwas anderes empfiehlt als die Website (Abschnitt 5). |
+| E4 | Texte | **Claude Sonnet 5.5** (`claude-sonnet-5-5`) schreibt die Captions für Instagram und Facebook sowie je Folie eine kurze Zeile „Warum hin?“ (höchstens 80 Zeichen). Anrede **du**, Marke „dies.das.düsseldorf“. Danach laufen Prüfungen wie beim Magazin (Abschnitt 5.3). **Stories bekommen keinen KI-Text**, nur Daten aus der Datenbank (Titel, Zeit, Ort, Kategorie). So bleibt der automatische Teil frei von KI-Fehlern. |
+| E5 | Wie entstehen die Bilder? | Die Folien rendert **die Website selbst** mit `next/og` (Satori), `sharp` macht daraus JPEG. Formate: Feed **1080×1350** (4:5), Story und Reel **1080×1920** (9:16). Die Vorschau im Admin zeigt genau dieses Bild. **Bei der Freigabe** (bei Stories: beim Posten) wird ein **Schnappschuss** als JPEG in den öffentlichen Storage-Bucket `social` gelegt. Meta holt die Bilder von dort und nicht von unserem Server (keine Last, keine Bremse aus `lib/bremse.ts`). Gepostet wird, was freigegeben wurde. **Alternative:** Rendern mit Playwright im GitHub-Job. Das ist langsamer, und die Vorschau im Admin wäre nicht sofort da. |
+| E6 | Bildquelle je Folie (Rangfolge) | (1) **Veranstalterfoto**, nur wenn für das Haus (`ort_id`) oder die Quelle eine gültige Erlaubnis in `bild_erlaubnisse` steht. Die Folie zeigt dann „Foto: <Name laut Erlaubnis>“. (2) **Eigenes Ortsbild** aus `web/public/ort-bilder/`, nur wenn die Lizenz „eigen“ oder CC0 ist. (3) **KI-Symbolbild** aus `web/public/fallback/`, mit dem Hinweis „Symbolbild · KI-generiert“ auf der Folie. (4) **Reine Grafik** ohne Foto. **Sperrliste, auch mit Erlaubnis nie:** Bilder von Ticketmaster, Eventim, Rausgegangen und den Aggregatoren (AllEvents, Eventfinder, Meetup, Eventbrite, Prinz, meinestadt). Im Admin lässt sich die Bildquelle je Folie umstellen. |
+| E7 | Freigabe-Ablauf | Vorschläge für Feed, Karussell und Reel entstehen **mindestens 2 Tage vorher** als `vorschlag`. Ohne Freigabe bis zur Postzeit wird ein Post zu `verfallen`: Es wird nichts gepostet, es gibt keinen Ersatz. Stories legt der Job mit `freigegeben_von = 'auto'` an, solange `story_auto` an ist. Bis zur Postzeit lassen sie sich im Admin verwerfen. **Kurz vor jedem Post** prüft der Takt erneut: Ist ein Event inzwischen abgelehnt, abgesagt, vorbei oder geändert (Datum oder Ort anders als beim Schnappschuss)? Bei Stories fällt dann nur diese Folie weg. Bei Feed, Karussell und Reel wird nicht gepostet, der Post wird `fehler` mit Grund und erscheint im Cockpit. |
+| E8 | Was geht auf Facebook? | Feed-Einzeltipp, Karussell (als Beitrag mit mehreren Fotos) und Reel, **mit klickbaren Links** auf die Event-Seiten (`/event/<kategorie>/<slug>`) bzw. den Magazin-Beitrag. **Facebook-Stories nicht** (geringe Reichweite, eigener API-Weg). Instagram-Captions enthalten keine Links, sondern „Link in Bio“ (E14). Facebook lässt sich in `social_einstellungen.facebook` getrennt abschalten. |
+| E9 | Wo läuft was? | **Vorbereiten** (Auswahl abrufen, Texte mit Claude, Prüfungen, Reel-Video mit ffmpeg) läuft im **GitHub-Job** `social.yml`: täglich gegen 04:00 UTC, manuell und per Anstoß aus dem Admin. Die Vorschläge liegen Tage im Voraus, deshalb schadet ein verspäteter Lauf nicht. **Veröffentlichen** übernimmt die **Website** (Next.js auf unserem Server) in `POST /api/intern/social-takt`. Diese Route ruft **Supabase `pg_cron` + `pg_net` alle 5 Minuten** auf, mit einem Schlüssel aus dem Supabase-Vault. Der Meta-Token liegt nur auf dem Server. **Alternative zum Auslöser:** ein `crontab`-Eintrag auf dem Server (`curl` alle 5 Minuten), den der Auftraggeber anlegt wie den nginx-Block. |
+| E10 | Schutz vor doppelten Posts | Der Takt **beansprucht** einen fälligen Post atomar (`UPDATE … SET status = 'wird_gepostet', takt_am = now() WHERE id = … AND status IN ('freigegeben','bereit') RETURNING`). Jede Meta-ID wird sofort gespeichert (Container-ID, dann Media-ID). Steht ein Post länger als 15 Minuten auf `wird_gepostet`, setzt der nächste Takt ihn auf **`unklar`**. **Es gibt nie einen automatischen zweiten Versuch** nach dem Veröffentlichen-Aufruf. Bei `unklar` schaut der Auftraggeber in der App nach und markiert im Admin „ist online“ oder „erneut posten“. Fehler **vor** dem Veröffentlichen-Aufruf (Container ließ sich nicht anlegen) werden bis zu 3 Mal wiederholt, in den nächsten Takten. |
+| E11 | Reels | Eine **Diashow in 9:16** aus den Wochenend-Events: Titelfolie, bis zu 8 Event-Folien (je etwa 2,5 s, leichter Zoom, weiche Überblendung) und eine Schlussfolie, zusammen etwa 25 s. ffmpeg im GitHub-Job baut sie aus den Schnappschuss-JPEGs (H.264, AAC-Stille, 30 fps). **Ohne Musik**, weil die Musikbibliothek von Instagram über die API nicht nutzbar ist (O6). Das Titelbild ist die erste Folie (`cover_url`), `share_to_feed = true`. Ein Reel wird nur vorgeschlagen, wenn das Wochenend-Karussell freigegeben ist, und braucht eine eigene Freigabe. |
+| E12 | Schalter | In der Datenbank, damit sie sofort wirken (der Takt liest sie bei jedem Aufruf): `social_einstellungen.modus` (`aus` = nichts / `vorschau` = Vorschläge ja, Posten nein / `an`), `story_auto`, `facebook`. Im Admin unter Social. Die GitHub-Variable `SOCIAL_AKTIV` schaltet nur den Job (`1` = Vorschläge erzeugen). |
+| E13 | Token | Ein **Token für einen Systembenutzer** im Business-Portfolio, **ohne Ablauf**, nur mit den nötigen Rechten (Abschnitt 9). Er liegt als Secret `META_TOKEN` nur in `web/.env.local` auf dem Server (über `deploy.yml`, wie die Job-Schlüssel), nicht im GitHub-Job. Lässt Meta den Systembenutzer ohne Freischaltung nicht zu, gibt es als **Ersatzweg** ein Seiten-Token ohne Ablauf, abgeleitet aus einem langlebigen Nutzer-Token des Auftraggebers. Ein Token-Fehler (Code 190) schaltet `modus` auf `vorschau` und meldet das im Cockpit. |
+| E14 | „Link in Bio“ | Eine neue Seite **`diesdas.events/links`**. Sie zeigt die Events der Posts der letzten 7 Tage mit Links zu den Event-Seiten, den neuesten Magazin-Beitrag sowie Impressum und Datenschutz. Ohne Cookies und ohne Tracking, `noindex`. Diese Adresse steht in der Instagram-Bio. So ist das Impressum mit 2 Klicks erreichbar (Abschnitt 10). |
+| E15 | Häuser erwähnen | Hat der Ort eines Events in `orte.instagram` ein Profil, nennt die Caption es als `@handle`, höchstens 3 je Post und nur, wenn das Muster passt (`^[A-Za-z0-9._]{1,30}$`). Das bringt Reichweite, und Häuser teilen solche Posts oft. Markierungen im Bild (`user_tags`) und Einladungen als Mitwirkende (`collaborators`) kommen erst später. |
+| E16 | Erinnerung an Freigaben | Im **Cockpit**: „x Social-Posts warten auf Freigabe, der nächste in y Stunden“. Dazu eine **Sammelmail** an `hallo@diesdas.events`, wenn ein Post der nächsten 36 Stunden noch nicht freigegeben ist. Höchstens eine Mail am Tag, verschickt aus dem täglichen Job über das vorhandene SMTP-Postfach (wie `geburtstag_mails.py`). |
+| E17 | Altbestand | **Captions und Publisher jetzt entfernen** (Q7 = ja, Schritt 1), unabhängig vom Rest dieses Plans. Das spart sofort die Kosten für bis zu 50 Captions je Lauf. |
+
+---
+
+## 4. Formate im Einzelnen
+
+Alle Folien folgen einem gemeinsamen Raster: Navy-Fläche oder Foto mit Abdunklung, Wortmarke „dies.das.düsseldorf“ klein oben, Gold als Akzentfarbe für Datum und Kategorie, Titel in DM Serif Display, Angaben in Inter. Die Entwürfe gibt der Auftraggeber vor dem Bau frei (Schritt 2).
+
+| Format | Slot (`slot`) | Inhalt | Folien | Caption |
+|---|---|---|---|---|
+| **Story** „Heute in Düsseldorf“ | `story-heute` | Tipp des Tages und Picks des Tages (wie die Startseite) | 1 Titelfolie („Heute · Mi 26.11.“), 3–4 Event-Folien (Foto/Symbolbild, Kategorie, Titel, Uhrzeit, Ort, „gratis“ falls zutreffend), 1 Schlussfolie („Alle Tipps auf diesdas.events“) | keine (Stories haben keine Caption, Link-Sticker gibt es über die API nicht) |
+| **Feed-Einzeltipp** „Tipp der Woche“ | `tipp-woche` | Highlight der kommenden 7 Tage | 1 Folie, 4:5 | IG: 2–4 Sätze, Datum/Zeit/Ort, „Mehr: Link in Bio“, bis zu 8 Hashtags. FB: dasselbe ohne Hashtag-Block, mit Link zur Event-Seite |
+| **Karussell** „Wochenende in Düsseldorf“ | `wochenende` | Fr–So, bis zu 8 Events | Titelfolie, bis zu 8 Event-Folien, Schlussfolie (höchstens 10) | IG: kurze Einleitung und je Event eine Zeile (Tag, Titel, Ort). FB: dasselbe mit einem Link je Event |
+| **Reel** zum Wochenende | `reel-wochenende` | dieselben Events wie das freigegebene Karussell | 9:16-Fassungen der Karussell-Folien als Video (E11) | wie das Karussell, gekürzt |
+| **Karussell** „Deine Woche“ | `wochenvorschau` | die Events aus dem **veröffentlichten** Magazin-Beitrag Wochenvorschau | wie oben | Verweis auf den Beitrag („ganzer Artikel: Link in Bio“, auf FB als Link) |
+| **Karussell** „Top-Events im <Monat>“ | `monats-tipps` | die Events aus dem veröffentlichten Beitrag Monats-Tipps | wie oben | wie oben |
+
+Ist der Magazin-Beitrag bis zum Vorschlagszeitpunkt nicht veröffentlicht, **entfällt** der Slot in dieser Woche (kein Ersatz aus der Startseiten-Logik, damit Social und Magazin nicht auseinanderlaufen).
+
+---
+
+## 5. Auswahl und Texte
+
+### 5.1 Interne Auswahl-Route
+
+`POST /api/intern/social-auswahl`, Kopf `x-social-schluessel` = `SOCIAL_JOB_SCHLUESSEL`. Ohne gültigen Schlüssel gibt es 404, bei einem Datenbankfehler 503, und die Antwort ist immer `no-store`, nach dem Muster von `api/magazin/auswahl`. Eingabe: `{ slot, datum }`. Ausgabe: `{ slot, datum, events: [...], ersatz: [...], beitrag? }`, je Event `id`, `titel`, `datum`, `uhrzeit`, `ort`, `ort_id`, `ort_instagram`, `kategorie`, `gratis`, `url`, `bild` (Vorschlag nach E6), `beschreibung_kurz`. Die Ersatzliste (bis zu 10 weitere Kandidaten) dient dem Tauschen im Admin.
+
+| Slot | Logik (vorhandene Funktionen) |
+|---|---|
+| `story-heute` | `startseitenAuswahl(pool, [], datum)` → `tipp` + `picks` des Tages |
+| `tipp-woche` | `highlightsImZeitraum(pool, {von: datum, bis: datum+6}, "highlight")` |
+| `wochenende` | `wochenendProgramm(pool)` mit `heute` = Donnerstag des Slots |
+| `wochenvorschau`, `monats-tipps` | Event-IDs aus dem veröffentlichten `magazin_beitraege`-Eintrag des Zeitraums, Reihenfolge wie im Beitrag |
+| `reel-wochenende` | keine eigene Auswahl: übernimmt `event_ids` des freigegebenen `wochenende`-Posts derselben Woche |
+
+**Zusätzliche Regeln für Social** (in der Route, getestet): Nie abgelehnte, abgesagte oder als sensibel markierte Events (gleiche Menge wie bei der Geburtstagsmail). Nur Events mit Ort und Datum. Ein Event steht höchstens einmal in 14 Tagen in einem Feed-Post (Stories dürfen wiederholen). Im Karussell höchstens 2 Events derselben Kategorie und, wenn vorhanden, mindestens 1 kostenloses. Der Pool wird nur aus Supabase geladen: Liefert `eventPoolLaden` Beispieldaten (`quelle !== "supabase"`), gibt die Route 503 (Lehre aus der Geburtstagsmail).
+
+### 5.2 Texte (Job)
+
+`pipeline/social.py vorschlaege` ruft je Slot die Auswahl ab, dann Claude (`claude-sonnet-5-5`, ein Aufruf je Post, strukturierte Ausgabe). Ergebnis: `caption_ig`, `caption_fb`, je Event-Folie `warum` (höchstens 80 Zeichen). Eingabe sind nur die Felder aus der Route, keine fremden Texte im Wortlaut. Ton: locker, empfehlend, du, kein Clickbait, höchstens 2 Emojis. Hashtags: fest `#düsseldorf #duesseldorf #diesdasduesseldorf`, dazu bis zu 5 passende aus einer festen Liste je Kategorie (`pipeline/social_hashtags.py`). Die KI erfindet keine Hashtags.
+
+### 5.3 Prüfungen vor dem Speichern
+
+Wie beim Magazin (`pipeline/magazin.py` `daten_im_text`, `CLICKBAIT`), dazu:
+- Jedes Datum im Text gehört zu einem Event des Posts.
+- Keine URL in `caption_ig`. In `caption_fb` nur URLs auf `diesdas.events`.
+- `@handles` nur aus `ort_instagram`.
+- Länge: IG höchstens 2200 Zeichen und 30 Hashtags (Instagram-Grenzen), unser Ziel sind 600 Zeichen und 8 Hashtags.
+- Kein Hinweis „ausverkauft“, „letzte Tickets“ oder Preise, die nicht in den Daten stehen.
+
+Fällt eine Prüfung durch, versucht der Job es einmal neu. Fällt sie wieder durch, wird der Post trotzdem als `vorschlag` gespeichert, mit Prüfvermerk in `pruefung` (rot im Admin). Freigeben geht erst nach einer Bearbeitung.
+
+Die Kosten je Aufruf schreibt der Job in `social_posts.ki_kosten_usd`. Das Cockpit summiert sie wie beim Magazin.
+
+---
+
+## 6. Bilder und Rechte
+
+- **Rendern** (E5): `web/lib/social/folien.tsx` (Satori-JSX) und die Route `GET /api/admin/social/[id]/folie/[n]` (nur Admin) für die Vorschau. Für den Schnappschuss schreibt `lib/social/schnappschuss.ts` nach `social/<post-id>/<version>/<n>.jpg` (JPEG, Qualität 88, sRGB, unter 8 MB). Die Schriften liegen als Dateien im Repo (`web/lib/social/schriften/`, OFL-Lizenzen beigelegt), weil `next/font/google` für Satori keine Dateien liefert.
+- **Veranstalterfotos** (S3): Sie werden über den vorhandenen Bild-Proxy (`lib/bild-proxy.ts`, verkleinert große Bilder) geholt, nur bei gültiger Erlaubnis und nicht auf der Sperrliste (E6). Die Folie nennt „Foto: <Name>“.
+- **Erlaubnisse** (`bild_erlaubnisse`, Abschnitt 7) pflegt der Auftraggeber im Admin: Haus oder Quelle, Name für die Nennung, erteilt am, Nachweis (z. B. „Mail vom 02.12.2026 an hallo@“), Umfang (`social`), widerrufen am. Eine Vorlage für die Anfrage an die Häuser steht in Anhang C (prüft der Anwalt).
+- **KI-Symbolbilder:** Hinweis auf der Folie „Symbolbild · KI-generiert“. Besteht ein Post nur aus Symbolbildern, steht in der Caption „Symbolbilder KI-generiert“. Ob sich das Meta-Label „KI-Info“ über die API setzen lässt, klärt Schritt 0. Geht das nicht, genügt nach unserem Verständnis der sichtbare Hinweis (A4).
+- **Ortsbilder von Wikimedia Commons** (CC BY/BY-SA) kommen vorerst **nicht** in Posts, nur eigene und CC0 (O7).
+
+---
+
+## 7. Datenmodell (SQL, führt der Auftraggeber aus)
+
+`database/social_2026-11-xx.sql`:
+
+**`social_posts`**
+`id uuid pk`, `slot text` (CHECK: Liste aus Abschnitt 4), `typ text` (`feed | karussell | story | reel`), `kanaele text[]` (`instagram`, `facebook`), `geplant_fuer timestamptz`, `event_ids uuid[]`, `beitrag_id uuid null` (→ `magazin_beitraege`), `folien jsonb` (je Folie: `art` = titel/event/schluss, `event_id`, `bild` = {`quelle`: veranstalter/ort/symbol/keins, `pfad`, `nennung`}, `warum`, Stand von Datum und Ort für die Vorab-Prüfung), `caption_ig text`, `caption_fb text`, `pruefung jsonb`, `status text` (`vorschlag | freigegeben | bereit | wird_gepostet | gepostet | teilweise | fehler | unklar | verworfen | verfallen`), `bilder text[]` (Schnappschuss-URLs), `video_url text`, `ig_container_ids text[]`, `ig_media_ids text[]`, `ig_permalink text`, `fb_post_id text`, `fehler text`, `versuche int default 0`, `takt_am timestamptz`, `freigegeben_von text` (Nutzer-ID oder `auto`), `freigegeben_am`, `gepostet_am`, `ki_kosten_usd numeric`, `erstellt_am`, `geaendert_am`.
+Eindeutig: `(slot, (geplant_fuer AT TIME ZONE 'Europe/Berlin')::date)`, damit ein doppelter Joblauf keine zweiten Vorschläge erzeugt.
+`teilweise` = Instagram ok, Facebook fehlgeschlagen (oder umgekehrt). Der Kanal, der geklappt hat, wird nie neu gepostet.
+
+**`social_einstellungen`** (genau eine Zeile): `modus text` (`aus | vorschau | an`, Start: `aus`), `story_auto bool` (Start: `false`), `facebook bool` (Start: `false`), `wochenplan jsonb` (E2), `geaendert_von`, `geaendert_am`.
+
+**`bild_erlaubnisse`**: `id`, `ort_id uuid null`, `quelle text null` (Scraper-Name; genau eins von beiden), `nennung text`, `umfang text` (`social`), `erteilt_am date`, `nachweis text`, `widerrufen_am date null`, `notiz`, `erstellt_von`, `erstellt_am`.
+
+**RLS:** Alle drei Tabellen nur über `ist_admin()` bzw. `service_role` lesbar und schreibbar. Die Linkseite `/links` liest über den Dienst-Client nur `event_ids` und `gepostet_am` gesendeter Posts.
+
+**Storage:** Bucket `social`, öffentlich lesbar (Meta muss die Bilder holen), Schreiben nur `service_role`. Aufräumen: Schnappschüsse 30 Tage nach `gepostet_am` bzw. `verfallen` löschen (im täglichen Job).
+
+**Takt-Auslöser** (eigenes SQL nach dem Deploy, E9): `pg_cron`-Job `social-takt` alle 5 Minuten, `net.http_post('https://diesdas.events/api/intern/social-takt', headers: x-social-schluessel aus vault.decrypted_secrets)`. Kontrollabfrage am Ende jedes SQL wie bisher.
+
+Protokoll: Freigeben, Verwerfen, Jetzt posten, Schalter und Erlaubnisse schreiben ins vorhandene Admin-Protokoll.
+
+---
+
+## 8. Bauteile
+
+**Website (`web/`)**
+- `lib/social/meta.ts`: Graph-API-Client (Version als Konstante, beim Bau die aktuelle Version prüfen). Instagram: `POST /{ig-id}/media` (Bild, `is_carousel_item`, `CAROUSEL` mit `children`, `STORIES`, `REELS` mit `video_url`/`cover_url`/`share_to_feed`), Status des Containers über `GET /{container}?fields=status_code` (Reels: über mehrere Takte, bis `FINISHED`), `POST /{ig-id}/media_publish`, Permalink über `GET /{media}?fields=permalink`. Facebook: Seiten-Token über `GET /{page-id}?fields=access_token`. Einzelbild: `POST /{page-id}/photos` (`url`, `message`). Mehrere Bilder: zuerst unveröffentlicht hochladen (`published=false`), dann `POST /{page-id}/feed` mit `attached_media`. Reel: `POST /{page-id}/video_reels` (start → Upload per `file_url` → finish mit `video_state=PUBLISHED`). Fehlercodes: 190 (Token) → `modus = vorschau` (E13). 4, 17 und 32 (Limits) → im nächsten Takt neu. 9004 und 36001 (Bild nicht abrufbar oder falsches Format) → `fehler`. Token und Schlüssel erscheinen nie im Log.
+- `lib/social/folien.tsx`, `lib/social/schnappschuss.ts`, Schriften (Abschnitt 6).
+- `lib/social/pruefen.ts`: Vorab-Prüfung vor dem Posten (E7), rein und getestet.
+- `app/api/intern/social-auswahl/route.ts` (5.1) und `app/api/intern/social-takt/route.ts` (E9, E10): Je Aufruf werden höchstens 3 fällige Posts bearbeitet, mit Zeitbudget 45 s. Fällig heißt `geplant_fuer <= now()` und nicht älter als 6 Stunden, sonst `verfallen`.
+- **Admin „Social“** (statt „Instagram“ in `rahmen.tsx`):
+  - Wochenansicht mit den nächsten 14 Tagen, Slots mit Status-Farbe.
+  - Post-Seite mit Folienvorschau, Captions für IG und FB zum Bearbeiten, Events tauschen und umsortieren (aus `ersatz`), Bildquelle je Folie, Postzeit ändern. Buttons: Freigeben, Verwerfen, Neu erzeugen (stößt `social.yml` für diesen Post an), Jetzt posten (mit Rückfrage), bei `unklar`: „ist online“ / „erneut posten“.
+  - Verlauf mit Permalinks und Fehlern, Bild-Erlaubnisse, Schalter (E12) und eine Verbindungsprüfung (Token gültig, Rechte, `content_publishing_limit`).
+- Cockpit: Kachel „Social“ (wartet auf Freigabe, Fehler/unklar, Token-Zustand).
+- `app/links/page.tsx` (E14).
+- `lib/admin/github.ts`: Workflow `social` in `WORKFLOWS`.
+- `deploy.yml`: `META_TOKEN`, `META_IG_ID`, `META_PAGE_ID`, `SOCIAL_JOB_SCHLUESSEL` und `SOCIAL_TAKT_SCHLUESSEL` nach `web/.env.local` (mit `tr -d` wie die anderen Schlüssel, `lib/schluessel.ts`).
+- Datenschutz-Text (Abschnitt 10), `seo.ts` `sameAs`, Footer mit Links zu Instagram und Facebook (nach dem Livegang).
+
+**Pipeline**
+- `pipeline/social.py`:
+  - `vorschlaege [--tage 4] [--slot …] [--post <id>] [--dry-run]` (5.2, 5.3)
+  - `reel --post <id>`: Schnappschüsse laden, ffmpeg, Upload nach `social/<id>/reel.mp4`, Status `bereit`
+  - `aufraeumen` (Storage, Abschnitt 7)
+  - `erinnern` (E16)
+  - Log nur mit Zahlen und Slot-Namen.
+- `pipeline/social_hashtags.py`.
+- `.github/workflows/social.yml`:
+  - täglich 04:00 UTC, manuell (Eingaben `aktion`, `post`, `dry_run`) und per Anstoß aus dem Admin.
+  - `if: vars.SOCIAL_AKTIV == '1'` (manueller `--dry-run` auch ohne).
+  - `apt-get install ffmpeg`.
+  - Secrets `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY`, `SOCIAL_JOB_SCHLUESSEL`, SMTP wie Geburtstag.
+- Aus `main.py` die Schritte 4/5 entfernen (Schritt 1).
+
+**Keine neue Bibliothek** (Regel aus `CLAUDE.md`): `next/og` gehört zu Next. `sharp`, `anthropic` und `httpx` sind schon da. ffmpeg kommt nur als Systempaket in den GitHub-Job (`apt-get`), so wie es `requirements.txt` schon vorsieht.
+
+**Aufräumen (Schritt 1):** `pipeline/caption_generator.py`, `pipeline/publisher.py` und `test_instagram.py` löschen. `openai` aus `requirements.txt` entfernen. `.env.example` (Instagram-Variablen raus). `CLAUDE.md`: Phase-1-Beschreibung, Tech-Stack (DALL-E, Canva, Pillow-Overlay), Struktur (`visual/`, `assets/`) und Regeln (Reels via ffmpeg Phase 1) auf diesen Plan umschreiben. `HANDOVER.md`: Hinweise auf den Publisher.
+
+---
+
+## 9. Meta-Einrichtung (Schritt 0, Auftraggeber mit Anleitung)
+
+Ausführliche Klickanleitung in Anhang D. Kurzfassung:
+
+1. **Business-Portfolio** (business.facebook.com): Facebook-Seite und Instagram-Konto sind dort als Assets eingetragen, der Auftraggeber ist Admin, die Zwei-Faktor-Anmeldung ist an.
+2. **Meta for Developers** (developers.facebook.com): Entwicklerkonto, neue App vom Typ **Business**, mit dem Business-Portfolio verbunden. Anwendungsfälle: „Instagram API mit Facebook-Login“ und „Alles auf deiner Seite verwalten“. App-Icon (`web/public/logo/app-icon.svg` als PNG). Datenschutz-URL `https://diesdas.events/datenschutz`. Die Kontaktadresse ist `hallo@diesdas.events`.
+3. **Berechtigungen (Standardzugriff):** `instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `business_management`. Laut Meta braucht eine App, die nur eigene Konten bespielt, **kein App-Review** (Standardzugriff genügt). Später optional `instagram_manage_insights` und `read_insights` für Zahlen.
+4. **Systembenutzer** (Unternehmenseinstellungen → Nutzer → Systembenutzer):
+   - Name `diesdas-social`, Rolle **Mitarbeiter** (nicht Admin; Meta rät davon ab, Assets über einen Admin-Systembenutzer zu verwalten).
+   - Assets zuweisen: die App (verwalten), die Seite (Inhalte erstellen) und das Instagram-Konto (Inhalte).
+   - **Token erzeugen** mit Ablauf „nie“ und den Rechten aus Punkt 3.
+   - Verweigert Meta das (fehlender Marketing-API-Zugang), nehmen wir den Ersatzweg aus E13.
+5. **App-Modus:** Ob Posts im Entwicklungsmodus öffentlich erscheinen oder die App „live“ sein muss, zeigt der Test in Punkt 6. Für „live“ braucht die App die Datenschutz-URL, eine URL für die Datenlöschung (`/datenschutz`) und vielleicht eine Unternehmensverifizierung.
+6. **Prüfung:** `python tools/meta_pruefen.py` (liest `META_TOKEN` aus `secrets/.env`, gibt den Token nie aus):
+   - Token gültig, Rechte (`debug_token`)
+   - Seiten-ID und Instagram-ID
+   - `content_publishing_limit`
+   - optional `--test-story`: eine Story mit der Testfolie, die nach 24 h verschwindet.
+   - Es prüft auch, ob sich das Label „KI-Info“ setzen lässt und ob die API Posts löschen kann.
+7. **Secrets** in GitHub: `META_TOKEN`, `SOCIAL_JOB_SCHLUESSEL`, `SOCIAL_TAKT_SCHLUESSEL` (zufällig, hex). Variablen: `META_IG_ID`, `META_PAGE_ID`, `SOCIAL_AKTIV` (zuerst leer).
+8. **Profile:**
+   - Instagram-Bio mit Link `diesdas.events/links`.
+   - Facebook-Seite: Feld „Impressum“ mit `https://diesdas.events/impressum` und Website `https://diesdas.events`.
+
+---
+
+## 10. Datenschutz, Impressum, Anwalt
+
+**Datenschutzerklärung** (Abschnitt „Soziale Netzwerke“, Sie-Form; Entwurf in Anhang B):
+- Instagram-Profil mit Namen und Facebook-Seite mit Adresse nennen; das „ggf.“ fällt weg.
+- Den Unterabschnitt „Instagram Graph API“ zu „Automatisches Veröffentlichen auf Instagram und Facebook“ erweitern: Über die Schnittstellen von Meta gehen nur von uns erstellte Inhalte raus (Texte, Grafiken, Fotos mit Erlaubnis der Rechteinhaber) sowie öffentliche Event-Angaben. Daten von Website-Nutzern werden nicht übermittelt.
+- Die Seite `/links` setzt keine Cookies und nutzt kein Tracking.
+- Die Hinweise zu Art. 26 (Seiten-Insights) bleiben.
+
+**Impressum in den Profilen:** Nach § 5 DDG muss das Impressum auch von den Profilen aus leicht erreichbar sein. Lösung: die Instagram-Bio verlinkt `/links`, dort steht „Impressum“ ganz oben. Auf Facebook steht es im Feld „Impressum“ (A2).
+
+**Fragen an den Anwalt** (eine Vorlage `docs/anwalt-social-2026-11-xx.md` entsteht in Schritt 7):
+- A1: Neuer Text für die Datenschutzerklärung (Anhang B).
+- A2: Reicht die Impressum-Lösung über `/links` für Instagram?
+- A3: Vorlage für die Erlaubnis zu Veranstalterfotos (Anhang C): Nutzungsrecht für Website und Social Media, Nennung, Zusicherung der Rechte an abgebildeten Personen, Widerruf.
+- A4: KI-Kennzeichnung. Genügt der sichtbare Hinweis „Symbolbild · KI-generiert“? Müssen KI-gestützte Captions gekennzeichnet werden? Unser Verständnis: Die Captions gibt der Auftraggeber frei und trägt dafür die redaktionelle Verantwortung (Art. 50 Abs. 4 KI-VO). Die automatischen Stories enthalten keinen KI-Text.
+- A5: Können Künstler:innen und Häuser genannt und per `@handle` erwähnt werden, ohne vorher zu fragen?
+- A6: Werbung. Posts über Events mit Partnerlinks (Awin und andere) verlinken auf Instagram gar nicht und auf Facebook nur auf unsere Event-Seite, wo der Partnerlink gekennzeichnet ist. Braucht der Post selbst eine Kennzeichnung? Unser Vorschlag: nein, solange kein Haus für einen Post bezahlt.
+
+---
+
+## 11. Schritte
+
+| Schritt | Wer | Inhalt | Ergebnis |
+|---|---|---|---|
+| 0 | Auftraggeber (Anleitung von Claude) | Meta-Einrichtung (Abschnitt 9), `tools/meta_pruefen.py`, Test-Story | Token gilt, IDs bekannt, Test-Story sichtbar |
+| 1 | Claude | Altbestand aufräumen (E17, Abschnitt 8). Kann **sofort** und unabhängig vom Rest live gehen (Deploy nur mit OK) | keine ungenutzten Captions mehr |
+| 2 | Claude → Auftraggeber | Folien-Entwürfe: Titel, Event (mit Foto, Symbolbild, ohne Foto), Schluss, je 4:5 und 9:16, mit echten Events gerendert, als Bilder in `docs/social-vorlagen/` | **Freigabe der Gestaltung** |
+| 3 | Claude, Auftraggeber führt aus | SQL (Abschnitt 7, ohne `pg_cron`) | Tabellen, Bucket, Kontrollabfrage ok |
+| 4 | Claude | Website: Rendern, Auswahl-Route, Meta-Client, Takt-Route, Admin Social, Cockpit, `/links`, Tests | lokal grün |
+| 5 | Claude | Pipeline: `social.py`, Hashtags, `social.yml`, Tests | lokal grün, `--dry-run` gegen die Live-Daten |
+| 6 | Cursor, dann Claude | Prüfung der Umsetzung (Prompt wie Anhang A, Fassung „Umsetzung“), Befunde beheben | abnahmefähig |
+| 7 | Anwalt (ab Schritt 2 parallel) | A1–A6 | Texte freigegeben |
+| 8 | Auftraggeber + Claude | Deploy (nach OK), Secrets, `pg_cron`-SQL. `modus = vorschau`, `SOCIAL_AKTIV = 1`. **Eine Woche nur Vorschläge**, Abnahme im Admin | Vorschläge stimmen |
+| 9 | Auftraggeber | `modus = an`: zuerst `story_auto` an (3 Tage beobachten), dann die ersten Feed-Freigaben, dann `facebook` an. Danach `sameAs` und Footer-Links (kleiner Deploy) | live |
+| später | – | Zahlen (Insights) im Admin, `collaborators`/`user_tags` für Häuser, Musik in Reels (O6), Kommentare im Cockpit, Commons-Bilder (O7) | eigener Mini-Plan |
+
+---
+
+## 12. Tests
+
+- **Website:**
+  - Auswahl-Route: 404 ohne Schlüssel, 503 bei Beispieldaten; nie abgelehnte, abgesagte oder sensible Events; 14-Tage-Sperre; Kategorie-Mischung; die Magazin-Slots übernehmen die Reihenfolge des Beitrags.
+  - Vorab-Prüfung: Datum oder Ort geändert → Feed `fehler`, bei der Story fällt die Folie weg.
+  - Takt:
+    - Beanspruchen ist atomar: Zwei gleichzeitige Takte ergeben einen Post.
+    - Nach 15 Minuten `wird_gepostet` → `unklar`, ohne neuen Versuch.
+    - Fehler 190 → `modus = vorschau`.
+    - Älter als 6 Stunden → `verfallen`.
+    - Bei `teilweise` wird der Kanal, der geklappt hat, nicht wiederholt.
+    - Reel wartet über mehrere Takte auf `FINISHED`.
+  - Meta-Client gegen aufgezeichnete Antworten (kein echter Aufruf in Tests).
+  - Folien: Sperrliste greift auch mit Erlaubnis, widerrufene Erlaubnis greift nicht mehr, Hinweise „Symbolbild · KI-generiert“ und „Foto: …“ stehen auf der Folie.
+  - Schnappschuss-JPEG mit der richtigen Größe.
+  - `/links`: ohne Cookies, `noindex`.
+  - Admin-Rechte: nur `ist_admin()`.
+- **Pipeline:** Prüfungen (Datum fremd, URL in IG, fremder `@handle`, Clickbait, Länge), zweiter Versuch, Eindeutigkeit (doppelter Lauf erzeugt keine zweiten Vorschläge), Story ohne KI-Aufruf, Reel-Befehl für ffmpeg (Dauer, Format), Log ohne Schlüssel.
+- **SQL:** RLS (anon und angemeldet sehen nichts), eindeutiger Slot je Tag, Kontrollabfrage.
+
+---
+
+## 13. Risiken
+
+- **Meta sperrt oder drosselt automatisierte Konten**, wenn sie wie Spam wirken. Gegenmittel: höchstens 4 Feed-Posts in der Woche, wenige feste Hashtags, keine Massen-Erwähnungen, alle Feed-Posts von Hand freigegeben.
+- **Fehler in den Daten** (falsches Datum, abgesagtes Event) gehen öffentlich raus. Gegenmittel: Freigabe, Vorab-Prüfung kurz vor dem Post, Stories nur mit Datenbank-Daten. Bleibt ein Rest: Eine Story mit falscher Uhrzeit ist bis zu 24 h sichtbar. Wir löschen sie dann in der App.
+- **Reels ohne Musik** erreichen weniger Leute. Das wird hingenommen, Musik ist O6.
+- **Token und API-Änderungen:** Meta ändert die Graph-API-Versionen etwa zweimal im Jahr. Die Version steht in einer Konstante, und die Verbindungsprüfung im Admin zeigt Abkündigungen.
+- **Supabase `pg_cron` fällt aus:** Dann wird nichts gepostet, und Posts werden `verfallen` (kein Doppelpost). Das Cockpit zeigt „letzter Takt vor x Minuten“. Ersatzweg ist der `crontab` auf dem Server.
+- **Speicher auf dem Server:** Gerendert wird nur bei Vorschau und Schnappschuss, und nur für Admins. Keine öffentliche Render-Route, die Bots auslösen könnten.
+- **Veranstalterfotos mit Personen:** Für die Rechte steht das Haus ein (Vorlage Anhang C). Bei einem Widerruf: Erlaubnis im Admin widerrufen und alte Posts in der App löschen. Ob die API Posts löschen kann, klärt Schritt 0.
+
+---
+
+## 14. Offene Fragen an den Auftraggeber
+
+| Nr. | Frage | Vorschlag |
+|---|---|---|
+| O1 | Wie heißt das Instagram-Konto (`@…`)? | – (für Datenschutz, `sameAs`, Footer) |
+| O2 | Passen Wochenplan und Uhrzeiten aus E2? | wie E2 |
+| O3 | Takt-Auslöser: Supabase `pg_cron` oder `crontab` auf dem Server? | `pg_cron` (kein Eingriff am Server) |
+| O4 | Adresse der Linkseite: `/links`? | `/links` |
+| O5 | Erinnerungsmail bei offenen Freigaben (E16) gewünscht? | ja, höchstens 1 am Tag |
+| O6 | Musik in Reels: lizenzfreie Musik (z. B. gekaufte Lizenz) in das Video einbauen? | zuerst ohne, später entscheiden |
+| O7 | Commons-Bilder (CC BY/BY-SA) mit Nennung in Posts? | vorerst nein |
+| O8 | Wer fragt die Häuser nach der Foto-Erlaubnis, und welche zuerst? | Claude stellt eine Liste der 20 häufigsten Häuser in Posts zusammen. Der Auftraggeber schreibt mit der Vorlage aus Anhang C |
+
+---
+
+## 15. Prüfhistorie
+
+- 25.11.2026: Bestandsaufnahme und erste Fassung (Claude), nach den Entscheidungen S1–S4 des Auftraggebers.
+
+---
+
+## Anhang A: Cursor-Prüf-Prompt (Plan)
+
+> Prüfe den Plan `docs/plan-social-2026-11-25.md` (automatische Posts auf Instagram und Facebook für diesdas.events) gegen den tatsächlichen Code im Repo. Ändere keinen Code und keinen Plan, liefere nur Befunde.
+>
+> Prüfe bitte besonders:
+> 1. **Bestand (Abschnitt 1):** Stimmen die Aussagen zu `pipeline/publisher.py`, `pipeline/caption_generator.py`, `main.py` (Schritte 4/5) und `test_instagram.py`? Bricht etwas, wenn Captions und Publisher wegfallen? Prüfe vor allem `categorizer.py` (lädt `status = neu`), `web/` und `dashboard/` auf Abhängigkeiten von `status = aufbereitet/gepostet` oder `instagram_caption`.
+> 2. **Auswahl (5.1):** Lassen sich `startseitenAuswahl`, `highlightsImZeitraum` und `wochenendProgramm` (`web/lib/startseite.ts`, `web/lib/ableitungen.ts`) für ein beliebiges `datum` aufrufen, ohne den Cache der Startseite zu teilen? Wo steht die Sensibel-Menge, die die Geburtstagsmail benutzt (`web/app/api/intern/geburtstag-tipps/route.ts`), und lässt sie sich hier gleich verwenden? Woher kommen die Event-IDs eines Magazin-Beitrags (`magazin_beitraege`)?
+> 3. **Rendern (E5, Abschnitt 6):** Ist `next/og` (`ImageResponse`) in Next 16.4 mit unserem Setup (Cache Components, `"use cache"`, `proxy.ts`, nginx) auf dem Server lauffähig? Fehlen Schriften als Dateien? Kann `sharp` PNG → JPEG ohne neue Abhängigkeit?
+> 4. **Takt (E9, E10):** Ist das Beanspruchen wirklich atomar? Lücken im Zustandsautomaten (`freigegeben → bereit → wird_gepostet → gepostet/teilweise/fehler/unklar/verfallen`)? Besonders: Reel-Container, der über mehrere Takte wartet; Absturz zwischen `media_publish` und dem Speichern; Facebook nach Instagram.
+> 5. **Meta-API (Abschnitt 8, 9):** Stimmen Endpunkte, Parameter und Rechte für Instagram (Bild, Karussell bis 10, Story, Reel) und für die Facebook-Seite (Foto, mehrere Fotos über `attached_media`, `video_reels`) mit der aktuellen Meta-Dokumentation überein? Reichen die Rechte aus Abschnitt 9 Punkt 3?
+> 6. **Sicherheit:** Token nur auf dem Server? Interne Routen 404 ohne Schlüssel, keine Schlüssel im Log? Admin-Routen nur mit `ist_admin()`? Ist der öffentliche Bucket `social` unbedenklich (nur freigegebene Inhalte, kein Auflisten)? Admin-Host-Trennung (`X-DDD-Bereich`, Admin-Plan 1a) für die neuen Admin-Routen?
+> 7. **Bildrechte (E6):** Greift die Sperrliste für alle Wege, auf denen ein Bild in eine Folie kommt (auch beim Tauschen im Admin)? Woran erkennt der Code, aus welcher Quelle `bild_url` stammt?
+> 8. **Widersprüche** zwischen den Abschnitten 3–12 und zu bestehenden Plänen (Admin-Plan 4.8, Magazin-Plan, Quellen-Ausbau-Plan 5.3 `INSTAGRAM_TAGE`).
+>
+> Ausgabe je Befund: Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile) · Befund · Vorschlag. Nach Schweregrad sortiert. Am Ende: Gesamturteil (freigabefähig ja/nein). Die offenen Fragen O1–O8 und die Anwaltsfragen A1–A6 sind bekannt und blockieren die technische Freigabe nicht.
+
+---
+
+## Anhang B: Entwurf Datenschutzerklärung (ersetzt `web/app/datenschutz/page.tsx:192–224`)
+
+> **Instagram und Facebook (Meta)**
+> Wir betreiben das Instagram-Profil @<O1> und die Facebook-Seite facebook.com/dies.das.duesseldorf. Betreiber der Plattformen ist die Meta Platforms Ireland Limited, Merrion Road, Dublin 4, D04 X2K5, Irland. Wenn Sie unsere Profile besuchen, verarbeitet Meta Ihre Daten nach der Meta-Datenschutzrichtlinie, u. a. Ihre IP-Adresse, Browser-Informationen und Ihr Nutzungsverhalten.
+> *(Absätze zu Seiten-Insights/Art. 26 und zur Rechtsgrundlage unverändert.)*
+>
+> **Automatisches Veröffentlichen auf Instagram und Facebook**
+> Wir veröffentlichen Beiträge auf unseren Profilen teilweise automatisiert über die Schnittstellen von Meta (Instagram Graph API, Facebook Graph API). Dabei übermitteln wir ausschließlich von uns erstellte Inhalte (Texte, Grafiken, Symbolbilder) sowie Fotos, deren Rechteinhaber zugestimmt haben, und öffentliche Angaben zu Veranstaltungen (Titel, Datum, Ort). Personenbezogene Daten von Nutzerinnen und Nutzern unserer Website werden dabei nicht übermittelt.
+>
+> **Linkseite für Instagram**
+> Die Seite diesdas.events/links, auf die unser Instagram-Profil verweist, setzt keine Cookies und verwendet kein Tracking. Es gelten die Angaben zum Server-Log in Abschnitt <n>.
+
+---
+
+## Anhang C: Vorlage Anfrage Foto-Erlaubnis (Entwurf, prüft der Anwalt)
+
+> Betreff: Eure Fotos auf dies.das.düsseldorf
+>
+> Hallo <Name>,
+>
+> wir sind dies.das.düsseldorf (diesdas.events), ein unabhängiger Stadtguide für Düsseldorf. Wir stellen eure Veranstaltungen auf unserer Website und ab Dezember auch auf Instagram und Facebook vor.
+>
+> Dürfen wir dafür die Pressefotos nutzen, die ihr auf eurer Website zu euren Veranstaltungen zeigt? Konkret: auf diesdas.events und in unseren Posts auf Instagram und Facebook, jeweils mit dem Vermerk „Foto: <euer Name oder Fotograf:in>“. Die Fotos werden nur zugeschnitten und mit Titel, Datum und Ort versehen, sonst nicht verändert.
+>
+> Wenn ihr einverstanden seid, bestätigt das bitte kurz per Mail. Bitte schreibt dazu, ob ihr die Rechte an den Fotos habt und ob abgebildete Personen einverstanden sind, und wie der Fotovermerk lauten soll. Widerrufen könnt ihr jederzeit mit einer Mail an hallo@diesdas.events; neue Posts nutzen eure Fotos dann nicht mehr.
+>
+> Viele Grüße
+> <Signatur>
+
+---
+
+## Anhang D: Klickanleitung Meta (für Schritt 0)
+
+Die Anleitung entsteht als eigene Datei `docs/meta-einrichtung-anleitung.md` direkt nach der Freigabe, mit Screenshots der aktuellen Oberflächen (Meta ändert die Menüs häufig). Inhalt wie Abschnitt 9, Punkte 1–8, je Punkt: wo klicken, was eintragen, woran man erkennt, dass es geklappt hat.
