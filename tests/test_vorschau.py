@@ -33,6 +33,8 @@ LANG = {
     # Welle A (V1): Bühnen mit Spielplan bis zu einem Jahr und die Ticketplattform Stagedates
     "Stagedates", "Theater an der Kö", "Theater an der Luegallee", "KaBARett FLiN", "Savoy Theater",
     "Roncalli's Apollo Varieté", "Schloss Benrath", "Theater am Schlachthof Neuss",
+    # Welle B (V2)
+    "Rheinisches Landestheater Neuss", "Globe Neuss",
 }
 
 

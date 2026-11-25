@@ -1,0 +1,936 @@
+{
+ "slots": [
+  {
+   "timeSlots": [
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-24T14:00:00",
+     "localEndDate": "2026-11-24T17:00:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "af43770b-6806-4490-89c9-8a706eb0ab60",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 9,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": true,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": true,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-24T18:00:00",
+     "localEndDate": "2026-11-24T20:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "bf7a69bb-aa19-4ae9-90b9-4d49a6df911f",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 9,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": true,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": true,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-26T10:00:00",
+     "localEndDate": "2026-11-26T12:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "8ec68a70-b342-4d81-bd38-d87ec4a194a9",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 14,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-26T18:00:00",
+     "localEndDate": "2026-11-26T20:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "386054e3-facc-4496-939f-a4fdc7ac5836",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 22,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-27T11:00:00",
+     "localEndDate": "2026-11-27T13:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "5a70dbf1-5956-4e53-838a-258237f395ae",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 10,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-27T16:00:00",
+     "localEndDate": "2026-11-27T19:00:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "bc2de561-91f9-4d27-9cd4-3273f7bcb041",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 9,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-27T20:00:00",
+     "localEndDate": "2026-11-27T22:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "efbb4383-0064-4541-a2c7-0d5f7c7cebb2",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 21,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-28T11:00:00",
+     "localEndDate": "2026-11-28T13:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "caf4306d-3020-4559-a1cd-27200eaacaa1",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 11,
+     "bookableCapacity": 11,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-28T15:00:00",
+     "localEndDate": "2026-11-28T17:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "603f77e9-4e84-4dd2-8d13-18460bdbc332",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 21,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-28T19:00:00",
+     "localEndDate": "2026-11-28T21:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "eb79db9d-127f-4af2-8b20-210c8656a59a",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 9,
+     "bookableCapacity": 9,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-29T10:00:00",
+     "localEndDate": "2026-11-29T12:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "2791ec1e-b897-4220-a36e-9acfc057fcf0",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 11,
+     "bookableCapacity": 11,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-29T13:30:00",
+     "localEndDate": "2026-11-29T16:00:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "ed1c9636-4d22-4340-971c-8853b17a6fd8",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 10,
+     "bookableCapacity": 10,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-11-29T17:00:00",
+     "localEndDate": "2026-11-29T19:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "08d9c507-4100-42a6-b099-a775a2d53f8b",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 11,
+     "bookableCapacity": 11,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    }
+   ],
+   "pagingMetadata": {
+    "hasNext": false
+   }
+  },
+  {
+   "timeSlots": [
+    {
+     "serviceId": "c6550c98-3298-49be-a995-505e45241695",
+     "localStartDate": "2026-12-04T17:00:00",
+     "localEndDate": "2026-12-04T19:00:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "a5cae3e0-1d3e-45ed-a082-c6243d3b614d",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "☕️Cozy Colours -Tassen bemalen"
+     },
+     "totalCapacity": 24,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "437e6703-a482-4fd6-b278-8600ebaccfb7",
+     "localStartDate": "2026-12-05T11:00:00",
+     "localEndDate": "2026-12-05T13:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "7849d8e3-a4fd-4127-b361-c7f7db7468ac",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🧼Soap Lab - Seifen selber gießen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 17,
+     "bookableCapacity": 17,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "437e6703-a482-4fd6-b278-8600ebaccfb7",
+     "localStartDate": "2026-12-05T15:00:00",
+     "localEndDate": "2026-12-05T17:30:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "dc6e2c8e-04f5-4fb7-a365-e9653225a0ce",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🧼Soap Lab - Seifen selber gießen"
+     },
+     "totalCapacity": 10,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": true,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": false
+     },
+     "allDay": false
+    },
+    {
+     "serviceId": "b3afd86e-075a-4ebd-87c6-dfac1d8f9308",
+     "localStartDate": "2026-12-05T19:00:00",
+     "localEndDate": "2026-12-05T21:00:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "c40faafc-9a4c-4d80-8ac0-06c45f2568be",
+      "eventTitle": "🍷Sip & Style - Weinglas bemalen"
+     },
+     "totalCapacity": 24,
+     "remainingCapacity": 19,
+     "bookableCapacity": 19,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "localStartDate": "2026-12-06T11:00:00",
+     "localEndDate": "2026-12-06T13:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "fc4589c7-f073-4cd2-bae8-8e2a48a7cf30",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🌲 Adventskranz Binden + Dip Dye Kerzen"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 16,
+     "bookableCapacity": 16,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "67dc00e7-fb74-49f4-865d-fd9d1ab53fc0",
+     "localStartDate": "2026-12-06T16:00:00",
+     "localEndDate": "2026-12-06T18:30:00",
+     "bookable": true,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "646e04a1-c262-4ba0-becd-f3b3a99bcc56",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "🥛Raysin Gießkeramik & Terrazzo"
+     },
+     "totalCapacity": 20,
+     "remainingCapacity": 19,
+     "bookableCapacity": 19,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "allDay": false
+    },
+    {
+     "serviceId": "c6550c98-3298-49be-a995-505e45241695",
+     "localStartDate": "2026-12-04T09:00:00",
+     "localEndDate": "2026-12-04T19:00:00",
+     "bookable": false,
+     "location": {
+      "id": "a5a82c7b-b2ee-4cbd-9525-b171627bd2a1",
+      "name": "The Craft Studio",
+      "formattedAddress": "The Craft Studio",
+      "locationType": "BUSINESS"
+     },
+     "eventInfo": {
+      "eventId": "a5cae3e0-1d3e-45ed-a082-c6243d3b614d",
+      "waitingList": {
+       "totalCapacity": 10,
+       "remainingCapacity": 10
+      },
+      "eventTitle": "☕️Cozy Colours -Tassen bemalen"
+     },
+     "totalCapacity": 24,
+     "remainingCapacity": 0,
+     "bookableCapacity": 0,
+     "bookingPolicyViolations": {
+      "tooEarlyToBook": false,
+      "tooLateToBook": false,
+      "bookOnlineDisabled": false
+     },
+     "nestedTimeSlots": [],
+     "nonBookableReasons": {
+      "noRemainingCapacity": false,
+      "violatesBookingPolicy": false,
+      "reservedForWaitingList": false,
+      "eventCancelled": true
+     },
+     "allDay": false
+    }
+   ],
+   "pagingMetadata": {
+    "hasNext": false
+   }
+  }
+ ],
+ "dienste": [
+  {
+   "services": [
+    {
+     "id": "437e6703-a482-4fd6-b278-8600ebaccfb7",
+     "type": "CLASS",
+     "name": "🧼Soap Lab - Seifen selber gießen",
+     "category": {
+      "id": "ac6f37ac-e30d-40e1-8c42-d8e46238208e",
+      "name": "Kerzen, Seife & Pflege",
+      "sortOrder": 518134
+     },
+     "payment": {
+      "rateType": "FIXED",
+      "fixed": {
+       "price": {
+        "value": "59",
+        "currency": "EUR"
+       }
+      }
+     },
+     "media": {
+      "mainMedia": {
+       "image": {
+        "id": "2b01bb_3c5ad2a38321464dbb78180b276038fe~mv2.jpg",
+        "url": "2b01bb_3c5ad2a38321464dbb78180b276038fe~mv2.jpg",
+        "height": 6081,
+        "width": 4054,
+        "filename": "2b01bb_3c5ad2a38321464dbb78180b276038fe~mv2.jpg"
+       }
+      }
+     },
+     "urls": {
+      "servicePage": {
+       "relativePath": "/service-page/soap-lab-seifen-selber-gießen",
+       "url": "https://www.the-craftstudio.de/service-page/soap-lab-seifen-selber-gießen"
+      },
+      "bookingPage": {
+       "relativePath": "/booking-calendar/soap-lab-seifen-selber-gießen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/soap-lab-seifen-selber-gießen"
+      },
+      "calendarPage": {
+       "relativePath": "/booking-calendar/soap-lab-seifen-selber-gießen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/soap-lab-seifen-selber-gießen"
+      }
+     },
+     "mainSlug": {
+      "name": "soap-lab-seifen-selber-gießen",
+      "custom": true,
+      "createdDate": "2026-04-09T08:50:51.840Z"
+     },
+     "hidden": false
+    },
+    {
+     "id": "67dc00e7-fb74-49f4-865d-fd9d1ab53fc0",
+     "type": "CLASS",
+     "name": "🥛Raysin Gießkeramik & Terrazzo",
+     "category": {
+      "id": "143e8081-f31d-4369-be44-940734576ccb",
+      "name": "Keramik & Glas",
+      "sortOrder": 195921
+     },
+     "payment": {
+      "rateType": "FIXED",
+      "fixed": {
+       "price": {
+        "value": "59",
+        "currency": "EUR"
+       }
+      }
+     },
+     "media": {
+      "mainMedia": {
+       "image": {
+        "id": "85a933_cc70310659cb49a8ada20c4d17dc15e7~mv2.jpg",
+        "url": "85a933_cc70310659cb49a8ada20c4d17dc15e7~mv2.jpg",
+        "height": 6120,
+        "width": 8160,
+        "filename": "2081dc434d6c49d3aee0e07a7f540baf.jpg"
+       }
+      }
+     },
+     "urls": {
+      "servicePage": {
+       "relativePath": "/service-page/raysin-gießkeramik-terrazzo",
+       "url": "https://www.the-craftstudio.de/service-page/raysin-gießkeramik-terrazzo"
+      },
+      "bookingPage": {
+       "relativePath": "/booking-calendar/raysin-gießkeramik-terrazzo",
+       "url": "https://www.the-craftstudio.de/booking-calendar/raysin-gießkeramik-terrazzo"
+      },
+      "calendarPage": {
+       "relativePath": "/booking-calendar/raysin-gießkeramik-terrazzo",
+       "url": "https://www.the-craftstudio.de/booking-calendar/raysin-gießkeramik-terrazzo"
+      }
+     },
+     "mainSlug": {
+      "name": "raysin-gießkeramik-terrazzo",
+      "custom": false,
+      "createdDate": "2026-02-17T14:28:58.550Z"
+     },
+     "hidden": false
+    },
+    {
+     "id": "a9c09c03-b468-4a6c-aa08-896a7c83baca",
+     "type": "CLASS",
+     "name": "🌲 Adventskranz Binden + Dip Dye Kerzen",
+     "category": {
+      "id": "eace4964-e7b7-4373-aabd-29a8e03d45d0",
+      "name": "Blumen & Kränze",
+      "sortOrder": 105510
+     },
+     "payment": {
+      "rateType": "FIXED",
+      "fixed": {
+       "price": {
+        "value": "79",
+        "currency": "EUR"
+       }
+      }
+     },
+     "media": {
+      "mainMedia": {
+       "image": {
+        "id": "85a933_6347a31b1cb44861b3164018265d733e~mv2.jpg",
+        "url": "85a933_6347a31b1cb44861b3164018265d733e~mv2.jpg",
+        "height": 725,
+        "width": 725,
+        "filename": "2081dc434d6c49d3aee0e07a7f540baf.jpg"
+       }
+      }
+     },
+     "urls": {
+      "servicePage": {
+       "relativePath": "/service-page/adventskranz-binden-dip-dye-kerzen",
+       "url": "https://www.the-craftstudio.de/service-page/adventskranz-binden-dip-dye-kerzen"
+      },
+      "bookingPage": {
+       "relativePath": "/booking-calendar/adventskranz-binden-dip-dye-kerzen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/adventskranz-binden-dip-dye-kerzen"
+      },
+      "calendarPage": {
+       "relativePath": "/booking-calendar/adventskranz-binden-dip-dye-kerzen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/adventskranz-binden-dip-dye-kerzen"
+      }
+     },
+     "mainSlug": {
+      "name": "adventskranz-binden-dip-dye-kerzen",
+      "custom": false,
+      "createdDate": "2026-07-16T14:31:40.441Z"
+     },
+     "hidden": false
+    },
+    {
+     "id": "b3afd86e-075a-4ebd-87c6-dfac1d8f9308",
+     "type": "CLASS",
+     "name": "🍷Sip & Style - Weinglas bemalen",
+     "category": {
+      "id": "143e8081-f31d-4369-be44-940734576ccb",
+      "name": "Keramik & Glas",
+      "sortOrder": 195921
+     },
+     "payment": {
+      "rateType": "FIXED",
+      "fixed": {
+       "price": {
+        "value": "35",
+        "currency": "EUR"
+       }
+      }
+     },
+     "media": {
+      "mainMedia": {
+       "image": {
+        "id": "85a933_a821471e6afc4e6db057def9b02d3b4e~mv2.jpg",
+        "url": "85a933_a821471e6afc4e6db057def9b02d3b4e~mv2.jpg",
+        "height": 1536,
+        "width": 1536,
+        "filename": "2b01bb_d74402633c2e4e10aa0527f306ee730d~mv2.jpg"
+       }
+      }
+     },
+     "urls": {
+      "servicePage": {
+       "relativePath": "/service-page/sip-style-weinglas-bemalen",
+       "url": "https://www.the-craftstudio.de/service-page/sip-style-weinglas-bemalen"
+      },
+      "bookingPage": {
+       "relativePath": "/booking-calendar/sip-style-weinglas-bemalen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/sip-style-weinglas-bemalen"
+      },
+      "calendarPage": {
+       "relativePath": "/booking-calendar/sip-style-weinglas-bemalen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/sip-style-weinglas-bemalen"
+      }
+     },
+     "mainSlug": {
+      "name": "sip-style-weinglas-bemalen",
+      "custom": true,
+      "createdDate": "2026-07-28T12:05:47.731Z"
+     },
+     "hidden": false
+    },
+    {
+     "id": "c6550c98-3298-49be-a995-505e45241695",
+     "type": "CLASS",
+     "name": "☕️Cozy Colours -Tassen bemalen",
+     "category": {
+      "id": "143e8081-f31d-4369-be44-940734576ccb",
+      "name": "Keramik & Glas",
+      "sortOrder": 195921
+     },
+     "payment": {
+      "rateType": "FIXED",
+      "fixed": {
+       "price": {
+        "value": "35",
+        "currency": "EUR"
+       }
+      }
+     },
+     "media": {
+      "mainMedia": {
+       "image": {
+        "id": "85a933_846b6a3f8d4b401b8a733f5e9bddde9a~mv2.jpg",
+        "url": "85a933_846b6a3f8d4b401b8a733f5e9bddde9a~mv2.jpg",
+        "height": 2215,
+        "width": 2575,
+        "filename": "2b01bb_f99ccabc40054299ac85b329c024ceab~mv2.jpg"
+       }
+      }
+     },
+     "urls": {
+      "servicePage": {
+       "relativePath": "/service-page/cozy-colours-tassen-bemalen",
+       "url": "https://www.the-craftstudio.de/service-page/cozy-colours-tassen-bemalen"
+      },
+      "bookingPage": {
+       "relativePath": "/booking-calendar/cozy-colours-tassen-bemalen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/cozy-colours-tassen-bemalen"
+      },
+      "calendarPage": {
+       "relativePath": "/booking-calendar/cozy-colours-tassen-bemalen",
+       "url": "https://www.the-craftstudio.de/booking-calendar/cozy-colours-tassen-bemalen"
+      }
+     },
+     "mainSlug": {
+      "name": "cozy-colours-tassen-bemalen",
+      "custom": false,
+      "createdDate": "2026-02-04T10:10:55.740Z"
+     },
+     "hidden": false
+    }
+   ]
+  }
+ ]
+}

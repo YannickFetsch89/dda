@@ -1,0 +1,170 @@
+<br />
+<b>Warning</b>:  Undefined array key "start" in <b>/homepages/10/d19502989/htdocs/clickandbuilds/OberschlesischesLandesmuseum/wp-content/plugins/modern-events-calendar/app/libraries/main.php</b> on line <b>4163</b><br />
+<br />
+BEGIN:VCALENDAR
+VERSION:2.0
+METHOD:PUBLISH
+CALSCALE:GREGORIAN
+PRODID:-//WordPress - MECv7.31.0//EN
+X-ORIGINAL-URL:https://oberschlesisches-landesmuseum.de/
+X-WR-CALNAME:Oberschlesisches Landesmuseum
+X-WR-CALDESC:
+X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VTIMEZONE
+TZID:Europe/Berlin
+X-LIC-LOCATION:Europe/Berlin
+BEGIN:DAYLIGHT
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+TZNAME:CEST
+DTSTART:20260329T030000
+RRULE:FREQ=YEARLY;BYMONTH=03;BYDAY=-1SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+TZNAME:CET
+DTSTART:20261025T020000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=4SU
+END:STANDARD
+END:VTIMEZONE
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
+X-MS-OLK-FORCEINSPECTOROPEN:TRUE
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-314e6ef5dee5ca3a61707d40a0e08d76@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20261128T120000
+DTEND;TZID=Europe/Berlin:20261128T150000
+DTSTAMP:20260729T161435Z
+CREATED:20260729
+LAST-MODIFIED:20260821
+PRIORITY:5
+SEQUENCE:2
+TRANSP:OPAQUE
+SUMMARY:Samstags im Museum: Advents-Werkstatt. Mini-Adventskalender zum Verschenken
+DESCRIPTION:Die Adventszeit ist eine Zeit der Vorfreude und des gemütlichen Beisammenseins. Manchmal möchte man jemandem schon vor Heiligabend eine Freude machen. Dazu eignet sich ein selbst gestalteter Adventska
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/samstags-im-museum-advents-werkstatt-mini-adventskalender-zum-verschenken/
+CATEGORIES:Samstags im Museum
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/07/28.11.-Adventswerkstatt.jpg
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-af141196b05c7fe6f8d290c41aa63f96@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20261128T183000
+DTEND;TZID=Europe/Berlin:20261128T210000
+DTSTAMP:20260520T140210Z
+CREATED:20260520
+LAST-MODIFIED:20261026
+PRIORITY:5
+SEQUENCE:1
+TRANSP:OPAQUE
+SUMMARY:Salon Silesia: Schwarzbrenner – „Joseph von Eichendorff & Momente der Romantik“
+DESCRIPTION:Ein Jubiläum trifft auf das nächste: Zum 750-jährigen Stadtjubiläum von Ratingen widmet sich die Ratinger Band Schwarzbrenner in einem abwechslungsreichen Konzertprogramm dem Romantiker Joseph von Eic
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/salon-silesia-schwarzbrenner-joseph-von-eichendorff-momente-der-romantik/
+CATEGORIES:Salon Silesia,Samstags im Museum,Sonderaktion
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/05/Duo-Bandbild-OSLM.jpg
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-091fe63c4d0db2482743ef709f5c8d6a@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20261204T170000
+DTEND;TZID=Europe/Berlin:20261204T180000
+DTSTAMP:20260729T150237Z
+CREATED:20260729
+LAST-MODIFIED:20260821
+PRIORITY:5
+SEQUENCE:2
+TRANSP:OPAQUE
+SUMMARY:Taschenlampenführung: „Enthüllt und Aufgedeckt“ mit Anna Appelhoff
+DESCRIPTION:Objekte, die viele Jahre oder sogar Jahrzehnte gut verstaut im Museumsdepot auf ihren großen Auftritt gewartet haben, werden während der Taschenlampenführung ins Scheinwerferlicht gerückt. Durch die K
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/taschenlampenfuehrung-enthuellt-und-aufgedeckt-mit-anna-appelhoff/
+CATEGORIES:Führungen
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/07/Taschenlampenfuehrung.jpg
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-745c7d75786602f3105a69845316ff61@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20261206T110000
+DTEND;TZID=Europe/Berlin:20261206T140000
+DTSTAMP:20261120T095758Z
+CREATED:20261120
+LAST-MODIFIED:20261120
+PRIORITY:5
+SEQUENCE:1
+TRANSP:OPAQUE
+SUMMARY:#oslmontour: Objekte – Erinnerung – Begriffe. Keynote von Katarzyna Schieweck in der Galerie Wedding
+DESCRIPTION:Wie spiegeln Theaterbau und -programm die bewegte Geschichte Oberschlesiens wider? Wie prägen sie Vorstellungen von Zugehörigkeit? Die Sonderausstellung „Schlesisches Theater. Geschichte und Gestalten
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/oslmontour-objekte-erinnerung-begriffe-galerie-wedding/
+CATEGORIES:Sonderaktion
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2025/09/D4C08988.jpg
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-750622b888646661fb918749ee3e550f@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20270321T110000
+DTEND;TZID=Europe/Berlin:20270321T130000
+DTSTAMP:20261117T115735Z
+CREATED:20261117
+LAST-MODIFIED:20261117
+PRIORITY:5
+SEQUENCE:3
+TRANSP:OPAQUE
+SUMMARY:Osterfrühstück im Oberschlesischen Landesmuseum
+DESCRIPTION:Das Oberschlesische Landesmuseum veranstaltet zum wiederholten Mal ein gemeinsames Osterfrühstück. In der oberschlesischen Tradition ist das österliche Frühstück ein wichtiges familiäres Ereignis, das
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/osterfruehstueck-im-oberschlesischen-landesmuseum/
+CATEGORIES:Sonderaktion
+ATTACH;FMTTYPE=image/png:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/11/Ostern_Fruehstueck_OSLM-1.png
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-1747d1fa8599d2bd102ce1e8b8ee2399@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20270307T150000
+DTEND;TZID=Europe/Berlin:20270307T180000
+DTSTAMP:20261022T073654Z
+CREATED:20261022
+LAST-MODIFIED:20261119
+PRIORITY:5
+SEQUENCE:1
+TRANSP:OPAQUE
+SUMMARY:Zeit für die eigene weibliche Kraft. Lunnica-Schnupperworkshop zum Weltfrauentag
+DESCRIPTION:Gönnen Sie sich eine bewusste Auszeit und entdecken Sie Lunnica – eine slawisch inspirierte Frauenpraxis, die fließende Bewegung, Achtsamkeit und Affirmationen zu einem ganzheitlichen Erlebnis verbind
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/zeit-fuer-die-eigene-weibliche-kraft-schnupperworkshop-zum-weltfrauentag/
+CATEGORIES:Sonderaktion
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/10/Katrin-Herbeck.jpg
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-e3b259d82783ba2b947a2045336fd83f@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20270131T150000
+DTEND;TZID=Europe/Berlin:20270131T180000
+DTSTAMP:20261022T065256Z
+CREATED:20261022
+LAST-MODIFIED:20261115
+PRIORITY:5
+SEQUENCE:2
+TRANSP:OPAQUE
+SUMMARY:Neujahrsempfang und Ausstellungseröffnung: „Das gemalte Staunen. Werke aus der Sammlung Otten“ mit begleitendem Kinder- und Jugendworkshop: Aus Platte wird Kunst – Workshop zum Linolschnitt
+DESCRIPTION:Der Neujahrsempfang des Oberschlesischen Landesmuseums bietet Gelegenheit, auf das vergangene Jahr zurückzublicken und einen Ausblick auf die kommenden Vorhaben zu geben. Ein besonderer Programmpunkt 
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/neujahrsempfang-und-ausstellungseroeffnung-das-gemalte-staunen/
+CATEGORIES:Eröffnung,Führungen
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/10/OSLM-2027-web-scaled.jpg
+END:VEVENT
+BEGIN:VEVENT
+CLASS:PUBLIC
+UID:MEC-cbe6735b8115b47966a4f19ff02e26b3@oberschlesisches-landesmuseum.de
+DTSTART;TZID=Europe/Berlin:20260913T150000
+DTEND;TZID=Europe/Berlin:20260913T180000
+DTSTAMP:20260730T100830Z
+CREATED:20260730
+LAST-MODIFIED:20260825
+PRIORITY:5
+SEQUENCE:2
+TRANSP:OPAQUE
+SUMMARY:Öffentliche Führung durch die Dauerausstellung mit Dr. Marius Hirschfeld
+DESCRIPTION:Die Führung durch die Dauerausstellung des Oberschlesischen Landesmuseums bietet einen faszinierenden Einblick in die reiche Geschichte und Kultur der Region. Die Besucherinnen und Besucher erleben ei
+URL:https://oberschlesisches-landesmuseum.de/veranstaltungen/oeffentliche-fuehrung-durch-die-dauerausstellung-mit-dr-marius-hirschfeld-6/
+CATEGORIES:Führungen
+ATTACH;FMTTYPE=image/jpeg:https://oberschlesisches-landesmuseum.de/wp-content/uploads/2026/05/Dr.-Marius-Hirschfeld-©-SHOS-OSLM-Leonie-Langen.jpg
+END:VEVENT
+END:VCALENDAR

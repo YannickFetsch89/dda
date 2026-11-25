@@ -1,0 +1,150 @@
+{
+ "items": [
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/ohrenfeindt-2026-11-27/8b57096b6f-1787230717/ohrenfeindt_pressefoto_2026-550x550-crop.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/ohrenfeindt-2026-11-27/8b57096b6f-1787230717/ohrenfeindt_pressefoto_2026-550x550-crop.webp 550 1x, https://www.concertteam.de/media/pages/events/ohrenfeindt-2026-11-27/8b57096b6f-1787230717/ohrenfeindt_pressefoto_2026-1100x1100-crop.webp 550 2x, https://www.concertteam.de/media/pages/events/ohrenfeindt-2026-11-27/8b57096b6f-1787230717/ohrenfeindt_pressefoto_2026-1650x1650-crop.webp 550 3x",
+    "alt": ""
+   },
+   "title": "Ohrenfeindt",
+   "date": "27.11.2026",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/ohrenfeindt-2026-11-27",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/die-toten-hosen-party-2026-12-15/2484b69486-1783440499/ctnrw_fheader_ratingerhof_1920x1080px_0325_v2-550x550-crop.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/die-toten-hosen-party-2026-12-15/2484b69486-1783440499/ctnrw_fheader_ratingerhof_1920x1080px_0325_v2-550x550-crop.webp 550 1x, https://www.concertteam.de/media/pages/events/die-toten-hosen-party-2026-12-15/2484b69486-1783440499/ctnrw_fheader_ratingerhof_1920x1080px_0325_v2-1100x1100-crop.webp 550 2x, https://www.concertteam.de/media/pages/events/die-toten-hosen-party-2026-12-15/2484b69486-1783440499/ctnrw_fheader_ratingerhof_1920x1080px_0325_v2-1650x1650-crop.webp 550 3x",
+    "alt": ""
+   },
+   "title": "Die Toten Hosen Party",
+   "date": "05.12.2026",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/die-toten-hosen-party-2026-12-15",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": true,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/the-spitfires-2026-12-06/dddb03352a-1786362486/the-spitfires-550x550-crop-51-7-39-0.webp",
+    "srcset": "https://www.concertteam.de/media/pages/events/the-spitfires-2026-12-06/dddb03352a-1786362486/the-spitfires-550x550-crop-51-7-39-0.webp 550 1x, https://www.concertteam.de/media/pages/events/the-spitfires-2026-12-06/dddb03352a-1786362486/the-spitfires-1100x1100-crop-51-7-39-0.webp 550 2x, https://www.concertteam.de/media/pages/events/the-spitfires-2026-12-06/dddb03352a-1786362486/the-spitfires-1650x1650-crop-51-7-39-0.webp 550 3x",
+    "alt": ""
+   },
+   "title": "The Spitfires",
+   "date": "06.12.2026",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/the-spitfires-2026-12-06",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/dj-battle-2026-12-19/e072c7b628-1770284592/die-drei-djs-550x550-crop-49-4-50-8.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/dj-battle-2026-12-19/e072c7b628-1770284592/die-drei-djs-550x550-crop-49-4-50-8.webp 550 1x, https://www.concertteam.de/media/pages/events/dj-battle-2026-12-19/e072c7b628-1770284592/die-drei-djs-1100x1100-crop-49-4-50-8.webp 550 2x, https://www.concertteam.de/media/pages/events/dj-battle-2026-12-19/e072c7b628-1770284592/die-drei-djs-1650x1650-crop-49-4-50-8.webp 550 3x",
+    "alt": ""
+   },
+   "title": "DJ-Battle",
+   "date": "19.12.2026",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/dj-battle-2026-12-19",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/glam-bang-silvester-ball-2025-12-31/c33236f5e2-1763464322/holder-1080-550x550-crop-52-3-51-0.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/glam-bang-silvester-ball-2025-12-31/c33236f5e2-1763464322/holder-1080-550x550-crop-52-3-51-0.webp 550 1x, https://www.concertteam.de/media/pages/events/glam-bang-silvester-ball-2025-12-31/c33236f5e2-1763464322/holder-1080-1100x1100-crop-52-3-51-0.webp 550 2x, https://www.concertteam.de/media/pages/events/glam-bang-silvester-ball-2025-12-31/c33236f5e2-1763464322/holder-1080-1650x1650-crop-52-3-51-0.webp 550 3x",
+    "alt": ""
+   },
+   "title": "GLAM BANG!",
+   "date": "31.12.2026",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/glam-bang-silvester-ball-2026-12-31",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/drunken-swallows-2026-10-02/a6a2e3f72b-1770122661/bandbild-550x550-crop-49-8-43-7.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/drunken-swallows-2026-10-02/a6a2e3f72b-1770122661/bandbild-550x550-crop-49-8-43-7.webp 550 1x, https://www.concertteam.de/media/pages/events/drunken-swallows-2026-10-02/a6a2e3f72b-1770122661/bandbild-1100x1100-crop-49-8-43-7.webp 550 2x, https://www.concertteam.de/media/pages/events/drunken-swallows-2026-10-02/a6a2e3f72b-1770122661/bandbild-1650x1650-crop-49-8-43-7.webp 550 3x",
+    "alt": ""
+   },
+   "title": "Drunken Swallows",
+   "date": "29.10.2027",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/drunken-swallows-2027-10-29",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/ninamarie-2026-12-07/15ac3bfe73-1791379066/02-ninamarie-birte-filmer-550x550-crop-47-6-44-8.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/ninamarie-2026-12-07/15ac3bfe73-1791379066/02-ninamarie-birte-filmer-550x550-crop-47-6-44-8.webp 550 1x, https://www.concertteam.de/media/pages/events/ninamarie-2026-12-07/15ac3bfe73-1791379066/02-ninamarie-birte-filmer-1100x1100-crop-47-6-44-8.webp 550 2x, https://www.concertteam.de/media/pages/events/ninamarie-2026-12-07/15ac3bfe73-1791379066/02-ninamarie-birte-filmer-1650x1650-crop-47-6-44-8.webp 550 3x",
+    "alt": ""
+   },
+   "title": "Ninamarie",
+   "date": "07.12.2026",
+   "location": "Ratinger Hof Düsseldorf",
+   "url": "https://www.concertteam.de/events/ninamarie-2026-12-07",
+   "isCancelled": true,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  },
+  {
+   "cover": {
+    "src": "https://www.concertteam.de/media/pages/events/alex-henry-foster-2026-12-08/2e70fdc467-1778844178/alex_henry_foster-credit_muralla-7507_26045-550x550-crop-35-5-31-4.jpg",
+    "srcset": "https://www.concertteam.de/media/pages/events/alex-henry-foster-2026-12-08/2e70fdc467-1778844178/alex_henry_foster-credit_muralla-7507_26045-550x550-crop-35-5-31-4.webp 550 1x, https://www.concertteam.de/media/pages/events/alex-henry-foster-2026-12-08/2e70fdc467-1778844178/alex_henry_foster-credit_muralla-7507_26045-1100x1100-crop-35-5-31-4.webp 550 2x, https://www.concertteam.de/media/pages/events/alex-henry-foster-2026-12-08/2e70fdc467-1778844178/alex_henry_foster-credit_muralla-7507_26045-1650x1650-crop-35-5-31-4.webp 550 3x",
+    "alt": ""
+   },
+   "title": "Alex Henry Foster",
+   "date": "08.12.2026",
+   "location": "Live Music Hall",
+   "url": "https://www.concertteam.de/events/alex-henry-foster-2026-12-08",
+   "isCancelled": false,
+   "hasFaq": false,
+   "isPostponed": false,
+   "isRelocated": false,
+   "isSoldOut": false,
+   "isReplacementDate": false
+  }
+ ],
+ "pagination": {
+  "prevPageURL": false,
+  "nextPageURL": false,
+  "prevPage": null,
+  "nextPage": null,
+  "page": 1,
+  "total": 1,
+  "firstPageURL": "https://www.concertteam.de/events.json/limit:50/query:location%3DRatinger%2BHof%2BD%C3%BCsseldorf",
+  "lastPageURL": "https://www.concertteam.de/events.json/limit:50/query:location%3DRatinger%2BHof%2BD%C3%BCsseldorf"
+ }
+}

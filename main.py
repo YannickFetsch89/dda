@@ -71,6 +71,20 @@ from scraper.tier2 import (
     insel_hombroich,
     stadt_ratingen,
     tas_neuss,
+    # Welle B (Plan Quellen-Ausbau 3.2, Schritt V2)
+    rsh_hochschule,
+    haus_der_universitaet,
+    philara,
+    aquazoo,
+    hetjens,
+    filmwerkstatt,
+    ratinger_hof,
+    boston_club,
+    craft_studio,
+    oberschlesisches_landesmuseum,
+    rheinisches_landestheater,
+    globe_neuss,
+    lvr_cromford,
 )
 from scraper.tier3 import (
     parkrun,
@@ -162,6 +176,20 @@ QUELLEN = [
     ("Insel Hombroich", 2, insel_hombroich.scrape),
     ("Stadt Ratingen Veranstaltungskalender", 2, stadt_ratingen.scrape),
     ("Theater am Schlachthof Neuss", 2, tas_neuss.scrape),
+    # Welle B (Plan Quellen-Ausbau 3.2, Schritt V2)
+    ("Robert Schumann Hochschule", 2, rsh_hochschule.scrape),
+    ("Haus der Universität", 2, haus_der_universitaet.scrape),
+    ("Sammlung Philara", 2, philara.scrape),
+    ("Aquazoo Löbbecke Museum", 2, aquazoo.scrape),
+    ("Hetjens-Museum", 2, hetjens.scrape),
+    ("Filmwerkstatt Düsseldorf", 2, filmwerkstatt.scrape),
+    ("Ratinger Hof", 2, ratinger_hof.scrape),
+    ("Boston Club", 2, boston_club.scrape),
+    ("The Craft Studio", 2, craft_studio.scrape),
+    ("Oberschlesisches Landesmuseum", 2, oberschlesisches_landesmuseum.scrape),
+    ("Rheinisches Landestheater Neuss", 2, rheinisches_landestheater.scrape),
+    ("Globe Neuss", 2, globe_neuss.scrape),
+    ("LVR-Industriemuseum Cromford", 2, lvr_cromford.scrape),
     # Tier 3: Nischen- und Spezialquellen
     ("Parkrun Volksgarten Düsseldorf", 3, parkrun.scrape),
     ("Sport im Park Düsseldorf", 3, sport_im_park.scrape),
@@ -365,12 +393,13 @@ async def _schritte_ausfuehren(report: LaufReport):
         # Alle offenen Termine je Lauf (Auftraggeber 20.11.2026: „Beschreibungen sollen immer mitgenommen werden“);
         # vorher 40 Rausgegangen-Events und 10 Minuten für Veranstalter – der Rückstand wuchs. Die Grenzen hier sind
         # nur Schutz gegen Hänger, das Zeitlimit des Workflows (.github/workflows/scrape.yml) ist darauf abgestimmt.
-        # Zeitbudgets (Cursor-Prüfung 24.11.2026): Scraper inkl. der neuen Quellen rund 60 Minuten, KI-Schritte und
-        # Speichern rund 30 Minuten, dazu 40 + 70 Minuten Beschreibungen → unter 200 der 240 Minuten des Workflows.
-        # Was liegen bleibt, kommt im nächsten Lauf dran.
+        # Zeitbudgets (Cursor-Prüfung 24.11.2026, Welle B 25.11.): Scraper rund 65 Minuten (Probelauf 24.11.: 42 Minuten
+        # ohne Rausgegangen, Welle B 12 Minuten, Rausgegangen ~10), KI-Schritte und Speichern rund 30 Minuten, dazu
+        # 40 + 60 Minuten Beschreibungen → unter 200 der 240 Minuten des Workflows. Was liegen bleibt, kommt im nächsten
+        # Lauf dran.
         beschreibungen_nachziehen(limit=1000, max_sekunden=2400)
         # Veranstalter-Events: Text aus der eigenen Event-Seite, ein Text pro Stück
-        veranstalter_nachziehen(max_stuecke=2000, max_sekunden=4200)
+        veranstalter_nachziehen(max_stuecke=2000, max_sekunden=3600)
     except Exception as e:
         logger.error("Beschreibungen aus Veranstalter-Quellen fehlgeschlagen: %s", e)
 

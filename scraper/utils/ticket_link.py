@@ -44,6 +44,8 @@ ANBIETER: dict[str, str] = {
     "tickettailor.com": "Ticket Tailor",
     "rodrigue.de": "Rodrigue",
     "fienta.com": "Fienta",
+    "derticketservice.de": "derticketservice",
+    "xceed.me": "Xceed",
     # Gefunden bei d.live und Mitsubishi Electric HALLE (Ticket-Button des Hauses, 24.11.2026)
     "livenation.de": "Live Nation",
     "koelnticket.de": "KölnTicket",

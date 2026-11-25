@@ -1003,6 +1003,42 @@ behoben: `stadt_im_gebiet` lässt einen Bindestrich nach dem Stadtnamen zu, `adr
 am Anfang eines Adressabschnitts als PLZ, Ticketmaster behält ein Event mit PLZ im Gebiet unabhängig von der
 Schreibweise der Stadt. Zwei Tests dazu, Python gesamt 787 ok.
 
+### V2 – Welle B (25.11.2026, lokal gebaut)
+
+Drei Hilfsagenten je Gruppe (Auftrag wie V1, ergänzt um `ticket_url`, `ticket_link_haus`, `adresse_im_gebiet`), Einbindung
+durch Claude (main.py QUELLEN je Haus eine Zeile, config.VORSCHAU_TAGE, Rangtabelle Python/TS/Fixture, CLAUDE.md).
+
+| Haus | Modul | Methode | Fenster | Ticket-Link |
+|---|---|---|---|---|
+| Robert Schumann Hochschule | rsh_hochschule | Liste + Details, fremde Orte mit eigener Adresse, Wuppertal/Radio weg | 120 | ja |
+| Haus der Universität | haus_der_universitaet | Kalender + Details, Crawl-delay 10 | 120 | ja (selten) |
+| Sammlung Philara | philara | Programmseite, Freitext-Daten | 120 | ja (Reservix) |
+| Aquazoo Löbbecke Museum | aquazoo | JSON-API, Tagungen weg | 120 | nein |
+| Hetjens-Museum | hetjens | JSON-API (gleiches CMS), Dauer-Suchspiel weg | 120 | nein |
+| Filmwerkstatt Düsseldorf | filmwerkstatt | Startseite + Beitragsseiten | 120 | ja (xceed, Anbieter ergänzt) |
+| Ratinger Hof | ratinger_hof | concertteam.de JSON + Details (Betreiber des Hauses) | 120 | ja |
+| Boston Club | boston_club | handgepflegte Seite | 120 | nein |
+| The Craft Studio | craft_studio | Playwright, Wix-Buchungskalender, community | 120 | ja (eigene Buchung) |
+| Oberschlesisches Landesmuseum | oberschlesisches_landesmuseum | iCal (MEC), Termine außer Haus weg | 120 | nein |
+| Rheinisches Landestheater Neuss | rheinisches_landestheater | Spielplan monatsweise, Gastspiele/Gruppenvorstellungen weg | 365 | ja (derticketservice, Anbieter ergänzt) |
+| Globe Neuss | globe_neuss | Festival-Programm, nur Spielort Globe, sonst „saisonal“ | 365 | ja |
+| LVR-Industriemuseum Cromford | lvr_cromford | Kalender-JSON, nur Standort Ratingen | 120 | Shop-Startseite |
+
+Nicht gebaut (Gründe in den Berichten): Event-Theater Schwanenhöfe, Kloster Flingern, KLUB KULB, Gare du Neuss (keine
+Termine); Düsseldorfer Marionetten-Theater (unvollständige Zertifikatskette, kein `verify=False`); Komödie Düsseldorf
+(Domain übernommen, kein Spielplan); The Vinyl Room (iCal nur YouTube-Livestream); Eigenlob Keramik (nur offene Kurse);
+Stadthalle/Zeughaus Neuss (neuss-marketing.de sperrt alle Bots). Möglicher Ersatz später: Kalender Kulturamt Neuss
+(ZeughausKonzerte, ~4 je Spielzeit).
+
+Live-Probe 25.11. mit den richtigen Fenstern: 392 Termine (RSH 61, HdU 29, Philara 4, Aquazoo 11, Hetjens 13,
+Filmwerkstatt 6, Ratinger Hof 20, Boston Club 3, Craft Studio 73, OSLM 21, RLT 145, Globe 0 = außerhalb der Saison,
+LVR 6), davon 167 mit Ticket-Link; Laufzeit zusammen 11,9 Minuten (HdU 5,6 min wegen Crawl-delay, RSH 3 min). Deshalb
+Veranstalter-Beschreibungen 3.600 statt 4.200 s (main.py), damit der Lauf unter 200 Minuten bleibt.
+
+Offen zur Prüfung durch den Auftraggeber: Adresse Globe Neuss (Hammer Landstraße 2), Bilder des LVR von lvr.gomus.de
+(Ticketsystem des LVR – als Website des Hauses gewertet), Ratinger-Hof-Bilder von concertteam.de (Betreiber). Tests
+876 Python ok.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

@@ -151,6 +151,22 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Insel Hombroich (Tribe-API) · Stadt Ratingen Veranstaltungskalender (Crawl-delay 10) | 120 Tage |
 | ~~Maxhaus~~ | nicht gebaut: Datum nur auf jeder Detailseite (siehe Plan Anhang C) |
 
+#### Welle B (Quellen-Ausbau V2, 25.11.2026 – Module in scraper/tier2/)
+| Haus | Quelle / Methode |
+|---|---|
+| Robert Schumann Hochschule · Filmwerkstatt Düsseldorf | Liste + Detailseiten (HTML), 120 Tage; RSH nennt Konzerte auch an fremden Orten (Tonhalle, Kirchen) |
+| Haus der Universität | Veranstaltungskalender + Detailseiten, **Crawl-delay 10** (≈ 5 min je Lauf), 120 Tage |
+| Sammlung Philara | Programmseite (Freitext-Daten), 120 Tage |
+| Aquazoo Löbbecke Museum · Hetjens-Museum | JSON-API des städtischen CMS (`/api/events/list`), 120 Tage |
+| Ratinger Hof | Programm des Betreibers concertteam.de (JSON + Detailseiten), 120 Tage |
+| Boston Club | handgepflegte Veranstaltungsseite (HTML), 120 Tage |
+| The Craft Studio | Wix-Buchungskalender per **Playwright** (Workshops → community), 120 Tage |
+| Oberschlesisches Landesmuseum (Ratingen) | iCal-Export (Modern Events Calendar), 120 Tage |
+| Rheinisches Landestheater Neuss | Spielplan monatsweise (HTML), 365 Tage |
+| Globe Neuss (Shakespeare-Festival) | kulturamt-neuss.de, nur Mai/Juni (sonst „saisonal“), 365 Tage |
+| LVR-Industriemuseum Cromford (Ratingen) | Kalender-JSON (`/industriemuseum/.elasticsearch`, Standort 86), 120 Tage |
+| nicht gebaut | Schwanenhöfe, Kloster Flingern, KLUB KULB, Gare du Neuss (keine Termine); Marionetten-Theater (Zertifikat); Komödie (keine gültige Website); The Vinyl Room (nur Livestream); Eigenlob Keramik (nur offene Kurse); Stadthalle/Zeughaus Neuss (robots sperrt alles) |
+
 Bausteine: scraper/utils/jsonld_events.py (JSON-LD), wp_tribe.py (The Events Calendar), ical.py (.ics).
 
 ---
