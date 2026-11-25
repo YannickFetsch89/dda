@@ -2,14 +2,16 @@
 google_abgleich.py – DiesDasDüsseldorf
 Google-Abgleich für den Guide „Spielplätze“ (Plan: docs/plan-spielplaetze-2026-11-12.md, Abschnitt 4.4).
 Runde 1 = Plätze aus 4.3; Runde 2 (Auftraggeber 16.11.2026) = alle übrigen aktiven Plätze ohne Foto, damit nicht
-269 von 347 Plätzen nur die Illustration zeigen. Jede Runde hat eigene Kandidaten-/Prüfdateien.
+269 von 347 Plätzen nur die Illustration zeigen. Runde 3 (Auftraggeber 25.11.2026) = alle aktiven Plätze, die danach
+noch ohne Foto sind: Umkreissuche mit 200 m plus Textsuche nach dem Namen (Google-Punkt liegt teils weiter weg);
+schreibt nichts in die Datenbank, nur Kandidaten und Fotos. Jede Runde hat eigene Kandidaten-/Prüfdateien.
 
 Je Platz eine Umkreissuche (80 m, Typ playground) über die Places API (New). Treffer nur bei Namensähnlichkeit oder
 einzigem Treffer, sonst Prüf-CSV. Bewertung nur intern (extras.spielplatz.google, für den Score). Foto-Kandidaten bleiben
 lokal (data/spielplaetze/google/), bis die Sichtung sie freigibt; das Foto setzt dann nur die Foto-SQL (Auftraggeber).
 
 Nutzung:
-  python -m scraper.spielplaetze.google_abgleich suchen [--runde 2] --dry-run     # nennt Plätze und Kosten, fragt nichts ab
+  python -m scraper.spielplaetze.google_abgleich suchen [--runde 2|3] --dry-run     # nennt Plätze und Kosten, fragt nichts ab
   python -m scraper.spielplaetze.google_abgleich suchen [--runde 2]               # Umkreissuche (kostet), schreibt google + Kandidaten
   python -m scraper.spielplaetze.google_abgleich fotos [--runde 2] [--dry-run]    # lädt Vorschaubilder der Kandidaten (kostet)
   python -m scraper.spielplaetze.google_abgleich sql [--runde 2] --sichtung DATEI # Foto-SQL aus der Sichtung erzeugen
@@ -47,6 +49,10 @@ def dateien(runde: int) -> tuple[Path, Path]:
 
 API_BASE = "https://places.googleapis.com/v1"
 RADIUS_M = 80.0
+RADIUS_RUNDE_3 = 200.0     # Runde 3: größerer Umkreis
+TEXT_MAX_M = 400.0         # Runde 3: Treffer der Textsuche nur bis zu diesem Abstand zum Stadt-Punkt
+CACHE_RUNDE_3 = _DATEN / "google_runde3"
+FOTOS_RUNDE_3 = _DATEN / "fotos_runde3"
 PREIS_SUCHE = 0.035    # USD je Umkreissuche mit Bewertung (Enterprise-Felder), wie flaechensuche.py
 PREIS_FOTO = 0.007     # USD je Foto (Place Photo)
 MAX_FOTOS = 10
@@ -81,6 +87,64 @@ def ist_runde_2(zeile: dict) -> bool:
     if not zeile.get("aktiv") or sp.get("ausgeschlossen") or ist_runde_1(zeile):
         return False
     return not extras.get("google_foto") and not zeile.get("bild_url")
+
+
+def ist_runde_3(zeile: dict) -> bool:
+    """Runde 3: alle aktiven, nicht ausgeschlossenen Plätze ohne Foto (egal ob Runde 1 oder 2)."""
+    sp = (zeile.get("extras") or {}).get("spielplatz") or {}
+    extras = zeile.get("extras") or {}
+    if not zeile.get("aktiv") or sp.get("ausgeschlossen"):
+        return False
+    return not extras.get("google_foto") and not zeile.get("bild_url")
+
+
+def cache_ordner(runde: int) -> Path:
+    return CACHE_RUNDE_3 if runde == 3 else CACHE
+
+
+def foto_ordner(runde: int) -> Path:
+    """Runde 3 in eigenem Ordner: dieselben Plätze können schon Fotos aus früheren Runden unter gleichem Index haben."""
+    return FOTOS_RUNDE_3 if runde == 3 else FOTOS
+
+
+def _abstand_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    import math
+    r = 6371000.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(lon2 - lon1)
+    h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(h))
+
+
+def zusammenfuehren(lat: float, lon: float, umkreis: list[dict], text: list[dict]) -> list[dict]:
+    """Runde 3: Umkreis- und Textsuche ohne Doppelte; Textsuche nur bis TEXT_MAX_M vom Stadt-Punkt."""
+    aus, ids = [], set()
+    for o in umkreis:
+        if o.get("id") not in ids:
+            ids.add(o.get("id"))
+            aus.append(o)
+    for o in text:
+        ort = o.get("location") or {}
+        if o.get("id") in ids or ort.get("latitude") is None:
+            continue
+        if _abstand_m(lat, lon, ort["latitude"], ort["longitude"]) > TEXT_MAX_M:
+            continue
+        ids.add(o.get("id"))
+        aus.append(o)
+    return aus
+
+
+NAECHSTER_MAX_M = 60.0     # Runde 3: bei Mehrdeutigkeit der nächste Google-Spielplatz, wenn so nah am Stadt-Punkt
+
+
+def naechster_treffer(lat: float, lon: float, orte: list[dict]) -> dict | None:
+    """Runde 3: nächster Google-Ort mit Koordinaten, wenn höchstens NAECHSTER_MAX_M entfernt, sonst None."""
+    mit_lage = [(_abstand_m(lat, lon, o["location"]["latitude"], o["location"]["longitude"]), o)
+                for o in orte if (o.get("location") or {}).get("latitude") is not None]
+    if not mit_lage:
+        return None
+    abstand, ort = min(mit_lage, key=lambda x: x[0])
+    return ort if abstand <= NAECHSTER_MAX_M else None
 
 
 def woerter(text: str) -> set[str]:
@@ -176,9 +240,9 @@ def _headers(felder: str) -> dict:
     return {"Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY or "", "X-Goog-FieldMask": felder}
 
 
-def umkreissuche(lat: float, lon: float) -> list[dict]:
+def umkreissuche(lat: float, lon: float, radius: float = RADIUS_M) -> list[dict]:
     body = {"includedTypes": ["playground"], "maxResultCount": 20, "languageCode": "de", "regionCode": "DE",
-            "locationRestriction": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": RADIUS_M}}}
+            "locationRestriction": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": radius}}}
     time.sleep(0.5)
     for versuch in range(3):
         try:
@@ -196,12 +260,33 @@ def umkreissuche(lat: float, lon: float) -> list[dict]:
     raise RuntimeError("Umkreissuche: zu viele Anfragen (429)")
 
 
+def textsuche(name: str, lat: float, lon: float) -> list[dict]:
+    """Runde 3: Textsuche nach dem Spielplatznamen, auf den Stadt-Punkt ausgerichtet (Places API New, searchText)."""
+    body = {"textQuery": f"{name} Düsseldorf", "maxResultCount": 10, "languageCode": "de", "regionCode": "DE",
+            "locationBias": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": 500.0}}}
+    time.sleep(0.5)
+    for versuch in range(3):
+        try:
+            r = httpx.post(f"{API_BASE}/places:searchText", json=body, headers=_headers(FELDER), timeout=30)
+            if r.status_code == 429:
+                time.sleep(5 * 2 ** versuch)
+                continue
+            r.raise_for_status()
+            return r.json().get("places") or []
+        except httpx.HTTPError as e:
+            if versuch == 2:
+                raise
+            logger.warning("Textsuche fehlgeschlagen (%s) – neuer Versuch", e)
+            time.sleep(5 * 2 ** versuch)
+    raise RuntimeError("Textsuche: zu viele Anfragen (429)")
+
+
 def plaetze_laden(db, runde: int = 1) -> list[dict]:
     from scraper.orte.google_places import alle_zeilen
 
     zeilen = alle_zeilen(db, "orte", "id, name, slug, stadtteil, latitude, longitude, aktiv, bild_url, extras",
                          lambda q: q.eq("typ", "spielplatz"))
-    auswahl = ist_runde_1 if runde == 1 else ist_runde_2
+    auswahl = {1: ist_runde_1, 2: ist_runde_2, 3: ist_runde_3}[runde]
     return sorted([z for z in zeilen if auswahl(z) and z.get("latitude") is not None], key=lambda z: z["name"])
 
 
@@ -215,29 +300,42 @@ def suchen(dry_run: bool, runde: int = 1) -> None:
     db = get_supabase_client()
     plaetze = plaetze_laden(db, runde)
     kandidaten_datei, pruef_datei = dateien(runde)
-    offen = [z for z in plaetze if not (CACHE / f"{z['id']}.json").exists()]
+    cache = cache_ordner(runde)
+    offen = [z for z in plaetze if not (cache / f"{z['id']}.json").exists()]
+    je_platz = 2 if runde == 3 else 1  # Runde 3: Umkreis- und Textsuche
     logger.info("Runde %d: %d Plätze (%d städtisch, %d Abenteuer), davon %d noch ohne Abfrage → Kosten ca. %.2f $%s",
                 runde, len(plaetze), sum(1 for z in plaetze if z["extras"]["spielplatz"].get("quelle") != "abenteuer"),
                 sum(1 for z in plaetze if z["extras"]["spielplatz"].get("quelle") == "abenteuer"),
-                len(offen), len(offen) * PREIS_SUCHE, " [Dry-Run, keine Abfrage]" if dry_run else "")
+                len(offen), len(offen) * PREIS_SUCHE * je_platz, " [Dry-Run, keine Abfrage]" if dry_run else "")
     if dry_run:
         return
-    CACHE.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
     for i, z in enumerate(offen, 1):
         try:
-            orte = umkreissuche(z["latitude"], z["longitude"])
-            (CACHE / f"{z['id']}.json").write_text(json.dumps(orte, ensure_ascii=False), encoding="utf-8")
+            if runde == 3:
+                umkreis = umkreissuche(z["latitude"], z["longitude"], RADIUS_RUNDE_3)
+                orte = zusammenfuehren(z["latitude"], z["longitude"], umkreis, textsuche(z["name"], z["latitude"], z["longitude"]))
+            else:
+                orte = umkreissuche(z["latitude"], z["longitude"])
+            (cache / f"{z['id']}.json").write_text(json.dumps(orte, ensure_ascii=False), encoding="utf-8")
             logger.info("[%d/%d] %s: %d Google-Orte", i, len(offen), z["name"], len(orte))
         except Exception as e:  # noqa: BLE001 – Platz überspringen, beim nächsten Lauf erneut
             logger.error("Umkreissuche für %s fehlgeschlagen: %s", z["name"], e)
 
     kandidaten, pruef, geschrieben = {}, [], 0
     for z in plaetze:
-        datei = CACHE / f"{z['id']}.json"
+        datei = cache / f"{z['id']}.json"
         if not datei.exists():
             continue
         orte = json.loads(datei.read_text(encoding="utf-8"))
+        if runde == 3:
+            # Die Textsuche liefert auch Schulen, Parkplätze, Slackline-Anlagen – nur echte Spielplätze zählen
+            orte = [o for o in orte if o.get("primaryType") == "playground"]
         treffer, art = treffer_waehlen(z["name"], orte)
+        if runde == 3 and art == "mehrdeutig":
+            # Runde 3: mehrere Spielplätze im größeren Umkreis → der nächste, wenn er höchstens 60 m entfernt liegt
+            treffer = naechster_treffer(z["latitude"], z["longitude"], orte)
+            art = "naechster" if treffer else art
         google = None
         if treffer:
             google = {"place_id": treffer["id"], "name": (treffer.get("displayName") or {}).get("text"),
@@ -247,6 +345,8 @@ def suchen(dry_run: bool, runde: int = 1) -> None:
                       "google_name": (google or {}).get("name") or "", "rating": (google or {}).get("rating") or "",
                       "anzahl": (google or {}).get("anzahl") or "", "fotos": len(kandidaten.get(z["id"], [])),
                       "alle_google_orte": " | ".join((o.get("displayName") or {}).get("text", "") for o in orte)})
+        if runde == 3:
+            continue  # Runde 3 schreibt nichts in die Datenbank – das Foto setzt nur die Foto-SQL nach der Sichtung
         try:
             aktuell = (db.table("orte").select("extras").eq("id", z["id"]).execute().data or [{}])[0].get("extras") or {}
             sp = {**(aktuell.get("spielplatz") or {}), "google": google}
@@ -259,7 +359,7 @@ def suchen(dry_run: bool, runde: int = 1) -> None:
         w = csv.DictWriter(f, fieldnames=list(pruef[0].keys()) if pruef else ["name"], delimiter=";")
         w.writeheader()
         w.writerows(pruef)
-    arten = {a: sum(1 for p in pruef if p["zuordnung"] == a) for a in ("name", "einziger", "mehrdeutig", "kein_treffer")}
+    arten = {a: sum(1 for p in pruef if p["zuordnung"] == a) for a in ("name", "einziger", "naechster", "mehrdeutig", "kein_treffer")}
     logger.info("Zuordnung: %s; %d Plätze mit Foto-Kandidaten (%d Fotos); %d Zeilen geschrieben; Prüf-CSV %s",
                 arten, sum(1 for k in kandidaten.values() if k), sum(len(k) for k in kandidaten.values()), geschrieben, pruef_datei)
 
@@ -269,8 +369,9 @@ def fotos_laden(dry_run: bool, runde: int = 1) -> None:
     from config import GOOGLE_PLACES_API_KEY
 
     kandidaten = json.loads(dateien(runde)[0].read_text(encoding="utf-8"))
+    fotos = foto_ordner(runde)
     offen = [(zid, i, f) for zid, liste in kandidaten.items() for i, f in enumerate(liste)
-             if not (FOTOS / zid / f"{i}.jpg").exists()]
+             if not (fotos / zid / f"{i}.jpg").exists()]
     logger.info("%d Fotos zu laden → Kosten ca. %.2f $%s", len(offen), len(offen) * PREIS_FOTO,
                 " [Dry-Run, nichts geladen]" if dry_run else "")
     if dry_run:
@@ -282,8 +383,8 @@ def fotos_laden(dry_run: bool, runde: int = 1) -> None:
             r = httpx.get(f"{API_BASE}/{f['name']}/media", params={"maxWidthPx": VORSCHAU_BREITE},
                           headers={"X-Goog-Api-Key": GOOGLE_PLACES_API_KEY or ""}, timeout=30, follow_redirects=True)
             r.raise_for_status()
-            (FOTOS / zid).mkdir(parents=True, exist_ok=True)
-            (FOTOS / zid / f"{i}.jpg").write_bytes(r.content)
+            (fotos / zid).mkdir(parents=True, exist_ok=True)
+            (fotos / zid / f"{i}.jpg").write_bytes(r.content)
             if n % 50 == 0:
                 logger.info("%d/%d Fotos geladen", n, len(offen))
         except Exception as e:  # noqa: BLE001
@@ -316,13 +417,13 @@ def main():
     sub = parser.add_subparsers(dest="befehl", required=True)
     s = sub.add_parser("suchen")
     s.add_argument("--dry-run", action="store_true")
-    s.add_argument("--runde", type=int, choices=(1, 2), default=1)
+    s.add_argument("--runde", type=int, choices=(1, 2, 3), default=1)
     f = sub.add_parser("fotos")
     f.add_argument("--dry-run", action="store_true")
-    f.add_argument("--runde", type=int, choices=(1, 2), default=1)
+    f.add_argument("--runde", type=int, choices=(1, 2, 3), default=1)
     q = sub.add_parser("sql")
     q.add_argument("--sichtung", type=Path, required=True)
-    q.add_argument("--runde", type=int, choices=(1, 2), default=1)
+    q.add_argument("--runde", type=int, choices=(1, 2, 3), default=1)
     args = parser.parse_args()
     if args.befehl == "suchen":
         suchen(args.dry_run, args.runde)
