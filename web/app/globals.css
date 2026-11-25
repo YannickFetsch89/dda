@@ -1639,7 +1639,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 :root[data-theme="dark"] .cl-karte__art { color: #c9a84c; }
 :root[data-theme="dark"] 
 /* Tages-Satz aus echten Daten unter der Kopfzeile von /heute und /tag/… (SEO-/GEO-Plan, Maßnahme 4) */
-.tagesatz { margin: 16px 0 0; font-size: 15px; line-height: 1.5; color: var(--ddd-text-body); max-width: 70ch; }
+/* Abstand zum dunklen Tages-Band darüber (Auftraggeber 25.11.2026: vorher zu eng) */
+.tagesatz { margin: 28px 0 0; font-size: 15px; line-height: 1.5; color: var(--ddd-text-body); max-width: 70ch; }
 .tagesatz__stand { margin: 4px 0 0; font-size: 12px; }
 
 /* Landingpages Kategorie/Stadtteil/Guide-Stadtteil, /ueber (SEO-/GEO-Plan Phase B) */
