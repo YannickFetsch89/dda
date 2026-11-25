@@ -2050,6 +2050,13 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .sp-naehe__kreis .icon { font-size: 20px; }
 .sp-naehe__zusatz { margin-top: 4px; font-size: 14px; }
 .sp-naehe__block .link { display: inline-block; margin-top: 10px; }
+/* Cafés in der Nähe: Pill „Empfehlung“ auf Guide-Cafés, schlichte Zeilen für Cafés ohne Guide-Seite (25.11.2026) */
+.gd-karte__hinweis { position: absolute; top: 12px; left: 12px; }
+.sp-cafes-weitere { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sp-cafe { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--ddd-border); border-radius: var(--r-card-s); background: var(--ddd-surface); }
+.sp-cafe__name { font-weight: 700; color: var(--ddd-text); overflow-wrap: anywhere; }
+.sp-cafe__meta { font-size: 13px; }
+.sp-naehe__block .sp-cafe__link { display: inline-flex; margin-top: 4px; }
 @media (min-width: 1024px) {
   .sp-naehe__grid.gd-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .sp-naehe__unten { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 32px; align-items: start; }

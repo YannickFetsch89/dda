@@ -228,6 +228,60 @@ export async function orteLaden(typ: OrtTyp | OrtTyp[]): Promise<DddOrt[]> {
   return orte;
 }
 
+/** Café für „Cafés in der Nähe“ auf Spielplatz-Seiten (Ansicht cafes_naehe, Score ≥ 5, ohne geschlossene). */
+export interface NaheCafe {
+  id: string;
+  name: string;
+  stadtteil: string | null;
+  latitude: number;
+  longitude: number;
+  google_rating: number | null;
+  google_bewertungen_anzahl: number | null;
+  google_maps_url: string | null;
+}
+
+/**
+ * Cafés ab Score 5 aus der Ansicht `cafes_naehe` (database/cafes_naehe_2026-11-25.sql). `null`, wenn die Ansicht
+ * fehlt oder der Abruf scheitert – dann zeigt die Seite wie bisher nur Guide-Cafés.
+ */
+export async function naheCafesLaden(): Promise<NaheCafe[] | null> {
+  "use cache";
+  cacheTag(ORTE_CACHE_TAG);
+  const client = supabaseClient();
+  if (!client) {
+    cacheLife(KURZ);
+    return null;
+  }
+  try {
+    const { data, error } = await client
+      .from("cafes_naehe")
+      .select("id, name, stadtteil, latitude, longitude, google_rating, google_bewertungen_anzahl, google_maps_url")
+      .limit(2000);
+    if (error) {
+      console.error(`Cafés in der Nähe konnten nicht geladen werden: ${error.message}`);
+      cacheLife(KURZ);
+      return null;
+    }
+    cacheLife(NORMAL);
+    return ((data ?? []) as Record<string, unknown>[])
+      .filter((z) => typeof z.latitude === "number" && typeof z.longitude === "number" && typeof z.name === "string")
+      .map((z) => ({
+        id: String(z.id),
+        name: z.name as string,
+        stadtteil: typeof z.stadtteil === "string" ? z.stadtteil : null,
+        latitude: z.latitude as number,
+        longitude: z.longitude as number,
+        google_rating: typeof z.google_rating === "number" ? z.google_rating : null,
+        google_bewertungen_anzahl: typeof z.google_bewertungen_anzahl === "number" ? z.google_bewertungen_anzahl : null,
+        google_maps_url: sichereUrl(z.google_maps_url),
+      }));
+  } catch (err) {
+    console.error(`Fehler beim Laden der Cafés in der Nähe: ${err instanceof Error ? err.message : err}`);
+    cacheLife(KURZ);
+    return null;
+  }
+}
+
 /** Einzelnen Ort per Slug laden (nur aktiv und Score ≥ MIN_QUALITAETS_SCORE). */
 export async function ortLaden(slug: string): Promise<DddOrt | null> {
   "use cache";

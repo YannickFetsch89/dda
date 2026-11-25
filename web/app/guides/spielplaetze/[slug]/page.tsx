@@ -18,7 +18,7 @@ import { eventPoolLaden } from "@/lib/daten";
 import { brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
 import { jsonLdText } from "@/lib/json-ld";
 import { guideStadtteilPfad, inStadtteil, kanonischerStadtteil, stadtteilPfad } from "@/lib/landing";
-import { orteLaden, ortBildAutorUrl, ortBildFokus, ortBildUrl, slugDekodieren } from "@/lib/orte";
+import { naheCafesLaden, orteLaden, ortBildAutorUrl, ortBildFokus, ortBildUrl, slugDekodieren, type NaheCafe } from "@/lib/orte";
 import { seitenMetadaten } from "@/lib/seo";
 import {
   EXTRAS, GERAETE, NEBENGERAETE, entfernungM, entfernungText, extraWert, groesseText, nachbarn, ortIndexierbar, saisonHinweis,
@@ -142,23 +142,53 @@ function aufzaehlung(teile: string[]): string {
   return teile.length < 2 ? (teile[0] ?? "") : `${teile.slice(0, -1).join(", ")} und ${teile.at(-1)}`;
 }
 
+/** Ein Café in der Nähe: Guide-Café (`o` gesetzt, Karte mit „Empfehlung“) oder Café ab Score 5 ohne Guide-Seite */
+type CafeTreffer = { id: string; m: number; o: DddOrt | null; c: NaheCafe | null };
+
+/**
+ * Die drei nächsten Cafés im Umkreis von 2 km (Auftraggeber 25.11.2026): Guide-Cafés (Score ≥ 7) als Karte mit Pill
+ * „Empfehlung“, Cafés mit Score 5–6 als schlichte Zeile mit Link zu Google Maps (sie haben keine eigene Seite).
+ * Ohne die Ansicht cafes_naehe nur Guide-Cafés wie bisher.
+ */
 async function Cafes({ ort }: { ort: DddOrt }) {
   if (ort.latitude == null || ort.longitude == null) return null;
   const p = { lat: ort.latitude, lng: ort.longitude };
-  const cafes = (await orteLaden("cafe"))
-    .filter((o) => o.typ === "cafe" && o.latitude != null && o.longitude != null)
-    .map((o) => ({ o, m: entfernungM(p, { lat: o.latitude!, lng: o.longitude! }) }))
-    .filter((x) => x.m <= CAFES_UMKREIS_M)
-    .sort((a, b) => a.m - b.m)
-    .slice(0, CAFES_ANZAHL);
+  const guide = (await orteLaden("cafe")).filter((o) => o.typ === "cafe" && o.latitude != null && o.longitude != null);
+  const guideNachId = new Map(guide.map((o) => [o.id, o]));
+  const weitere = await naheCafesLaden();
+  const kandidaten: CafeTreffer[] = weitere
+    ? weitere.map((c) => ({ id: c.id, m: entfernungM(p, { lat: c.latitude, lng: c.longitude }), o: guideNachId.get(c.id) ?? null, c }))
+    : guide.map((o) => ({ id: o.id, m: entfernungM(p, { lat: o.latitude!, lng: o.longitude! }), o, c: null }));
+  const cafes = kandidaten.filter((x) => x.m <= CAFES_UMKREIS_M).sort((a, b) => a.m - b.m).slice(0, CAFES_ANZAHL);
   if (!cafes.length) return null;
+  const empfohlen = cafes.filter((x) => x.o);
+  const einfach = cafes.filter((x) => !x.o && x.c);
   return (
     <section className="sp-naehe__block sp-naehe__cafes">
       <h3 className="sp-naehe__titel"><span className="sp-naehe__kreis" aria-hidden><Icon name="local_cafe" /></span>Cafés in der Nähe</h3>
       <p className="muted sp-naehe__zusatz">Perfekt für einen Kaffee danach · {aufzaehlung(cafes.map((c) => entfernungText(c.m)))} entfernt</p>
-      <div className="gd-grid sp-naehe__grid" role="list">
-        {cafes.map((c) => <OrtKarte key={c.o.id} o={c.o} />)}
-      </div>
+      {empfohlen.length > 0 && (
+        <div className="gd-grid sp-naehe__grid" role="list">
+          {empfohlen.map((x) => <OrtKarte key={x.id} o={x.o!} hinweis="Empfehlung" />)}
+        </div>
+      )}
+      {einfach.length > 0 && (
+        <ul className="sp-cafes-weitere">
+          {einfach.map(({ id, m, c }) => (
+            <li key={id} className="sp-cafe">
+              <span className="sp-cafe__name">{c!.name}</span>
+              <span className="sp-cafe__meta muted">
+                {[c!.stadtteil, c!.google_rating != null ? `★ ${c!.google_rating.toLocaleString("de-DE")}` : null, entfernungText(m)].filter(Boolean).join(" · ")}
+              </span>
+              {c!.google_maps_url && (
+                <a className="link sp-cafe__link" href={c!.google_maps_url} target="_blank" rel="noopener noreferrer nofollow">
+                  In Google Maps öffnen <Icon name="open_in_new" />
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

@@ -93,7 +93,8 @@ export function Bewertung({ o }: { o: DddOrt }) {
   );
 }
 
-export function OrtKarte({ o }: { o: DddOrt }) {
+/** `hinweis`: kleine Pill oben links auf dem Bild, z. B. „Empfehlung“ bei Cafés neben Spielplätzen */
+export function OrtKarte({ o, hinweis }: { o: DddOrt; hinweis?: string }) {
   const bild = ortBildUrl(o);
   return (
     <article className="gd-karte" role="listitem">
@@ -101,6 +102,7 @@ export function OrtKarte({ o }: { o: DddOrt }) {
         <div className="gd-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
           <BildImg src={bild} alt="" icon={ortTypIcon(o)} />
+          {hinweis && <span className="badge badge--tipp gd-karte__hinweis">{hinweis}</span>}
           {preisKurz(o) && <span className="gd-karte__preis">{preisKurz(o)}</span>}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>
