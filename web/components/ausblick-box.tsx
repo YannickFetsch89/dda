@@ -1,14 +1,14 @@
 // Startseiten-Box „Große Events später im Jahr“ (Plan docs/plan-quellen-ausbau-2026-11-23.md, 6.1 Q10, Schritt W2):
-// sechs Einträge aus dem Ausblick (Rang 1–2, Orte mit Ortsseite, nach Datum) und Link auf /ausblick.
+// sechs Einträge aus dem Ausblick (große Events, je Haus höchstens einer, über die Monate verteilt) und Link auf /ausblick.
 // Eigene Suspense-Grenze auf der Startseite: der Fernpool lädt nach, die Startseite wartet nicht darauf.
 import Link from "next/link";
 import { Icon, KompaktKarte } from "@/components/karten";
 import { Reihe } from "@/components/client";
-import { AUSBLICK_BOX, ausblickLaden } from "@/lib/ausblick";
+import { ausblickBox, ausblickLaden } from "@/lib/ausblick";
 
 export async function AusblickStartBox() {
-  const { heute, events } = await ausblickLaden();
-  const auswahl = events.slice(0, AUSBLICK_BOX);
+  const { heute, eintraege } = await ausblickLaden();
+  const auswahl = ausblickBox(eintraege).map((x) => x.e);
   if (!auswahl.length) return null;
   return (
     <section className="sektion" aria-labelledby="ausblick-start-titel">

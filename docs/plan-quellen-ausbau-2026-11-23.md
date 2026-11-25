@@ -956,6 +956,15 @@ Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
 - JSON-LD `offers.url`: `ticket_url`, sonst `quelle_url` – immer die echte URL.
 - Tests `web/tests/ausblick-tickets.test.ts`. Browser-Prüfung zusammen mit W1 nach dem Lauf am 27.11. (Turbopack läuft
   im Worktree nicht mit dem verlinkten node_modules; außerdem fehlen bis dahin die fernen Events).
+- **Browser-Prüfung 25.11.2026** (nach dem Volllauf 45611523099, 1.976 Events ab Tag 61): Suche, Ortsseiten mit
+  eingeklapptem Ausblick, Monats-Label, Ticket-Button, „Website von <Ort>“, ferne Tagesseiten und Sitemap (6.973
+  Adressen, 1,5 MB) in Ordnung. **/ausblick war zu breit:** 1.085 Karten (Dev ≈ 7 MB HTML), darunter Onleihe-Kurse,
+  Kindertheater, Open Mics; die Startbox zeigte die sechs frühesten davon. **Eingrenzung (Auftraggeber 25.11.):**
+  nur Grundstufe 3 der Startseite (`grundstufe`, Zugpferd-Häuser/-Titel, Heimspiele) ohne Stammformate (`istStamm`);
+  gleicher Titel am gleichen Ort wird ein Eintrag mit „n Termine bis TT.MM.“ (`ausblickBuendeln`, `termineHinweis`);
+  Startbox reihum über die Monate, je Haus höchstens ein Eintrag, Bild vor Symbolbild (`ausblickBox`). Ergebnis:
+  278 Einträge (Dev ≈ 1,9 MB), Startbox z. B. DEG–Ravensburg (Jan), ABBA Diamonds (Feb), Wahnsinn (Mär),
+  Klangkuenstler (Apr), Jenůfa (Mai), JP Weber (Jun). Monatsseiten (Q18) bleiben für später.
 
 ### P2 – Partner-Links (24.11.2026, lokal gebaut, Schalter aus)
 
