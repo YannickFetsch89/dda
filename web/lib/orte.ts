@@ -173,6 +173,8 @@ export function sichereUrl(wert: unknown): string | null {
   if (typeof wert !== "string") return null;
   try {
     const url = new URL(wert);
+    // Keine Adressen mit Benutzername/Passwort: „https://www.eventim.de@evil.com/“ führt zu evil.com (Cursor-Prüfung)
+    if (url.username || url.password) return null;
     return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
   } catch {
     return null;

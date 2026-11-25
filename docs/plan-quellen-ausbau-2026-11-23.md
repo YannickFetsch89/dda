@@ -1072,6 +1072,23 @@ Veranstaltungsseite), `comedy_fuer_freunde.py` (JSON-LD + sichtbare Liste – da
 aus der Liste; Weezevent-Link nur aus dem HTML, Widget nie abgerufen), `heine_haus.py` (Startseite, „Außer Haus“
 weggelassen). Live-Probe mit 120 Tagen: 46 + 1 + 2 Termine, 0,5 Minuten. Alle Rang 1, Fenster 120. Tests 910 ok.
 
+### Cursor-Gesamtprüfung seit V2 (25.11.2026) – Einarbeitung
+
+Cursor: V2-Fixes geschlossen; **Welle C deploybar**, **Website W1/W2/P2 + Cockpit deploybar nach der Browser-Prüfung
+mit echten fernen Events**. Zwei mittlere und drei geringe Befunde, alle behoben:
+1. **mittel – `ort_id` in jeder Spaltenvariante:** fehlte die Spalte, zeigte die Startseite Beispieldaten. Jetzt
+   `SPALTEN_BASIS` = `SPALTEN_OHNE_ORT` + `ort_id`, letzte Variante ohne `ort_id`, `spaltenFehlt` kennt `ort_id`.
+2. **mittel – URLs mit Benutzername** (`https://www.eventim.de@evil.com/…` führt zu evil.com): `sichereUrl`
+   (web/lib/orte.ts) verwirft Benutzer/Passwort – wirkt für Ticket-Button und Ortswebsite; Admin-Eingabe `ticket_url`
+   prüft zusätzlich `sichereUrl`; Python `ticket_link`/`ticket_link_haus` verwerfen solche Adressen ebenfalls.
+3. **gering – Haus der Universität:** Log an der Obergrenze war irreführend; jetzt Warnung mit Zahl der nicht
+   übernommenen späteren Termine (sie rücken in späteren Läufen nach, die Liste ist chronologisch).
+4. **gering – ferne Folgetage:** `noindex` auf `/tag/<datum>` prüft dieselbe Auswahl wie die Tagesliste
+   (`filtern(…, {von: datum, bis: datum})`), also auch mehrtägige Termine.
+5. **gering – Bürgerhäuser Jahreswechsel:** In Listen wie „28.12., 4.1.2027“ bekommt ein Monat nach dem letzten Datum
+   das Vorjahr.
+Tests: `tests/test_cursor_gesamt_2026_11_25.py`, `web/tests/tickets.test.ts` (Benutzername); Python 913, Web 732 ok.
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.

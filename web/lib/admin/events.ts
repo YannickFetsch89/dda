@@ -3,6 +3,7 @@
 
 import { KATEGORIEN } from "../kategorien";
 import { istSammelquelle } from "../quellen-rang";
+import { sichereUrl } from "../orte";
 
 /** Felder, die der Admin-Bereich ändern darf (Whitelist, 4.4) */
 export const BEARBEITBAR = [
@@ -98,7 +99,9 @@ export function eingabenPruefen(eingabe: Record<string, unknown>): { ok: true; f
       }
       case "ticket_url": {
         const t = text(wert, 1000, false);
-        if (!t.ok || (t.wert !== null && !/^https?:\/\/[^\s]+$/.test(t.wert))) return { ok: false, fehler: "ticket_url: vollständige Adresse (https://…)." };
+        if (!t.ok || (t.wert !== null && (!/^https?:\/\/[^\s]+$/.test(t.wert) || !sichereUrl(t.wert)))) {
+          return { ok: false, fehler: "ticket_url: vollständige Adresse (https://…), ohne Benutzername." };
+        }
         felder[feld] = t.wert;
         break;
       }

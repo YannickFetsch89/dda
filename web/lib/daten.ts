@@ -11,8 +11,10 @@ import type { DddEvent, EventPool } from "./typen";
 /** Cache-Tag aller Event-Loader (Plan Admin-Dashboard 4.4) */
 export const EVENTS_CACHE_TAG = "events";
 
-const SPALTEN_BASIS =
-  "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats, ort_id";
+const SPALTEN_OHNE_ORT =
+  "id, titel, datum, datum_bis, uhrzeit, ort, adresse, kategorie, beschreibung, preis, quelle_name, quelle_url, bild_url, stadtteil, slug, erstellt_am, tipp_des_tages, highlight_der_woche, top_event_des_monats";
+// ort_id (Ausblick nur an Orten mit Ortsseite, Plan Quellen-Ausbau W2); fehlt sie, lädt die letzte Variante ohne sie
+const SPALTEN_BASIS = `${SPALTEN_OHNE_ORT}, ort_id`;
 // Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
 const SPALTEN_VARIANTEN = [
   // Ticket-Link des Hauses (database/ticket_url_2026-11-24.sql, Plan Quellen-Ausbau 5.5.2, P1; Button erst mit W2)
@@ -25,6 +27,7 @@ const SPALTEN_VARIANTEN = [
   `${SPALTEN_BASIS}, abgesagt, reihe:reihen(slug, titel)`,
   `${SPALTEN_BASIS}, abgesagt`,
   SPALTEN_BASIS,
+  SPALTEN_OHNE_ORT,
 ];
 
 // Absage im Text erkennen (auch für Altdaten, z.B. PRINZ-Ort "© EventimAbgesagt")
@@ -96,7 +99,7 @@ function reiheAus(wert: unknown): DddEvent["reihe"] {
 
 /** Supabase meldet eine unbekannte Spalte/Beziehung (Migration noch nicht ausgeführt). */
 function spaltenFehlt(meldung: string | undefined): boolean {
-  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen|ticket_url/.test(meldung);
+  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen|ticket_url|ort_id/.test(meldung);
 }
 
 /** Events laden mit der neuesten Spaltenvariante, die die DB schon kennt. */

@@ -94,3 +94,15 @@ describe("Cockpit-Kennzahl Ticket-Links", () => {
     expect(k).toEqual({ mit: 4, von: 6, partnerfaehig: 3, jeAnbieter: [{ anbieter: "eventim", anzahl: 2 }, { anbieter: "reservix", anzahl: 1 }] });
   });
 });
+
+describe("URLs mit Benutzername (Cursor-Gesamtprüfung 25.11.)", () => {
+  it("werden nie als Ticket-Ziel oder Admin-Eingabe angenommen", async () => {
+    const { sichereUrl } = await import("@/lib/orte");
+    const { ticketZiel } = await import("@/lib/ticket-button");
+    const { eingabenPruefen } = await import("@/lib/admin/events");
+    expect(sichereUrl("https://www.eventim.de@evil.com/phish")).toBeNull();
+    expect(sichereUrl("https://www.eventim.de/e/1")).toBe("https://www.eventim.de/e/1");
+    expect(ticketZiel({ quelle_name: "zakk", quelle_url: "https://www.zakk.de/e", ticket_url: "https://www.eventim.de@evil.com/x" })).toBeNull();
+    expect(eingabenPruefen({ ticket_url: "https://user:pw@www.reservix.de/e" }).ok).toBe(false);
+  });
+});
