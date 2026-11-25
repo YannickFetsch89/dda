@@ -257,10 +257,7 @@ export default async function Spielplaetze(props: { searchParams: Promise<SP> })
         <GefilterteAnsicht searchParams={props.searchParams} alle={alle} />
       </Suspense>
       <GuideSeoText seite="spielplaetze" />
-      <p className="container sp-quellen muted">
-        Kartendaten und Ausstattung teils © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap-Mitwirkende</a>
-        {" · "}Spielplatzdaten: Landeshauptstadt Düsseldorf (dl-de/zero-2.0)
-      </p>
+      {/* Quellenzeile entfernt (Auftraggeber 25.11.2026); Karten-Namensnennung steht in der Karte, Datenquellen im Impressum */}
     </div>
   );
 }

@@ -384,14 +384,12 @@ export const GUIDE_TEXTE: Record<GuideSeite, GuideText> = {
     titel: "Spielen in Düsseldorf",
     abschnitte: [
       {
-        titel: "Woher die Angaben kommen",
+        // Quellen nicht mehr genannt (Auftraggeber 25.11.2026)
+        titel: "So lest ihr die Angaben",
         absaetze: [
-          "Grundlage ist die Liste der städtischen Spielplätze, die Düsseldorf als offene Daten veröffentlicht – mit Lage, " +
-            "Größe jedes Platzes. Was dort steht, haben wir um Angaben aus OpenStreetMap und aus " +
-            "öffentlichen Quellen wie Stadtteil- und Familienportalen ergänzt. Jedes Gerät, jedes Extra und jede " +
-            "Altersangabe auf einer Spielplatz-Seite stützt sich auf so einen Beleg. Wo nichts belegt ist, steht „keine " +
-            "Angabe“ – das heißt nicht, dass etwas fehlt. Eine Altersgruppe, die wir nur aus den Geräten ableiten, ist als " +
-            "„vermutlich“ gekennzeichnet.",
+          "Jede Spielplatz-Seite zeigt Lage, Größe, Ausstattung und Extras. Wo zu einem Gerät nichts bekannt ist, steht " +
+            "„keine Angabe“ – das heißt nicht, dass es fehlt. Eine Altersgruppe, die wir nur aus den Geräten ableiten, ist " +
+            "als „vermutlich“ gekennzeichnet.",
         ],
       },
       {

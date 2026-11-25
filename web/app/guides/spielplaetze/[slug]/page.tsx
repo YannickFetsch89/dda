@@ -8,7 +8,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BeschreibungText } from "@/components/beschreibung-text";
-import { BildImg, GoogleKarte, Reihe } from "@/components/client";
+import { BildImg, GoogleKarte } from "@/components/client";
 import { EventKarte, Icon } from "@/components/karten";
 import { InfoZeile, Oeffnungszeiten } from "@/components/ort-detail";
 import { OrtKarte } from "@/components/ort-karten";
@@ -125,15 +125,6 @@ function Extras({ sp }: { sp: SpielplatzDaten }) {
   );
 }
 
-
-function domain(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
-
 /** Cafés in der Nähe (Auftraggeber 25.11.2026): die drei nächsten im Umkreis von 2 km statt zwei im Umkreis von 1 km */
 const CAFES_ANZAHL = 3;
 const CAFES_UMKREIS_M = 2000;
@@ -206,9 +197,12 @@ async function FamilienEvents({ ort }: { ort: DddOrt }) {
   return (
     <section className="sp-naehe__block sp-naehe__events">
       <h3 className="sp-naehe__titel"><span className="sp-naehe__kreis" aria-hidden><Icon name="family_restroom" /></span>Familien-Events {inStadtteil(st)}</h3>
-      <Reihe breite={258} label={`Familien-Events ${inStadtteil(st)}`}>
+      {/* Unterzeile wie bei den Cafés, damit beide Spalten auf gleicher Höhe beginnen; festes Raster statt
+          Scroll-Reihe – bei höchstens drei Karten lag sonst der Weiter-Pfeil über der dritten Karte (25.11.2026) */}
+      <p className="muted sp-naehe__zusatz">Die nächsten Termine für Familien {inStadtteil(st)}</p>
+      <div className="sp-naehe__events-raster" role="list" aria-label={`Familien-Events ${inStadtteil(st)}`}>
         {events.map((e) => <EventKarte key={e.id} e={e} heute={pool.heute} variante="reihe" />)}
-      </Reihe>
+      </div>
       <Link href={seite ?? "/kategorie/familie"} className="link">Mehr Events {inStadtteil(st)}</Link>
     </section>
   );
@@ -246,7 +240,6 @@ export default async function SpielplatzDetail(props: Props) {
   const saison = saisonHinweis(sp);
   const groesse = groesseText(sp);
   const teilBereiche = bereiche(sp);
-  const quellen = (sp.profil?.quellen ?? []).filter((u) => /^https:\/\//.test(u)).slice(0, 6);
   const kanonischerSt = kanonischerStadtteil(ort.stadtteil);
 
   const krumen = [
@@ -312,18 +305,9 @@ export default async function SpielplatzDetail(props: Props) {
             {saison && <InfoZeile icon="water_drop" l1={saison.text} l2={saison.label} />}
           </section>
 
-          {/* Notfallnummer und „Stand der Angaben“ entfernt (Auftraggeber 25.11.2026) */}
+          {/* Notfallnummer, „Stand der Angaben“ und Quellen entfernt (Auftraggeber 25.11.2026);
+              die OpenStreetMap-Namensnennung steht zentral im Impressum unter „Datenquellen“ */}
           <div className="sp-stand muted">
-            <p>
-              <b>Quellen:</b>{" "}
-              {sp.quelle_url ? <a href={sp.quelle_url} target="_blank" rel="noopener noreferrer">Spielplatzdaten der Landeshauptstadt Düsseldorf</a> : sp.quelle === "abenteuer" ? "Angaben des Trägers" : "Spielplatzdaten der Landeshauptstadt Düsseldorf"}
-              {quellen.map((u) => (
-                <span key={u}>, <a href={u} target="_blank" rel="noopener noreferrer nofollow">{domain(u)}</a></span>
-              ))}
-            </p>
-            {sp.osm?.id && (
-              <p>Ausstattung teils aus <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a></p>
-            )}
             <p>Angaben ohne Gewähr. Geräte können umgebaut oder gesperrt sein.</p>
           </div>
         </div>
