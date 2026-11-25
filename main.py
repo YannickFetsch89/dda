@@ -85,6 +85,10 @@ from scraper.tier2 import (
     rheinisches_landestheater,
     globe_neuss,
     lvr_cromford,
+    # Welle C (Plan Quellen-Ausbau, 25.11.2026)
+    buergerhaeuser,
+    comedy_fuer_freunde,
+    heine_haus,
 )
 from scraper.tier3 import (
     parkrun,
@@ -190,6 +194,10 @@ QUELLEN = [
     ("Rheinisches Landestheater Neuss", 2, rheinisches_landestheater.scrape),
     ("Globe Neuss", 2, globe_neuss.scrape),
     ("LVR-Industriemuseum Cromford", 2, lvr_cromford.scrape),
+    # Welle C (Plan Quellen-Ausbau, 25.11.2026)
+    ("Bürgerhäuser Düsseldorf", 2, buergerhaeuser.scrape),
+    ("Comedy für Freunde", 2, comedy_fuer_freunde.scrape),
+    ("Heine Haus Literaturhaus", 2, heine_haus.scrape),
     # Tier 3: Nischen- und Spezialquellen
     ("Parkrun Volksgarten Düsseldorf", 3, parkrun.scrape),
     ("Sport im Park Düsseldorf", 3, sport_im_park.scrape),

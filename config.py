@@ -115,6 +115,8 @@ VORSCHAU_TAGE: dict[str, int] = {
         "Theatermuseum Düsseldorf", "Gerhart Hauptmann Haus", "Goethe-Museum", "KIT – Kunst im Tunnel", "Comedy Club Düsseldorf", "Bilker Bunker", "Tor 3", "Nachtresidenz", "Ampere", "Weltkunstzimmer", "Insel Hombroich", "Stadt Ratingen Veranstaltungskalender",
         # Welle B (V2)
         "Robert Schumann Hochschule", "Haus der Universität", "Sammlung Philara", "Aquazoo Löbbecke Museum", "Hetjens-Museum", "Filmwerkstatt Düsseldorf", "Ratinger Hof", "Boston Club", "The Craft Studio", "Oberschlesisches Landesmuseum", "LVR-Industriemuseum Cromford",
+        # Welle C
+        "Bürgerhäuser Düsseldorf", "Comedy für Freunde", "Heine Haus Literaturhaus",
     )},
     # 60
     **{name: VORSCHAU_KURZ for name in (

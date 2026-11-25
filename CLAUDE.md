@@ -165,6 +165,7 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
 | Rheinisches Landestheater Neuss | Spielplan monatsweise (HTML), 365 Tage |
 | Globe Neuss (Shakespeare-Festival) | kulturamt-neuss.de, nur Mai/Juni (sonst „saisonal“), 365 Tage |
 | LVR-Industriemuseum Cromford (Ratingen) | Kalender-JSON (`/industriemuseum/.elasticsearch`, Standort 86), 120 Tage |
+| Bürgerhäuser Düsseldorf (Reisholz, Bilk, Salzmannbau, Kulturhaus Süd/Garath) · Comedy für Freunde · Heine Haus Literaturhaus | Welle C (25.11.2026): städtische Programmseiten (3 Vorlagen), JSON-LD + Liste, Startseite HTML; 120 Tage |
 | nicht gebaut | Schwanenhöfe, Kloster Flingern, KLUB KULB, Gare du Neuss (keine Termine); Marionetten-Theater (Zertifikat); Komödie (keine gültige Website); The Vinyl Room (nur Livestream); Eigenlob Keramik (nur offene Kurse); Stadthalle/Zeughaus Neuss (robots sperrt alles) |
 
 Bausteine: scraper/utils/jsonld_events.py (JSON-LD), wp_tribe.py (The Events Calendar), ical.py (.ics).

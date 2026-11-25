@@ -108,6 +108,10 @@ RANG_ANZEIGE: dict[str, int] = {
     "Rheinisches Landestheater Neuss": HAUS,
     "Globe Neuss": HAUS,
     "LVR-Industriemuseum Cromford": HAUS,
+    # Welle C (25.11.2026)
+    "Bürgerhäuser Düsseldorf": HAUS,
+    "Comedy für Freunde": HAUS,
+    "Heine Haus Literaturhaus": HAUS,
     # Tier 3: Nischen- und Spezialquellen der Veranstalter
     "Parkrun Volksgarten Düsseldorf": HAUS,
     "Sport im Park Düsseldorf": HAUS,

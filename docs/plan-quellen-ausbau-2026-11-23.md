@@ -975,6 +975,10 @@ Tests: Python 720 ok, Web 712 ok, tsc nur die bekannten generierten Typen.
   `TIQETS_PARTNER_ID`, `GYG_PARTNER_ID` bei jedem Deploy ausdrücklich in `web/.env.local` (ohne sed). Admin → Technik
   zeigt `PARTNERLINKS_AKTIV` und `TICKETMASTER_PARTNER_OK`.
 - Reihenfolge zum Einschalten: Anwalt gibt die Texte frei → Kennungen setzen → `PARTNERLINKS_AKTIV=1` → Deploy.
+- **25.11.2026:** Texte für /ueber und Datenschutz vom Anwalt freigegeben (Mitteilung des Auftraggebers). Kennzeichnung
+  am Button auf Wunsch des Auftraggebers geändert (er trägt das Risiko): kein Sternchen mehr, darunter nur
+  „Partnerlink“ mit „i“-Tooltip (`PartnerHinweis` in `web/components/partner-links.tsx`, `<details>` ohne JavaScript,
+  auf Geräten mit Maus auch beim Darüberfahren). Im Browser geprüft (lokal mit Testkennung).
 
 ### Cursor-Prüfung der Scraper-Neubauten (24.11.2026, nach T1-Fixes) – Einarbeitung
 
@@ -1044,6 +1048,29 @@ Abrufe); LVR Cromford ohne `ticket_url` (nur Shop-Startseite, kein Link je Termi
 „Schumann-Hochschule“ und Fischerstraße als Haus, nicht das bloße Wort „Hochschule“. Tests
 `tests/test_cursor_v2_2026_11_25.py`. Tests
 876 Python ok.
+
+### Welle C – Auswertung und Bau (25.11.2026, lokal gebaut)
+
+- **Lücken nach N1:** nur noch 110 von 1.529 künftigen Events ausschließlich bei Rausgegangen (7 %), verteilt auf viele
+  kleine Orte (höchstens 6 je Ort: hi sunny, UFA-Palast, Maxhaus, BrauArt, Cuvée …). Daraus lohnt keine eigene Welle.
+- **Spielstätten ohne kommende Termine:** 109 von 241 (viele Welle-A/B-Häuser darunter, deren erster Lauf erst am 27.11.
+  kommt). 15 Kandidaten nur lesend geprüft (je ≤ 4 Abrufe, robots beachtet). Lohnend:
+  1. **Bürgerhaus Reisholz** – `duesseldorf.de/buergerhaeuser/reisholz/veranstaltungen`, ~10 Termine/4 Wochen, HTML, S;
+     vermutlich gleiche Vorlage für die anderen städtischen Bürgerhäuser (ungeprüft).
+  2. **Comedy für Freunde** – wöchentliche Profi-Testbühne (Mo 20 Uhr, Lupin Gin Bar), JSON-LD, S; nur der nächste
+     Termin sichtbar.
+  3. **Heine Haus Literaturhaus** – Startseite HTML, ~3–5 Termine/Monat, S (iCal unvollständig, nicht nutzen).
+  4. optional **NRW-Akademie der Wissenschaften und der Künste** – S, aber nur ~3–4 öffentliche Termine.
+- **Nein:** Niemandsland, Leica Galerie, ZERO foundation, reinraum, b41 (zu wenig/Freitext – eher von Hand);
+  Storage Museum (robots.txt HTTP 500 = gesperrt); Einstein Boulderhalle (Kalender bei vertical-life, robots sperrt);
+  Das Dazwischen, Sponk, ausARTen, Studio Brick (keine datierten Termine/nur JS); ASG-Bildungsforum (Kursprogramm);
+  Berger Kirche, Henkel-Saal (keine eigene Programmseite).
+
+**Welle C gebaut (25.11.2026, Freigabe Auftraggeber):** `scraper/tier2/buergerhaeuser.py` („Bürgerhäuser Düsseldorf“, drei
+Vorlagen der Stadt-Seiten: Reisholz, Bilk, Salzmannbau, Kulturhaus Süd/Garath; Benrath, Eller, Gerresheim, Wersten ohne
+Veranstaltungsseite), `comedy_fuer_freunde.py` (JSON-LD + sichtbare Liste – das JSON-LD nennt eine Stunde zu spät, Uhrzeit
+aus der Liste; Weezevent-Link nur aus dem HTML, Widget nie abgerufen), `heine_haus.py` (Startseite, „Außer Haus“
+weggelassen). Live-Probe mit 120 Tagen: 46 + 1 + 2 Termine, 0,5 Minuten. Alle Rang 1, Fenster 120. Tests 910 ok.
 
 ## Prüfhistorie
 
