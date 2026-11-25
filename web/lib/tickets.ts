@@ -128,3 +128,25 @@ export function aktivePartner(konfig: PartnerKonfig = partnerKonfig()): { awin: 
 export function aufzaehlung(teile: string[]): string {
   return teile.length <= 1 ? (teile[0] ?? "") : `${teile.slice(0, -1).join(", ")} und ${teile[teile.length - 1]}`;
 }
+
+/**
+ * Kennzahl fürs Admin-Cockpit (Plan Quellen-Ausbau P1/P2): Wie viele kommende Events haben einen Ticket-Link des
+ * Hauses, und wie viele davon könnten ein Partner-Link werden (Hauptdomain eines Partnerprogramms)?
+ */
+export function ticketLinkKennzahl(events: { ticket_url?: string | null }[]): {
+  mit: number;
+  von: number;
+  partnerfaehig: number;
+  jeAnbieter: { anbieter: Anbieter; anzahl: number }[];
+} {
+  const zaehler = new Map<Anbieter, number>();
+  let mit = 0;
+  for (const e of events) {
+    if (!e.ticket_url) continue;
+    mit++;
+    const a = anbieterVon(e.ticket_url);
+    if (a) zaehler.set(a, (zaehler.get(a) ?? 0) + 1);
+  }
+  const jeAnbieter = [...zaehler].map(([anbieter, anzahl]) => ({ anbieter, anzahl })).sort((a, b) => b.anzahl - a.anzahl);
+  return { mit, von: events.length, partnerfaehig: jeAnbieter.reduce((s, x) => s + x.anzahl, 0), jeAnbieter };
+}

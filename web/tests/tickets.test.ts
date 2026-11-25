@@ -82,3 +82,15 @@ describe("Kennzeichnung", () => {
     expect(aufzaehlung(["A"])).toBe("A");
   });
 });
+
+describe("Cockpit-Kennzahl Ticket-Links", () => {
+  it("zählt Ticket-Links und partnerfähige je Anbieter", async () => {
+    const { ticketLinkKennzahl } = await import("@/lib/tickets");
+    const k = ticketLinkKennzahl([
+      { ticket_url: "https://www.eventim.de/e/1" }, { ticket_url: "https://www.eventim.de/e/2" },
+      { ticket_url: "https://www.reservix.de/e/3" }, { ticket_url: "https://tickets.kommoedchen.de/x" },
+      { ticket_url: null }, {},
+    ]);
+    expect(k).toEqual({ mit: 4, von: 6, partnerfaehig: 3, jeAnbieter: [{ anbieter: "eventim", anzahl: 2 }, { anbieter: "reservix", anzahl: 1 }] });
+  });
+});

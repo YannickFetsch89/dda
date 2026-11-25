@@ -7,6 +7,7 @@ import { BEREICH_KOPF } from "./konfig";
 import { eventLuecken, scraperAmpel, tokenAmpel, workflowAmpel, type Ampel, type EventLuecken, type Farbe } from "./ampeln";
 import { letzterLauf } from "./github";
 import { warnungenBerechnen, type ErgebnisZeile, type LaufZeile, type Warnung } from "./warnregeln";
+import { ticketLinkKennzahl } from "../tickets";
 
 export interface Aufgabe {
   schluessel: string;
@@ -29,6 +30,8 @@ export interface CockpitDaten {
     konten: number | null;
     /** Letzter beendeter Lauf: künftige Events, davon nur bei Rausgegangen (Plan Quellen-Ausbau 4.3) */
     nurRausgegangen: { anzahl: number; von: number } | null;
+    /** Kommende Events (60 Tage) mit Ticket-Link des Hauses, davon partnerfähig je Anbieter (Plan Quellen-Ausbau P1/P2) */
+    ticketLinks: ReturnType<typeof ticketLinkKennzahl> | null;
   };
   luecken: EventLuecken | null;
 }
@@ -195,6 +198,7 @@ export async function cockpitLaden(db: SupabaseClient): Promise<CockpitDaten> {
       neuSeitLauf,
       konten: zahlen?.konten ?? null,
       nurRausgegangen,
+      ticketLinks: pool && pool.quelle === "supabase" ? ticketLinkKennzahl(pool.alle.filter((e) => !e.abgesagt)) : null,
     },
     luecken,
   };

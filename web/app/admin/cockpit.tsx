@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CockpitDaten } from "@/lib/admin/cockpit";
 
+const ANBIETER_TEXT: Record<string, string> = {
+  eventim: "Eventim", reservix: "Reservix", adticket: "ADticket", ticketmaster: "Ticketmaster", tiqets: "Tiqets", getyourguide: "GetYourGuide",
+};
+
 const FARBE_TEXT = { gruen: "in Ordnung", gelb: "Achtung", rot: "Problem", grau: "unbekannt" } as const;
 
 function zeit(iso: string | null): string {
@@ -69,6 +73,18 @@ export function Cockpit() {
               <span>
                 nur bei Rausgegangen
                 {daten.kennzahlen.nurRausgegangen ? ` (von ${zahl(daten.kennzahlen.nurRausgegangen.von)} künftigen)` : ""}
+              </span>
+            </div>
+            <div>
+              <strong>{daten.kennzahlen.ticketLinks ? zahl(daten.kennzahlen.ticketLinks.mit) : "–"}</strong>
+              <span>
+                mit Ticket-Link (60 Tage)
+                {daten.kennzahlen.ticketLinks
+                  ? ` – partnerfähig ${zahl(daten.kennzahlen.ticketLinks.partnerfaehig)}` +
+                    (daten.kennzahlen.ticketLinks.jeAnbieter.length
+                      ? ` (${daten.kennzahlen.ticketLinks.jeAnbieter.map((x) => `${ANBIETER_TEXT[x.anbieter]} ${zahl(x.anzahl)}`).join(", ")})`
+                      : "")
+                  : ""}
               </span>
             </div>
           </section>
