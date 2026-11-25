@@ -112,3 +112,44 @@ export function redaktionJsonLd(siteUrl: string): Record<string, unknown> {
     ],
   };
 }
+
+/**
+ * Magazin-Übersicht bzw. Rubrik-Seite (25.11.2026): CollectionPage mit ItemList der Beiträge (Position, URL, Name),
+ * Herausgeber = Redaktion, plus BreadcrumbList. Nur sichtbare Beiträge, höchstens 30 (wie die Liste auf der Seite).
+ */
+export function sammlungJsonLd(
+  siteUrl: string,
+  seite: { pfad: string; name: string; beschreibung: string; krumen: { name: string; pfad: string }[] },
+  beitraege: Pick<MagazinBeitrag, "slug" | "titel">[],
+): Record<string, unknown> {
+  const url = `${siteUrl}${seite.pfad}`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": url,
+        url,
+        name: seite.name,
+        description: seite.beschreibung,
+        inLanguage: "de-DE",
+        isPartOf: { "@id": `${siteUrl}/#website` },
+        publisher: { "@id": redaktionId(siteUrl) },
+        about: { "@type": "City", name: "Düsseldorf" },
+        mainEntity: {
+          "@type": "ItemList",
+          itemListOrder: "https://schema.org/ItemListOrderDescending",
+          numberOfItems: Math.min(beitraege.length, 30),
+          itemListElement: beitraege.slice(0, 30).map((b, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            url: `${siteUrl}${beitragPfad(b)}`,
+            name: kurzeHeadline(b.titel),
+          })),
+        },
+      },
+      redaktion(siteUrl),
+      brotkrumen(siteUrl, seite.krumen),
+    ],
+  };
+}

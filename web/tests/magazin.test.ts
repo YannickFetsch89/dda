@@ -68,6 +68,8 @@ import {
 import { seitenAlternates, seitenMetadaten } from "@/lib/seo";
 import { AutorZeile, eventsGruppieren, MagazinOrtKarte, MagazinText } from "@/components/magazin";
 import { erwaehntIn, lesetippFuer, startAuswahl, wochenvorschauFuer } from "@/components/magazin-verweise";
+import { filterRubriken, karteDaten, themenZaehlen, titelgeschichte } from "@/lib/magazin-uebersicht";
+import { sammlungJsonLd } from "@/lib/magazin-json-ld";
 import { config as proxyConfig } from "@/proxy";
 import { magazinEintraege } from "@/app/sitemap";
 import type { DddEvent, EventPool } from "@/lib/typen";
@@ -655,5 +657,47 @@ describe("Event-Einbettungen gruppieren", () => {
       { art: "einbettung", typ: "guide", id: "weihnachtsmaerkte" }, e("d"), e("e"), e("f"),
     ]);
     expect(teile.map((t) => (t.art === "events" ? t.ids.join("") : t.art))).toEqual(["ab", "absatz", "c", "einbettung", "def"]);
+  });
+});
+
+
+// ---------- Magazin-Übersicht (25.11.2026) ----------
+describe("Magazin-Übersicht", () => {
+  const woche = beitrag({ id: "w", slug: "woche", rubrik: "wochenvorschau", veroeffentlicht_am: "2026-11-29T07:00:00Z" });
+  const wm = beitrag({ id: "s", slug: "wm", rubrik: "saison", gueltig_von: "2026-11-19", gueltig_bis: "2027-01-10", veroeffentlicht_am: "2026-11-20T09:00:00Z" });
+  const launch = beitrag({ id: "l", slug: "launch", rubrik: "stadtleben", gueltig_von: null, gueltig_bis: null, veroeffentlicht_am: "2026-11-19T09:00:00Z" });
+  const liste = [woche, wm, launch];
+
+  it("Titelgeschichte: neuester aktueller Beitrag außerhalb der laufenden Rubriken", () => {
+    expect(titelgeschichte(liste, "2026-12-01")?.slug).toBe("wm");
+    expect(titelgeschichte(liste, "2027-01-11")?.slug).toBe("launch");
+    expect(titelgeschichte([woche], "2026-12-01")?.slug).toBe("woche");
+    expect(titelgeschichte([], "2026-12-01")).toBeNull();
+  });
+
+  it("Themenwelten zählen alle Rubriken, Filter nur vorhandene in fester Reihenfolge", () => {
+    const zahl = themenZaehlen(liste);
+    expect(zahl.saison).toBe(1);
+    expect(zahl.genuss).toBe(0);
+    expect(Object.keys(zahl)).toHaveLength(7);
+    expect(filterRubriken([launch, woche].map(karteDaten))).toEqual(["wochenvorschau", "stadtleben"]);
+  });
+
+  it("Karte: Pfad, Rubrikname, Datum, Lesezeit, Bild", () => {
+    const k = karteDaten(wm);
+    expect(k.href).toBe("/magazin/wm");
+    expect(k.rubrikName).toBe("Saison");
+    expect(k.datum).toContain("2026");
+    expect(k.lesezeit).toBeGreaterThanOrEqual(1);
+    expect(k.bild).toBe("/fallback/theater-1.webp");
+  });
+
+  it("CollectionPage mit ItemList und Brotkrumen, ohne Pseudonym", () => {
+    const ld = sammlungJsonLd(SITE, { pfad: "/magazin", name: "Magazin", beschreibung: "x", krumen: [{ name: "Start", pfad: "/" }, { name: "Magazin", pfad: "/magazin" }] }, liste);
+    const graph = ld["@graph"] as Record<string, unknown>[];
+    const seite = graph.find((g) => g["@type"] === "CollectionPage") as { mainEntity: { itemListElement: { url: string; position: number }[] } };
+    expect(seite.mainEntity.itemListElement.map((i) => i.url)).toEqual([`${SITE}/magazin/woche`, `${SITE}/magazin/wm`, `${SITE}/magazin/launch`]);
+    expect(graph.some((g) => g["@type"] === "BreadcrumbList")).toBe(true);
+    expect(JSON.stringify(ld)).not.toContain(AUTOR.name);
   });
 });

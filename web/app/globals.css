@@ -2561,3 +2561,99 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
   .os-filter__feld { min-width: 100%; }
 }
 .os-saal-link { margin-top: 10px; }
+
+/* ---------- Magazin-Übersicht (25.11.2026, nach dem Vorbild eines Ratgeber-Hubs) ---------- */
+.mz-h2 { font-size: clamp(26px, 3.6vw, 36px); line-height: 1.1; margin: 4px 0 18px; }
+/* Hero: Navy-Band wie /wochenende, Gold-Akzent im Titel, Kennzahlen wie auf der Startseite */
+.mzh { background: var(--ddd-navy); color: var(--ddd-on-navy); padding: 20px 0 32px; position: relative; overflow: hidden; }
+.mzh::after { content: ""; position: absolute; right: -120px; top: -160px; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(212, 168, 75, 0.22), transparent 65%); pointer-events: none; }
+.mzh__innen { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px; }
+.mzh__krumen, .mzh__krumen a { color: var(--ddd-on-navy-muted); }
+.mzh__krumen [aria-current] { color: var(--ddd-on-navy); }
+.mz-uebersicht .mzh h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.02; margin: 0; max-width: 16ch; color: var(--ddd-on-navy); }
+.mzh__akzent { color: var(--ddd-gold); font-style: italic; }
+.mzh__intro { font-size: 17px; line-height: 1.55; max-width: 62ch; color: var(--ddd-on-navy-muted); margin: 0; }
+.mzh__gefragt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 0; font-size: 13px; color: var(--ddd-on-navy-muted); }
+.mzh__chip { padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid rgba(255, 255, 255, 0.22); color: var(--ddd-on-navy); font-weight: 600; }
+.mzh__chip:hover { border-color: var(--ddd-gold); color: var(--ddd-gold); }
+.mzh__zahlen { display: flex; flex-wrap: wrap; gap: 28px; margin: 10px 0 0; }
+.mzh__zahlen div { display: flex; flex-direction: column-reverse; }
+.mzh__zahlen dd { margin: 0; font-size: 28px; color: var(--ddd-gold); line-height: 1.1; }
+.mzh__zahlen dt { font-size: 12px; color: var(--ddd-on-navy-muted); }
+/* Themenwelten und Guides: Kacheln */
+.mzt-raster { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.mzt-kachel { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: var(--r-card-s); background: var(--ddd-surface); border: 1px solid var(--ddd-border); color: var(--ddd-text); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+.mzt-kachel:hover { transform: translateY(-2px); box-shadow: var(--sh-m); border-color: var(--ddd-gold); }
+.mzt-kachel strong { font-size: 17px; }
+.mzt-kachel__kopf { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.mzt-kachel__icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ddd-gold-tint); color: var(--ddd-navy); flex: none; }
+.mzt-kachel__icon .icon { font-size: 22px; }
+.mzt-kachel__zahl { font-size: 12px; font-weight: 600; color: var(--ddd-text-muted); }
+.mzt-kachel__text { font-size: 14px; line-height: 1.45; color: var(--ddd-text-muted); }
+.mzt-kachel--navy { background: var(--ddd-navy); border-color: var(--ddd-navy); color: var(--ddd-on-navy); }
+.mzt-kachel--navy .mzt-kachel__text { color: var(--ddd-on-navy-muted); }
+.mzt-kachel--navy .mzt-kachel__icon { background: rgba(255, 255, 255, 0.1); color: var(--ddd-gold); margin-bottom: 4px; }
+/* Titelgeschichte */
+.mzg { display: grid; grid-template-columns: minmax(0, 1fr); border-radius: var(--r-card); overflow: hidden; background: var(--ddd-surface); box-shadow: var(--sh-m); }
+.mzg__bild { position: relative; aspect-ratio: 16 / 10; background: var(--ddd-subtle); }
+.mzg__bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mzg__marke { position: absolute; left: 14px; top: 14px; padding: 5px 10px; border-radius: var(--r-pill); background: var(--ddd-gold); color: var(--ddd-navy); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.mzg__text { padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.mzg__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.mzg__stand { font-size: 12px; color: var(--ddd-text-muted); padding: 4px 10px; border: 1px solid var(--ddd-border); border-radius: var(--r-pill); }
+.mz-uebersicht .mzg__titel { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.08; margin: 0; }
+.mzg__titel a { color: var(--ddd-text); }
+.mzg__titel a:hover { color: var(--ddd-link); }
+.mzg__teaser { font-size: 16px; line-height: 1.55; color: var(--ddd-text-body); margin: 0; }
+.mzg__punkte { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px 16px; grid-template-columns: minmax(0, 1fr); }
+.mzg__punkte li { display: flex; gap: 10px; font-size: 14px; line-height: 1.4; color: var(--ddd-text-body); }
+.mzg__nr { flex: none; font-weight: 800; font-size: 12px; color: var(--ddd-gold); padding-top: 2px; }
+.mzg__fuss { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 8px; font-size: 13px; color: var(--ddd-text-muted); }
+@media (min-width: 900px) {
+  .mzg { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+  .mzg__bild { aspect-ratio: auto; min-height: 100%; }
+  .mzg__text { padding: 32px 32px 28px; }
+  .mzg__punkte { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Frisch aus der Redaktion: Filter-Pillen und Raster, erste Karte breit */
+.mzf-pillen { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 0 0 18px; scrollbar-width: thin; }
+.mzf-pille { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid var(--ddd-border); background: var(--ddd-surface); color: var(--ddd-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.mzf-pille .icon { font-size: 18px; }
+.mzf-pille:hover { border-color: var(--ddd-navy); }
+.mzf-pille[aria-pressed="true"] { background: var(--ddd-navy); border-color: var(--ddd-navy); color: var(--ddd-on-navy); }
+.mzf-raster { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 720px) { .mzf-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .mzf-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.mzf-karte { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: var(--r-card); overflow: hidden; background: var(--ddd-surface); box-shadow: var(--sh-m); transition: transform 0.15s, box-shadow 0.15s; }
+.mzf-karte:hover { transform: translateY(-2px); }
+.mzf-karte__bild { position: relative; aspect-ratio: 16 / 10; background: var(--ddd-subtle); }
+/* Kennzeichnung KI-Symbolbild auf Karten und Titelgeschichte (E7) */
+.mz-ki-marke { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: var(--r-pill); background: rgba(13, 17, 23, 0.72); color: #fff; font-size: 11px; font-weight: 600; }
+.mzf-karte__bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mzf-karte__text { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.mzf-chip { align-self: flex-start; padding: 3px 10px; border-radius: var(--r-pill); background: var(--ddd-navy-tint); color: var(--ddd-navy); font-size: 12px; font-weight: 700; }
+.mzf-karte__titel { font-size: 19px; line-height: 1.25; margin: 0; }
+.mzf-karte__titel a { color: var(--ddd-text); }
+.mzf-karte__titel a::after { content: ""; position: absolute; inset: 0; }
+.mzf-karte__teaser { font-size: 14px; line-height: 1.5; color: var(--ddd-text-body); margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mzf-karte__meta { margin-top: auto; font-size: 12px; color: var(--ddd-text-muted); }
+@media (min-width: 720px) {
+  .mzf-karte--breit { grid-column: 1 / -1; flex-direction: row; }
+  .mzf-karte--breit .mzf-karte__bild { flex: 0 0 52%; }
+  .mzf-karte--breit .mzf-karte__text { padding: 26px 28px; justify-content: center; }
+  .mzf-karte--breit .mzf-karte__titel { font-size: clamp(22px, 2.4vw, 30px); line-height: 1.15; }
+  .mzf-karte--breit .mzf-karte__teaser { font-size: 16px; -webkit-line-clamp: 4; }
+}
+/* Redaktion */
+.mzr__liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.mzr__autor { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-card-s); background: var(--ddd-surface); border: 1px solid var(--ddd-border); color: var(--ddd-text); }
+.mzr__autor:hover { border-color: var(--ddd-gold); }
+.mzr__autor img, .mzr__platz { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; background: var(--ddd-subtle); }
+.mzr__autor strong { display: block; font-size: 15px; }
+.mzr__autor span span { display: block; font-size: 13px; color: var(--ddd-text-muted); }
+.mz-newsletter { margin-top: 32px; }
+@media (min-width: 768px) { .mz-newsletter { flex-direction: row; align-items: center; padding: 26px 28px; } .mz-newsletter .newsletter__form { flex: 1; } }
+.mz-ueber p { max-width: 70ch; font-size: 15px; line-height: 1.6; color: var(--ddd-text-body); }
+.mz-ueber a { color: var(--ddd-link); text-decoration: underline; text-underline-offset: 2px; }
+/* Rubrik-Seite: Icon im Titel */
+.mz-rubrik-h1 { display: flex; align-items: center; gap: 14px; }
