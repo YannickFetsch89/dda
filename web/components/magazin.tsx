@@ -36,11 +36,19 @@ function InlineText({ teile }: { teile: Inline[] }) {
   );
 }
 
-/** Schmale Ort-Karte (Plan 5.2 Punkt 7, Cursor-Prüfung 1 Befund 7): Name, Typ, Stadtteil, Link. Kein Bild, keine Bewertung. */
+/**
+ * Schmale Ort-Karte (Plan 5.2 Punkt 7, Cursor-Prüfung 1 Befund 7): Name, Typ, Stadtteil, Link, keine Bewertung.
+ * Seit 25.11.2026 mit kleinem Bild, aber nur aus eigenem Bestand (MagazinOrt.bild) – nie Google-Foto.
+ */
 export function MagazinOrtKarte({ ort }: { ort: MagazinOrt }) {
   const inhalt = (
     <>
-      <span className="mz-ort__icon"><Icon name={typIcon(ort.typ)} /></span>
+      {ort.bild ? (
+        // eslint-disable-next-line @next/next/no-img-element -- statische, eigene Datei aus public/ort-bilder
+        <img className="mz-ort__bild" src={ort.bild} alt="" width={96} height={72} loading="lazy" decoding="async" />
+      ) : (
+        <span className="mz-ort__icon"><Icon name={typIcon(ort.typ)} /></span>
+      )}
       <span className="mz-ort__text">
         <span className="mz-ort__name">{ort.name}</span>
         <span className="mz-ort__sub">

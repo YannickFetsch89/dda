@@ -15,12 +15,12 @@ CAFES = {
     "autor_slug": "laurenz-weigelt",
     "titel": "Top 5 Cafés in Flingern: Wo sich der Weg für Kaffee und Kuchen lohnt",
     "seo_titel": "Top 5 Cafés in Flingern – Kaffee, Kuchen, Frühstück",
-    "teaser": "Specialty Coffee, italienische Espressobar, Frühstück mit Ruhe: unsere fünf liebsten Cafés in Flingern – "
+    "teaser": "Specialty Coffee, eigene Rösterei, Frühstück mit Ruhe: unsere fünf liebsten Cafés in Flingern – "
               "und warum die Ackerstraße eine Kaffeemeile ist.",
     "kurzfassung": [
         "Jaenner Modern Coffee: Pour Over und frisch geröstete Bohnen zum Mitnehmen.",
         "No Worries: wechselnde Gastbohnen, Zimtschnecken und ein Babyccino für die Kleinen.",
-        "NOSTIMO: Espresso, Cornetti und Panini wie in einer italienischen Bar.",
+        "Fjaka Café & Clubhouse: Kaffee aus der eigenen Rösterei und cremiger Cheesecake.",
         "MERCY coffee company: Kuchen und Bagels in einem kleinen, gemütlichen Café.",
         "Café Liebe: marokkanisches Frühstück und Bowls ohne Eile.",
     ],
@@ -30,7 +30,7 @@ CAFES = {
     "gueltig_von": None,
     "gueltig_bis": None,
     "naechste_pruefung": date(2027, 2, 1),
-    "ort_slugs": ["jaenner-modern-coffee-flingern", "no-worries-flingern", "nostimo-flingerns-finest-flingern",
+    "ort_slugs": ["jaenner-modern-coffee-flingern", "no-worries-flingern", "fjaka-cafe-clubhouse-flingern",
                   "mercy-coffee-company-flingern", "cafe-liebe-flingern"],
     "quellen": [{"titel": "dies.das.düsseldorf: Restaurants & Cafés in Flingern",
                  "url": "https://diesdas.events/guides/restaurants-cafes/stadtteil/flingern", "abgerufen_am": "2026-11-25"}],
@@ -61,13 +61,14 @@ CAFES = {
             "Mitnehmen.\n\n"
             "{{ort:no-worries-flingern}}"
         )},
-        {"ueberschrift": "3. NOSTIMO: ein Stück Italien an der Ackerstraße", "text_md": (
-            "Im NOSTIMO fühlt sich der Espresso an wie in einer italienischen Bar: aromatisch, sorgfältig zubereitet, dazu "
-            "ein Cappuccino mit cremigem Milchschaum. Frische Cornetti, hausgemachte Dolci und herzhafte Panini – etwa mit "
-            "Mortadella, warm und knusprig serviert – machen es auch zum Ort für ein schnelles Mittagessen.\n\n"
-            "Wer Pistazie mag, sollte die kleinen Köstlichkeiten damit probieren. Der Inhaber und sein Team empfangen ihre "
-            "Gäste persönlich und warmherzig, das hübsch eingerichtete Café ist familiär und lädt zum Verweilen ein.\n\n"
-            "{{ort:nostimo-flingerns-finest-flingern}}"
+        {"ueberschrift": "3. Fjaka Café & Clubhouse: Kaffee aus der eigenen Rösterei", "text_md": (
+            "Im Fjaka an der Ackerstraße steht der Kaffee aus der eigenen Rösterei im Mittelpunkt, Espresso und Milch sind "
+            "genau aufeinander abgestimmt. Dazu gibt es Matcha-Spezialitäten, Frühstückssnacks und auch einige alkoholische "
+            "Getränke – das Café kann schnell zum Stammlokal werden.\n\n"
+            "An der kleinen, feinen Kuchentheke ist der New York Cheesecake besonders cremig, herzhaft geht es mit Bagels. "
+            "Drinnen ist es hell und freundlich, die Stimmung bleibt auch bei gutem Besuch ruhig. Im Sommer locken "
+            "Sonnenplätze draußen, und für Hunde steht ein Wassernapf bereit.\n\n"
+            "{{ort:fjaka-cafe-clubhouse-flingern}}"
         )},
         {"ueberschrift": "4. MERCY coffee company: Kuchen, Bagels und Zeit zum Lesen", "text_md": (
             "Das MERCY an der Birkenstraße ist klein, aber richtig gemütlich und liebevoll eingerichtet – ein Ort, an dem man "
@@ -87,12 +88,13 @@ CAFES = {
             "{{ort:cafe-liebe-flingern}}"
         )},
         {"ueberschrift": "Die Ackerstraße: Flingerns Kaffeemeile", "text_md": (
-            "Auffällig ist, wie viele gute Cafés an einer einzigen Straße liegen. Neben Jaenner und NOSTIMO findet ihr an der "
+            "Auffällig ist, wie viele gute Cafés an einer einzigen Straße liegen. Neben Jaenner und dem Fjaka findet ihr an der "
             "Ackerstraße das [Café Kleinod](" + RC + "/cafe-kleinod-flingern), in dem ein Paar aus Italien hausgemachte "
             "Kuchen, Tiramisu und Gebäck mit Pistazie serviert – ruhig gelegen und ideal zum Plaudern. Das "
             "[coffiez](" + RC + "/coffiez-flingern) ist modern und gemütlich zugleich, der Chef bedient oft selbst, und der "
-            "Matcha mit Erdbeeren ist ein Hingucker. Weiter östlich röstet das [Fjaka Café & Clubhouse](" + RC +
-            "/fjaka-cafe-clubhouse-flingern) seinen Kaffee selbst, dazu gibt es einen sehr cremigen New York Cheesecake.\n\n"
+            "Matcha mit Erdbeeren ist ein Hingucker. Und im [NOSTIMO](" + RC + "/nostimo-flingerns-finest-flingern) "
+            "fühlt sich der Espresso an wie in einer italienischen Bar, dazu gibt es frische Cornetti und Panini mit "
+            "Mortadella.\n\n"
             "Wer an einem freien Vormittag Zeit hat, kann die Ackerstraße entlangspazieren und sich von Café zu Café treiben "
             "lassen – Flingern lässt sich so gut kennenlernen."
         )},
@@ -125,7 +127,7 @@ FAMILIE = {
     "autor_slug": "amelie-glasner",
     "titel": "10 Empfehlungen für Familien im Dezember: Düsseldorf mit Kindern",
     "seo_titel": "Düsseldorf mit Kindern im Dezember: 10 Tipps",
-    "teaser": "Musical, Kinderkino, Marionettentheater und ein Weihnachtsmarkt mit Rodelbahn: zehn Ideen für Familien in "
+    "teaser": "Musical, Kinderkino, Becher bemalen und ein Weihnachtsmarkt mit Rodelbahn: zehn Ideen für Familien in "
               "Düsseldorf und Umgebung im Dezember.",
     "kurzfassung": [
         "Musicals für Kinder: „Der Glöckner von Notre Dame“ im Capitol, „Santa Claus“ am 5. Dezember in Ratingen.",
@@ -163,16 +165,20 @@ FAMILIE = {
             "Momente, für Schulkinder ist sie ein großes Bühnenerlebnis.\n\n"
             "{{event:6d392e7f-f941-4161-a698-a312c088d5b3}}"
         )},
-        {"ueberschrift": "2. Weihnachtsmusical in Ratingen: Santa Claus", "text_md": (
-            "Ein Musical ausdrücklich für Kinder und Familien: In der Stadthalle Ratingen kommt „Santa Claus – das Musical“ "
-            "auf die Bühne – ein kurzer Ausflug über die Stadtgrenze, der sich zum Start in die Adventszeit anbietet.\n\n"
-            "{{event:0496484d-939e-47a4-8322-43de7a900e12}}"
-        )},
-        {"ueberschrift": "3. Geburtstagsparty mit den tonies in der Tonhalle", "text_md": (
+        {"ueberschrift": "2. Geburtstagsparty mit den tonies in der Tonhalle", "text_md": (
             "Wer zu Hause eine Toniebox hat, kennt die kleinen Hörfiguren. Jetzt laden die tonies zur großen "
             "Geburtstagsparty in die Tonhalle ein – ein Termin für alle, bei denen die Box im Kinderzimmer nicht mehr "
             "stillsteht.\n\n"
             "{{event:d9f8745e-3f2d-4507-9045-c7105067d9d9}}"
+        )},
+        {"ueberschrift": "3. Weihnachtsmarkt mit Rodelbahn: Gerresheim", "text_md": (
+            "Unter den Weihnachtsmärkten ist der Markt auf dem Gerricusplatz in Gerresheim für Kinder ein Höhepunkt. An zwei "
+            "Adventswochenenden gibt es dort eine rund zwanzig Meter lange Rodelbahn, ein Puppentheater und Eisstockschießen "
+            "für Groß und Klein. Wer an anderen Tagen unterwegs ist: Im Areal Böhler in Heerdt spielt die Puppenbühne Maatz, "
+            "dazu gibt es Kinderschminken und Mitmachaktionen, und vor Schloss Benrath fährt die traditionelle Eisenbahn für "
+            "Kinder. Welche Märkte heute geöffnet haben, zeigt unser [Weihnachtsmarkt-Guide](" + WM + ").\n\n"
+            "{{ort:weihnachtsmarkt-gerresheim}}\n\n"
+            "{{ort:weihnachtszauber-areal-boehler-heerdt}}"
         )},
         {"ueberschrift": "4. Kinderkino am Sonntag: Momo im Filmmuseum", "text_md": (
             "Das Familienkino in der Black Box im Filmmuseum in der Altstadt zeigt „Momo“ – die Geschichte nach Michael Ende "
@@ -180,11 +186,10 @@ FAMILIE = {
             "Adventssonntag, der draußen vielleicht grau ist.\n\n"
             "{{event:d787de03-bca6-4aea-af7e-7019709cb691}}"
         )},
-        {"ueberschrift": "5. Michael Ende auf der Marionettenbühne: Der Wunschpunsch", "text_md": (
-            "Noch einmal Michael Ende: Das Düsseldorfer Marionetten-Theater in der Altstadt spielt „Der "
-            "satanarchäolügenialkohöllische Wunschpunsch“. Schon der Titel ist ein Zungenbrecher, den Kinder lieben – und "
-            "Marionettentheater ist eine Kunstform, die viele Kinder heute gar nicht mehr kennen.\n\n"
-            "{{event:ac40e918-e39d-4cea-981b-df9b0f155a21}}"
+        {"ueberschrift": "5. Weihnachtsmusical in Ratingen: Santa Claus", "text_md": (
+            "Ein Musical ausdrücklich für Kinder und Familien: In der Stadthalle Ratingen kommt „Santa Claus – das Musical“ "
+            "auf die Bühne – ein kurzer Ausflug über die Stadtgrenze, der sich zum Start in die Adventszeit anbietet.\n\n"
+            "{{event:0496484d-939e-47a4-8322-43de7a900e12}}"
         )},
         {"ueberschrift": "6. Anime, Mangas und Super Mario: Familienführung im NRW-Forum", "text_md": (
             "Ob Sailor Moon, One Piece oder Super Mario: Die Familienführung im NRW-Forum ist eine Entdeckungsreise durch die "
@@ -204,14 +209,13 @@ FAMILIE = {
             "gemeinsame Spielen. Für Familien, die gerne am Tisch zusammensitzen, ist das ein Ausflug wert.\n\n"
             "{{event:f414c593-afa4-4043-bdba-e6b49c4c51c4}}"
         )},
-        {"ueberschrift": "9. Weihnachtsmarkt mit Rodelbahn: Gerresheim", "text_md": (
-            "Unter den Weihnachtsmärkten ist der Markt auf dem Gerricusplatz in Gerresheim für Kinder ein Höhepunkt. An zwei "
-            "Adventswochenenden gibt es dort eine rund zwanzig Meter lange Rodelbahn, ein Puppentheater und Eisstockschießen "
-            "für Groß und Klein. Wer an anderen Tagen unterwegs ist: Im Areal Böhler in Heerdt spielt die Puppenbühne Maatz, "
-            "dazu gibt es Kinderschminken und Mitmachaktionen, und vor Schloss Benrath fährt die traditionelle Eisenbahn für "
-            "Kinder. Welche Märkte heute geöffnet haben, zeigt unser [Weihnachtsmarkt-Guide](" + WM + ").\n\n"
-            "{{ort:weihnachtsmarkt-gerresheim}}\n\n"
-            "{{ort:weihnachtszauber-areal-boehler-heerdt}}"
+        {"ueberschrift": "9. Gemeinsam kreativ: Lieblingsbecher bemalen im Craft Studio", "text_md": (
+            "Ein Programmpunkt für Groß und Klein zusammen: Beim Workshop „Mini & Me – Lieblingsbecher“ im Craft Studio "
+            "gestalten Kinder gemeinsam mit einem Erwachsenen ihren eigenen Becher. Am Ende steht ein Stück, das jeden Morgen "
+            "auf dem Frühstückstisch an den Nachmittag erinnert – und vielleicht auch ein schönes Weihnachtsgeschenk für "
+            "Oma und Opa. Wer lieber allein gestaltet, findet im Dezember im Craft Studio weitere Workshops, vom Tassenmalen "
+            "bis zum Kerzengießen.\n\n"
+            "{{event:ed197365-8c99-47c8-bf9a-b59a8766cdeb}}"
         )},
         {"ueberschrift": "10. Vorlesen und Basteln in den Stadtbüchereien", "text_md": (
             "Die Stadtbüchereien sind im Dezember eine kleine Fundgrube für Familien: In vielen Stadtteilen gibt es "
@@ -230,7 +234,7 @@ FAMILIE = {
     ],
     "faq": [
         {"frage": "Was kann man im Dezember mit Kindern in Düsseldorf unternehmen?",
-         "antwort": "Zum Beispiel ein Musical im Capitol, Kinderkino im Filmmuseum, Marionettentheater in der Altstadt, "
+         "antwort": "Zum Beispiel ein Musical im Capitol, Kinderkino im Filmmuseum, Kreativworkshops für Eltern und Kinder, "
                     "Familienführungen in Museen wie dem NRW-Forum und dem K20, Weihnachtsmärkte mit Kinderprogramm und "
                     "Vorlesestunden in den Stadtbüchereien."},
         {"frage": "Welcher Weihnachtsmarkt in Düsseldorf hat besonders viel für Kinder?",

@@ -6,7 +6,7 @@ import { heuteBerlin } from "./datum";
 import { mitSpalten, normalisieren, type Zeile } from "./daten";
 import { istRubrik, type MagazinAutor, type MagazinBeitrag, type Rubrik } from "./magazin";
 import { ortEntscheidung, type OrtHub, type OrtKopf } from "./pfad-pruefung";
-import { ORTE_CACHE_TAG } from "./orte";
+import { lokalesBild, ORTE_CACHE_TAG } from "./orte";
 import { SPIELPLAETZE_VERLINKT } from "./schalter";
 import { dienstClient, leseClient } from "./supabase-server";
 import type { DddEvent } from "./typen";
@@ -161,6 +161,18 @@ export interface MagazinOrt {
   stadtteil: string | null;
   /** Kanonische, sichtbare Ortsseite – sonst null (dann ohne Link). Nie Google-Foto oder -Bewertung (Plan 5.2). */
   pfad: string | null;
+  /** Kleines Bild nur aus eigenem Bestand (web/public/ort-bilder/…), nie Google, nie mit Fremdnachweis (25.11.2026) */
+  bild: string | null;
+}
+
+/** Fremdfoto mit Nachweispflicht (wie im Magazin-Aufmacher verboten) */
+const FREMDFOTO = "/ort-bilder/weihnachtsmaerkte/koe-on-ice.webp";
+
+/** Eigenes Ortsbild für die Magazin-Karte: nur lokale Datei, kein Fremdnachweis (bild_link), mit Version gegen Cache. */
+export function magazinOrtBild(bildUrl: string | null | undefined, bildLink: unknown, version: unknown): string | null {
+  const lokal = lokalesBild(bildUrl);
+  if (!lokal || lokal === FREMDFOTO || (typeof bildLink === "string" && bildLink.trim())) return null;
+  return typeof version === "number" && version >= 1 ? `${lokal}?v=${version}` : lokal;
 }
 
 const TYP_HUB: Record<string, OrtHub> = {
@@ -182,7 +194,7 @@ export function ortZiel(slug: string, kopf: OrtKopf): string | null {
   return e.art === "umleiten" ? e.ziel : null;
 }
 
-/** Eingebettete Orte: Name, Typ, Stadtteil und Link – bewusst ohne Bild und Bewertung. */
+/** Eingebettete Orte: Name, Typ, Stadtteil, Link und – nur bei eigenem Foto – ein kleines Bild. Nie Bewertungen. */
 export async function orteFuerSlugs(slugs: string[]): Promise<MagazinOrt[]> {
   "use cache";
   cacheLife(MAGAZIN_CACHE);
@@ -193,7 +205,8 @@ export async function orteFuerSlugs(slugs: string[]): Promise<MagazinOrt[]> {
   const { data, error } = await client
     .from("orte")
     .select(
-      "slug, name, typ, aktiv, qualitaets_score, stadtteil, club:extras->club, club_score:extras->club_score, " +
+      "slug, name, typ, aktiv, qualitaets_score, stadtteil, bild_url, foto_version:extras->foto_version, bild_link:extras->bild_link, " +
+        "club:extras->club, club_score:extras->club_score, " +
         "club_freigegeben:extras->club_freigegeben, auch_club:extras->auch_club, kein_club:extras->kein_club, " +
         "freigeschaltet_am:extras->spielplatz->>freigeschaltet_am, wm_freigeschaltet_am:extras->weihnachtsmarkt->>freigeschaltet_am",
     )
@@ -202,12 +215,13 @@ export async function orteFuerSlugs(slugs: string[]): Promise<MagazinOrt[]> {
     console.error(`Magazin: eingebettete Orte konnten nicht geladen werden: ${error.message}`);
     return [];
   }
-  return ((data ?? []) as unknown as (OrtKopf & { slug: string; name: string })[]).map((o) => ({
+  return ((data ?? []) as unknown as (OrtKopf & { slug: string; name: string; bild_url?: string | null; foto_version?: unknown; bild_link?: unknown })[]).map((o) => ({
     slug: o.slug,
     name: o.name,
     typ: o.typ,
     stadtteil: o.stadtteil ?? null,
     pfad: ortZiel(o.slug, o),
+    bild: magazinOrtBild(o.bild_url, o.bild_link, o.foto_version),
   }));
 }
 

@@ -58,7 +58,7 @@ import {
 import { auswahlRechnen, schluesselOk, zeitraumPassend } from "@/lib/magazin-auswahl";
 import { imErlaubtenOrdner } from "@/lib/magazin-bild-pfad";
 import { ERLAUBTE_FALLBACK_HEROS, heroErlaubt, heroFuer, RUBRIK_ERSATZ, zuschnittPruefen } from "@/lib/magazin-bilder";
-import { ortZiel } from "@/lib/magazin-daten";
+import { magazinOrtBild, ortZiel } from "@/lib/magazin-daten";
 import { feedXml, FEED_MAX, rfc822, xml } from "@/lib/magazin-feed";
 import { artikelJsonLd, autorJsonLd } from "@/lib/magazin-json-ld";
 import { einbettungPruefen, inhaltsverzeichnis, linkZiel, parsen } from "@/lib/magazin-markdown";
@@ -493,7 +493,7 @@ describe("JSON-LD und Kennzeichnung", () => {
   });
 
   it("Ort-Einbettung ohne Google-Foto und -Bewertung (Befund 7)", () => {
-    const html = renderToStaticMarkup(createElement(MagazinOrtKarte, { ort: { slug: "zakk", name: "zakk", typ: "club", stadtteil: "Flingern", pfad: "/guides/clubs/zakk" } }));
+    const html = renderToStaticMarkup(createElement(MagazinOrtKarte, { ort: { slug: "zakk", name: "zakk", typ: "club", stadtteil: "Flingern", pfad: "/guides/clubs/zakk", bild: null } }));
     expect(html).not.toContain("/ort-foto/");
     expect(html).not.toMatch(/★|google/i);
     expect(html).toContain('href="/guides/clubs/zakk"');
@@ -699,5 +699,24 @@ describe("Magazin-Übersicht", () => {
     expect(seite.mainEntity.itemListElement.map((i) => i.url)).toEqual([`${SITE}/magazin/woche`, `${SITE}/magazin/wm`, `${SITE}/magazin/launch`]);
     expect(graph.some((g) => g["@type"] === "BreadcrumbList")).toBe(true);
     expect(JSON.stringify(ld)).not.toContain(AUTOR.name);
+  });
+});
+
+
+// ---------- Ortskarte mit eigenem Bild (25.11.2026) ----------
+describe("Ortskarte mit eigenem Bild", () => {
+  it("nur lokale eigene Bilder, nie Google-Proxy, Fremdfoto oder Bild mit Nachweis", () => {
+    expect(magazinOrtBild("/ort-bilder/restaurants-cafes/jaenner.webp", null, 2)).toBe("/ort-bilder/restaurants-cafes/jaenner.webp?v=2");
+    expect(magazinOrtBild("/ort-bilder/restaurants-cafes/jaenner.webp", undefined, undefined)).toBe("/ort-bilder/restaurants-cafes/jaenner.webp");
+    expect(magazinOrtBild("https://lh3.googleusercontent.com/x", null, 1)).toBeNull();
+    expect(magazinOrtBild("/ort-foto/jaenner", null, 1)).toBeNull();
+    expect(magazinOrtBild("/ort-bilder/weihnachtsmaerkte/koe-on-ice.webp", null, 1)).toBeNull();
+    expect(magazinOrtBild("/ort-bilder/restaurants-cafes/x.webp", "https://cafe.example", 1)).toBeNull();
+  });
+
+  it("Karte zeigt das Bild statt des Icons", () => {
+    const html = renderToStaticMarkup(createElement(MagazinOrtKarte, { ort: { slug: "jaenner", name: "Jaenner", typ: "cafe", stadtteil: "Flingern", pfad: "/guides/restaurants-cafes/jaenner", bild: "/ort-bilder/restaurants-cafes/jaenner.webp" } }));
+    expect(html).toContain('src="/ort-bilder/restaurants-cafes/jaenner.webp"');
+    expect(html).not.toContain("mz-ort__icon");
   });
 });

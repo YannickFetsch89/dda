@@ -2416,7 +2416,8 @@ html:not([data-konto="1"]) .tabbar--konto { display: none; }
 .mz-hero { margin: 16px 0 20px; }
 .mz-hero img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-card); display: block; background: var(--ddd-subtle); }
 .mz-hero figcaption { font-size: 12px; color: var(--ddd-text-muted); margin-top: 6px; }
-.mz-blick { background: var(--ddd-gold-tint); border-radius: var(--r-card-s); padding: 16px 20px; margin: 0 0 20px; }
+/* Schrift fest in Navy: Hintergrund bleibt auch im Dunkelmodus hell (sonst weiß auf Beige, 25.11.2026) */
+.mz-blick { background: var(--ddd-gold-tint); color: var(--ddd-navy); border-radius: var(--r-card-s); padding: 16px 20px; margin: 0 0 20px; }
 .mz-blick__titel { font-size: 15px; font-weight: 800; margin: 0 0 6px; }
 .mz-blick ul { margin: 0; padding-left: 20px; line-height: 1.5; }
 .mz-toc { border: 1px solid var(--ddd-border); border-radius: var(--r-card-s); padding: 12px 18px; margin: 0 0 20px; }
@@ -2441,6 +2442,7 @@ a.mz-ort:hover { border-color: var(--ddd-gold); }
 .mz-ort__name { font-weight: 700; }
 .mz-ort__sub { font-size: 13px; color: var(--ddd-text-muted); }
 .mz-ort__pfeil { font-size: 18px; color: var(--ddd-text-muted); }
+.mz-ort__bild { width: 96px; height: 72px; flex: none; border-radius: 10px; object-fit: cover; background: var(--ddd-subtle); }
 .mz-kasten { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; margin: 12px 0 16px; border-radius: var(--r-card-s); background: var(--ddd-navy); color: var(--ddd-on-navy); }
 .mz-text a.mz-kasten { text-decoration: none; color: var(--ddd-on-navy); }
 .mz-kasten .icon { font-size: 24px; color: var(--ddd-gold); }
