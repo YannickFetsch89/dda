@@ -1,4 +1,4 @@
-// Startseiten-Box „Weihnachtsmärkte heute geöffnet“ (Plan Weihnachtsmärkte 5.6): nur bei Schalter an und vom 15.11. bis
+// Startseiten-Box „Weihnachtsmärkte in Düsseldorf“ mit den heute geöffneten Märkten (Plan Weihnachtsmärkte 5.6): nur bei Schalter an und vom 15.11. bis
 // 30.12. Der Tag kommt aus heuteKurz() (höchstens 5 Minuten alt) – nicht aus pool.heute (bis 1 h alt).
 // Tagesgenau (ohne Uhrzeit): „heute 11–21 Uhr“. Ohne belegt offenen Markt ein ehrlicher Satz statt „alles zu“.
 import Link from "next/link";
@@ -38,8 +38,10 @@ export async function WmStartBox() {
   return (
     <section className="sektion wm-startbox" aria-labelledby="wm-startbox-titel">
       <div className="sektionskopf sektionskopf--stapeln">
-        <h2 className="d" id="wm-startbox-titel"><Icon name="wm:markt" /> Weihnachtsmärkte heute geöffnet</h2>
-        <Link href={rest > 0 ? offenHref : WM_BASIS}>{rest > 0 ? `Alle ${offen.length} geöffneten Märkte` : "Alle Weihnachtsmärkte"}</Link>
+        {/* Titel und Link (Auftraggeber 25.11.2026): immer „Alle Weihnachtsmärkte“ auf die ungefilterte Übersicht;
+            nur die „+N weitere“-Karte führt zur Liste der heute geöffneten Märkte */}
+        <h2 className="d" id="wm-startbox-titel"><Icon name="wm:markt" /> Weihnachtsmärkte in Düsseldorf</h2>
+        <Link href={WM_BASIS}>Alle Weihnachtsmärkte</Link>
       </div>
       {offen.length ? (
         // Bildkarten in einer waagerechten Reihe: bleibt bei 4 wie bei 20 offenen Märkten übersichtlich (Auftraggeber 19.11.2026)
