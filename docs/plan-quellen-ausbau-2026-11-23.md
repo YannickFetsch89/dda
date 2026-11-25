@@ -1049,6 +1049,23 @@ Abrufe); LVR Cromford ohne `ticket_url` (nur Shop-Startseite, kein Link je Termi
 `tests/test_cursor_v2_2026_11_25.py`. Tests
 876 Python ok.
 
+### Welle C – Auswertung (25.11.2026, nur Prüfung, noch nicht gebaut)
+
+- **Lücken nach N1:** nur noch 110 von 1.529 künftigen Events ausschließlich bei Rausgegangen (7 %), verteilt auf viele
+  kleine Orte (höchstens 6 je Ort: hi sunny, UFA-Palast, Maxhaus, BrauArt, Cuvée …). Daraus lohnt keine eigene Welle.
+- **Spielstätten ohne kommende Termine:** 109 von 241 (viele Welle-A/B-Häuser darunter, deren erster Lauf erst am 27.11.
+  kommt). 15 Kandidaten nur lesend geprüft (je ≤ 4 Abrufe, robots beachtet). Lohnend:
+  1. **Bürgerhaus Reisholz** – `duesseldorf.de/buergerhaeuser/reisholz/veranstaltungen`, ~10 Termine/4 Wochen, HTML, S;
+     vermutlich gleiche Vorlage für die anderen städtischen Bürgerhäuser (ungeprüft).
+  2. **Comedy für Freunde** – wöchentliche Profi-Testbühne (Mo 20 Uhr, Lupin Gin Bar), JSON-LD, S; nur der nächste
+     Termin sichtbar.
+  3. **Heine Haus Literaturhaus** – Startseite HTML, ~3–5 Termine/Monat, S (iCal unvollständig, nicht nutzen).
+  4. optional **NRW-Akademie der Wissenschaften und der Künste** – S, aber nur ~3–4 öffentliche Termine.
+- **Nein:** Niemandsland, Leica Galerie, ZERO foundation, reinraum, b41 (zu wenig/Freitext – eher von Hand);
+  Storage Museum (robots.txt HTTP 500 = gesperrt); Einstein Boulderhalle (Kalender bei vertical-life, robots sperrt);
+  Das Dazwischen, Sponk, ausARTen, Studio Brick (keine datierten Termine/nur JS); ASG-Bildungsforum (Kursprogramm);
+  Berger Kirche, Henkel-Saal (keine eigene Programmseite).
+
 ## Prüfhistorie
 
 - 23.11.2026: erste Fassung (Claude), Datenstand 23.11., Lauf vom 21.11.
