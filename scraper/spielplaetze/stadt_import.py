@@ -658,7 +658,8 @@ def planen(plaetze: list[dict], stadtteile: list[dict], korrekturen: dict | None
         }
         spalten = {
             "name": name, "stadtteil": stadtteil,
-            "adresse": f"{p['strasse_hausnr']}, Düsseldorf" if p["strasse_hausnr"] else None,
+            # Ohne Adresse in den Stadtdaten bleibt die gespeicherte (ungefähre Adressen per SQL, 25.11.2026)
+            "adresse": f"{p['strasse_hausnr']}, Düsseldorf" if p["strasse_hausnr"] else ((zeile or {}).get("adresse") or None),
             "latitude": p["latitude"], "longitude": p["longitude"],
         }
         datensatz = {"platz": p, "zeile": zeile, "art": art, "spalten": spalten, "stadtfelder": stadtfelder,
@@ -849,7 +850,7 @@ def importieren(dry_run: bool, neu_laden: bool) -> dict:
     from scraper.orte.google_places import alle_zeilen
 
     db = get_supabase_client()
-    alle = alle_zeilen(db, "orte", "id, name, slug, typ, stadtteil, aktiv, extras")
+    alle = alle_zeilen(db, "orte", "id, name, slug, typ, stadtteil, adresse, aktiv, extras")  # adresse: bestehende behalten
     ist_stadt = lambda z: z["typ"] == "spielplatz" and ((z.get("extras") or {}).get("spielplatz") or {}).get("quelle") == QUELLE  # noqa: E731
     bestehend = [z for z in alle if ist_stadt(z)]
     andere = {z["slug"] for z in alle if not ist_stadt(z)}
