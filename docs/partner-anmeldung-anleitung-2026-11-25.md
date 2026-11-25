@@ -110,3 +110,10 @@ immer direkt als Secret in GitHub eintragen, nie in den Chat.
   angemeldet, Bewerbung in Prüfung. Tiqets angemeldet, Bewerbung in Prüfung. **GetYourGuide fertig:** Partner-ID
   `MDZIQUO` (→ Variable `GYG_PARTNER_ID`), **Bilder dürfen verwendet werden** (gilt für T3: `bild_url` aus der
   GetYourGuide-API erlaubt). Reservix-API-Mail noch offen (optional, siehe Abschnitt 3).
+- **25.11.2026, GetYourGuide-API geprüft:** Der API-Token ist nicht im Partner-Portal erzeugbar; laut offizieller Doku
+  (github.com/getyourguide/partner-api-spec, „Getting started“) wird er „provided by GetYourGuide“. Für T3 reicht die
+  Stufe BASIC/LIMITED_READ (`/tours`, `/tours/{id}`). Die Doku bittet ausdrücklich, die API nicht abzugreifen, um die
+  Ausgabe zu cachen („please do not scrape the API in an attempt to cache its output“) → T3 muss das mit GetYourGuide
+  klären (tägliche Übernahme von ~50 Düsseldorf-Touren) oder die Touren beim Seitenaufruf mit kurzem Cache abrufen.
+  Anfrage an das Partner-Team (über „Hilfe“ im Portal) enthält deshalb beide Fragen. Die Seite
+  supply.getyourguide.support („Unterstützte Systeme“) betrifft Anbieter/Buchungssysteme, nicht Affiliates.
