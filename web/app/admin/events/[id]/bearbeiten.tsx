@@ -13,6 +13,7 @@ interface Event {
   datum: string;
   datum_bis: string | null;
   uhrzeit: string | null;
+  uhrzeit_hinweis?: string | null;
   ort: string;
   adresse: string | null;
   stadtteil: string | null;
@@ -52,6 +53,7 @@ const TEXTFELDER: { feld: keyof Event; text: string; lang?: boolean; typ?: strin
   { feld: "datum", text: "Datum", typ: "date" },
   { feld: "datum_bis", text: "bis (mehrtägig)", typ: "date" },
   { feld: "uhrzeit", text: "Uhrzeit", typ: "time" },
+  { feld: "uhrzeit_hinweis", text: "Uhrzeit-Hinweis (nur ohne Uhrzeit, z. B. „zwischen 09:00–23:00 Uhr“)" },
   { feld: "ort", text: "Ort" },
   { feld: "adresse", text: "Adresse" },
   { feld: "stadtteil", text: "Stadtteil" },

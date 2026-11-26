@@ -20,6 +20,8 @@ export interface DddEvent {
   datum: string; // YYYY-MM-DD
   datum_bis: string | null;
   uhrzeit: string | null; // HH:MM
+  /** Zeitfenster statt fester Uhrzeit, z. B. „zwischen 09:00–23:00 Uhr“ (database/uhrzeit_hinweis_2026-11-26.sql) */
+  uhrzeit_hinweis?: string | null;
   ort: string;
   adresse: string | null;
   kategorie: KategorieSlug;

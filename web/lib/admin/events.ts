@@ -11,6 +11,7 @@ export const BEARBEITBAR = [
   "datum",
   "datum_bis",
   "uhrzeit",
+  "uhrzeit_hinweis", // Zeitfenster statt fester Uhrzeit (26.11.2026)
   "ort",
   "adresse",
   "stadtteil",
@@ -113,6 +114,7 @@ export function eingabenPruefen(eingabe: Record<string, unknown>): { ok: true; f
           stadtteil: [80, false],
           unterkategorie: [60, false],
           preis: [100, false],
+          uhrzeit_hinweis: [60, false],
           beschreibung: [20000, false],
         };
         const [max, pflicht] = grenzen[feld];

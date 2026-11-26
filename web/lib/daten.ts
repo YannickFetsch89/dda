@@ -17,6 +17,8 @@ const SPALTEN_OHNE_ORT =
 const SPALTEN_BASIS = `${SPALTEN_OHNE_ORT}, ort_id`;
 // Neuere Spalten zuerst; fehlen sie in der DB noch, wird mit der nächsten Variante geladen (siehe spaltenFehlt)
 const SPALTEN_VARIANTEN = [
+  // Zeitfenster statt fester Uhrzeit (database/uhrzeit_hinweis_2026-11-26.sql)
+  `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, nicht_empfehlen, ticket_url, uhrzeit_hinweis, reihe:reihen(slug, titel)`,
   // Ticket-Link des Hauses (database/ticket_url_2026-11-24.sql, Plan Quellen-Ausbau 5.5.2, P1; Button erst mit W2)
   `${SPALTEN_BASIS}, abgesagt, unterkategorie, highlight_gesetzt_am, top_gesetzt_am, nicht_empfehlen, ticket_url, reihe:reihen(slug, titel)`,
   // Redaktions-Schalter „nicht empfehlen“ (database/nicht_empfehlen_2026-11-23.sql)
@@ -66,6 +68,7 @@ export function normalisieren(z: Zeile): DddEvent {
     datum: String(z.datum).slice(0, 10),
     datum_bis: text(z.datum_bis)?.slice(0, 10) ?? null,
     uhrzeit: text(z.uhrzeit)?.slice(0, 5) ?? null,
+    uhrzeit_hinweis: text(z.uhrzeit_hinweis)?.slice(0, 60) ?? null,
     ort: (!ortUngueltig && ortRoh) || "Düsseldorf",
     adresse: text(z.adresse),
     kategorie: kategorieAusDb(text(z.kategorie)),

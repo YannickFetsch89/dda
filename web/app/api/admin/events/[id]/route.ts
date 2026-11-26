@@ -3,6 +3,7 @@
 // POST { aktion: "zuruecksetzen" }     → redaktion_felder und abgleich_* leeren (Pipeline darf wieder schreiben)
 // POST { aktion: "dublette", behalten } → dieses Event ist Dublette von „behalten“ (admin_dublette_zusammenlegen)
 import { revalidateTag } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { eingabenPruefen, uhrzeitUebernehmen, updateBauen, type EventZeile } from "@/lib/admin/events";
 import { protokollieren } from "@/lib/admin/protokoll";
 import { adminAntwort, adminRoute } from "@/lib/admin/route";
@@ -15,6 +16,14 @@ const SPALTEN =
   "id, slug, titel, datum, datum_bis, uhrzeit, ort, adresse, stadtteil, kategorie, unterkategorie, preis, beschreibung, " +
   "bild_url, ort_id, quelle_name, quelle_url, ticket_url, abgelehnt, abgesagt, nicht_empfehlen, tipp_des_tages, highlight_der_woche, " +
   "top_event_des_monats, erstellt_am, redaktion_felder, abgleich_titel, abgleich_datum, abgleich_uhrzeit, abgleich_ort";
+// Mit Zeitfenster (database/uhrzeit_hinweis_2026-11-26.sql); fehlt die Spalte noch, ohne sie
+const SPALTEN_NEU = `${SPALTEN}, uhrzeit_hinweis`;
+
+async function eventLaden(db: SupabaseClient, id: string) {
+  const neu = await db.from("events").select(SPALTEN_NEU).eq("id", id).maybeSingle();
+  if (neu.error && neu.error.message.includes("uhrzeit_hinweis")) return db.from("events").select(SPALTEN).eq("id", id).maybeSingle();
+  return neu;
+}
 
 function cacheLeeren(id: string, bild: boolean) {
   revalidateTag(EVENTS_CACHE_TAG, { expire: 0 });
@@ -25,7 +34,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/admin/events
   const { id } = await ctx.params;
   return adminRoute(request, {}, async ({ admin, setCookies }) => {
     if (!UUID.test(id)) return adminAntwort(404, { fehler: "Nicht gefunden." }, setCookies);
-    const { data, error } = await admin!.db.from("events").select(SPALTEN).eq("id", id).maybeSingle();
+    const { data, error } = await eventLaden(admin!.db, id);
     if (error) return adminAntwort(500, { fehler: error.message, code: "db" }, setCookies);
     if (!data) return adminAntwort(404, { fehler: "Nicht gefunden." }, setCookies);
     const e = data as unknown as EventZeile & { slug: string | null; kategorie: string };
@@ -38,7 +47,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/admin/event
   return adminRoute(request, {}, async ({ admin, body, setCookies }) => {
     if (!UUID.test(id)) return adminAntwort(404, { fehler: "Nicht gefunden." }, setCookies);
     const db = admin!.db;
-    const { data: bisherDaten, error: f1 } = await db.from("events").select(SPALTEN).eq("id", id).maybeSingle();
+    const { data: bisherDaten, error: f1 } = await eventLaden(db, id);
     if (f1) return adminAntwort(500, { fehler: f1.message, code: "db" }, setCookies);
     if (!bisherDaten) return adminAntwort(404, { fehler: "Nicht gefunden." }, setCookies);
     const bisher = bisherDaten as unknown as EventZeile;

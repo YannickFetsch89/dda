@@ -210,7 +210,7 @@ async function EventInhalt({ params }: { params: Promise<{ kategorie: string; sl
                         ? `${e.uhrzeit} Uhr · ${termine.length} Termine an diesem Tag`
                         : e.uhrzeit
                           ? `${e.uhrzeit} Uhr`
-                          : "Uhrzeit siehe Veranstalter"}
+                          : (e.uhrzeit_hinweis ?? "Uhrzeit siehe Veranstalter")}
                     </span>
                   </div>
                 </div>
