@@ -102,7 +102,7 @@ function reiheAus(wert: unknown): DddEvent["reihe"] {
 
 /** Supabase meldet eine unbekannte Spalte/Beziehung (Migration noch nicht ausgeführt). */
 function spaltenFehlt(meldung: string | undefined): boolean {
-  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen|ticket_url|ort_id/.test(meldung);
+  return !!meldung && /abgesagt|reihe|unterkategorie|gesetzt_am|nicht_empfehlen|ticket_url|ort_id|uhrzeit_hinweis/.test(meldung);
 }
 
 /** Events laden mit der neuesten Spaltenvariante, die die DB schon kennt. */
