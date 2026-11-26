@@ -297,6 +297,10 @@ def google_kandidaten(ort: dict, key: str) -> tuple[list[dict], int]:
                    "autor": autor.get("displayName"), "autor_url": autor.get("uri")}
         (inhaber if ist_inhaber(eintrag["autor"] or "", ort["name"]) else nutzer).append(eintrag)
     auswahl = sorted(inhaber, key=lambda f: not quer(f))[:MAX_GOOGLE_INHABER] + sorted(nutzer, key=lambda f: not quer(f))[:MAX_GOOGLE_NUTZER]
+    # Das heutige Bild (erstes Google-Foto) tritt immer mit an – ein Wechsel muss besser sein als der Ist-Zustand
+    heute = next((e for e in inhaber + nutzer if e["name"] == (fotos[0].get("name") if fotos else None)), None)
+    if heute and heute not in auswahl:
+        auswahl.append(heute)
     kandidaten = []
     for f in auswahl:
         try:
@@ -312,7 +316,8 @@ def google_kandidaten(ort: dict, key: str) -> tuple[list[dict], int]:
             continue
         quelle = "google_inhaber" if f in inhaber else "google_nutzer"
         kandidaten.append({"quelle": quelle, "google_foto": f["name"], "breite": f["breite"], "hoehe": f["hoehe"],
-                           "autor": f["autor"], "autor_url": f["autor_url"], "_daten": r.content, "nachweis": f["autor"]})
+                           "autor": f["autor"], "autor_url": f["autor_url"], "_daten": r.content, "nachweis": f["autor"],
+                           "heute": f is heute})
     return kandidaten, abrufe
 
 
@@ -322,7 +327,8 @@ def ki_bewerten(client, ort: dict, kandidaten: list[dict]) -> tuple[dict, dict]:
     inhalt: list[dict] = [{"type": "text", "text": f"Lokal: {ort['name']} ({ort['typ']}, {ort.get('stadtteil') or 'Düsseldorf'})"}]
     for i, k in enumerate(kandidaten, start=1):
         herkunft = {"website": "Website des Lokals", "google_inhaber": "Google, vom Lokal hochgeladen", "google_nutzer": "Google, von einem Gast"}[k["quelle"]]
-        inhalt.append({"type": "text", "text": f"Foto {i} ({herkunft}, {k['breite']}×{k['hoehe']} px):"})
+        heute = ", heutiges Titelbild" if k.get("heute") else ""
+        inhalt.append({"type": "text", "text": f"Foto {i} ({herkunft}{heute}, {k['breite']}×{k['hoehe']} px):"})
         inhalt.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": ki_vorschau(k["_daten"])}})
     antwort = client.messages.create(
         model=MODELL,
@@ -347,17 +353,22 @@ def punkte(k: dict) -> float:
     p -= 1.5 if b.get("personen_im_fokus") else 0
     p -= 2 if b.get("stockfoto_verdacht") else 0
     p -= 4 if b.get("motiv") in ("logo_text", "speisekarte") else 0
+    # Das Lokal selbst zeigt mehr als ein Teller (Probelauf 26.11.: donecake-Innenraum schöner als Donuts)
+    p += 1 if b.get("motiv") in ("innenraum", "aussen", "terrasse") else 0
     return round(p, 2)
 
 
 def auswaehlen(kandidaten: list[dict]) -> dict | None:
-    """Website vor Inhaber-Google vor Nutzer-Google – jeweils nur mit Punktwert ≥ 7, sonst das beste insgesamt."""
+    """Website vor Inhaber-Google vor Nutzer-Google – jeweils nur mit Punktwert ≥ 7. Sonst das beste insgesamt, aber
+    nur ab 5 Punkten; darunter bleibt das heutige Bild (Probelauf 26.11.: ein Stockfoto mit 2,5 Punkten rutschte durch)."""
     for quelle in ("website", "google_inhaber", "google_nutzer"):
         gut = sorted([k for k in kandidaten if k["quelle"] == quelle and k["punkte"] >= 7], key=lambda k: -k["punkte"])
         if gut:
             return gut[0]
     rest = sorted(kandidaten, key=lambda k: -k["punkte"])
-    return rest[0] if rest else None
+    if rest and rest[0]["punkte"] >= 5:
+        return rest[0]
+    return next((k for k in kandidaten if k.get("heute")), None)
 
 
 # ── Stichprobe, Lauf, Vorschau ────────────────────────────────────────────────
@@ -433,8 +444,8 @@ def vorschau_bauen(ergebnisse: list[dict]) -> Path:
 <section>
   <h2>{e['name']} <small>{e['typ']} · {e.get('stadtteil') or ''} · Score {e.get('score')} · {f'<a href="{e["webseite"]}" target="_blank">Website</a>' if e.get('webseite') else 'keine Website'}</small></h2>
   <div class="vn">
-    <figure><img src="https://diesdas.events/ort-foto/{e['slug']}" loading="lazy"><figcaption>Vorher (live)</figcaption></figure>
-    <figure>{f'<img src="{g["vorschau"]}">' if g else '<div class="leer">kein Kandidat</div>'}<figcaption>Nachher: {quelle_text[g["quelle"]] if g else '–'} {('· ' + (g.get("nachweis") or '')) if g else ''} · Ausschnitt {g.get("ki", {}).get("fokus", "") if g else ''}</figcaption></figure>
+    <figure><img src="/ort-foto/{e['slug']}" loading="lazy"><figcaption>Vorher (heutiges Bild)</figcaption></figure>
+    <figure>{f'<img src="{g["vorschau"]}">' if g else '<div class="leer">kein Kandidat</div>'}<figcaption>Nachher: {'<b>bleibt wie heute</b> · ' if g and g.get("heute") else ''}{quelle_text[g["quelle"]] if g else '–'} {('· ' + (g.get("nachweis") or '')) if g else ''} · Ausschnitt {g.get("ki", {}).get("fokus", "") if g else ''}</figcaption></figure>
   </div>
   <p class="amb">Ambiente: <b>{amb.get('note', '–')}</b>/10 {'(sicher)' if amb.get('sicher') else '<span class="unsicher">(unsicher → du entscheidest)</span>'} – {amb.get('begruendung', '')}</p>
   <details><summary>Alle {len(e['kandidaten'])} Kandidaten</summary><div class="kand">{kand}</div></details>

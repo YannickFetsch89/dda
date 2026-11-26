@@ -5,7 +5,51 @@ Bug „Weitere laden“ und das Ausblenden der Google-Sterne sind gebaut (lokal,
 
 ---
 
-## A. Eigenes dies.das-Bewertungssystem (Vorschlag)
+## A2. dies.das-Wertung: Entscheidung des Auftraggebers (26.11.2026), ersetzt Abschnitt A
+
+**Entscheidung:** bisheriger Score (auf Google-Basis) **plus** Ambiente-Einschätzung aus der Bildanalyse.
+- **Restaurants und Cafés:** Die Ambiente-Note kommt von der KI.
+- **Kneipen und Bars:** Die Ambiente-Note vergibt der Auftraggeber selbst.
+- **Unsichere Fälle:** Der Auftraggeber entscheidet.
+- Das rechtliche Restrisiko (Google-Grundlage) trägt der Auftraggeber.
+
+### Rechnung (Vorschlag)
+- **Grundwert:** Gespeichert ist das stufenlose Bayes-Mittel `extras.vorab_score`. Bei den sichtbaren Orten
+  reicht es von 4,34 bis 4,88. Es wird auf 6,0 bis 9,0 abgebildet:
+  `grund = 6,0 + (vorab_score − 4,3) / 0,6 × 3,0`, begrenzt auf 6,0–9,0.
+- **Ambiente-Zuschlag:** Die KI vergibt 1–10, dabei ist 5 gewöhnlich. Daraus wird
+  `zuschlag = (note − 5) × 0,3`, begrenzt auf −1,0 bis +1,0. Beispiele: Note 8 ergibt +0,9, Note 3 ergibt −0,6.
+- **dies.das-Wertung** = grund + zuschlag, begrenzt auf 5,0 bis 10,0. Angezeigt mit einer Nachkommastelle,
+  z. B. **„8,4“**, mit dem dies.das-Zeichen statt Sternen.
+- **Unsicher** (die KI meldet `sicher = false`, etwa weil kein Foto der Räume da ist): Der Zuschlag bleibt
+  erst einmal bei 0, und der Ort landet im Admin auf der Liste „Ambiente prüfen“. Dort gibt es diese Buttons:
+  - −1
+  - −0,5
+  - 0
+  - +0,5
+  - +1
+  
+  Dieselben Buttons nutzt der Auftraggeber für Kneipen und Bars.
+- **Speicherort:**
+  - `extras.ambiente = {note, sicher, begruendung, quelle: "ki"|"hand", stand}`
+  - `extras.ddd_wertung` (gerechnet)
+  - Ein Handwert gewinnt immer gegen die KI.
+- **„Empfohlen“-Sortierung und Sortierung „Bewertung“** nutzen künftig die dies.das-Wertung.
+
+### Transparenz (kurz, gegen UWG § 5)
+Ein kleiner Erklärtext am Wert, z. B. „Die dies.das-Wertung verbindet öffentliche Gästebewertungen mit unserer
+Einschätzung des Ambientes.“ Dazu ein Link auf die Erklärseite. So behaupten wir keinen eigenen Test, der nicht
+stattgefunden hat.
+
+### Ablauf
+1. Die Ambiente-Note entsteht im Bilderlauf, und zwar je Ort aus allen Kandidatenfotos, nicht nur aus dem
+   gewählten. Im Probelauf ist sie schon enthalten.
+2. Nach dem Volllauf der Bilder: Admin-Liste „Ambiente prüfen“ und Feld für Kneipen. Dann zeigt die Website die
+   Wertung, aber erst nach deinem OK zur Darstellung.
+
+---
+
+## A. Eigenes dies.das-Bewertungssystem (erster Vorschlag, überholt durch A2)
 
 ### Ausgangslage
 - Der interne `qualitaets_score` (1–10) ist **vollständig aus Google gerechnet**: Bayes-Mittel aus Sternen und
@@ -155,7 +199,12 @@ oder Punkte vor, sondern **redaktionelle Auszeichnungen**, die ehrlich beschreib
 
 ---
 
-## C. Texte (Beispiele, Ausführung erst nach OK)
+## C. Texte
+
+**Entscheidung 26.11.2026:** Die kurzen Texte werden nicht verlängert. Alle Texte bekommen nur Absätze und Fett.
+**Erledigt:** 677 Texte, Wortlaut automatisch geprüft. Vorschau in `docs/restaurant-texte-vorschau-2026-11-26.md`,
+SQL in `database/orte_texte_restaurants_2026-11-26.sql`. Die SQL erst nach dem Deploy ausführen.
+Die Beispiele unten zu Fall 2 sind damit überholt.
 
 ### Befund
 - Mindestens 5 Sätze: **673** Texte. 6–8 Sätze sind typisch, im Mittel rund 775 Zeichen.
