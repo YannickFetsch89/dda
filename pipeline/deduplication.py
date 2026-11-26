@@ -269,12 +269,74 @@ def _bandname_enthalten(a: dict, b: dict) -> bool:
     return len(wort) >= 5 and wort not in _ALLGEMEINE_EINZELTITEL and wort in gross
 
 
+# ── Gleiche Quell-Adresse ───────────────────────────────────────────────────────────────────────────────
+# Dasselbe Event unter anderem Titel (26.11.2026: „Bryson Tiller, Majid Jordan in Düsseldorf“, „Bryson Tiller at
+# Mitsubishi Electric Halle“, „Bryson Tiller – Bryson Tiller Presents: The Neo Trapsoul Tour“ – alle mit der Seite
+# …/event/bryson-tiller-presents-the-neo-trapsoul-tour, 20:00). Sammeladressen dürfen dabei nicht zählen: die Messe
+# nennt für alle Messen dieselbe Übersichtsseite, das Savoy nur seine Startseite.
+_URL_WORT_UMLAUT = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+_URL_FUELLWORTE = {
+    "duesseldorf", "dusseldorf", "neuss", "ratingen", "event", "events", "tickets", "ticket", "live", "tour", "konzert",
+    "programm", "veranstaltung", "veranstaltungen", "halle", "theater", "show", "with", "mit", "der", "die", "das",
+    "und", "the", "and", "2026", "2027",
+}
+
+
+def _url_woerter(text: str) -> set[str]:
+    woerter = re.split(r"[^a-z0-9]+", (text or "").lower().translate(_URL_WORT_UMLAUT))
+    return {w for w in woerter if len(w) >= 4 and w not in _URL_FUELLWORTE and not w.isdigit()}
+
+
+def url_ist_eigen(url: str, titel: str) -> bool:
+    """
+    Ist die Adresse die eigene Seite dieses Events? Ja, wenn Pfad oder Abfrage eine Kennnummer tragen (mindestens vier
+    Ziffern, keine Jahreszahl) oder ein markantes Titelwort enthalten. Startseiten und Übersichtsseiten zählen nicht.
+    """
+    teil = re.sub(r"^[a-z]+://[^/?#]+", "", (url or "").strip().lower())
+    if not teil.strip("/"):
+        return False
+    if any(not re.fullmatch(r"(19|20)\d\d", z) for z in re.findall(r"(?<!\d)\d{4,}(?!\d)", teil)):
+        return True
+    return bool(_url_woerter(teil) & _url_woerter(titel))
+
+
+def _host(url: str) -> str:
+    treffer = re.match(r"^[a-z]+://(?:www\.)?([^/?#]+)", url.lower())
+    return treffer.group(1) if treffer else ""
+
+
+def quell_urls(event: dict) -> set[str]:
+    """quelle_url und alle URLs aus `quellen` (Datenbank) bzw. `_quellen` (im Lauf), ohne Schrägstrich am Ende."""
+    urls = {event.get("quelle_url")}
+    for q in [*(event.get("quellen") or []), *(event.get(QUELLEN_FELD) or [])]:
+        if isinstance(q, dict):
+            urls.add(q.get("url"))
+    return {u.strip().rstrip("/") for u in urls if isinstance(u, str) and u.strip()}
+
+
+def gleiche_eigene_url(a: dict, b: dict) -> bool:
+    """Gleiche Uhrzeit (bei beiden gesetzt) und eine gemeinsame Quell-Adresse, die für beide Titel die eigene ist."""
+    if not _uhrzeit(a) or _uhrzeit(a) != _uhrzeit(b):
+        return False
+    # Zwei verschiedene Hauptadressen beim selben Anbieter = zwei Seiten = zwei Events (26.11.2026: zakk-Workshops
+    # „Wort“ und „Körper“ am selben Abend, beim einen stand die Adresse des anderen fälschlich in `quellen`)
+    ha, hb = (a.get("quelle_url") or "").strip().rstrip("/"), (b.get("quelle_url") or "").strip().rstrip("/")
+    if ha and hb and ha != hb and _host(ha) == _host(hb):
+        return False
+    gemeinsam = quell_urls(a) & quell_urls(b)
+    return any(url_ist_eigen(u, a.get("titel") or "") and url_ist_eigen(u, b.get("titel") or "") for u in gemeinsam)
+
+
 def bester_treffer(bestand: list[dict], event: dict) -> Optional[dict]:
     """
-    Das passendste Event eines Tagesbestands: gleiche Uhrzeit vor naher Uhrzeit.
+    Das passendste Event eines Tagesbestands: zuerst dieselbe eigene Quell-Adresse zur selben Uhrzeit (nur bei genau
+    einem Treffer), dann gleiche Uhrzeit vor naher Uhrzeit.
     Liegen mehrere Termine derselben Quelle in Reichweite (Matinee 18:00 und Abend 20:00, Aggregator 19:00),
     ist die Zuordnung mehrdeutig – dann bleibt das Event lieber getrennt, statt mit dem falschen zu verschmelzen.
     """
+    gleiche_url = [k for k in bestand if k is not event and gleiche_eigene_url(k, event)]
+    if len(gleiche_url) == 1:
+        return gleiche_url[0]
     treffer = [k for k in bestand if k is not event and aehnliches_event(k, event)]
     exakte = [k for k in treffer if _uhrzeit(k) and _uhrzeit(k) == _uhrzeit(event)]
     if exakte:

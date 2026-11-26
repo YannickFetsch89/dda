@@ -280,28 +280,6 @@ def _uhrzeit_hhmm(wert: Optional[str]) -> Optional[str]:
     return str(wert)[:5]
 
 
-def _quell_urls(event: dict) -> set[str]:
-    """quelle_url und alle URLs aus `quellen` (ohne Leerwerte, ohne Schrägstrich am Ende)."""
-    urls = {event.get("quelle_url")}
-    for q in event.get("quellen") or []:
-        if isinstance(q, dict):
-            urls.add(q.get("url"))
-    return {u.strip().rstrip("/") for u in urls if isinstance(u, str) and u.strip()}
-
-
-def gleiche_quell_url(bestand: list[dict], event: dict) -> Optional[dict]:
-    """
-    Schritt 2b: Das Event des Tagesbestands mit derselben Quell-Adresse und derselben Uhrzeit (beide gesetzt).
-    Nur bei genau einem Treffer – teilen sich mehrere Events eine Sammel-URL (Kalenderseite), bleibt es getrennt.
-    """
-    url = (event.get("quelle_url") or "").strip().rstrip("/")
-    zeit = _uhrzeit_hhmm(event.get("uhrzeit"))
-    if not url or not zeit:
-        return None
-    treffer = [k for k in bestand if _uhrzeit_hhmm(k.get("uhrzeit")) == zeit and url in _quell_urls(k)]
-    return treffer[0] if len(treffer) == 1 else None
-
-
 def _slug_pruefen(db: Client, basis: str, uhrzeit: Optional[str]) -> tuple[Optional[dict], str]:
     """
     Prüft einen neuen Slug gegen bereits gespeicherte Events.
@@ -481,18 +459,11 @@ def events_speichern(events: list[dict]) -> dict:
                         datensatz["slug"] = freier_slug
 
             if bestehendes is None:
-                # Schritt 2b: Gleiche Quell-Adresse am selben Tag zur selben Uhrzeit – dasselbe Event, auch wenn das
-                # Haus den Titel geändert hat (Lauf 25.11.2026: „Lichterkinder // Live - Millionen Sterne Tour 2026“
-                # → „Lichterkinder“, beide mit derselben Seite der Mitsubishi Electric Halle)
-                bestehendes = gleiche_quell_url(_tagesbestand(db, datum, tagesbestand), datensatz)
-                if bestehendes is not None:
-                    logger.info("Duplikat über Quell-Adresse erkannt: '%s' = '%s' (%s)",
-                                titel[:40], (bestehendes.get("titel") or "")[:40], datum)
-
-            if bestehendes is None:
                 # Schritt 3: Dasselbe Event in anderer Schreibweise (Titel/Ortsname leicht anders, z.B. „zakk – Studio“
                 # vs. „zakk - Zentrum für …“) – gleiche Uhrzeit, bei anderer Quelle auch Einlass/Beginn (≤ 2 Std.) oder
                 # fehlende Uhrzeit. Der interne Titel-Status („ENTFÄLLT!“ entfernt) fließt in den Abgleich mit ein.
+                # Vorrang hat dieselbe eigene Quell-Adresse zur selben Uhrzeit, auch bei ganz anderem Titel
+                # (bester_treffer; 26.11.2026: Bryson Tiller dreimal, Lichterkinder zweimal).
                 abgleich = {**datensatz, TITEL_STATUS_FELD: event.get(TITEL_STATUS_FELD)}
                 bestehendes = bester_treffer(_tagesbestand(db, datum, tagesbestand), abgleich)
                 if bestehendes is not None:

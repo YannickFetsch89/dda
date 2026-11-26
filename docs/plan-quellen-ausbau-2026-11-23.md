@@ -1120,7 +1120,22 @@ Vier Fixes aus der Durchsicht:
 4. **Kategorisierung:** „max. 1500“, aber PostgREST liefert je Abfrage höchstens 1.000 Zeilen. Jetzt seitenweise
    (`range`, sortiert nach Datum und id) und mit **Zeitbudget 30 min** (`max_sekunden=1800`), damit der Lauf nicht
    länger wird als heute.
-Tests: `tests/test_lauf_2026_11_25_fixes.py` (16); Python 929 ok.
+Tests: `tests/test_lauf_2026_11_25_fixes.py` (16); Python 929 ok. LIVE 16131da.
+
+**Nachtrag 26.11.2026 – Bryson Tiller dreimal auf der Startseite:** Zwei alte AllEvents-Einträge („… at Mitsubishi
+Electric Halle“, „…, Majid Jordan in Düsseldorf“) hatten durch N1 dieselbe Hausadresse bekommen wie das richtige
+Event; der Abgleich griff nur bei neuen Events. Im Bestand 18 solche Paare (Broilers, Kehlani, beabadoobee, Selig,
+Lichterkinder, KneipenKultTour …). Der eigene Schritt 2b ist wieder raus; die Regel steckt jetzt in `bester_treffer`
+(`pipeline/deduplication.py`) und gilt damit beim Abgleich im Lauf, beim Speichern, in den Admin-Vorschlägen und in
+`dubletten_sql.py`:
+- gleiche Uhrzeit (beide gesetzt) und eine gemeinsame Adresse aus `quelle_url`/`quellen`, nur bei genau einem Treffer;
+- die Adresse muss die **eigene Seite** sein (`url_ist_eigen`: Kennnummer mit mindestens vier Ziffern, keine
+  Jahreszahl, oder ein markantes Titelwort im Pfad). Sammeladressen wie die Messe-Übersicht oder die Savoy-Startseite
+  zählen nicht – sonst hätte Schritt 2b zwei Savoy-Shows um 20:00 zusammengelegt;
+- verschiedene Hauptadressen beim selben Anbieter = verschiedene Events (zakk-Workshops „Wort“/„Körper“).
+`dubletten_sql.py` lädt dafür `quellen` mit und behält bei gleichem Rang den Eintrag mit mehr Quellen.
+Aufräumen des Bestands: `database/dubletten_2026-11-26.sql` (18 Paare: ausblenden + 301 auf das behaltene Event,
+fehlende Felder ergänzt) – führt der Auftraggeber im SQL-Editor aus. Python 933 ok.
 
 ## Prüfhistorie
 

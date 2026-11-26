@@ -28,7 +28,7 @@ STAPEL = 500
 
 def dubletten_vorschlaege(events: list[dict], original: dict[str, dict], lauf_id: Optional[str] = None) -> list[dict]:
     """Ein Vorschlag je Paar (behalten, dublette) – gleiche Regeln wie pipeline/dubletten_sql.py."""
-    from pipeline.deduplication import TITEL_STATUS_FELD, _uhrzeit, ist_aggregator
+    from pipeline.deduplication import TITEL_STATUS_FELD, _uhrzeit, gleiche_eigene_url, ist_aggregator
     from pipeline.dubletten_sql import paare_finden, pfad
 
     paare, _ = paare_finden(events)
@@ -60,8 +60,10 @@ def dubletten_vorschlaege(events: list[dict], original: dict[str, dict], lauf_id
                 "dublette_uhrzeit": ud,
                 "ort": behalten.get("ort"),
             },
-            "begruendung": f"Gleicher Tag und Ort, fast gleicher Titel: „{td[:80]}“ ({dublette.get('quelle_name')}) "
-                           f"ist dasselbe wie „{tb[:80]}“ ({behalten.get('quelle_name')}).",
+            "begruendung": (f"Gleiche Seite des Hauses zur selben Uhrzeit: „{td[:80]}“ ist dasselbe wie „{tb[:80]}“."
+                            if gleiche_eigene_url(behalten, dublette) else
+                            f"Gleicher Tag und Ort, fast gleicher Titel: „{td[:80]}“ ({dublette.get('quelle_name')}) "
+                            f"ist dasselbe wie „{tb[:80]}“ ({behalten.get('quelle_name')})."),
             "quelle_lauf": lauf_id,
         })
     return zeilen

@@ -8,7 +8,7 @@ import unittest
 from datetime import date
 from unittest import mock
 
-from database.client import gleiche_quell_url
+from pipeline.deduplication import bester_treffer, url_ist_eigen
 from pipeline import categorizer
 from scraper.tier1 import ticketmaster as tm
 from scraper.tier1.visitduesseldorf_fuehrungen import _preis
@@ -60,31 +60,57 @@ class VisitDuesseldorfPreis(unittest.TestCase):
 
 
 class AbgleichQuellAdresse(unittest.TestCase):
+    """Gleiche eigene Quell-Adresse zur selben Uhrzeit = dasselbe Event (bester_treffer, 25./26.11.2026)."""
     URL = "https://www.mitsubishi-electric-halle.de/event/lichterkinder-28-11-2026"
+    BRYSON = "https://www.mitsubishi-electric-halle.de/event/bryson-tiller-presents-the-neo-trapsoul-tour"
 
-    def bestand(self):
-        return [
-            {"id": "alt", "titel": "Lichterkinder // Live - Millionen Sterne Tour 2026", "uhrzeit": "15:30:00",
-             "quelle_url": "https://rausgegangen.de/events/lichterkinder",
-             "quellen": [{"url": self.URL + "/", "name": "d-live", "rang": 1}]},
-            {"id": "anderes", "titel": "Paul Panzer", "uhrzeit": "18:00:00",
-             "quelle_url": "https://www.mitsubishi-electric-halle.de/event/paul-panzer", "quellen": []},
-        ]
+    def ev(self, titel, uhrzeit, url, quellen=(), ort="Mitsubishi Electric Halle", quelle="d-live"):
+        return {"titel": titel, "datum": "2026-11-28", "uhrzeit": uhrzeit, "ort": ort, "quelle_name": quelle,
+                "quelle_url": url, "quellen": [{"url": u, "name": "d-live", "rang": 1} for u in quellen]}
 
-    def test_gleiche_url_und_uhrzeit_trifft_auch_bei_anderem_titel(self):
-        t = gleiche_quell_url(self.bestand(), {"titel": "Lichterkinder", "uhrzeit": "15:30", "quelle_url": self.URL})
-        self.assertEqual(t["id"], "alt")
+    def test_lichterkinder_anderer_titel_gleiche_seite(self):
+        alt = self.ev("Lichterkinder // Live - Millionen Sterne Tour 2026", "15:30:00",
+                      "https://rausgegangen.de/events/lichterkinder", quellen=[self.URL + "/"])
+        anderes = self.ev("Paul Panzer", "15:30:00", "https://www.mitsubishi-electric-halle.de/event/paul-panzer")
+        self.assertIs(bester_treffer([alt, anderes], self.ev("Lichterkinder", "15:30", self.URL)), alt)
+
+    def test_bryson_tiller_dreimal(self):
+        gut = self.ev("Bryson Tiller – Bryson Tiller Presents: The Neo Trapsoul Tour", "20:00:00", self.BRYSON)
+        neu = self.ev("Bryson Tiller, Majid Jordan in Düsseldorf", "20:00:00", self.BRYSON, quelle="AllEvents.in Düsseldorf")
+        self.assertIs(bester_treffer([gut], neu), gut)
 
     def test_andere_uhrzeit_ist_weiterer_termin(self):
-        self.assertIsNone(gleiche_quell_url(self.bestand(), {"uhrzeit": "19:00", "quelle_url": self.URL}))
+        alt = self.ev("Lichterkinder", "15:30", self.URL)
+        self.assertIsNone(bester_treffer([alt], self.ev("Lichterkinder Abendshow", "19:00", self.URL)))
 
-    def test_ohne_uhrzeit_kein_treffer(self):
-        self.assertIsNone(gleiche_quell_url(self.bestand(), {"uhrzeit": None, "quelle_url": self.URL}))
+    def test_ohne_uhrzeit_kein_treffer_ueber_die_adresse(self):
+        alt = self.ev("Messe A", None, "https://x.de/event/messe-a-12345")
+        self.assertIsNone(bester_treffer([alt], self.ev("Ganz anderer Titel", None, "https://x.de/event/messe-a-12345")))
 
-    def test_sammel_url_mit_mehreren_treffern_bleibt_getrennt(self):
-        kalender = "https://www.d-live.de/events/eventkalender"
-        bestand = [{"id": "a", "uhrzeit": "20:00", "quelle_url": kalender}, {"id": "b", "uhrzeit": "20:00", "quelle_url": kalender}]
-        self.assertIsNone(gleiche_quell_url(bestand, {"uhrzeit": "20:00", "quelle_url": kalender}))
+    def test_savoy_startseite_ist_sammeladresse(self):
+        a = self.ev("Nikita Miller – Natural Born Miller", "20:00", "https://savoy-theater.de", ort="Savoy Theater")
+        b = self.ev("Peter Illmann – Eine Zeitreise in das Kult-Jahrzehnt", "20:00", "https://savoy-theater.de", ort="Savoy Theater")
+        self.assertIsNone(bester_treffer([a], b))
+
+    def test_verschiedene_hauptadressen_beim_selben_haus(self):
+        wort = self.ev("Workshop des Moduls „Wort“", "18:00", "https://zakk.de/event-detail?event=16323", ort="zakk",
+                       quellen=["https://zakk.de/event-detail?event=16334"])
+        koerper = self.ev("Workshop des Moduls „Körper“", "18:00", "https://zakk.de/event-detail?event=16334", ort="zakk")
+        self.assertIsNone(bester_treffer([wort], koerper))
+
+    def test_messe_uebersicht_ist_sammeladresse(self):
+        url = "https://www.messe-duesseldorf.de/de/messen_und_events/messen_national_und_international"
+        self.assertFalse(url_ist_eigen(url, "MEDICA"))
+        self.assertFalse(url_ist_eigen(url, "COMPAMED"))
+
+    def test_eigene_adressen(self):
+        self.assertTrue(url_ist_eigen(self.BRYSON, "Bryson Tiller at Mitsubishi Electric Halle"))
+        self.assertTrue(url_ist_eigen("https://zakk.de/event-detail?event=15539", "Selig"))
+        self.assertTrue(url_ist_eigen("https://www.dhaus.de/programm/spielplan/2026-12/impro/3167", "Offenes Training"))
+        self.assertTrue(url_ist_eigen("https://kasematten-duesseldorf.de/31-12-26-silvester-2026", "Silvester an den Kasematten"))
+        # nur Jahreszahl oder nur Füllwörter → keine eigene Seite
+        self.assertFalse(url_ist_eigen("https://haus.de/programm/2027", "Konzert"))
+        self.assertFalse(url_ist_eigen("https://haus.de/events/duesseldorf-live", "Live in Düsseldorf"))
 
 
 class FakeAbfrage:

@@ -40,7 +40,7 @@ from pipeline.quellen_rang import quellen_rang
 
 logger = logging.getLogger(__name__)
 
-SPALTEN = "id,slug,titel,datum,uhrzeit,ort,quelle_name,quelle_url,kategorie,abgesagt,bild_url,beschreibung,preis,adresse,erstellt_am,ort_id"
+SPALTEN = "id,slug,titel,datum,uhrzeit,ort,quelle_name,quelle_url,kategorie,abgesagt,bild_url,beschreibung,preis,adresse,erstellt_am,ort_id,quellen"
 FUELL_FELDER = ["bild_url", "beschreibung", "preis", "adresse"]
 
 
@@ -115,8 +115,10 @@ def paare_finden(events: list[dict]) -> tuple[list[tuple[dict, dict]], list[dict
         pro_tag[e["datum"]].append(e)
     paare, allein_mit_zusatz = [], []
     for tag in sorted(pro_tag):
-        # Bessere Quelle zuerst (Rang, pipeline/quellen_rang.py), Einträge mit Zusatz zuletzt, sonst die älteren zuerst
-        reihe = sorted(pro_tag[tag], key=lambda e: (bool(e.get(TITEL_STATUS_FELD)), quellen_rang(e), e.get("erstellt_am") or ""))
+        # Bessere Quelle zuerst (Rang, pipeline/quellen_rang.py), Einträge mit Zusatz zuletzt; bei gleichem Rang der
+        # Eintrag mit mehr Quellen (der vollständigere, 26.11.2026: Bryson Tiller), sonst der ältere
+        reihe = sorted(pro_tag[tag], key=lambda e: (bool(e.get(TITEL_STATUS_FELD)), quellen_rang(e),
+                                                     -len(e.get("quellen") or []), e.get("erstellt_am") or ""))
         behalten: list[dict] = []
         for e in reihe:
             treffer = bester_treffer(behalten, e)
