@@ -1,13 +1,13 @@
 # Plan: Automatische Posts auf Instagram und Facebook – sechste Fassung, 26.11.2026
 
-**Status:** ENTWURF zur Freigabe. Gebaut wird erst nach der Freigabe. Eingearbeitet sind:
+**Status:** **FREIGEGEBEN 26.11.2026** durch den Auftraggeber („Ja, freigegeben“), sechste Fassung, einschließlich „Deine Woche“ montags 18:00 und Monats-Tipps 1.–3. Umsetzung ab Schritt 0/1. Eingearbeitet sind:
 - Cursor-Prüfung 1: 12 Befunde, davon 2 kritisch (Anhang E).
 - Cursor-Prüfung 2: Urteil „freigabefähig“, 7 Befunde (Anhang G).
 - Cursor-Prüfung 3 (vollständig): Urteil „nicht freigabefähig“, 13 Befunde, davon 6 mittel (Anhang I).
 - Cursor-Prüfung 4: Urteil „nicht freigabefähig“, 10 von 13 gelöst, 3 mittlere und 3 geringe Befunde (Anhang K).
 - Cursor-Prüfung 5: **Urteil „freigabefähig: ja“**, alle 6 Befunde aus Prüfung 4 gelöst; der eine geringe Rest (Facebook-Reel nicht sofort in `video_reels`) ist in E10 eingearbeitet (Anhang M).
 
-Technisch freigabefähig. Es fehlt die Freigabe durch den Auftraggeber.
+Technisch freigabefähig und vom Auftraggeber freigegeben.
 
 **Kanäle:** Instagram (Business-Konto, mit der Facebook-Seite verknüpft) und Facebook-Seite [facebook.com/dies.das.duesseldorf](https://www.facebook.com/dies.das.duesseldorf).
 **Grundlage:** `CLAUDE.md` (Phase 1: Instagram-Pipeline), Platzhalter im Admin-Plan (`docs/plan-admin-dashboard-2026-11-23.md`, Abschnitte 1.4 und 4.8, Frage Q7). Diesen Plan hat der Admin-Plan als „eigener Plan Instagram-Posting“ vorgemerkt.
@@ -418,6 +418,7 @@ Keine Euro-Schätzung, die Preise ändern sich. Die Mengen:
 - 26.11.2026: **Cursor-Prüfung 3** (vollständig und kritisch, `docs/cursor-pruefung-social-plan-3-2026-11-26.md`): „freigabefähig: nein“, 6 mittlere und 7 geringe Befunde. Alle eingearbeitet → **vierte Fassung** (Anhang I).
 - 26.11.2026: **Cursor-Prüfung 4** (`docs/cursor-pruefung-social-plan-4-2026-11-26.md`): „freigabefähig: nein“, 10 von 13 gelöst. Offen waren meine Begründung zu Befund 8 (sie war falsch, Cursor hat recht), der Abgleich eines Facebook-Reels, der Bild-Cache vor der Host-Prüfung, dazu 3 geringe Punkte. Alle eingearbeitet → **fünfte Fassung** (Anhang K).
 - 26.11.2026: **Cursor-Prüfung 5** (`docs/cursor-pruefung-social-plan-5-2026-11-26.md`): **„freigabefähig: ja“**. Ein geringer Rest (Facebook-Reel nicht sofort in `video_reels` → `unklar` statt zweitem `finish`) ist eingearbeitet → **sechste Fassung** (Anhang M).
+- 26.11.2026: **Vom Auftraggeber freigegeben** („Ja, freigegeben“), sechste Fassung.
 - Hinweis zur vierten Fassung, **geändert gegenüber den Entscheidungen:** „Deine Woche“ geht **montags** um 18:00 statt sonntags, die Monats-Tipps um 18:00 am 1. bis 3. je nach Veröffentlichung.
 
 ---
