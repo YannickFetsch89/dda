@@ -13,6 +13,8 @@ import { EventKarte, Icon } from "@/components/karten";
 import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { OrtProgramm } from "@/components/ort-programm";
+import { BeschreibungText } from "@/components/beschreibung-text";
+import { kurzBeschreibung } from "@/lib/beschreibung";
 import { eventPoolLaden } from "@/lib/daten";
 import { kueche, preisDetail, preisKurz, sortieren } from "@/lib/guide-filter";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
@@ -29,7 +31,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: `${ort.name} – ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}`,
     description:
-      ort.beschreibung ??
+      kurzBeschreibung(ort.beschreibung, 160) ??
       `${ort.name}: ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}. Empfohlen von dies.das.düsseldorf.`,
     alternates: seitenAlternates(`${BASIS}/${encodeURIComponent(ort.slug)}`),
     openGraph: bild ? { images: [{ url: bild }] } : undefined,
@@ -139,7 +141,8 @@ export default async function OrtDetail(props: Props) {
           <span className="gd-typ gd-typ--gross"><Icon name={typIcon(ort.typ)} />{typZeile}</span>
           <h1 className="d">{ort.name}</h1>
           {ort.highlight && <blockquote className="gd-zitat">{ort.highlight}</blockquote>}
-          {ort.beschreibung && <p className="gd-detail__text">{ort.beschreibung}</p>}
+          {/* Eigene redaktionelle Texte: Absätze und „**fett**“ (Textrunde 26.11.2026, wie /orte) */}
+          {ort.beschreibung && <div className="gd-detail__text"><BeschreibungText text={ort.beschreibung} fett /></div>}
           {ort.tags.length > 0 && (
             <div className="gd-detail__tags">{ort.tags.map((t) => <span key={t} className="gd-tag gd-tag--gross">{t}</span>)}</div>
           )}
