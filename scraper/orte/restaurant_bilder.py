@@ -360,7 +360,17 @@ def punkte(k: dict) -> float:
 
 def auswaehlen(kandidaten: list[dict]) -> dict | None:
     """Website vor Inhaber-Google vor Nutzer-Google – jeweils nur mit Punktwert ≥ 7. Sonst das beste insgesamt, aber
-    nur ab 5 Punkten; darunter bleibt das heutige Bild (Probelauf 26.11.: ein Stockfoto mit 2,5 Punkten rutschte durch)."""
+    nur ab 5 Punkten; darunter bleibt das heutige Bild (Probelauf 26.11.: ein Stockfoto mit 2,5 Punkten rutschte durch).
+
+    Vorrang (Auftraggeber 26.11.2026): Ein einigermaßen schönes Innenraumfoto (KI-Note ≥ 6, ohne Text/Logo) schlägt
+    jedes Essensfoto – Essen ist nur Rückfall. Unter den Innenraumfotos gilt wieder die Rangfolge der Quellen."""
+    rang = {"website": 0, "google_inhaber": 1, "google_nutzer": 2}
+    innen = [k for k in kandidaten if (k.get("ki") or {}).get("motiv") == "innenraum" and (k.get("ki") or {}).get("note", 0) >= 6
+             and not (k.get("ki") or {}).get("text_oder_logo")]
+    # Querformat geht auch hier vor (Hochformat nur, wenn es kein Innenraumfoto im Querformat gibt)
+    innen = [k for k in innen if (k["breite"] or 0) >= (k["hoehe"] or 1) * 1.1] or innen
+    if innen:
+        return sorted(innen, key=lambda k: (rang[k["quelle"]], -k["punkte"]))[0]
     for quelle in ("website", "google_inhaber", "google_nutzer"):
         gut = sorted([k for k in kandidaten if k["quelle"] == quelle and k["punkte"] >= 7], key=lambda k: -k["punkte"])
         if gut:
