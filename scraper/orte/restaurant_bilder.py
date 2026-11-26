@@ -29,7 +29,9 @@ import os
 import random
 import re
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from difflib import SequenceMatcher
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -48,11 +50,14 @@ logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 MODELL = "claude-opus-5-5"
-TYPEN = ("restaurant", "cafe", "imbiss")
+TYPEN = ("restaurant", "cafe", "imbiss", "kneipe")   # Kneipen & Bars seit 26.11. (Auswahlseite mit Trenner)
 MIN_SCORE_WEBSITE = 7
 ORDNER = Path("data/restaurant_bilder")
 ERGEBNIS = ORDNER / "probe.json"
-VORSCHAU = Path("web/public/_probe")          # nur lokal (in .git/info/exclude), Dev-Server zeigt es an
+ALLE = ORDNER / "alle.json"                    # Gesamtlauf (fortsetzbar), Grundlage der Auswahlseite
+VORSCHAU = ORDNER / "vorschau"                 # Vorschaubilder für die Auswahlseite (gitignored, nur lokal)
+VORSCHAU_KANTE = 640
+PARALLEL = 4
 PAUSE_S = 2.0
 MIN_BREITE = 900
 MAX_WEBSITE_KANDIDATEN = 8
@@ -99,7 +104,7 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
-SYSTEM = """Du bewertest Fotos für den Düsseldorfer Stadtguide dies.das.düsseldorf (Restaurants, Cafés, Imbisse).
+SYSTEM = """Du bewertest Fotos für den Düsseldorfer Stadtguide dies.das.düsseldorf (Restaurants, Cafés, Imbisse, Kneipen und Bars).
 Du bekommst den Namen und die Art des Lokals und nummerierte Fotos (Website des Lokals oder Google).
 
 1. Für JEDES Foto:
@@ -157,13 +162,13 @@ def ki_vorschau(daten: bytes) -> str:
     return base64.standard_b64encode(puffer.getvalue()).decode()
 
 
-def vorschau_speichern(daten: bytes, ziel: Path, kante: int = 900) -> None:
+def vorschau_speichern(daten: bytes, ziel: Path, kante: int = VORSCHAU_KANTE) -> None:
     from PIL import Image, ImageOps
     with Image.open(io.BytesIO(daten)) as roh:
         b = ImageOps.exif_transpose(roh).convert("RGB")
     b.thumbnail((kante, kante))
     ziel.parent.mkdir(parents=True, exist_ok=True)
-    b.save(ziel, "WEBP", quality=78)
+    b.save(ziel, "WEBP", quality=72)
 
 
 # ── Quelle 1: Website ─────────────────────────────────────────────────────────
@@ -180,12 +185,21 @@ def _groesste_aus_srcset(srcset: str) -> str | None:
     return beste
 
 
+_SPERRE = threading.Lock()
+
+
+def host_warten(host: str, letzter: dict) -> None:
+    """Mindestens PAUSE_S zwischen zwei Abrufen derselben Website – auch bei parallelen Arbeitern (Platz reservieren)."""
+    with _SPERRE:
+        jetzt = time.time()
+        frei = max(jetzt, letzter.get(host, 0) + PAUSE_S)
+        letzter[host] = frei
+    if frei > jetzt:
+        time.sleep(frei - jetzt)
+
+
 def seite_holen(url: str, letzter: dict) -> str | None:
-    host = urlparse(url).netloc
-    warte = PAUSE_S - (time.time() - letzter.get(host, 0))
-    if warte > 0:
-        time.sleep(warte)
-    letzter[host] = time.time()
+    host_warten(urlparse(url).netloc, letzter)
     try:
         r = httpx.get(url, headers=kopfzeilen(url), timeout=25, follow_redirects=True)
         if r.status_code != 200 or "html" not in r.headers.get("content-type", ""):
@@ -255,11 +269,7 @@ def website_kandidaten(ort: dict, robots: dict, letzter: dict) -> list[dict]:
             break
         if not robots_erlaubt(u, robots):
             continue
-        host = urlparse(u).netloc
-        warte = PAUSE_S - (time.time() - letzter.get(host, 0))
-        if warte > 0:
-            time.sleep(warte)
-        letzter[host] = time.time()
+        host_warten(urlparse(u).netloc, letzter)
         daten = abrufen(u)
         masse = bildmasse(daten) if daten else None
         if not masse or masse[0] < MIN_BREITE:
@@ -419,7 +429,8 @@ def ort_bearbeiten(ort: dict, client, key: str, robots: dict, letzter: dict, abr
     abruf_zaehler["google"] += n
     kandidaten += g
     ergebnis = {"id": ort["id"], "name": ort["name"], "slug": ort["slug"], "typ": ort["typ"], "stadtteil": ort.get("stadtteil"),
-                "webseite": ort.get("webseite"), "score": ort.get("qualitaets_score"), "kandidaten": [], "gewaehlt": None, "ambiente": None}
+                "webseite": ort.get("webseite"), "score": ort.get("qualitaets_score"),
+                "vorab_score": (ort.get("extras") or {}).get("vorab_score"), "kandidaten": [], "gewaehlt": None, "ambiente": None}
     if not kandidaten:
         return ergebnis
     ki, verbrauch = ki_bewerten(client, ort, kandidaten)
@@ -481,9 +492,54 @@ Goldrahmen = gewählt. Punkte = KI-Note ± Format/Mängel. Nur lokal, nicht ver�
     return pfad
 
 
+def gesamtlauf(client, key: str) -> int:
+    """Alle sichtbaren Orte (TYPEN), fortsetzbar: schon bearbeitete (auch aus der Stichprobe) werden übersprungen."""
+    bestand = {e["id"]: e for e in (json.loads(ALLE.read_text(encoding="utf-8")) if ALLE.exists() else []) if not e.get("fehler")}
+    if ERGEBNIS.exists():
+        for e in json.loads(ERGEBNIS.read_text(encoding="utf-8")):
+            if not e.get("fehler") and e.get("kandidaten"):
+                bestand.setdefault(e["id"], e)
+    orte = orte_laden()
+    for o in orte:   # Grundwert für die dies.das-Wertung auch bei übernommenen Einträgen
+        if o["id"] in bestand:
+            bestand[o["id"]]["vorab_score"] = (o.get("extras") or {}).get("vorab_score")
+            bestand[o["id"]]["typ"] = o["typ"]
+    offen = [o for o in orte if o["id"] not in bestand]
+    logger.info("Gesamtlauf: %d Orte, davon %d schon bearbeitet, %d offen (%d parallel)", len(orte), len(bestand), len(offen), PARALLEL)
+    robots, letzter, zaehler = {}, {}, {"google": 0, "ein": 0, "aus": 0}
+    sperre = threading.Lock()
+
+    def speichern() -> None:
+        tmp = ALLE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(list(bestand.values()), ensure_ascii=False, indent=1), encoding="utf-8")
+        tmp.replace(ALLE)
+
+    def arbeit(ort: dict) -> dict:
+        try:
+            return ort_bearbeiten(ort, client, key, robots, letzter, zaehler)
+        except Exception as fehler:  # noqa: BLE001 – ein Ort darf den Lauf nicht abbrechen
+            logger.warning("%s: %s", ort["name"], fehler)
+            return {"id": ort["id"], "name": ort["name"], "slug": ort["slug"], "typ": ort["typ"], "kandidaten": [], "gewaehlt": None,
+                    "ambiente": None, "fehler": str(fehler)}
+
+    with ThreadPoolExecutor(max_workers=PARALLEL) as pool:
+        for n, f in enumerate(as_completed([pool.submit(arbeit, o) for o in offen]), start=1):
+            e = f.result()
+            with sperre:
+                bestand[e["id"]] = e
+                if n % 5 == 0 or n == len(offen):
+                    speichern()
+            logger.info("%d/%d %s: %d Kandidaten, Ambiente %s", n, len(offen), e["name"], len(e["kandidaten"]), (e.get("ambiente") or {}).get("note"))
+    speichern()
+    logger.info("Google-Abrufe: %d · KI-Token: %d ein, %d aus (≈ %.2f $)", zaehler["google"], zaehler["ein"], zaehler["aus"],
+                zaehler["ein"] / 1e6 * 4 + zaehler["aus"] / 1e6 * 20)
+    return 0
+
+
 def main():
     p = argparse.ArgumentParser(description="Restaurant-Guide: bessere Bilder + Ambiente-Einschätzung")
     p.add_argument("--stichprobe", type=int, default=30)
+    p.add_argument("--alle", action="store_true", help="alle sichtbaren Orte (fortsetzbar)")
     p.add_argument("--nur-vorschau", action="store_true")
     args = p.parse_args()
     ORDNER.mkdir(parents=True, exist_ok=True)
@@ -493,6 +549,8 @@ def main():
     import anthropic
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     key = os.environ["GOOGLE_PLACES_API_KEY"]
+    if args.alle:
+        return gesamtlauf(client, key)
     auswahl = stichprobe(orte_laden(), args.stichprobe)
     logger.info("Stichprobe: %d Orte", len(auswahl))
     robots, letzter, zaehler, ergebnisse = {}, {}, {"google": 0, "ein": 0, "aus": 0}, []

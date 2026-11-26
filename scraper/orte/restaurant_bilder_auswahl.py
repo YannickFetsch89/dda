@@ -1,24 +1,30 @@
 """
 restaurant_bilder_auswahl.py – DiesDasDüsseldorf
-Lokale Auswahlseite für die Restaurant-Bilder (Wunsch des Auftraggebers, 26.11.2026): Je Betrieb alle Kandidaten
-aus restaurant_bilder.py zum Anklicken, dazu „heutiges Bild behalten“. Der Button „Speichern und hochladen“ setzt
-die gewählten Bilder sofort in der Datenbank – die Website zeigt sie nach spätestens etwa 10 Minuten (Cache).
+Lokale Auswahlseite für die Guide-Bilder und die dies.das-Wertung (Wünsche des Auftraggebers, 26.11.2026).
 
-Was beim Speichern passiert (wie admin_ort_bild_setzen im Admin, Stufe 3b):
-- Google-Foto: extras.google_foto = {name, breite, hoehe, autor, autor_url}, bild_url leer, Nachweis = Autor.
-- Website-Bild: bild_url = Bildadresse der Website (die Website holt es über den eigenen Bild-Proxy /ort-foto/…,
-  der Browser spricht nie mit der fremden Seite), Nachweis = Domain, extras.bild_link = Website.
-  Zusätzlich wird das Bild als WebP unter web/public/ort-bilder/restaurants/<slug>.webp abgelegt und in
-  data/restaurant_bilder/umstellen.json vermerkt. Nach dem nächsten Deploy stellt
-  `--nach-deploy` diese Orte auf die eigene Datei um (unabhängig von der fremden Website).
-- Immer: extras.foto_manuell = heute (schützt vor Skript-Läufen), foto_version + 1, bild_fokus aus der KI (oben/unten).
-- Jede Änderung mit Vorher/Nachher in data/restaurant_bilder/protokoll.jsonl (Rückweg: --zurueck <slug>).
+Aufbau:
+- Reiter Restaurants · Cafés · Imbisse · Kneipen & Bars, je Seite 50 Betriebe (immer klar, wo man ist).
+- Je Betrieb zwei Bildrollen: **Ambiente** (= Titelbild auf der Website) und **Essen & Getränke** (zweites Bild,
+  wird gespeichert, angezeigt erst nach einem kleinen Umbau der Website). Vorausgewählt ist der KI-Vorschlag
+  (Innenraum vor Essen, Querformat zuerst). „Heutiges Bild behalten“ lässt das Titelbild unverändert.
+- dies.das-Wertung (Plan docs/plan-restaurantguide-2026-11-26.md, A2): Grund aus dem bisherigen Score (extras.vorab_score)
+  plus Ambiente-Zuschlag der KI (nur wenn sicher; Kneipen & Bars bewertet der Auftraggeber selbst). Freifeld zum
+  Überschreiben – leer = gerechneter Wert.
+- Gespeichert werden nur Betriebe mit ✓ (angeklickt, Wert eingetragen oder „Auswahl passt“).
 
-Läuft nur lokal (127.0.0.1), schreibt mit dem Service-Schlüssel aus web/.env.local.
+Was beim Speichern passiert (ein Update je Betrieb, sofort live; Website-Cache bis etwa 10 Minuten):
+- Titelbild Google → extras.google_foto, bild_url leer, Nachweis = Autor. Titelbild Website → bild_url = Bildadresse der
+  Website (die Website holt es über den eigenen Bild-Proxy), Nachweis = Domain, extras.bild_link. Dazu foto_manuell
+  (schützt vor Skript-Läufen), foto_version + 1, bild_fokus aus der KI.
+- Zweites Bild → extras.bild_zweit = {art: google|eigen, …}.
+- Website-Bilder werden zusätzlich als WebP unter web/public/ort-bilder/restaurants/ abgelegt; nach dem nächsten Deploy
+  stellt `--nach-deploy` auf die eigene Datei um.
+- extras.ambiente (KI), extras.ddd_wertung_hand (Freifeld, sonst entfernt), extras.ddd_wertung (gilt).
+- Vorher/Nachher in data/restaurant_bilder/protokoll.jsonl; `--zurueck <slug>` stellt den Stand vor der Runde her.
 
 Nutzung (im Repo-Stamm, Python aus DD/.venv):
-  python -m scraper.orte.restaurant_bilder_auswahl                 → http://127.0.0.1:3650
-  python -m scraper.orte.restaurant_bilder_auswahl --nach-deploy   → Website-Bilder auf eigene Dateien umstellen
+  python -m scraper.orte.restaurant_bilder_auswahl [--trocken]       → http://127.0.0.1:3650
+  python -m scraper.orte.restaurant_bilder_auswahl --nach-deploy
   python -m scraper.orte.restaurant_bilder_auswahl --zurueck <slug>
 """
 from __future__ import annotations
@@ -27,13 +33,13 @@ import argparse
 import html
 import json
 import logging
+import math
 import os
 import sys
-import time
 from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 import httpx
 from dotenv import load_dotenv
@@ -42,7 +48,7 @@ load_dotenv(Path("web/.env.local"))
 load_dotenv()
 
 from scraper.orte.ortsbilder import abrufen, umwandeln  # noqa: E402
-from scraper.orte.restaurant_bilder import ERGEBNIS, VORSCHAU, auswaehlen  # noqa: E402
+from scraper.orte.restaurant_bilder import ALLE, ERGEBNIS, TYPEN, VORSCHAU, auswaehlen  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -55,9 +61,15 @@ PROTOKOLL = ORDNER / "protokoll.jsonl"
 ZIEL = Path("web/public/ort-bilder/restaurants")
 WEB_PFAD = "/ort-bilder/restaurants"
 PORT = 3650
+JE_SEITE = 50
 TROCKEN = False   # --trocken: nichts schreiben, nur protokollieren, was gesetzt würde
 QUELLE_TEXT = {"website": "Website", "google_inhaber": "Google · Inhaber", "google_nutzer": "Google · Gast"}
+REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse"), ("kneipe", "Kneipen & Bars")]
+AMBIENTE_MOTIVE = ("innenraum", "aussen", "terrasse")
+ESSEN_MOTIVE = ("essen", "getraenk")
 
+
+# ── Hilfen ────────────────────────────────────────────────────────────────────
 
 def db():
     from supabase import create_client
@@ -76,108 +88,269 @@ def json_schreiben(pfad: Path, daten) -> None:
 
 
 def protokollieren(eintrag: dict) -> None:
+    PROTOKOLL.parent.mkdir(parents=True, exist_ok=True)
     with PROTOKOLL.open("a", encoding="utf-8") as f:
         f.write(json.dumps({"zeit": datetime.now().isoformat(timespec="seconds"), **eintrag}, ensure_ascii=False) + "\n")
 
 
-# ── Schreiben in die Datenbank ────────────────────────────────────────────────
+def eintraege() -> list[dict]:
+    """Ergebnisse des Gesamtlaufs (sonst der Stichprobe), nur Orte mit Kandidaten, nach Name sortiert."""
+    roh = json_lesen(ALLE, None) or json_lesen(ERGEBNIS, [])
+    return sorted([e for e in roh if e.get("kandidaten")], key=lambda e: e["name"].lower())
+
+
+def ist_quer(k: dict) -> bool:
+    return (k.get("breite") or 0) >= (k.get("hoehe") or 1) * 1.1
+
+
+def komma(x: float) -> str:
+    return f"{x:.1f}".replace(".", ",")
+
+
+# ── dies.das-Wertung (Plan A2) ────────────────────────────────────────────────
+
+def wertung(vorab: float | None, ambiente: dict | None, typ: str) -> dict:
+    """Grund 6–9 aus dem Google-Bayes-Mittel, Ambiente-Zuschlag ±1 (nur sicher, nicht bei Kneipen), gesamt 5–10."""
+    grund = 6.0 + ((vorab or 4.3) - 4.3) / 0.6 * 3.0
+    grund = max(6.0, min(9.0, grund))
+    amb = ambiente or {}
+    zuschlag = 0.0
+    if typ != "kneipe" and amb.get("sicher") and isinstance(amb.get("note"), (int, float)):
+        zuschlag = max(-1.0, min(1.0, (amb["note"] - 5) * 0.3))
+    wert = round(max(5.0, min(10.0, grund + zuschlag)), 1)
+    return {"grund": round(grund, 1), "zuschlag": round(zuschlag, 1), "wert": wert,
+            "pruefen": typ != "kneipe" and not amb.get("sicher")}
+
+
+def hand_lesen(text: str) -> float | None:
+    """Freifeld: '' → None; '8,5' / '8.5' → 8.5 (1–10). Ungültig → ValueError."""
+    text = (text or "").strip().replace(",", ".")
+    if not text:
+        return None
+    wert = float(text)
+    if not (1.0 <= wert <= 10.0) or math.isnan(wert):
+        raise ValueError("Wert muss zwischen 1 und 10 liegen")
+    return round(wert, 1)
+
+
+# ── Vorschläge ────────────────────────────────────────────────────────────────
+
+def vorschlag(e: dict) -> tuple[int | str, int | str]:
+    """(Titel/Ambiente, Essen): Kandidaten-Index oder 'heute' bzw. 'keins'."""
+    k = e["kandidaten"]
+    titel = auswaehlen(k)
+    t = "heute" if titel is None or titel.get("heute") else k.index(titel)
+    essen = [x for x in k if (x.get("ki") or {}).get("motiv") in ESSEN_MOTIVE and x.get("punkte", 0) >= 6 and x is not titel
+             and not (x.get("ki") or {}).get("text_oder_logo")]
+    essen = [x for x in essen if ist_quer(x)] or essen
+    rang = {"website": 0, "google_inhaber": 1, "google_nutzer": 2}
+    beste = sorted(essen, key=lambda x: (rang[x["quelle"]], -x["punkte"]))[0] if essen else None
+    return t, (k.index(beste) if beste else "keins")
+
+
+# ── Schreiben ─────────────────────────────────────────────────────────────────
 
 def ort_lesen(client, ort_id: str) -> dict:
-    zeilen = client.table("orte").select("id, slug, name, bild_url, bild_attribution, extras").eq("id", ort_id).execute().data
+    zeilen = client.table("orte").select("id, slug, name, typ, bild_url, bild_attribution, extras").eq("id", ort_id).execute().data
     if not zeilen:
         raise RuntimeError("Ort nicht gefunden")
     return zeilen[0]
 
 
-def neue_extras(ort: dict, fokus: str | None) -> dict:
-    extras = dict(ort.get("extras") or {})
-    extras.pop("bild_fokus", None)
-    extras["foto_manuell"] = date.today().isoformat()
-    extras["foto_version"] = int(extras.get("foto_version") or 0) + 1
-    if fokus in ("oben", "unten"):
-        extras["bild_fokus"] = fokus
-    return extras
+def stand(ort: dict) -> dict:
+    x = ort.get("extras") or {}
+    return {"bild_url": ort.get("bild_url"), "bild_attribution": ort.get("bild_attribution"),
+            **{f: x.get(f) for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell", "bild_zweit", "ambiente",
+                                     "ddd_wertung", "ddd_wertung_hand")}}
 
 
-def bild_setzen(client, ort_id: str, k: dict) -> dict:
-    """Setzt einen Kandidaten als Bild des Ortes. Gibt {ok, hinweis} zurück."""
-    ort = ort_lesen(client, ort_id)
-    vorher = {"bild_url": ort.get("bild_url"), "bild_attribution": ort.get("bild_attribution"),
-              "google_foto": (ort.get("extras") or {}).get("google_foto"), "bild_link": (ort.get("extras") or {}).get("bild_link"),
-              "bild_fokus": (ort.get("extras") or {}).get("bild_fokus"), "foto_manuell": (ort.get("extras") or {}).get("foto_manuell")}
-    extras = neue_extras(ort, (k.get("ki") or {}).get("fokus"))
-    hinweis = ""
-    if k["quelle"] == "website":
-        url = k["url"]
-        if not url.startswith(("https://", "http://")):
-            raise RuntimeError("ungültige Bildadresse")
-        extras.pop("google_foto", None)
-        seite = k.get("seite") or ""
-        if seite.startswith("https://"):
-            extras["bild_link"] = seite
-        else:
-            extras.pop("bild_link", None)
-        aenderung = {"bild_url": url, "bild_attribution": (k.get("nachweis") or "")[:200] or None, "extras": extras}
-        # Eigene Kopie für den nächsten Deploy (danach --nach-deploy)
-        daten = abrufen(url)
-        if daten and TROCKEN:
-            hinweis = "Datei ladbar (Trockenlauf, nicht abgelegt)"
-        elif daten:
-            umwandeln(daten, ZIEL / f"{ort['slug']}.webp")
-            liste = json_lesen(UMSTELLEN, {})
-            liste[ort_id] = {"slug": ort["slug"], "pfad": f"{WEB_PFAD}/{ort['slug']}.webp", "quelle_url": url}
-            json_schreiben(UMSTELLEN, liste)
-            hinweis = "eigene Datei abgelegt (nach dem nächsten Deploy umstellen)"
-        else:
-            hinweis = "eigene Datei nicht ladbar – bleibt über den Bild-Proxy"
-    else:
-        name = k.get("google_foto") or ""
-        if not name.startswith("places/"):
-            raise RuntimeError("ungültiger Google-Fotoname")
-        extras.pop("bild_link", None)
-        extras["google_foto"] = {"name": name, "breite": k.get("breite"), "hoehe": k.get("hoehe"),
-                                 "autor": k.get("autor"), "autor_url": k.get("autor_url") if (k.get("autor_url") or "").startswith("https://") else None}
-        aenderung = {"bild_url": None, "bild_attribution": (k.get("autor") or "")[:200] or None, "extras": extras}
-        # Eine ältere eigene Kopie darf nach dem Deploy nicht wieder umstellen
-        liste = json_lesen(UMSTELLEN, {})
-        if not TROCKEN and liste.pop(ort_id, None):
-            json_schreiben(UMSTELLEN, liste)
+def erster_stand(slug: str) -> dict | None:
+    """Stand vor der ersten Änderung dieser Runde (nach dem letzten Zurücksetzen)."""
+    if not PROTOKOLL.exists():
+        return None
+    eigene = [json.loads(z) for z in PROTOKOLL.read_text(encoding="utf-8").splitlines() if z.strip()]
+    eigene = [e for e in eigene if e.get("slug") == slug]
+    ab = max((i for i, e in enumerate(eigene) if e["aktion"] == "zurueck"), default=-1)
+    return next((e["vorher"] for e in eigene[ab + 1:] if e["aktion"] == "speichern"), None)
+
+
+def kopie_ablegen(ort_id: str, slug: str, rolle: str, url: str) -> str:
+    """Website-Bild als eigene WebP-Datei für den nächsten Deploy ablegen und vormerken."""
     if TROCKEN:
-        logger.info("TROCKEN %s: %s", ort["slug"], json.dumps({kk: v for kk, v in aenderung.items() if kk != "extras"}
-                                                              | {"google_foto": extras.get("google_foto"), "bild_link": extras.get("bild_link"),
-                                                                 "bild_fokus": extras.get("bild_fokus"), "foto_version": extras["foto_version"]}, ensure_ascii=False))
-        return {"ok": True, "hinweis": "Trockenlauf"}
-    client.table("orte").update(aenderung).eq("id", ort_id).execute()
-    protokollieren({"ort_id": ort_id, "slug": ort["slug"], "aktion": "bild", "quelle": k["quelle"], "vorher": vorher,
-                    "nachher": {kk: v for kk, v in aenderung.items() if kk != "extras"} | {"google_foto": extras.get("google_foto"),
-                                                                                         "bild_link": extras.get("bild_link")}})
-    return {"ok": True, "hinweis": hinweis}
+        return "Trockenlauf"
+    daten = abrufen(url)
+    if not daten:
+        return "eigene Datei nicht ladbar – bleibt über den Bild-Proxy"
+    name = f"{slug}.webp" if rolle == "titel" else f"{slug}-essen.webp"
+    umwandeln(daten, ZIEL / name)
+    liste = json_lesen(UMSTELLEN, {})
+    liste[f"{ort_id}:{rolle}"] = {"ort_id": ort_id, "slug": slug, "rolle": rolle, "pfad": f"{WEB_PFAD}/{name}", "quelle_url": url}
+    json_schreiben(UMSTELLEN, liste)
+    return "eigene Datei abgelegt"
+
+
+def vormerkung_loeschen(ort_id: str, rolle: str) -> None:
+    if TROCKEN:
+        return
+    liste = json_lesen(UMSTELLEN, {})
+    if liste.pop(f"{ort_id}:{rolle}", None):
+        json_schreiben(UMSTELLEN, liste)
+
+
+def bild_daten(k: dict) -> dict:
+    if k["quelle"] == "website":
+        seite = k.get("seite") or ""
+        return {"art": "eigen", "bild_url": k["url"], "nachweis": (k.get("nachweis") or "")[:200],
+                "link": seite if seite.startswith("https://") else None}
+    autor_url = k.get("autor_url") if (k.get("autor_url") or "").startswith("https://") else None
+    return {"art": "google", "google_foto": {"name": k["google_foto"], "breite": k.get("breite"), "hoehe": k.get("hoehe"),
+                                             "autor": k.get("autor"), "autor_url": autor_url}, "nachweis": (k.get("autor") or "")[:200]}
+
+
+def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
+    """Ein Betrieb: Titelbild, zweites Bild, Ambiente und Wertung in EINEM Update. Gibt einen Hinweis zurück."""
+    ort = ort_lesen(client, e["id"])
+    vorher = stand(ort)
+    extras = dict(ort.get("extras") or {})
+    aenderung: dict = {}
+    hinweise = []
+    k = e["kandidaten"]
+
+    # Titelbild (Ambiente)
+    t = wahl["t"]
+    if t != "heute" and k[t].get("heute"):
+        t = "heute"
+    if t != (bisher or {}).get("t", "heute"):
+        if t == "heute":
+            alt = erster_stand(ort["slug"]) or vorher   # früher gewähltes Bild zurücknehmen
+            aenderung["bild_url"], aenderung["bild_attribution"] = alt.get("bild_url"), alt.get("bild_attribution")
+            for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell"):
+                if alt.get(f) is None:
+                    extras.pop(f, None)
+                else:
+                    extras[f] = alt[f]
+            vormerkung_loeschen(e["id"], "titel")
+        else:
+            b = bild_daten(k[t])
+            extras.pop("bild_fokus", None)
+            fokus = (k[t].get("ki") or {}).get("fokus")
+            if fokus in ("oben", "unten"):
+                extras["bild_fokus"] = fokus
+            extras["foto_manuell"] = date.today().isoformat()
+            if b["art"] == "eigen":
+                extras.pop("google_foto", None)
+                if b["link"]:
+                    extras["bild_link"] = b["link"]
+                else:
+                    extras.pop("bild_link", None)
+                aenderung["bild_url"], aenderung["bild_attribution"] = b["bild_url"], b["nachweis"] or None
+                hinweise.append(kopie_ablegen(e["id"], ort["slug"], "titel", b["bild_url"]))
+            else:
+                extras.pop("bild_link", None)
+                extras["google_foto"] = b["google_foto"]
+                aenderung["bild_url"], aenderung["bild_attribution"] = None, b["nachweis"] or None
+                vormerkung_loeschen(e["id"], "titel")
+        extras["foto_version"] = int(extras.get("foto_version") or 0) + 1
+
+    # Zweites Bild (Essen & Getränke)
+    s = wahl["e"]
+    if s == "keins":
+        extras.pop("bild_zweit", None)
+        vormerkung_loeschen(e["id"], "zweit")
+    elif s != (bisher or {}).get("e"):
+        b = bild_daten(k[s])
+        extras["bild_zweit"] = {kk: v for kk, v in b.items() if v is not None}
+        if b["art"] == "eigen":
+            hinweise.append(kopie_ablegen(e["id"], ort["slug"], "zweit", b["bild_url"]))
+        else:
+            vormerkung_loeschen(e["id"], "zweit")
+
+    # Ambiente (KI) und dies.das-Wertung
+    if e.get("ambiente"):
+        extras["ambiente"] = {**e["ambiente"], "quelle": "ki", "stand": date.today().isoformat()}
+    hand = wahl["w"]
+    if hand is None:
+        extras.pop("ddd_wertung_hand", None)
+    else:
+        extras["ddd_wertung_hand"] = hand
+    extras["ddd_wertung"] = hand if hand is not None else wertung(e.get("vorab_score"), e.get("ambiente"), e["typ"])["wert"]
+
+    aenderung["extras"] = extras
+    nachher = {**vorher, **{f: aenderung[f] for f in ("bild_url", "bild_attribution") if f in aenderung},
+               **{f: extras.get(f) for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell", "bild_zweit", "ambiente",
+                                            "ddd_wertung", "ddd_wertung_hand")}}
+    if TROCKEN:
+        logger.info("TROCKEN %s: %s", ort["slug"], json.dumps({f: v for f, v in nachher.items() if v != vorher.get(f)}, ensure_ascii=False)[:600])
+        return "Trockenlauf"
+    client.table("orte").update(aenderung).eq("id", e["id"]).execute()
+    protokollieren({"ort_id": e["id"], "slug": ort["slug"], "aktion": "speichern", "wahl": wahl, "vorher": vorher, "nachher": nachher})
+    return "; ".join(h for h in hinweise if h)
+
+
+def speichern(daten: dict) -> dict:
+    alle = {e["id"]: e for e in eintraege()}
+    auswahl = json_lesen(AUSWAHL, {})
+    client = db()
+    gespeichert, fehler = 0, []
+    for ort_id, roh in daten.items():
+        e = alle.get(ort_id)
+        if not e or not isinstance(roh, dict):
+            continue
+        try:
+            wahl = {"t": "heute" if roh.get("t") in (None, "heute") else int(roh["t"]),
+                    "e": "keins" if roh.get("e") in (None, "keins") else int(roh["e"]),
+                    "w": hand_lesen(str(roh.get("w") or ""))}
+            for feld in ("t", "e"):
+                if isinstance(wahl[feld], int) and not (0 <= wahl[feld] < len(e["kandidaten"])):
+                    raise ValueError("unbekanntes Bild")
+            ort_speichern(client, e, wahl, auswahl.get(ort_id))
+            gespeichert += 1
+        except Exception as f:  # noqa: BLE001 – Fehler je Ort melden, Rest weiter speichern
+            logger.warning("%s: %s", e["name"], f)
+            fehler.append(f"{e['name']} ({f})")
+            continue
+        if not TROCKEN:
+            auswahl[ort_id] = {**wahl, "zeit": datetime.now().strftime("%d.%m. %H:%M")}
+            json_schreiben(AUSWAHL, auswahl)
+    meldung = f"{gespeichert} Betriebe gespeichert" + (" (Trockenlauf, nichts geschrieben)" if TROCKEN else "") + \
+              (f" · Fehler: {'; '.join(fehler)}" if fehler else "")
+    logger.info(meldung)
+    return {"meldung": meldung}
 
 
 def nach_deploy() -> int:
-    """Website-Bilder auf die eigene Datei umstellen – nur wenn die Datei live erreichbar ist."""
+    """Website-Bilder (Titel und zweites Bild) auf die eigene Datei umstellen – nur wenn die Datei live erreichbar ist."""
     client, liste = db(), json_lesen(UMSTELLEN, {})
     fertig = 0
-    for ort_id, e in list(liste.items()):
+    for schluessel, v in list(liste.items()):
         try:
-            r = httpx.head(f"https://diesdas.events{e['pfad']}", timeout=20, follow_redirects=True)
-        except Exception as fehler:
-            logger.warning("%s: Prüfung fehlgeschlagen (%s)", e["slug"], type(fehler).__name__)
+            r = httpx.head(f"https://diesdas.events{v['pfad']}", timeout=20, follow_redirects=True)
+        except Exception as f:
+            logger.warning("%s: Prüfung fehlgeschlagen (%s)", v["slug"], type(f).__name__)
             continue
         if r.status_code != 200:
-            logger.warning("%s: %s ist live noch nicht da (HTTP %s) – erst deployen", e["slug"], e["pfad"], r.status_code)
+            logger.warning("%s: %s ist live noch nicht da (HTTP %s) – erst deployen", v["slug"], v["pfad"], r.status_code)
             continue
-        ort = ort_lesen(client, ort_id)
-        if ort.get("bild_url") != e["quelle_url"]:
-            logger.info("%s: Bild wurde inzwischen geändert – nicht umgestellt", e["slug"])
-            liste.pop(ort_id)
-            continue
+        ort = ort_lesen(client, v["ort_id"])
         extras = dict(ort.get("extras") or {})
-        extras["foto_version"] = int(extras.get("foto_version") or 0) + 1
-        client.table("orte").update({"bild_url": e["pfad"], "extras": extras}).eq("id", ort_id).execute()
-        protokollieren({"ort_id": ort_id, "slug": e["slug"], "aktion": "umstellen", "vorher": {"bild_url": e["quelle_url"]},
-                        "nachher": {"bild_url": e["pfad"]}})
-        liste.pop(ort_id)
+        if v["rolle"] == "titel":
+            if ort.get("bild_url") != v["quelle_url"]:
+                liste.pop(schluessel)
+                continue
+            extras["foto_version"] = int(extras.get("foto_version") or 0) + 1
+            aenderung = {"bild_url": v["pfad"], "extras": extras}
+        else:
+            zweit = dict(extras.get("bild_zweit") or {})
+            if zweit.get("bild_url") != v["quelle_url"]:
+                liste.pop(schluessel)
+                continue
+            zweit["bild_url"] = v["pfad"]
+            extras["bild_zweit"] = zweit
+            aenderung = {"extras": extras}
+        client.table("orte").update(aenderung).eq("id", v["ort_id"]).execute()
+        protokollieren({"ort_id": v["ort_id"], "slug": v["slug"], "aktion": "umstellen", "vorher": {"rolle": v["rolle"], "url": v["quelle_url"]},
+                        "nachher": {"url": v["pfad"]}})
+        liste.pop(schluessel)
         fertig += 1
     json_schreiben(UMSTELLEN, liste)
     logger.info("Umgestellt: %d, offen: %d", fertig, len(liste))
@@ -185,145 +358,175 @@ def nach_deploy() -> int:
 
 
 def zurueck(slug: str) -> int:
-    """Ort auf den Stand vor der ersten Bildänderung dieser Runde zurücksetzen (aus dem Protokoll)."""
-    eintraege = [json.loads(z) for z in PROTOKOLL.read_text(encoding="utf-8").splitlines()] if PROTOKOLL.exists() else []
-    eigene = [e for e in eintraege if e["slug"] == slug]
-    # Erste Bildänderung nach dem letzten Zurücksetzen = Stand vor dieser Runde
-    ab = max((i for i, e in enumerate(eigene) if e["aktion"] == "zurueck"), default=-1)
-    letzter = next((e for e in eigene[ab + 1:] if e["aktion"] == "bild"), None)
-    if not letzter:
-        logger.error("Keine Bildänderung für %s im Protokoll", slug)
+    """Betrieb auf den Stand vor der ersten Änderung dieser Runde zurücksetzen (Bilder, Ambiente, Wertung)."""
+    alt = erster_stand(slug)
+    if not alt:
+        logger.error("Keine Änderung für %s im Protokoll", slug)
         return 1
     client = db()
-    ort = ort_lesen(client, letzter["ort_id"])
-    v = letzter["vorher"]
+    zeile = client.table("orte").select("id, slug, bild_url, bild_attribution, extras").eq("slug", slug).execute().data
+    if not zeile:
+        logger.error("Ort %s nicht gefunden", slug)
+        return 1
+    ort = zeile[0]
     extras = dict(ort.get("extras") or {})
-    for feld in ("google_foto", "bild_link", "bild_fokus", "foto_manuell"):
-        if v.get(feld) is None:
-            extras.pop(feld, None)
+    for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell", "bild_zweit", "ambiente", "ddd_wertung", "ddd_wertung_hand"):
+        if alt.get(f) is None:
+            extras.pop(f, None)
         else:
-            extras[feld] = v[feld]
+            extras[f] = alt[f]
     extras["foto_version"] = int(extras.get("foto_version") or 0) + 1
-    client.table("orte").update({"bild_url": v.get("bild_url"), "bild_attribution": v.get("bild_attribution"), "extras": extras}).eq("id", letzter["ort_id"]).execute()
-    liste = json_lesen(UMSTELLEN, {})
-    if liste.pop(letzter["ort_id"], None):
-        json_schreiben(UMSTELLEN, liste)
-    protokollieren({"ort_id": letzter["ort_id"], "slug": slug, "aktion": "zurueck", "vorher": {}, "nachher": v})
+    client.table("orte").update({"bild_url": alt.get("bild_url"), "bild_attribution": alt.get("bild_attribution"), "extras": extras}).eq("id", ort["id"]).execute()
+    for rolle in ("titel", "zweit"):
+        vormerkung_loeschen(ort["id"], rolle)
+    auswahl = json_lesen(AUSWAHL, {})
+    if auswahl.pop(ort["id"], None):
+        json_schreiben(AUSWAHL, auswahl)
+    protokollieren({"ort_id": ort["id"], "slug": slug, "aktion": "zurueck", "vorher": stand(ort), "nachher": alt})
     logger.info("%s: zurückgesetzt", slug)
     return 0
 
 
 # ── Seite ─────────────────────────────────────────────────────────────────────
 
-def seite() -> str:
-    ergebnisse = json_lesen(ERGEBNIS, [])
-    auswahl = json_lesen(AUSWAHL, {})
-    abschnitte = []
-    for e in ergebnisse:
-        if not e.get("kandidaten"):
+def kachel(e: dict, i: int | str, bild: str, unter: str, t_wahl, e_wahl, nur_titel: bool = False) -> str:
+    oid = e["id"]
+    an_t = "an-t" if t_wahl == i else ""
+    an_e = "an-e" if e_wahl == i else ""
+    knoepfe = f'<label class="w t"><input type="radio" name="t-{oid}" value="{i}" {"checked" if t_wahl == i else ""}>Ambiente</label>'
+    if not nur_titel:
+        knoepfe += f'<label class="w e"><input type="radio" name="e-{oid}" value="{i}" {"checked" if e_wahl == i else ""}>Essen</label>'
+    return f'<div class="kachel {an_t} {an_e}"><img src="{html.escape(bild)}" loading="lazy"><span class="unter">{unter}</span><span class="knoepfe">{knoepfe}</span></div>'
+
+
+def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
+    vt, ve = vorschlag(e)
+    t_wahl = gespeichert["t"] if gespeichert else vt
+    e_wahl = gespeichert["e"] if gespeichert else ve
+    kacheln = [kachel(e, "heute", f"/heute/{e['slug']}", "Heutiges Bild behalten", t_wahl, e_wahl, nur_titel=True)]
+    for i, k in enumerate(e["kandidaten"]):
+        if k.get("heute"):
             continue
-        vorschlag = auswaehlen(e["kandidaten"])
-        vorschlag_nr = e["kandidaten"].index(vorschlag) if vorschlag else None
-        gespeichert = auswahl.get(e["id"])
-        markiert = gespeichert["wahl"] if gespeichert else ("heute" if vorschlag is None or vorschlag.get("heute") else vorschlag_nr)
-        kacheln = [f"""<label class="kachel {'an' if markiert == 'heute' else ''}"><input type="radio" name="{e['id']}" value="heute" {'checked' if markiert == 'heute' else ''}>
-<img src="/heute/{html.escape(e['slug'])}" loading="lazy"><span>Heutiges Bild behalten</span></label>"""]
-        for i, k in enumerate(e["kandidaten"]):
-            if k.get("heute"):
-                continue
-            ki = k.get("ki") or {}
-            format_text = "quer" if (k.get("breite") or 0) >= (k.get("hoehe") or 1) * 1.2 else ("hoch" if (k.get("hoehe") or 0) > (k.get("breite") or 0) * 1.1 else "quadrat")
-            kacheln.append(f"""<label class="kachel {'an' if markiert == i else ''}"><input type="radio" name="{e['id']}" value="{i}" {'checked' if markiert == i else ''}>
-<img src="/{html.escape(k['vorschau'])}" loading="lazy"><span>{QUELLE_TEXT[k['quelle']]} · {ki.get('motiv', '')} · {format_text}<br>Note {ki.get('note', '–')}{' · Vorschlag' if i == vorschlag_nr else ''}</span></label>""")
-        amb = e.get("ambiente") or {}
-        status = f'<span class="ok">gespeichert {html.escape(gespeichert.get("zeit", ""))}</span>' if gespeichert else ""
-        web = f'<a href="{html.escape(e["webseite"])}" target="_blank" rel="noopener">Website</a>' if e.get("webseite") else "keine Website"
-        abschnitte.append(f"""<section data-id="{e['id']}"><h2>{html.escape(e['name'])} <small>{e['typ']} · {html.escape(e.get('stadtteil') or '')} · {web}</small> {status}
+        ki = k.get("ki") or {}
+        fmt = "quer" if ist_quer(k) else ("hoch" if (k.get("hoehe") or 0) > (k.get("breite") or 0) * 1.1 else "quadrat")
+        hinweis = " · <b>Vorschlag Ambiente</b>" if i == vt else (" · <b>Vorschlag Essen</b>" if i == ve else "")
+        kacheln.append(kachel(e, i, f"/{k['vorschau']}", f"{QUELLE_TEXT[k['quelle']]} · {ki.get('motiv', '')} · {fmt} · Note {ki.get('note', '–')}{hinweis}",
+                              t_wahl, e_wahl))
+    kein = f'<label class="kein {"an-e" if e_wahl == "keins" else ""}"><input type="radio" name="e-{e["id"]}" value="keins" {"checked" if e_wahl == "keins" else ""}>Kein Essensbild</label>'
+    amb = e.get("ambiente") or {}
+    w = wertung(e.get("vorab_score"), amb, e["typ"])
+    hand = gespeichert.get("w") if gespeichert else (ort_db or {}).get("ddd_wertung_hand")
+    if e["typ"] == "kneipe":
+        erklaerung = f"Grund {komma(w['grund'])} (bisheriger Score) · Ambiente bewertest du selbst (KI meint {amb.get('note', '–')}/10)"
+    else:
+        zuschlag = f"{'+' if w['zuschlag'] >= 0 else '−'}{komma(abs(w['zuschlag']))}"
+        erklaerung = (f"Grund {komma(w['grund'])} (bisheriger Score) · Ambiente {zuschlag} (KI {amb.get('note', '–')}/10, "
+                      f"{'sicher' if amb.get('sicher') else '<span class=rot>unsicher – bitte prüfen</span>'})")
+    status = f'<span class="ok">gespeichert {html.escape(gespeichert.get("zeit", ""))}</span>' if gespeichert else ""
+    web = f'<a href="{html.escape(e["webseite"])}" target="_blank" rel="noopener">Website</a>' if e.get("webseite") else "keine Website"
+    return f"""<section data-id="{e['id']}"><h2>{html.escape(e['name'])} <small>{html.escape(e.get('stadtteil') or '')} · {web}</small> {status}
 <button type="button" class="passt">Auswahl passt</button></h2>
-<p class="amb">Ambiente {amb.get('note', '–')}/10 {'(sicher)' if amb.get('sicher') else '(unsicher)'} – {html.escape(amb.get('begruendung', ''))}</p>
-<div class="kacheln">{''.join(kacheln)}</div></section>""")
+<div class="wertung">dies.das-Wertung <b>{komma(w['wert'])}</b> <span class="muted">{erklaerung}</span>
+<label>eigener Wert <input class="hand" type="text" inputmode="decimal" placeholder="leer = {komma(w['wert'])}" value="{'' if hand is None else komma(float(hand))}" size="5"></label></div>
+<p class="amb">{html.escape(amb.get('begruendung', ''))}</p>
+<div class="kacheln">{''.join(kacheln)}</div><div class="zeile2">{kein}</div></section>"""
+
+
+def seite(typ: str, nr: int) -> str:
+    alle = eintraege()
+    auswahl = json_lesen(AUSWAHL, {})
+    reiter = []
+    for wert, name in REITER:
+        liste = [e for e in alle if e["typ"] == wert]
+        fertig = sum(1 for e in liste if e["id"] in auswahl)
+        reiter.append(f'<a class="{"aktiv" if wert == typ else ""}" href="/?{urlencode({"typ": wert})}">{name} <span>{fertig}/{len(liste)}</span></a>')
+    liste = [e for e in alle if e["typ"] == typ]
+    seiten = max(1, math.ceil(len(liste) / JE_SEITE))
+    nr = max(1, min(nr, seiten))
+    teil = liste[(nr - 1) * JE_SEITE: nr * JE_SEITE]
+    try:   # eigener Wert, der schon in der Datenbank steht (nur diese Seite abfragen)
+        zeilen = db().table("orte").select("id, hand:extras->ddd_wertung_hand").in_("id", [e["id"] for e in teil]).execute().data
+        ort_db = {z["id"]: {"ddd_wertung_hand": z.get("hand")} for z in zeilen}
+    except Exception as f:  # noqa: BLE001 – Seite auch ohne Datenbank anzeigen
+        logger.warning("Datenbank nicht lesbar (%s)", type(f).__name__)
+        ort_db = {}
+    def seitenlinks() -> str:
+        links = []
+        for s in range(1, seiten + 1):
+            stueck = liste[(s - 1) * JE_SEITE: s * JE_SEITE]
+            fertig = sum(1 for e in stueck if e["id"] in auswahl)
+            klasse = "aktiv" if s == nr else ("voll" if fertig == len(stueck) and stueck else "")
+            links.append(f'<a class="{klasse}" href="/?{urlencode({"typ": typ, "seite": s})}">{s}<small>{fertig}/{len(stueck)}</small></a>')
+        return f'<nav class="seiten">Seite {nr} von {seiten}: {"".join(links)}</nav>'
+    name_typ = dict(REITER)[typ]
+    try:   # Läuft der Bilderlauf noch? Dann verschieben sich die alphabetischen Seiten.
+        gesamt = (db().table("orte").select("id", count="exact").in_("typ", list(TYPEN)).eq("aktiv", True)
+                  .gte("qualitaets_score", 7).limit(1).execute().count) or 0
+    except Exception:  # noqa: BLE001
+        gesamt = 0
+    lauf = (f'<p class="lauf">Der Bilderlauf ist noch nicht fertig: {len(alle)} von {gesamt} Betrieben bearbeitet. Bis zum Ende '
+            f'kommen laufend Betriebe dazu, und die Seiten verschieben sich. Am besten erst danach loslegen.</p>') if gesamt and len(alle) < gesamt - 5 else ""
+    inhalt = "".join(abschnitt(e, auswahl.get(e["id"]), ort_db.get(e["id"])) for e in teil) or "<p>Für diese Art liegen noch keine Ergebnisse vor (Bilderlauf läuft noch?).</p>"
     return f"""<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bilder auswählen</title><style>
-body{{font-family:system-ui,sans-serif;margin:0 auto;max-width:1280px;padding:16px 16px 90px;background:#fafaf7;color:#1d1d1b}}
-h1{{font-size:22px}} h2{{font-size:17px;margin:26px 0 4px}} small{{font-weight:400;color:#666}} .amb{{font-size:13px;color:#444;margin:0 0 8px}}
-.kacheln{{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}}
-.kachel{{display:block;cursor:pointer;border-radius:10px;padding:4px;border:3px solid transparent;background:#fff}}
-.kachel.an{{border-color:#c9a227}} .kachel input{{position:absolute;opacity:0}}
+<title>Bilder · {name_typ} · Seite {nr}</title><style>
+body{{font-family:system-ui,sans-serif;margin:0 auto;max-width:1320px;padding:0 16px 90px;background:#fafaf7;color:#1d1d1b}}
+.kopf{{position:sticky;top:0;z-index:5;background:#fafaf7;padding:10px 0 8px;border-bottom:1px solid #e2e2dc}}
+.reiter{{display:flex;gap:6px;flex-wrap:wrap}} .reiter a{{padding:7px 12px;border-radius:999px;border:1px solid #ccc;text-decoration:none;color:#1d1d1b;font-weight:600}}
+.reiter a.aktiv{{background:#1d1d1b;color:#fff;border-color:#1d1d1b}} .reiter span{{font-weight:400;font-size:12px;opacity:.75}}
+.seiten{{margin-top:8px;font-size:13px;display:flex;gap:4px;flex-wrap:wrap;align-items:center}}
+.seiten a{{padding:3px 8px;border:1px solid #ddd;border-radius:6px;text-decoration:none;color:#1d1d1b}} .seiten a.aktiv{{background:#c9a227;border-color:#c9a227;font-weight:700}}
+.seiten a.voll{{background:#e3f1e7}} .seiten small{{display:block;font-size:10px;color:#666}}
+h1{{font-size:20px;margin:8px 0}} h2{{font-size:17px;margin:26px 0 4px}} small{{font-weight:400;color:#666}}
+.wertung{{font-size:14px;margin:4px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}} .wertung b{{font-size:18px}}
+.wertung input{{font-size:14px;padding:3px 6px;border:1px solid #bbb;border-radius:6px;width:5em}} .muted{{color:#555;font-size:13px}}
+.rot{{color:#b3261e}} .lauf{{background:#fff4d6;border:1px solid #e6c65c;border-radius:8px;padding:8px 12px;font-size:14px}} .amb{{font-size:13px;color:#555;margin:0 0 8px}}
+.kacheln{{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}}
+.kachel{{border-radius:10px;padding:4px;border:3px solid transparent;background:#fff;position:relative}}
+.kachel.an-t{{border-color:#c9a227}} .kachel.an-e{{border-color:#2f6fd6}} .kachel.an-t.an-e{{border-color:#c9a227 #2f6fd6 #2f6fd6 #c9a227}}
 .kachel img{{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:7px;display:block;background:#ddd}}
-.kachel span{{display:block;font-size:12px;color:#555;padding:4px 2px 0}}
+.unter{{display:block;font-size:12px;color:#555;padding:4px 2px}} .knoepfe{{display:flex;gap:6px}}
+.w,.kein{{font-size:12px;border:1px solid #bbb;border-radius:6px;padding:3px 8px;cursor:pointer;user-select:none}}
+.w input,.kein input{{position:absolute;opacity:0;pointer-events:none}}
+.w.t:has(input:checked){{background:#c9a227;border-color:#c9a227;font-weight:700}} .w.e:has(input:checked){{background:#2f6fd6;border-color:#2f6fd6;color:#fff;font-weight:700}}
+.kein:has(input:checked){{background:#2f6fd6;color:#fff;border-color:#2f6fd6}} .zeile2{{margin-top:8px}}
 .ok{{font-size:12px;color:#1b7f3b;font-weight:600}} section{{border-bottom:1px solid #e2e2dc;padding-bottom:14px}}
-.leiste{{position:fixed;left:0;right:0;bottom:0;background:#1d1d1b;color:#fff;padding:12px 16px;display:flex;gap:16px;align-items:center;justify-content:center}}
-.leiste button{{background:#c9a227;color:#1d1d1b;border:0;border-radius:8px;padding:10px 18px;font-weight:700;font-size:15px;cursor:pointer}}
-.leiste button:disabled{{opacity:.5}}
 .passt{{font-size:12px;margin-left:8px;border:1px solid #c9a227;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer}}
 section.geprueft .passt{{background:#c9a227;font-weight:700}} section.geprueft h2::after{{content:" ✓";color:#1b7f3b}}
+.leiste{{position:fixed;left:0;right:0;bottom:0;background:#1d1d1b;color:#fff;padding:12px 16px;display:flex;gap:16px;align-items:center;justify-content:center;z-index:6}}
+.leiste button{{background:#c9a227;color:#1d1d1b;border:0;border-radius:8px;padding:10px 18px;font-weight:700;font-size:15px;cursor:pointer}}
+.leiste button:disabled{{opacity:.5}}
 </style></head><body>
-<h1>Bilder auswählen ({len(abschnitte)} Betriebe)</h1>
-<p>Vorausgewählt (Goldrahmen) ist der Vorschlag der KI (Innenraum vor Essen). Klick auf ein anderes Bild, um es zu wählen, oder auf
-„Auswahl passt“, wenn der Vorschlag stimmt. Gespeichert werden <b>nur Betriebe mit ✓</b>. So kannst du die Liste in Etappen
-durchgehen. „Heutiges Bild behalten“ ändert nichts. „Speichern und hochladen“ setzt die Bilder sofort live (Website-Cache bis etwa 10 Minuten).</p>
-{''.join(abschnitte)}
+<div class="kopf"><nav class="reiter">{''.join(reiter)}</nav>{seitenlinks()}</div>
+{lauf}<h1>{name_typ} · Seite {nr} von {seiten}</h1>
+<p class="muted">Gold = <b>Ambiente</b> (Titelbild), Blau = <b>Essen &amp; Getränke</b> (zweites Bild). Vorausgewählt ist der KI-Vorschlag.
+Gespeichert werden nur Betriebe mit ✓ (Bild angeklickt, eigener Wert eingetragen oder „Auswahl passt“). Leeres Wertfeld = gerechneter Wert.</p>
+{inhalt}
+{seitenlinks()}
 <div class="leiste"><span id="info"></span><button id="speichern">Speichern und hochladen</button></div>
 <script>
 function zaehlen(){{var n=document.querySelectorAll('section.geprueft').length;
-  document.getElementById('info').textContent=n+' Betriebe zum Speichern markiert';document.getElementById('speichern').disabled=!n}}
-// Auch ein Klick auf das schon vorausgewählte Bild zählt als Bestätigung (dort feuert kein change)
-document.querySelectorAll('.kachel input').forEach(function(r){{r.addEventListener('click',function(){{
-  r.closest('.kacheln').querySelectorAll('.kachel').forEach(function(k){{k.classList.toggle('an',k.contains(r))}});
-  r.closest('section').classList.add('geprueft');zaehlen();
-}})}});
-document.querySelectorAll('.passt').forEach(function(b){{b.addEventListener('click',function(){{
-  b.closest('section').classList.toggle('geprueft');zaehlen();
-}})}});
+  document.getElementById('info').textContent=n+' Betriebe auf dieser Seite zum Speichern markiert';document.getElementById('speichern').disabled=!n}}
+function markieren(el){{el.closest('section').classList.add('geprueft');zaehlen()}}
+function rahmen(s){{s.querySelectorAll('.kachel').forEach(function(k){{
+  var t=k.querySelector('.w.t input'),e=k.querySelector('.w.e input');
+  k.classList.toggle('an-t',!!(t&&t.checked));k.classList.toggle('an-e',!!(e&&e.checked))}})}}
+document.querySelectorAll('section input[type=radio]').forEach(function(r){{r.addEventListener('click',function(){{rahmen(r.closest('section'));markieren(r)}})}});
+document.querySelectorAll('.hand').forEach(function(i){{i.addEventListener('input',function(){{markieren(i)}})}});
+document.querySelectorAll('.passt').forEach(function(b){{b.addEventListener('click',function(){{b.closest('section').classList.toggle('geprueft');zaehlen()}})}});
 zaehlen();
+window.addEventListener('beforeunload',function(ev){{if(document.querySelector('section.geprueft')){{ev.preventDefault();ev.returnValue=''}}}});
 document.getElementById('speichern').addEventListener('click',async function(){{
-  var b=this,info=document.getElementById('info'),wahl={{}};
-  document.querySelectorAll('section.geprueft').forEach(function(s){{var r=s.querySelector('input:checked');if(r)wahl[s.dataset.id]=r.value}});
+  var b=this,info=document.getElementById('info'),daten={{}};
+  document.querySelectorAll('section.geprueft').forEach(function(s){{var id=s.dataset.id;
+    var t=s.querySelector('input[name="t-'+id+'"]:checked'),e=s.querySelector('input[name="e-'+id+'"]:checked');
+    daten[id]={{t:t?t.value:'heute',e:e?e.value:'keins',w:s.querySelector('.hand').value}}}});
   b.disabled=true;info.textContent='Speichere … (Website-Bilder werden dabei geladen, das dauert etwas)';
-  try{{var a=await fetch('/speichern',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(wahl)}});var d=await a.json();
-    info.textContent=d.meldung;setTimeout(function(){{location.reload()}},2500);}}
+  try{{var a=await fetch('/speichern',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(daten)}});var d=await a.json();
+    info.textContent=d.meldung;document.querySelectorAll('section.geprueft').forEach(function(s){{s.classList.remove('geprueft')}});
+    setTimeout(function(){{location.reload()}},2500);}}
   catch(e){{info.textContent='Fehler: '+e;b.disabled=false}}
 }});
 </script></body></html>"""
-
-
-def speichern(wahl: dict) -> dict:
-    ergebnisse = {e["id"]: e for e in json_lesen(ERGEBNIS, [])}
-    auswahl = json_lesen(AUSWAHL, {})
-    client = db()
-    geaendert, gleich, fehler = 0, 0, []
-    for ort_id, wert in wahl.items():
-        e = ergebnisse.get(ort_id)
-        if not e:
-            continue
-        neu = "heute" if wert == "heute" else int(wert)
-        if auswahl.get(ort_id, {}).get("wahl") == neu:
-            gleich += 1
-            continue
-        # Wird ein früher gespeichertes Bild auf „heute“ zurückgenommen, gilt wieder der Stand vor dem ersten Speichern
-        if neu == "heute":
-            if ort_id in auswahl and auswahl[ort_id]["wahl"] != "heute" and not TROCKEN:
-                zurueck(e["slug"])
-                geaendert += 1
-        else:
-            k = e["kandidaten"][neu]
-            if k.get("heute"):
-                neu = "heute"
-            else:
-                try:
-                    bild_setzen(client, ort_id, k)
-                    geaendert += 1
-                except Exception as f:  # noqa: BLE001 – Fehler je Ort melden, Rest weiter speichern
-                    logger.warning("%s: %s", e["name"], f)
-                    fehler.append(e["name"])
-                    continue
-        if TROCKEN:
-            continue
-        auswahl[ort_id] = {"wahl": neu, "zeit": datetime.now().strftime("%d.%m. %H:%M")}
-        json_schreiben(AUSWAHL, auswahl)
-    meldung = f"{geaendert} Bilder gesetzt, {gleich} unverändert" + (f", Fehler bei: {', '.join(fehler)}" if fehler else "")
-    logger.info(meldung)
-    return {"meldung": meldung}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -338,9 +541,17 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(inhalt)
 
     def do_GET(self):  # noqa: N802
-        pfad = unquote(urlparse(self.path).path)
+        teile = urlparse(self.path)
+        pfad = unquote(teile.path)
         if pfad == "/":
-            return self.senden(200, seite().encode("utf-8"), "text/html; charset=utf-8")
+            q = parse_qs(teile.query)
+            typ = (q.get("typ") or ["restaurant"])[0]
+            typ = typ if typ in TYPEN else "restaurant"
+            try:
+                nr = int((q.get("seite") or ["1"])[0])
+            except ValueError:
+                nr = 1
+            return self.senden(200, seite(typ, nr).encode("utf-8"), "text/html; charset=utf-8")
         if pfad.startswith("/bilder/"):
             datei = (VORSCHAU / pfad.lstrip("/")).resolve()
             if VORSCHAU.resolve() in datei.parents and datei.is_file():
@@ -360,8 +571,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.senden(404, b"", "text/plain")
         laenge = int(self.headers.get("Content-Length") or 0)
         try:
-            wahl = json.loads(self.rfile.read(laenge) or b"{}")
-            antwort = speichern(wahl if isinstance(wahl, dict) else {})
+            daten = json.loads(self.rfile.read(laenge) or b"{}")
+            antwort = speichern(daten if isinstance(daten, dict) else {})
             self.senden(200, json.dumps(antwort, ensure_ascii=False).encode(), "application/json")
         except Exception as f:  # noqa: BLE001
             logger.exception("Speichern fehlgeschlagen")
@@ -369,20 +580,20 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    p = argparse.ArgumentParser(description="Restaurant-Bilder auswählen und live setzen")
+    global TROCKEN
+    p = argparse.ArgumentParser(description="Guide-Bilder und dies.das-Wertung auswählen und live setzen")
     p.add_argument("--nach-deploy", action="store_true")
     p.add_argument("--zurueck", metavar="SLUG")
     p.add_argument("--port", type=int, default=PORT)
     p.add_argument("--trocken", action="store_true", help="nichts schreiben (Test)")
     args = p.parse_args()
-    global TROCKEN
     TROCKEN = args.trocken
     if args.nach_deploy:
         return nach_deploy()
     if args.zurueck:
         return zurueck(args.zurueck)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    logger.info("Auswahlseite: http://127.0.0.1:%d (Strg+C beendet)", args.port)
+    logger.info("Auswahlseite: http://127.0.0.1:%d%s (Strg+C beendet)", args.port, " – TROCKENLAUF" if TROCKEN else "")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
