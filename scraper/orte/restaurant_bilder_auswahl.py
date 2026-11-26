@@ -197,6 +197,26 @@ def vormerkung_loeschen(ort_id: str, rolle: str) -> None:
         json_schreiben(UMSTELLEN, liste)
 
 
+def link_kandidat(url: str, e: dict) -> dict:
+    """Eigener Bildlink (z. B. von der Website des Betriebs): prüfen, ob dort wirklich ein ausreichend großes Bild liegt,
+    und wie ein Website-Kandidat behandeln. Nachweis = Domain der Website des Betriebs (sonst des Bild-Servers)."""
+    from scraper.orte.restaurant_bilder import bildmasse
+    url = (url or "").strip()
+    teile = urlparse(url)
+    host = (teile.hostname or "").lower()
+    if teile.scheme not in ("http", "https") or not host or host in ("localhost", "127.0.0.1") or host.endswith((".local", ".localhost")):
+        raise ValueError("Link muss mit https:// beginnen")
+    daten = abrufen(url)
+    masse = bildmasse(daten) if daten else None
+    if not masse:
+        raise ValueError("Unter dem Link liegt kein Bild")
+    if masse[0] < 600:
+        raise ValueError(f"Bild zu klein ({masse[0]}×{masse[1]} px)")
+    web = e.get("webseite") or ""
+    nachweis = (urlparse(web).hostname or host).removeprefix("www.")
+    return {"quelle": "website", "url": url, "seite": web, "nachweis": nachweis, "breite": masse[0], "hoehe": masse[1], "ki": {}}
+
+
 def bild_daten(k: dict) -> dict:
     if k["quelle"] == "website":
         seite = k.get("seite") or ""
@@ -216,11 +236,13 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
     hinweise = []
     k = e["kandidaten"]
 
-    # Titelbild (Ambiente)
+    # Titelbild (Ambiente) – ein eigener Link geht vor
     t = wahl["t"]
-    if t != "heute" and k[t].get("heute"):
+    if wahl.get("tl"):
+        t = "link"
+    elif t != "heute" and k[t].get("heute"):
         t = "heute"
-    if t != (bisher or {}).get("t", "heute"):
+    if (t, wahl.get("tl")) != ((bisher or {}).get("t", "heute"), (bisher or {}).get("tl")):
         if t == "heute":
             alt = erster_stand(ort["slug"]) or vorher   # früher gewähltes Bild zurücknehmen
             aenderung["bild_url"], aenderung["bild_attribution"] = alt.get("bild_url"), alt.get("bild_attribution")
@@ -231,9 +253,10 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
                     extras[f] = alt[f]
             vormerkung_loeschen(e["id"], "titel")
         else:
-            b = bild_daten(k[t])
+            kt = link_kandidat(wahl["tl"], e) if t == "link" else k[t]
+            b = bild_daten(kt)
             extras.pop("bild_fokus", None)
-            fokus = (k[t].get("ki") or {}).get("fokus")
+            fokus = (kt.get("ki") or {}).get("fokus")
             if fokus in ("oben", "unten"):
                 extras["bild_fokus"] = fokus
             extras["foto_manuell"] = date.today().isoformat()
@@ -253,12 +276,12 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
         extras["foto_version"] = int(extras.get("foto_version") or 0) + 1
 
     # Zweites Bild (Essen & Getränke)
-    s = wahl["e"]
+    s = "link" if wahl.get("el") else wahl["e"]
     if s == "keins":
         extras.pop("bild_zweit", None)
         vormerkung_loeschen(e["id"], "zweit")
-    elif s != (bisher or {}).get("e"):
-        b = bild_daten(k[s])
+    elif (s, wahl.get("el")) != ((bisher or {}).get("e"), (bisher or {}).get("el")):
+        b = bild_daten(link_kandidat(wahl["el"], e) if s == "link" else k[s])
         extras["bild_zweit"] = {kk: v for kk, v in b.items() if v is not None}
         if b["art"] == "eigen":
             hinweise.append(kopie_ablegen(e["id"], ort["slug"], "zweit", b["bild_url"]))
@@ -299,7 +322,9 @@ def speichern(daten: dict) -> dict:
         try:
             wahl = {"t": "heute" if roh.get("t") in (None, "heute") else int(roh["t"]),
                     "e": "keins" if roh.get("e") in (None, "keins") else int(roh["e"]),
-                    "w": hand_lesen(str(roh.get("w") or ""))}
+                    "w": hand_lesen(str(roh.get("w") or "")),
+                    "tl": str(roh.get("tl") or "").strip() or None,
+                    "el": str(roh.get("el") or "").strip() or None}
             for feld in ("t", "e"):
                 if isinstance(wahl[feld], int) and not (0 <= wahl[feld] < len(e["kandidaten"])):
                     raise ValueError("unbekanntes Bild")
@@ -422,6 +447,8 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
         zuschlag = f"{'+' if w['zuschlag'] >= 0 else '−'}{komma(abs(w['zuschlag']))}"
         erklaerung = (f"Grund {komma(w['grund'])} (bisheriger Score) · Ambiente {zuschlag} (KI {amb.get('note', '–')}/10, "
                       f"{'sicher' if amb.get('sicher') else '<span class=rot>unsicher – bitte prüfen</span>'})")
+    tl = (gespeichert or {}).get("tl") or ""
+    el = (gespeichert or {}).get("el") or ""
     status = f'<span class="ok">gespeichert {html.escape(gespeichert.get("zeit", ""))}</span>' if gespeichert else ""
     web = f'<a href="{html.escape(e["webseite"])}" target="_blank" rel="noopener">Website</a>' if e.get("webseite") else "keine Website"
     return f"""<section data-id="{e['id']}"><h2>{html.escape(e['name'])} <small>{html.escape(e.get('stadtteil') or '')} · {web}</small> {status}
@@ -429,7 +456,11 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
 <div class="wertung">dies.das-Wertung <b>{komma(w['wert'])}</b> <span class="muted">{erklaerung}</span>
 <label>eigener Wert <input class="hand" type="text" inputmode="decimal" placeholder="leer = {komma(w['wert'])}" value="{'' if hand is None else komma(float(hand))}" size="5"></label></div>
 <p class="amb">{html.escape(amb.get('begruendung', ''))}</p>
-<div class="kacheln">{''.join(kacheln)}</div><div class="zeile2">{kein}</div></section>"""
+<div class="kacheln">{''.join(kacheln)}</div><div class="zeile2">{kein}</div>
+<div class="links">
+<label class="link"><span>Eigenes <b>Ambientebild</b> per Link (geht vor):</span><input class="link-t" type="url" placeholder="https://… direkter Link zum Bild" value="{html.escape(tl)}"><img class="vor" src="{html.escape(tl)}" alt=""></label>
+<label class="link"><span>Eigenes <b>Essensbild</b> per Link (geht vor):</span><input class="link-e" type="url" placeholder="https://… direkter Link zum Bild" value="{html.escape(el)}"><img class="vor" src="{html.escape(el)}" alt=""></label>
+</div></section>"""
 
 
 def seite(typ: str, nr: int) -> str:
@@ -489,6 +520,9 @@ h1{{font-size:20px;margin:8px 0}} h2{{font-size:17px;margin:26px 0 4px}} small{{
 .w input,.kein input{{position:absolute;opacity:0;pointer-events:none}}
 .w.t:has(input:checked){{background:#c9a227;border-color:#c9a227;font-weight:700}} .w.e:has(input:checked){{background:#2f6fd6;border-color:#2f6fd6;color:#fff;font-weight:700}}
 .kein:has(input:checked){{background:#2f6fd6;color:#fff;border-color:#2f6fd6}} .zeile2{{margin-top:8px}}
+.links{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}} .link{{font-size:13px;display:flex;flex-direction:column;gap:4px}}
+.link input{{font-size:13px;padding:5px 8px;border:1px solid #bbb;border-radius:6px}} .link .vor{{max-width:220px;max-height:140px;object-fit:cover;border-radius:6px}}
+.link .vor[src=""]{{display:none}} @media (max-width:700px){{.links{{grid-template-columns:1fr}}}}
 .ok{{font-size:12px;color:#1b7f3b;font-weight:600}} section{{border-bottom:1px solid #e2e2dc;padding-bottom:14px}}
 .passt{{font-size:12px;margin-left:8px;border:1px solid #c9a227;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer}}
 section.geprueft .passt{{background:#c9a227;font-weight:700}} section.geprueft h2::after{{content:" ✓";color:#1b7f3b}}
@@ -512,6 +546,8 @@ function rahmen(s){{s.querySelectorAll('.kachel').forEach(function(k){{
   k.classList.toggle('an-t',!!(t&&t.checked));k.classList.toggle('an-e',!!(e&&e.checked))}})}}
 document.querySelectorAll('section input[type=radio]').forEach(function(r){{r.addEventListener('click',function(){{rahmen(r.closest('section'));markieren(r)}})}});
 document.querySelectorAll('.hand').forEach(function(i){{i.addEventListener('input',function(){{markieren(i)}})}});
+document.querySelectorAll('.link input').forEach(function(i){{i.addEventListener('input',function(){{
+  var v=i.value.trim(),img=i.parentNode.querySelector('.vor');img.src=(v.indexOf('https://')===0||v.indexOf('http://')===0)?v:'';markieren(i)}})}});
 document.querySelectorAll('.passt').forEach(function(b){{b.addEventListener('click',function(){{b.closest('section').classList.toggle('geprueft');zaehlen()}})}});
 zaehlen();
 window.addEventListener('beforeunload',function(ev){{if(document.querySelector('section.geprueft')){{ev.preventDefault();ev.returnValue=''}}}});
@@ -519,7 +555,8 @@ document.getElementById('speichern').addEventListener('click',async function(){{
   var b=this,info=document.getElementById('info'),daten={{}};
   document.querySelectorAll('section.geprueft').forEach(function(s){{var id=s.dataset.id;
     var t=s.querySelector('input[name="t-'+id+'"]:checked'),e=s.querySelector('input[name="e-'+id+'"]:checked');
-    daten[id]={{t:t?t.value:'heute',e:e?e.value:'keins',w:s.querySelector('.hand').value}}}});
+    daten[id]={{t:t?t.value:'heute',e:e?e.value:'keins',w:s.querySelector('.hand').value,
+      tl:s.querySelector('.link-t').value,el:s.querySelector('.link-e').value}}}});
   b.disabled=true;info.textContent='Speichere … (Website-Bilder werden dabei geladen, das dauert etwas)';
   try{{var a=await fetch('/speichern',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(daten)}});var d=await a.json();
     info.textContent=d.meldung;document.querySelectorAll('section.geprueft').forEach(function(s){{s.classList.remove('geprueft')}});
