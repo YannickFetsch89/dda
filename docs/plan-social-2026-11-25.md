@@ -335,7 +335,7 @@ Ausführliche Klickanleitung in Anhang D. Kurzfassung:
 
 | Nr. | Frage | Vorschlag |
 |---|---|---|
-| O1 | Wie heißt das Instagram-Konto (`@…`)? | – (für Datenschutz, `sameAs`, Footer) |
+| O1 | Wie heißt das Instagram-Konto (`@…`)? | **beantwortet 26.11.2026:** `@dies.das.duesseldorf` ([instagram.com/dies.das.duesseldorf](https://www.instagram.com/dies.das.duesseldorf)), für Datenschutz, `sameAs` und Footer |
 | O2 | Passen Wochenplan und Uhrzeiten aus E2? | wie E2 |
 | O3 | Takt-Auslöser: Supabase `pg_cron` oder `crontab` auf dem Server? | `pg_cron` (kein Eingriff am Server) |
 | O4 | Adresse der Linkseite: `/links`? | `/links` |
@@ -376,7 +376,7 @@ Ausführliche Klickanleitung in Anhang D. Kurzfassung:
 ## Anhang B: Entwurf Datenschutzerklärung (ersetzt `web/app/datenschutz/page.tsx:192–224`)
 
 > **Instagram und Facebook (Meta)**
-> Wir betreiben das Instagram-Profil @<O1> und die Facebook-Seite facebook.com/dies.das.duesseldorf. Betreiber der Plattformen ist die Meta Platforms Ireland Limited, Merrion Road, Dublin 4, D04 X2K5, Irland. Wenn Sie unsere Profile besuchen, verarbeitet Meta Ihre Daten nach der Meta-Datenschutzrichtlinie, u. a. Ihre IP-Adresse, Browser-Informationen und Ihr Nutzungsverhalten.
+> Wir betreiben das Instagram-Profil @dies.das.duesseldorf (instagram.com/dies.das.duesseldorf) und die Facebook-Seite facebook.com/dies.das.duesseldorf. Betreiber der Plattformen ist die Meta Platforms Ireland Limited, Merrion Road, Dublin 4, D04 X2K5, Irland. Wenn Sie unsere Profile besuchen, verarbeitet Meta Ihre Daten nach der Meta-Datenschutzrichtlinie, u. a. Ihre IP-Adresse, Browser-Informationen und Ihr Nutzungsverhalten.
 > *(Absätze zu Seiten-Insights/Art. 26 und zur Rechtsgrundlage unverändert.)*
 >
 > **Automatisches Veröffentlichen auf Instagram und Facebook**
@@ -468,3 +468,62 @@ Die Anleitung entsteht als eigene Datei `docs/meta-einrichtung-anleitung.md` dir
 | 7 `reel --post` ohne Statusbedingung | gering | Abschnitt 8 (Pipeline: `social_status_setzen(id, ['freigegeben'], 'bereit', …)`, sonst Video löschen) |
 
 Bewusst verbleibender Rest (laut Prüfung 2): Der Button „erneut posten“ nach `unklar` kann doppelt posten, wenn die Media-ID nach einem Absturz nicht gespeichert wurde. Deshalb steht vor dem Button der Blick in die App (E10).
+
+---
+
+## Anhang H: Cursor-Prüf-Prompt (Prüfung 3, vollständige kritische Prüfung der dritten Fassung)
+
+> Prüfe die **dritte Fassung** des Plans `docs/plan-social-2026-11-25.md` (automatische Posts auf Instagram @dies.das.duesseldorf und auf der Facebook-Seite facebook.com/dies.das.duesseldorf) **vollständig und kritisch** gegen den Code im Repo und gegen die aktuelle Meta-Dokumentation. Ändere keinen Code und keinen Plan, liefere nur Befunde.
+>
+> Das ist **keine Nachprüfung** der Befunde aus den Prüfungen 1 und 2 (Anhänge E und G). Lies den Plan so, als würdest du ihn zum ersten Mal sehen und morgen danach bauen müssen. Suche aktiv nach Fehlern, Lücken, Widersprüchen und Annahmen, die nicht stimmen. Ein „passt“ ohne Beleg aus dem Code oder der Doku zählt nicht. Wenn du etwas nicht prüfen kannst, sag das ausdrücklich.
+>
+> **A. Stimmt der Plan mit dem Code?**
+> 1. Jede Datei-, Zeilen- und Funktionsangabe im Plan: Gibt es sie, und tut sie, was der Plan behauptet? Das gilt besonders für `magazinPoolLaden`, `startseitenAuswahl`, `highlightsImZeitraum`, `wochenendProgramm`, `startPlaetze`, `sensibelMenge`, `schluesselOk`, `lokalesBild`, `bild-proxy.ts`, `job-anstoss.ts`, `lib/admin/github.ts`, `magazin-pruefung.ts`, `_VERBOTEN`, `bilder.csv` und `deploy.yml`.
+> 2. Schritt 1 (Altbestand entfernen): Bricht danach irgendetwas, das der Plan nicht nennt? Durchsuche das ganze Repo (Python, `web/`, Workflows, Doku, `agents/`).
+> 3. Passen die neuen Tabellen und Funktionen zu den Konventionen der vorhandenen SQL-Dateien: RLS, `ist_admin()`, `service_role`, `security definer` mit `search_path`, Kontrollabfrage, Admin-Protokoll?
+>
+> **B. Zustandsautomat und Nebenläufigkeit (E7, E10, Abschnitt 7 und 8)**
+> 4. Zeichne alle Status und Übergänge auf und prüfe jeden Übergang: Wer setzt ihn, mit welcher Bedingung, über welche Funktion? Gibt es Status ohne Ausgang, Übergänge ohne Funktion oder doppelte Wege?
+> 5. Spiele zusätzlich durch:
+>    - Admin klickt „Jetzt posten“, während der Takt läuft.
+>    - Zwei Admin-Tabs geben gleichzeitig frei bzw. bearbeiten gleichzeitig.
+>    - Der Job läuft doppelt (manuell und geplant) für denselben Slot.
+>    - Freigabe 1 Minute vor `geplant_fuer`.
+>    - Der Schnappschuss schlägt bei der Freigabe halb fehl (3 von 9 Bildern hochgeladen).
+>    - Ein Event wird nach dem Schnappschuss im Admin geändert (Titel, Bild).
+>    - Die Sommerzeit wechselt zwischen Vorschlag und Postzeit.
+>    - `modus` wird von `an` auf `aus` gestellt, während ein Post `container_wartet` ist.
+>    - Der Token läuft ab, während ein Post `teilweise` ist.
+> 6. Ist der verbleibende Rest „erneut posten nach `unklar`“ wirklich der einzige Weg zu einem Doppelpost?
+>
+> **C. Meta (Abschnitt 8 und 9) gegen die aktuelle Doku**
+> 7. Endpunkte, Parameter, Grenzen und Fehlercodes für Instagram (Bild, Karussell, Story, Reel inklusive `cover_url`, `share_to_feed`, Videoformat, Länge, Seitenverhältnis, Dateigröße) und für die Facebook-Seite (Foto, mehrere Fotos über `attached_media`, Reel in drei Schritten). Belege jede Abweichung mit dem Link zur Doku.
+> 8. Rechte, Systembenutzer, Seiten-Token, Standardzugriff ohne App-Review, Entwicklungs- oder Live-Modus, Unternehmensverifizierung: Ist Schritt 0 so durchführbar? Was fehlt in der Anleitung?
+> 9. Kann Meta Bilder und Videos aus einem öffentlichen Supabase-Storage-Bucket abrufen (Content-Type, Weiterleitungen, Cache, Größe)? Ist JPEG aus `sharp` mit sRGB ausreichend?
+> 10. Gibt es Meta-Regeln (Plattformrichtlinien, Automatisierung, Hashtags, Erwähnungen, KI-Kennzeichnung über die API), gegen die der Wochenplan oder die Captions verstoßen könnten?
+>
+> **D. Auswahl, Texte, Bilder**
+> 11. Liefert die Auswahl an jedem Wochentag brauchbare Events? Prüfe das auch für schwache Tage (Montag, Feiertage, Januar). Was passiert, wenn ein Slot 0, 1 oder 2 Events hat?
+> 12. Abhängigkeit vom Magazin: Die Wochenvorschau kam schon einmal erst Freitag 23:58. Wann muss der Beitrag veröffentlicht sein, damit der Sonntags-Slot 2 Tage Vorlauf hat? Dasselbe für die Monats-Tipps (Beitrag am 28., Post am 1.).
+> 13. Caption-Prüfungen (5.3): Was rutscht durch? Zum Beispiel falsche Uhrzeiten, erfundene Künstler:innen, Preise, „ausverkauft“, Partnerlinks, fremde Texte im Wortlaut (Rausgegangen-Beschreibungen), `@handles` aus `orte.instagram`, die nicht mehr existieren.
+> 14. Bildrechte (E6, Abschnitt 6): Gibt es noch einen Weg, auf dem ein fremdes Bild ohne Erlaubnis in eine Folie oder ein Reel kommt? Dazu gehören Weiterleitungen, Hosts mit `www`/CDN-Subdomains, Bilder in `beschreibung`, `orte.extras`, Magazin-Bilder und Symbolbilder, die aus fremden Fotos abgeleitet sind.
+> 15. Satori (`next/og`) in Next 16.4: Was kann es nicht (CSS, Schriften, WebP-Bilder als Eingabe, Bildgrößen)? Reicht der Speicher auf dem Server, ohne die Website zu gefährden (Ausfall 23.11., `lib/bremse.ts`)?
+>
+> **E. Betrieb, Sicherheit, Recht**
+> 16. Interne Routen (`/api/intern/social-*`): Sind sie auf diesdas.events öffentlich erreichbar? Reicht der Schlüssel? Spielen `proxy.ts`, nginx und die Bremse mit? Woher bekommt `pg_net` den Schlüssel, und ist der Vault-Weg im Supabase-Projekt verfügbar?
+> 17. Welche Secrets und Variablen kommen wohin (GitHub, `web/.env.local`, Supabase-Vault)? Gibt es irgendwo einen Weg, auf dem `META_TOKEN` ins Log, in den Browser oder in den GitHub-Job gerät?
+> 18. Notaus und Rückweg: Wie schnell ist alles gestoppt? Was bleibt online, und wie werden falsche Posts entfernt?
+> 19. Kosten: Claude-Aufrufe je Woche, Storage, GitHub-Minuten (ffmpeg). Ist die Schätzung realistisch?
+> 20. Datenschutz, Impressum, Kennzeichnung (Abschnitt 10, Anhänge B und C): Widersprüche zur bestehenden `web/app/datenschutz/page.tsx`, zu `web/app/impressum/page.tsx` und zu den Partnerlink-Regeln (P2)? Fehlt etwas Rechtliches, das in A1–A6 nicht vorkommt?
+>
+> **F. Plan als Ganzes**
+> 21. Widersprüche zwischen allen Abschnitten und Anhängen, auch zu `CLAUDE.md` und zu den Plänen Admin-Dashboard, Redaktion und Quellen-Ausbau.
+> 22. Reihenfolge der Schritte 0–9: Was blockiert was? Kann etwas live gehen, bevor seine Voraussetzung da ist (SQL, Secrets, `pg_cron`, Anwalt)?
+> 23. Testlücken in Abschnitt 12: Welche Fehler aus A bis E würden die Tests nicht finden?
+> 24. Ist der Plan für den ersten Livegang zu groß? Welche Teile könnte man in eine zweite Stufe schieben, ohne die Entscheidungen S1–S4 zu verletzen? Nenne konkret, was wegfällt und was dadurch einfacher wird.
+>
+> **Ausgabe:** je Befund Schweregrad (kritisch / mittel / gering) · Fundstelle (Plan-Abschnitt + Datei:Zeile bzw. Doku-Link) · Befund · Vorschlag. Nach Schweregrad sortiert. Danach eine kurze Liste „geprüft und in Ordnung“ mit Beleg und eine Liste „nicht prüfbar“. Am Ende das Gesamturteil (freigabefähig ja/nein) mit Begründung.
+>
+> O2–O8 und A1–A6 sind bekannt und blockieren die technische Freigabe nicht. Melde aber, wenn eine davon eine Bauentscheidung verändert.
+>
+> Speichere das Ergebnis als `docs/cursor-pruefung-social-plan-3-2026-11-26.md`.
