@@ -14,7 +14,7 @@ import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { OrtProgramm } from "@/components/ort-programm";
 import { eventPoolLaden } from "@/lib/daten";
-import { kueche, preisDetail, preisKurz, sortieren, sterne, zahl } from "@/lib/guide-filter";
+import { kueche, preisDetail, preisKurz, sortieren } from "@/lib/guide-filter";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
@@ -30,7 +30,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title: `${ort.name} – ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}`,
     description:
       ort.beschreibung ??
-      `${ort.name}: ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}${ort.google_rating ? `, ${sterne(ort.google_rating)} Sterne` : ""}. Empfohlen von dies.das.düsseldorf.`,
+      `${ort.name}: ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}. Empfohlen von dies.das.düsseldorf.`,
     alternates: seitenAlternates(`${BASIS}/${encodeURIComponent(ort.slug)}`),
     openGraph: bild ? { images: [{ url: bild }] } : undefined,
   };
@@ -163,13 +163,6 @@ export default async function OrtDetail(props: Props) {
               </Suspense>
             )}
             {ort.telefon && <InfoZeile icon="phone" l1={<a href={`tel:${ort.telefon.replace(/[^\d+]/g, "")}`}>{ort.telefon}</a>} />}
-            {ort.google_rating != null && (
-              <InfoZeile
-                icon="star"
-                l1={`${sterne(ort.google_rating)} von 5`}
-                l2={ort.google_bewertungen_anzahl != null ? `${zahl(ort.google_bewertungen_anzahl)} Google-Bewertungen` : undefined}
-              />
-            )}
             {preis && <InfoZeile icon="payments" l1={preis.zeile} l2={preis.herkunft} />}
           </div>
           {webseite && (

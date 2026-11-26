@@ -103,7 +103,11 @@ function Ansicht({ ansichten }: { ansichten: { label: string; icon: string; href
  */
 async function Inhalt({ searchParams }: { searchParams: Promise<SP> }) {
   const f = filterLesen(await searchParams);
-  const abfrage = filterHref(BASIS, f, {}).split("?")[1] ?? "";
+  // filterHref setzt die Seitenzahl zurück – „anzahl“ muss daher ausdrücklich in den Schlüssel, sonst bleibt
+  // „Weitere laden“ wirkungslos (Fehler seit dem Cache vom 23.11.). In der Gridansicht auf volle Seiten gerundet
+  // (weniger Cache-Varianten), in der Kartenansicht spielt sie keine Rolle.
+  const anzahl = f.ansicht === "grid" ? Math.ceil(f.anzahl / SEITE) * SEITE : SEITE;
+  const abfrage = filterHref(BASIS, f, { anzahl }).split("?")[1] ?? "";
   return <InhaltGecacht schluessel={abfrage} />;
 }
 

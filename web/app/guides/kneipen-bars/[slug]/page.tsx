@@ -16,7 +16,7 @@ import { KneipenKarte } from "@/components/kneipen-karte";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { OrtProgramm } from "@/components/ort-programm";
 import { eventPoolLaden } from "@/lib/daten";
-import { preisDetail, sortieren, sterne, zahl } from "@/lib/guide-filter";
+import { preisDetail, sortieren } from "@/lib/guide-filter";
 import { RAUCHER_TEXT, artInfo, happyHour, raucher, spezialitaeten, vibes } from "@/lib/kneipen";
 import { kneipenLaden } from "@/lib/kneipen-daten";
 import { barOrPubJsonLd, brotkrumenJsonLd } from "@/lib/kneipen-json-ld";
@@ -38,7 +38,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const titel = `${ort.name} – ${artName(ort)} in ${ort.stadtteil ?? "Düsseldorf"}`;
   const beschreibung =
     ort.beschreibung ??
-    `${ort.name}: ${artName(ort)} in ${ort.stadtteil ?? "Düsseldorf"}${ort.google_rating ? `, ${sterne(ort.google_rating)} Sterne` : ""}. Empfohlen von dies.das.düsseldorf.`;
+    `${ort.name}: ${artName(ort)} in ${ort.stadtteil ?? "Düsseldorf"}. Empfohlen von dies.das.düsseldorf.`;
   const pfad = `${BASIS}/${encodeURIComponent(ort.slug)}`;
   return {
     title: titel,
@@ -192,13 +192,6 @@ export default async function KneipeDetail(props: Props) {
             {spez.length > 0 && <InfoZeile icon="sports_bar" l1={spez.join(" · ")} l2="Spezialität" />}
             {hh && <InfoZeile icon="schedule" l1={`Happy Hour ${hh}`} l2="laut Gästebewertungen" />}
             {rauch && <InfoZeile icon="smoking_rooms" l1={RAUCHER_TEXT[rauch]} l2="laut Gästebewertungen" />}
-            {ort.google_rating != null && (
-              <InfoZeile
-                icon="star"
-                l1={`${sterne(ort.google_rating)} von 5`}
-                l2={ort.google_bewertungen_anzahl != null ? `${zahl(ort.google_bewertungen_anzahl)} Google-Bewertungen` : undefined}
-              />
-            )}
             {preisDetail(ort) && <InfoZeile icon="payments" l1={preisDetail(ort)!.zeile} l2={preisDetail(ort)!.herkunft} />}
           </div>
           {webseite && (

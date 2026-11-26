@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
-import { Bewertung, ortPfad } from "./ort-karten";
+import { ortPfad } from "./ort-karten";
 import { artInfo, happyHour, spezialitaeten, vibes } from "@/lib/kneipen";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
@@ -29,8 +29,6 @@ export function KneipenKarte({ o }: { o: DddOrt }) {
           {spez.length > 0 && <span className="gd-karte__spez"><Icon name="local_bar" />{spez.join(" · ")}</span>}
           <span className="gd-karte__meta">
             {o.stadtteil && <span className="gd-karte__ort"><Icon name="location_on" />{o.stadtteil}</span>}
-            {o.stadtteil && o.google_rating != null && <span className="gd-trenner" aria-hidden />}
-            <Bewertung o={o} />
           </span>
           {(hh || chips.length > 0) && (
             <span className="gd-karte__tags">

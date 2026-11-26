@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
-import { kueche, preisKurz, sterne, zahl } from "@/lib/guide-filter";
+import { kueche, preisKurz, zahl } from "@/lib/guide-filter";
 import { artInfo } from "@/lib/kneipen";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
@@ -82,17 +82,6 @@ export function ortUntertitel(o: DddOrt): string {
   return [o.untertitel ?? kueche(o)?.name, o.stadtteil].filter(Boolean).join(" · ");
 }
 
-export function Bewertung({ o }: { o: DddOrt }) {
-  if (o.google_rating == null) return null;
-  return (
-    <span className="gd-bewertung">
-      <Icon name="star" className="is-active" />
-      <b>{sterne(o.google_rating)}</b>
-      {o.google_bewertungen_anzahl != null && <span className="muted">({zahl(o.google_bewertungen_anzahl)})</span>}
-    </span>
-  );
-}
-
 /** `hinweis`: kleine Pill oben links auf dem Bild, z. B. „Empfehlung“ bei Cafés neben Spielplätzen */
 export function OrtKarte({ o, hinweis }: { o: DddOrt; hinweis?: string }) {
   const bild = ortBildUrl(o);
@@ -112,8 +101,6 @@ export function OrtKarte({ o, hinweis }: { o: DddOrt; hinweis?: string }) {
           <span className="gd-karte__sub">{ortUntertitel(o)}</span>
           <span className="gd-karte__meta">
             {o.stadtteil && <span className="gd-karte__ort"><Icon name="location_on" />{o.stadtteil}</span>}
-            {o.stadtteil && o.google_rating != null && <span className="gd-trenner" aria-hidden />}
-            <Bewertung o={o} />
           </span>
           {o.tags.length > 0 && (
             <span className="gd-karte__tags">
@@ -145,8 +132,9 @@ export function kartenOrte(orte: DddOrt[]): KartenOrt[] {
       icon: ortTypIcon(o),
       stadtteil: o.stadtteil,
       preis: preisKurz(o),
-      rating: o.google_rating != null ? sterne(o.google_rating) : null,
-      anzahl: o.google_bewertungen_anzahl != null ? zahl(o.google_bewertungen_anzahl) : null,
+      // Keine Google-Sterne/-Bewertungszahlen mehr (Wunsch 26.11.2026, eigenes dies.das-System folgt)
+      rating: null,
+      anzahl: null,
       bild: ortBildUrl(o),
       href: ortPfad(o),
       lat: o.latitude!,
