@@ -90,13 +90,13 @@ class StrukturTest(unittest.TestCase):
         self.assertGreaterEqual(oper_am_rhein.MONATE_VORAUS + 2, 13)   # Startseite liefert schon zwei Monate
         self.assertGreaterEqual(schauspielhaus.MONATE_VORAUS, 13)
 
-    def test_captions_und_publisher_bleiben_nah(self):
-        for datei in ("pipeline/caption_generator.py", "pipeline/publisher.py"):
-            text = (WURZEL / datei).read_text(encoding="utf-8")
-            self.assertIn('.lte("datum", (date.today() + timedelta(days=INSTAGRAM_TAGE)).isoformat())', text, datei)
-        from pipeline import caption_generator, publisher
-        self.assertEqual(caption_generator.INSTAGRAM_TAGE, 60)
-        self.assertEqual(publisher.INSTAGRAM_TAGE, 60)
+    def test_alter_instagram_weg_ist_entfernt(self):
+        # Plan docs/plan-social-2026-11-25.md, Schritt 1: Captions und Publisher laufen nicht mehr im Scraper-Lauf
+        for datei in ("pipeline/caption_generator.py", "pipeline/publisher.py", "test_instagram.py"):
+            self.assertFalse((WURZEL / datei).exists(), datei)
+        text = (WURZEL / "main.py").read_text(encoding="utf-8")
+        self.assertNotIn("caption_generator", text)
+        self.assertNotIn("publisher.posten", text)
 
     def test_kategorien_rueckstand_ist_befristet(self):
         text = (WURZEL / "main.py").read_text(encoding="utf-8")

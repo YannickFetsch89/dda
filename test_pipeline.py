@@ -1,7 +1,7 @@
 """
 test_pipeline.py – DiesDasDüsseldorf
-Testlauf: Scraper + Supabase-Speicherung + KI-Aufbereitung
-Ohne Instagram-Posting.
+Testlauf: Scraper + Supabase-Speicherung + Kategorisierung.
+Instagram/Facebook laufen im eigenen Social-Job (Plan docs/plan-social-2026-11-25.md).
 """
 import logging
 import sys
@@ -23,7 +23,7 @@ from scraper.tier2 import (
     schauspielhaus,
     dlive,
 )
-from pipeline import categorizer, caption_generator
+from pipeline import categorizer
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -77,11 +77,6 @@ def test_pipeline_ausfuehren():
     logger.info("--- Schritt 3: Kategorisierung (Claude Haiku) ---")
     anzahl = categorizer.kategorisieren(limit=50)
     logger.info("Kategorisiert: %d Events", anzahl)
-
-    # --- Schritt 4: Caption-Generierung ---
-    logger.info("--- Schritt 4: Caption-Generierung (Claude Sonnet) ---")
-    anzahl = caption_generator.captions_generieren(limit=20)
-    logger.info("Captions generiert: %d Events", anzahl)
 
     logger.info("=== TEST-PIPELINE ABGESCHLOSSEN ===")
 

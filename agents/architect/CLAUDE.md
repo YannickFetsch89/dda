@@ -84,49 +84,9 @@ inklusive Dateinamen, Funktionsnamen und erwartetes Verhalten]
 Duplikate erkennen über: `titel.lower().strip() + datum + ort.lower().strip()`
 Fuzzy Matching (fuzz ratio > 85) als zweite Prüfung einplanen.
 
-### Instagram Caption Struktur
-```
-📅 [Wochentag], [Datum] | [Uhrzeit] Uhr
-📍 [Venue], [Stadtbezirk]
+### Instagram und Facebook
 
-[Headline – max. 1 Satz, einladend]
-
-[Beschreibung – 2-3 Sätze, locker, informativ]
-
-[Preis-Info falls vorhanden]
-
-#düsseldorf #diesdasdüsseldorf #[kategorie] [weitere Hashtags]
-```
-
-### Visuelle Pipeline – Architektur-Entscheidungen
-
-**Bildquellen (Priorität):**
-1. Bild vom Veranstalter vorhanden (`bild_url` nicht null) → herunterladen und verwenden
-2. Kein Bild vorhanden → DALL-E 3 generiert ein stimmungsvolles Lifestyle-Bild passend zur Kategorie
-
-**Brand-Overlay (Pillow):**
-- Immer auf jedes Bild anwenden – egal ob Original oder generiert
-- Overlay-Elemente: DDA-Logo (oben rechts), Kategorie-Badge (oben links), Farbstreifen unten
-- Alle Brand-Werte kommen aus `visual/brand.py` – niemals hardcoden
-
-**Canva-Templates:**
-- Canva Pro wird nur für einmalige manuelle Template-Gestaltung verwendet
-- Templates werden als PNG exportiert und in `assets/templates/` abgelegt
-- Python befüllt diese Templates dynamisch (Pillow paste/composite)
-- Template-Änderungen = manueller Prozess → nicht automatisieren
-
-**Post-Typen:**
-- `feed`: 1080x1080px Bild, direkt via Instagram Graph API
-- `reel`: 1080x1920px, MP4 via ffmpeg aus Standbild (Phase 1), direkt via Instagram Graph API
-
-**Verlinkungen (Instagram Graph API):**
-- `@Mentions` in Caption einfügen wenn Venue-Account bekannt
-- Standort-Tag: `instagram_location_id` (Facebook Location ID) im API-Call mitgeben
-- Kein klickbarer Link in Caption möglich → "Link in Bio" Strategie
-
-**Kein Drittanbieter (kein Make.com, kein Buffer):**
-- Alle API-Calls gehen direkt von Python → Instagram Graph API
-- Vereinfacht Debugging und gibt volle Kontrolle
+Die frühere Instagram-Idee (visual/, Canva-Templates, Pillow-Overlay, DALL-E 3, `pipeline/caption_generator.py`, `pipeline/publisher.py`) ist verworfen und entfernt (26.11.2026). Verbindlich für Instagram und Facebook ist `docs/plan-social-2026-11-25.md` (Formate, Freigabe, Bildrechte, Zustandsautomat, Tests).
 
 ## Was du NICHT tust
 - Keinen produktiven Python-Code schreiben

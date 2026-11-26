@@ -3,11 +3,10 @@ httpx==0.27.0
 beautifulsoup4==4.12.3
 supabase==2.4.6
 anthropic==2.4.0
-openai>=1.30.0
 python-dotenv==1.0.1
 apscheduler==3.10.4
 fuzzywuzzy==0.18.0
 python-Levenshtein==0.25.1
 Pillow==10.3.0
-# Hinweis: ffmpeg muss als Systemabhängigkeit installiert sein (nicht via pip)
-# Installation: apt-get install ffmpeg (Linux) / brew install ffmpeg (macOS)
+# Hinweis: ffmpeg (für Reels im Social-Job, Plan docs/plan-social-2026-11-25.md) ist eine Systemabhängigkeit
+# und wird im Workflow per apt-get installiert, nicht via pip.

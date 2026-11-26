@@ -66,8 +66,8 @@ Du pflegst mental (und auf Nachfrage schriftlich) den aktuellen Stand:
 **Sprint 2 – Pipeline (Woche 1-2)**
 1. Deduplication-Modul (`pipeline/deduplication.py`)
 2. Kategorisierung via Claude API (`pipeline/categorizer.py`)
-3. Caption-Generator (`pipeline/caption_generator.py`)
-4. QA: End-to-End Test (Scraper → DB → Caption)
+3. (Caption-Generator entfernt – Instagram/Facebook siehe docs/plan-social-2026-11-25.md)
+4. QA: End-to-End Test (Scraper → DB → Kategorisierung)
 
 **Sprint 3 – Weitere Quellen (Woche 2)**
 1. Eventbrite API (`scraper/tier1/eventbrite.py`)
@@ -75,21 +75,8 @@ Du pflegst mental (und auf Nachfrage schriftlich) den aktuellen Stand:
 3. Ticketmaster API (`scraper/tier1/ticketmaster.py`)
 4. Kulturportal Düsseldorf Scraper (`scraper/tier1/kulturportal.py`)
 
-**Sprint 4 – Visuelle Pipeline (Woche 2-3)**
-1. Brand Identity einrichten (`visual/brand.py`)
-2. Canva-Templates exportieren → in `assets/templates/` ablegen (manueller Schritt)
-3. Bild-Renderer mit Brand-Overlay (`visual/image_renderer.py`)
-4. DALL-E 3 Fallback-Generator (`visual/image_generator.py`)
-5. Reel-Renderer via ffmpeg (`visual/reel_renderer.py`)
-6. QA: Visuellen Output für mehrere Kategorien prüfen
-
-**Sprint 5 – Publishing (Woche 3)**
-1. Instagram Graph API – Feed-Post Publishing (`pipeline/publisher.py`)
-2. Instagram Graph API – Reel Publishing (in `publisher.py` integriert)
-3. Scheduler einrichten (`main.py`)
-4. Monitoring & Telegram-Benachrichtigungen
-5. QA: Vollständiger End-to-End Test
-6. Deployment auf Railway
+**Sprint 4/5 – Visuelle Pipeline und Publishing (verworfen)**
+Die frühere Instagram-Idee (visual/, Canva-Templates, Pillow-Overlay, DALL-E 3, `pipeline/caption_generator.py`, `pipeline/publisher.py`) ist verworfen und entfernt (26.11.2026). Verbindlich für Instagram und Facebook ist `docs/plan-social-2026-11-25.md` (Formate, Freigabe, Bildrechte, Zustandsautomat, Tests).
 
 ---
 
@@ -126,7 +113,7 @@ Wenn das System live ist, ist der Orchestrator auch für die tägliche Überwach
 ```
 Täglicher Check (morgens):
 1. Wurden Events erfolgreich gesammelt? (Logs prüfen)
-2. Wurde der Instagram-Post veröffentlicht?
+2. Social: Cockpit-Kachel „Social“ (Freigaben, Fehler, unklar) prüfen – siehe docs/plan-social-2026-11-25.md
 3. Gibt es Fehler in den Logs?
 4. Falls Fehler: QA Agent analysieren lassen, Developer fixen
 ```

@@ -224,9 +224,9 @@ async def pipeline_ausfuehren():
     Führt die vollständige Pipeline aus und protokolliert sie im Lauf-Report:
     1. Scraper starten (Tier 1, 2, 3)
     2. Duplikate entfernen, Stadtteile zuordnen, speichern
-    3. Events kategorisieren
-    4. Instagram Captions generieren
-    5. Posts veröffentlichen
+    3. Events kategorisieren (und Folgeschritte 3a–3e)
+    Instagram/Facebook laufen nicht mehr hier, sondern im eigenen Social-Job
+    (Plan docs/plan-social-2026-11-25.md, Schritt 1: Caption-Generator und Publisher entfernt).
     """
     logger.info("=== DiesDasDüsseldorf Pipeline gestartet ===")
     logger.info("Datum: %s", date.today().isoformat())
@@ -437,20 +437,6 @@ async def _schritte_ausfuehren(report: LaufReport):
         vorschlaege_erzeugen(report.lauf_id)
     except Exception as e:
         logger.error("Vorschläge fehlgeschlagen: %s", e)
-
-    # Schritt 4: Caption-Generierung
-    logger.info("--- Schritt 4: Caption-Generierung ---")
-    from pipeline import caption_generator
-    anzahl_captions = caption_generator.captions_generieren(limit=50)
-    logger.info("Captions generiert: %d Events aufbereitet", anzahl_captions)
-    report.kennzahl(captions=anzahl_captions)
-
-    # Schritt 5: Instagram-Posting
-    logger.info("--- Schritt 5: Instagram-Posting ---")
-    from pipeline import publisher
-    anzahl_gepostet = publisher.posten(limit=5)
-    logger.info("Instagram: %d Events gepostet", anzahl_gepostet)
-    report.kennzahl(gepostet=anzahl_gepostet)
 
 
 def scheduler_starten():

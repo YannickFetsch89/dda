@@ -420,6 +420,14 @@ Keine Euro-Schätzung, die Preise ändern sich. Die Mengen:
 - 26.11.2026: **Cursor-Prüfung 5** (`docs/cursor-pruefung-social-plan-5-2026-11-26.md`): **„freigabefähig: ja“**. Ein geringer Rest (Facebook-Reel nicht sofort in `video_reels` → `unklar` statt zweitem `finish`) ist eingearbeitet → **sechste Fassung** (Anhang M).
 - 26.11.2026: **Vom Auftraggeber freigegeben** („Ja, freigegeben“), sechste Fassung.
 - Hinweis zur vierten Fassung, **geändert gegenüber den Entscheidungen:** „Deine Woche“ geht **montags** um 18:00 statt sonntags, die Monats-Tipps um 18:00 am 1. bis 3. je nach Veröffentlichung.
+- 26.11.2026: **Schritt 1 gebaut** (lokal, nicht gepusht).
+  - `pipeline/caption_generator.py`, `pipeline/publisher.py` und `test_instagram.py` gelöscht; Schritte 4/5 aus `main.py` entfernt.
+  - `tests/test_vorschau.py`: Der alte Test ist durch `test_alter_instagram_weg_ist_entfernt` ersetzt. `test_pipeline.py` und `config.py` sind bereinigt.
+  - `.env.example` enthält jetzt die Meta-Variablen statt der Instagram- und OpenAI-Variablen; `openai` ist aus `requirements.txt` entfernt.
+  - Doku auf diesen Plan umgestellt: `CLAUDE.md`, `HANDOVER.md` und die Agenten-Anleitungen `developer`, `orchestrator`, `qa` und zusätzlich `architect`, die ebenfalls die DALL-E/Canva-Idee beschrieb.
+  - Python-Suite 929/929 grün (lokale Testumgebung im Scratchpad).
+  - Nicht geändert: `web/app/datenschutz/page.tsx:287` nennt noch „OpenAI DALL-E“ bei der KI-Nutzung. Das ist ein Rechtstext, die Korrektur geht mit A1 an den Anwalt.
+- 26.11.2026: **Schritt 0 vorbereitet:** `tools/meta_pruefen.py` (Grundprüfung ohne Veröffentlichen, Test-Container Bild/Reel ohne Veröffentlichen, Test-Story nur mit `--wirklich-veroeffentlichen`, Testvideo mit den Parametern aus E11 samt Atom-Prüfung; Token nur im `Authorization`-Kopf), Tests `tests/test_meta_pruefen.py` (4), Vorlage `secrets/meta.env.example`, Klickanleitung `docs/meta-einrichtung-anleitung.md`. **Abweichung von Abschnitt 9 Punkt 6:** Der Reel-Test-Container kommt erst mit dem Social-Job (Schritt 8). Lokal ist kein ffmpeg installiert, und den Bucket `social` legt erst Schritt 3 an.
 
 ---
 

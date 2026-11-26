@@ -129,71 +129,21 @@ result = supabase.table("events").upsert(
 - `beautifulsoup4` – HTML parsen
 - `supabase` – Datenbankverbindung
 - `anthropic` – Claude API (Texterstellung, Kategorisierung)
-- `openai` – OpenAI API (DALL-E 3 Bildgenerierung als Fallback)
+- (kein `openai` mehr – DALL-E-Idee verworfen, siehe docs/plan-social-2026-11-25.md)
 - `python-dotenv` – .env laden
 - `apscheduler` – Task Scheduling
 - `fuzzywuzzy` – Fuzzy String Matching (Deduplication)
-- `Pillow` – Bildverarbeitung, Brand-Overlay, Template-Befüllung
+- `Pillow` – Bildverarbeitung in Python-Skripten (z. B. Ortsbilder)
 
 ## Systemabhängigkeiten (nicht via pip)
-- `ffmpeg` – Reel-Rendering (Standbild → MP4). Muss auf dem Server installiert sein.
-  Aufruf via `subprocess` oder `imageio-ffmpeg` Wrapper.
+- `ffmpeg` – Reel-Rendering im GitHub-Job `social.yml` (per apt-get, nicht auf dem Server).
+  Aufruf via `subprocess`; Parameter siehe Social-Plan E11.
 
-## Visuelle Pipeline – Code-Standards
+## Instagram/Facebook – Verweis
 
-### Brand-Overlay (visual/image_renderer.py)
-```python
-# Immer aus visual/brand.py importieren – nie hardcoden
-from visual.brand import BRAND
-
-# Pillow-Composite für Overlay
-from PIL import Image, ImageDraw, ImageFont
-
-def brand_overlay_anwenden(bild: Image.Image, kategorie: str) -> Image.Image:
-    """
-    Wendet DDA-Brand-Overlay auf ein Bild an.
-    Fügt Logo, Kategorie-Badge und Farbstreifen hinzu.
-    """
-    ...
-```
-
-### DALL-E 3 Fallback (visual/image_generator.py)
-```python
-from openai import OpenAI
-
-client = OpenAI()  # API Key aus OPENAI_API_KEY in .env
-
-def bild_generieren(kategorie: str, titel: str) -> str:
-    """
-    Generiert ein Lifestyle-Bild via DALL-E 3.
-    Gibt die Bild-URL zurück (temporär, muss sofort heruntergeladen werden).
-    """
-    ...
-```
-
-### Instagram Graph API – Feed-Post (pipeline/publisher.py)
-```python
-# Feed-Post: Bild hochladen + veröffentlichen (zwei Schritte)
-# Schritt 1: Media Container erstellen
-POST https://graph.instagram.com/{account_id}/media
-    { "image_url": "...", "caption": "...", "location_id": "..." }
-# Schritt 2: Container veröffentlichen
-POST https://graph.instagram.com/{account_id}/media_publish
-    { "creation_id": "..." }
-```
-
-### Instagram Graph API – Reel (pipeline/publisher.py)
-```python
-# Reel: Video-Datei hochladen + veröffentlichen
-# Schritt 1: Media Container für Video erstellen
-POST https://graph.instagram.com/{account_id}/media
-    { "media_type": "REELS", "video_url": "...", "caption": "..." }
-# Schritt 2: Auf Upload warten (Status prüfen)
-GET https://graph.instagram.com/{creation_id}?fields=status_code
-# Schritt 3: Veröffentlichen wenn status_code == "FINISHED"
-POST https://graph.instagram.com/{account_id}/media_publish
-    { "creation_id": "..." }
-```
+Die frühere „Visuelle Pipeline“ (visual/, Canva-Templates, Pillow-Overlay, DALL-E 3, pipeline/publisher.py) ist verworfen und entfernt (26.11.2026).
+Verbindlich ist `docs/plan-social-2026-11-25.md`: Folien rendert die Website (`next/og` + `sharp`), gepostet wird aus der Website
+(Takt-Route) über die Instagram- und Facebook-Graph-API mit dem Seiten-Token, Reels baut ffmpeg im GitHub-Job `social.yml`.
 
 ## Was du NICHT tust
 - Keine Architektur-Entscheidungen treffen (das ist Architect)

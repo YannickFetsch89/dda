@@ -1,29 +1,22 @@
 # DiesDasDüsseldorf – Projekt CLAUDE.md
 
 ## Was dieses Projekt ist
-DiesDasDüsseldorf ist ein vollautomatisiertes Event-Aggregations- und Publishing-System für Düsseldorf. Es sammelt täglich Events und Aktivitäten aus der Stadt, bereitet sie mit KI auf und veröffentlicht sie als Instagram-Posts. Langfristig wird daraus eine App und ein täglicher Stadtguide.
+DiesDasDüsseldorf ist ein vollautomatisiertes Event-Aggregations- und Publishing-System für Düsseldorf. Es sammelt täglich Events und Aktivitäten aus der Stadt, bereitet sie mit KI auf und veröffentlicht sie auf diesdas.events sowie als Posts auf Instagram (@dies.das.duesseldorf) und Facebook (facebook.com/dies.das.duesseldorf). Langfristig wird daraus eine App und ein täglicher Stadtguide.
 
 ## Aktueller Entwicklungsstand
-**Phase 1:** Instagram-Pipeline + Supabase Datenbank
-- Scraper und API-Anbindungen für alle Datenquellen
-- KI-basierte Aufbereitung und Kategorisierung der Events
-- Automatisches Erstellen von Instagram-Captions (Feed-Posts & Reels)
-- Visuelle Pipeline: Canva-Templates + Python/Pillow Overlay + DALL-E 3 Fallback
-- Brand Identity wird auf jedem Post automatisch angewendet
-- Speicherung aller Events in Supabase
-- Automatisches Posting direkt via Instagram Graph API (kein Drittanbieter)
+- Scraper und API-Anbindungen für alle Datenquellen, KI-basierte Aufbereitung und Kategorisierung, Speicherung in Supabase
+- Website diesdas.events (Next.js unter `web/`) mit Admin-Bereich admin.diesdas.events
+- **Instagram/Facebook:** eigener Plan `docs/plan-social-2026-11-25.md` (freigegeben 26.11.2026). Die alte Phase-1-Idee (Canva-Templates, Pillow-Overlay, DALL-E, Captions im Scraper-Lauf, `pipeline/publisher.py`) ist verworfen; Caption-Generator und Publisher sind entfernt (Plan Schritt 1). Folien rendert die Website im Markenstil, gepostet wird über die Graph API (Feed, Karussell, Story, Reel), Feed-Posts erst nach Freigabe im Admin.
 
 ## Tech Stack
 - **Sprache:** Python 3.11
 - **Datenbank:** Supabase (PostgreSQL)
-- **KI Text:** Claude API (claude-sonnet-4-6) für Caption-Erstellung und Kategorisierung
-- **KI Bild:** OpenAI API (DALL-E 3) als Fallback-Bildgenerierung wenn kein Event-Bild vorhanden
+- **KI Text:** Claude API für Kategorisierung, Beschreibungen, Magazin und (künftig) Social-Captions
+- **KI Bild:** keine automatische Bildgenerierung; eigene KI-Symbolbilder liegen fest unter `web/public/fallback/` (`docs/fallback-bilder.md`)
 - **Scraping:** Playwright (für dynamische Seiten), httpx + BeautifulSoup (für statische Seiten)
-- **Bildverarbeitung:** Pillow – Brand-Overlay auf Canva-Templates (Logo, Farben, Kategorie-Badge)
-- **Video (Reels):** ffmpeg (Systemabhängigkeit) für Reel-Rendering
-- **Design-Templates:** Canva Pro – einmalige Gestaltung der Vorlagen, Export als PNG/SVG
+- **Social-Grafiken und Reels:** Plan `docs/plan-social-2026-11-25.md` (Folien per `next/og` + `sharp` auf der Website, Reels per ffmpeg im GitHub-Job)
 - **Scheduling:** APScheduler oder cron (täglich 06:00 Uhr)
-- **Posting:** Instagram Graph API (direkt – Feed-Posts & Reels, kein Drittanbieter)
+- **Posting:** Instagram- und Facebook-Graph-API (direkt, kein Drittanbieter), siehe Social-Plan
 - **Hosting:** Railway oder Render
 - **Versionskontrolle:** GitHub
 
@@ -46,11 +39,10 @@ Ausschließlich Deutsch. Alle generierten Texte, Captions, Beschreibungen und Lo
   "quelle_url": "string (Original-URL des Events)",
   "ticket_url": "string oder null – Ticket-Link, den das Haus selbst nennt (Anbieter oder eigener Shop, scraper/utils/ticket_link.py); quelle_url bleibt die Seite des Termins",
   "bild_url": "string oder null",
-  "bild_generiert": "boolean (true = DALL-E generiert, false = Original vom Veranstalter)",
-  "post_typ": "enum: feed | reel",
-  "instagram_caption": "string oder null (wird von KI befüllt)",
-  "instagram_location_id": "string oder null (Facebook Location ID für Standort-Tag)",
-  "status": "enum: neu | aufbereitet | gepostet | fehler",
+  "bild_generiert": "boolean (Altfeld aus der DALL-E-Idee, wird nicht mehr gesetzt)",
+  "instagram_caption": "string oder null (Altfeld, wird seit Social-Plan Schritt 1 nicht mehr befüllt)",
+  "instagram_location_id": "string oder null (Altfeld, ungenutzt)",
+  "status": "enum: neu | aufbereitet | gepostet | fehler (aufbereitet/gepostet sind Altwerte; Social-Posts stehen künftig in social_posts)",
   "erstellt_am": "ISO 8601 timestamp",
   "gepostet_am": "ISO 8601 timestamp oder null"
 }
@@ -219,22 +211,7 @@ diesdasduesseldorf/
 │
 ├── pipeline/
 │   ├── deduplication.py             ← Duplikate entfernen
-│   ├── categorizer.py               ← KI-Kategorisierung
-│   ├── caption_generator.py         ← Instagram-Captions generieren (Claude API)
-│   └── publisher.py                 ← Instagram Graph API – Feed-Posts & Reels
-│
-├── visual/
-│   ├── brand.py                     ← Brand Identity (Farben, Fonts, Logo-Pfad)
-│   ├── image_renderer.py            ← Pillow: Canva-Template + Event-Bild + Brand-Overlay
-│   ├── image_generator.py           ← DALL-E 3: KI-Bild generieren wenn kein Bild vorhanden
-│   └── reel_renderer.py             ← ffmpeg: Standbild-Reel aus fertigem Bild erstellen
-│
-├── assets/
-│   ├── templates/                   ← Canva-Exporte (PNG/SVG Rohdateien, einmalig erstellt)
-│   │   ├── feed_template.png        ← Feed-Post Template (1080x1080px)
-│   │   └── reel_template.png        ← Reel Template (1080x1920px)
-│   └── logo/
-│       └── dda_logo.png             ← DDA Logo für Overlay
+│   └── categorizer.py               ← KI-Kategorisierung (Social-Job kommt laut docs/plan-social-2026-11-25.md)
 │
 ├── database/
 │   ├── schema.sql                   ← Supabase Tabellenstruktur
@@ -288,24 +265,11 @@ diesdasduesseldorf/
 
 ### Output-Regeln
 
-#### Captions (Feed & Reels)
-- Instagram Captions: max. 2200 Zeichen
-- Ton: locker, einladend, keine Werbsprache, kein Clickbait
-- Immer mit Datum, Uhrzeit und Ort beginnen
-- Mindestens 5 relevante Hashtags am Ende
-- Verlinkungen: Venue-Account per @Mention taggen wenn bekannt
-- Kein Klick-Link in der Caption (Instagram sperrt das) – stattdessen "Link in Bio"
-
-#### Bilder & Visuals
-- Jeder Post bekommt ein Bild: entweder vom Veranstalter oder DALL-E 3 generiert
-- Jedes Bild bekommt den Brand-Overlay (Logo, Kategorie-Badge, Farbstreifen)
-- Brand-Farben, Fonts und Logo sind in `visual/brand.py` definiert – nie hardcoden
-- Canva-Templates werden nur manuell angepasst (nicht automatisch) – bei Bedarf Architect fragen
-
-#### Reels
-- Format: 1080x1920px, MP4, mind. 3 Sekunden, max. 90 Sekunden
-- Phase 1: Standbild-Reel (ein Bild als kurzes Video via ffmpeg)
-- Standort-Tag via `instagram_location_id` im Graph API Request setzen wenn vorhanden
+#### Instagram & Facebook (Captions, Bilder, Reels)
+Verbindlich ist `docs/plan-social-2026-11-25.md`. Kurz:
+- Captions: du, locker, kein Clickbait, IG ohne Links („Link in Bio“ → diesdas.events/links), FB mit Links auf die Event-Seiten; Hashtags nur aus fester Liste; `@`-Erwähnungen nur aus `orte.instagram`
+- Bilder: eigene Folien im Markenstil; Veranstalterfotos nur mit schriftlicher Erlaubnis je Bild-Host; Sperrliste (Ticketmaster, Eventim, Rausgegangen, Aggregatoren, Google); KI-Symbolbilder sichtbar kennzeichnen
+- Feed, Karussell und Reel nur nach Freigabe im Admin; Stories automatisch mit Notaus
 
 ### Kommunikation
 - Bei Unklarheiten **immer fragen**, nie raten

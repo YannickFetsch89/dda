@@ -72,9 +72,8 @@ Die komplette Scraper-Infrastruktur für 3 Tiers steht und liefert aktuell **~93
 ### Pipeline
 - **Deduplication** (`pipeline/deduplication.py`) – Fuzzy Matching über Titel+Datum+Ort
 - **Kategorisierung** (`pipeline/categorizer.py`) – Claude API (claude-sonnet-4-6)
-- **Caption Generator** (`pipeline/caption_generator.py`) – Claude API
+- **Instagram/Facebook:** Caption-Generator und Publisher am 26.11.2026 entfernt, neuer Weg siehe `docs/plan-social-2026-11-25.md`
 - **Stadtteil-Zuordnung** (`pipeline/stadtteil_mapper.py`) – 4-stufig: Quelle → Venue-Name → PLZ → Straße
-- **Publisher** (`pipeline/publisher.py`) – Instagram Graph API (noch nicht konfiguriert)
 
 ### Datenbank (Supabase)
 - **Projekt-ID:** `dqckcszxoyaxiwwcgxxk`
@@ -137,7 +136,7 @@ top_event_des_monats, stadtteil
 ### Priorität 2 – Konfiguration
 4. **GitHub Actions Secrets** einrichten (SERVER_HOST, SERVER_USER, SERVER_SSH_KEY)
 5. **SSH Deploy Key** auf Server generieren und zu GitHub hinzufügen
-6. **Instagram Graph API Token** konfigurieren (noch nicht eingerichtet)
+6. **Meta-Einrichtung** (Instagram + Facebook) nach `docs/meta-einrichtung-anleitung.md` (Social-Plan Schritt 0)
 7. **SSL/Let's Encrypt** für admin.diesdas.events (zeigt "Nicht sicher")
 8. **Playwright System-Libs** auf Server (libnss3 etc.) – Timme Support kontaktieren
 
@@ -201,8 +200,6 @@ dda/
 ├── pipeline/
 │   ├── deduplication.py
 │   ├── categorizer.py
-│   ├── caption_generator.py
-│   ├── publisher.py
 │   ├── stadtteil_mapper.py       ← NEU: 4-stufiges Mapping
 │   └── stadtteil_backfill.py     ← NEU: Backfill-Skript
 │
@@ -228,9 +225,7 @@ dda/
 SUPABASE_URL=https://dqckcszxoyaxiwwcgxxk.supabase.co
 SUPABASE_KEY=<anon key vorhanden>
 ANTHROPIC_API_KEY=<vorhanden, aber Credits aufgebraucht>
-OPENAI_API_KEY=<Status unbekannt>
-INSTAGRAM_ACCESS_TOKEN=<nicht konfiguriert>
-INSTAGRAM_ACCOUNT_ID=<nicht konfiguriert>
+META_TOKEN=<nur auf dem Server, siehe Social-Plan E13>
 TICKETMASTER_API_KEY=<nicht konfiguriert>
 MEETUP_API_KEY=<vorhanden>
 SONGKICK_API_KEY=<nicht konfiguriert>
