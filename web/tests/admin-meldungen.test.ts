@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { freigabePruefen, kuerzen, slugErzeugen, slugMitSuffix, stadtteilAusAdresse } from "@/lib/admin/meldungen";
+import { BESCHREIBUNG_MAX, freigabePruefen, kuerzen, slugErzeugen, slugMitSuffix, stadtteilAusAdresse } from "@/lib/admin/meldungen";
 
 // Gemeinsame Prüfliste mit tests/test_admin_5b.py (pipeline/slug_generator.py)
 const FIXTURE = JSON.parse(readFileSync(join(__dirname, "..", "..", "tests", "fixtures", "slugs.json"), "utf-8")) as {
@@ -33,7 +33,19 @@ describe("Freigabe", () => {
     expect(stadtteilAusAdresse("Fichtenstraße 40, 40233 Düsseldorf")).toBeTruthy();
     expect(stadtteilAusAdresse("Hauptstraße 1, 41460 Neuss")).toBeNull();
     const lang = "Satz eins ist hier. ".repeat(30);
-    expect(kuerzen(lang).length).toBeLessThanOrEqual(300);
-    expect(kuerzen(lang).endsWith(".")).toBe(true);
+    expect(kuerzen(lang, 300).length).toBeLessThanOrEqual(300);
+    expect(kuerzen(lang, 300).endsWith(".")).toBe(true);
+  });
+  it("Beschreibung: keine 300-Zeichen-Grenze mehr, Absätze bleiben (26.11.2026)", () => {
+    const text = "Erster Absatz mit   doppelten Leerzeichen.\r\n\r\n\r\nZweiter Absatz.\n- Punkt eins\n- Punkt zwei";
+    expect(kuerzen(text)).toBe("Erster Absatz mit doppelten Leerzeichen.\n\nZweiter Absatz.\n- Punkt eins\n- Punkt zwei");
+    const mittel = "Ein ganz normaler Satz über das Event. ".repeat(30); // gut 1.100 Zeichen
+    expect(kuerzen(mittel)).toBe(mittel.trim());
+    expect(BESCHREIBUNG_MAX).toBe(2000);
+    const zuLang = "Satz eins ist hier.\n".repeat(150); // 3.000 Zeichen
+    const gekuerzt = kuerzen(zuLang);
+    expect(gekuerzt.length).toBeLessThanOrEqual(BESCHREIBUNG_MAX);
+    expect(gekuerzt.endsWith(".")).toBe(true);
+    expect(gekuerzt).toContain("\n");
   });
 });

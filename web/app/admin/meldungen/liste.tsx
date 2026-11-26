@@ -3,7 +3,7 @@
 // Umzug aus dashboard/meldungen.py). Nutzerangaben werden nur als Text gezeigt.
 import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { MELDUNG_KATEGORIEN } from "@/lib/admin/meldungen";
+import { BESCHREIBUNG_MAX, MELDUNG_KATEGORIEN } from "@/lib/admin/meldungen";
 import { STADTTEILE } from "@/lib/admin/orte";
 
 interface Meldung {
@@ -135,8 +135,8 @@ function Karte({ m, nachher }: { m: Meldung; nachher: (text: string, art: "ok" |
             <input name="link" defaultValue={m.link ?? ""} maxLength={500} />
           </label>
           <label className="admin-feld admin-feld--breit">
-            Beschreibung (wird auf 300 Zeichen gekürzt)
-            <textarea name="beschreibung" defaultValue={m.beschreibung} rows={6} />
+            Beschreibung (Absätze bleiben erhalten, höchstens 2.000 Zeichen)
+            <textarea name="beschreibung" defaultValue={m.beschreibung} rows={10} maxLength={BESCHREIBUNG_MAX} />
           </label>
           <div className="admin-feld--breit admin-knopfreihe">
             <button className="admin-knopf" type="submit" disabled={laeuft}>

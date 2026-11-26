@@ -39,14 +39,31 @@ export function stadtteilAusAdresse(adresse: string | null | undefined): string 
   return plz ? ((PLZ_STADTTEIL as Record<string, string>)[plz] ?? null) : null;
 }
 
-/** Beschreibung auf die Event-Höchstlänge kürzen, möglichst am Satzende (wie _kuerzen im Dashboard) */
-export function kuerzen(text: string, laenge = 300): string {
-  const t = (text ?? "").replace(/\s+/g, " ").trim();
+/**
+ * Höchstlänge der Beschreibung bei der Freigabe = Höchstlänge im Meldeformular (event_meldungen: 20–2.000 Zeichen).
+ * Bis 26.11.2026 wurde hier auf 300 Zeichen gekürzt (Altlast aus dem Streamlit-Dashboard); die Grenze in
+ * events.beschreibung ist seit 10.11.2026 aufgehoben, die Pipeline schreibt bis etwa 1.200 Zeichen.
+ */
+export const BESCHREIBUNG_MAX = 2000;
+
+/**
+ * Beschreibung aufräumen und nur bei Überlänge kürzen, möglichst am Satzende. Zeilenumbrüche bleiben erhalten:
+ * Die Event-Seite zeigt Absätze und Listen (lib/beschreibung.ts beschreibungsBloecke). Mehrfache Leerzeichen und
+ * mehr als eine Leerzeile werden zusammengefasst.
+ */
+export function kuerzen(text: string, laenge = BESCHREIBUNG_MAX): string {
+  const t = (text ?? "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((z) => z.replace(/[ \t ]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
   if (t.length <= laenge) return t;
   const stueck = t.slice(0, laenge - 1);
-  const ende = Math.max(stueck.lastIndexOf(". "), stueck.lastIndexOf("! "), stueck.lastIndexOf("? "));
+  const ende = Math.max(...[". ", "! ", "? ", ".\n", "!\n", "?\n"].map((s) => stueck.lastIndexOf(s)));
   if (ende >= Math.floor(laenge / 2)) return stueck.slice(0, ende + 1);
-  return stueck.slice(0, stueck.lastIndexOf(" ")).replace(/[ ,;:–-]+$/, "") + "…";
+  return stueck.slice(0, Math.max(stueck.lastIndexOf(" "), stueck.lastIndexOf("\n"))).replace(/[\s,;:–-]+$/, "") + "…";
 }
 
 export const MELDUNG_KATEGORIEN = ["kultur", "musik", "food", "sport", "outdoor", "stadtfuehrung", "community", "nightlife", "family", "dating", "sonstiges"] as const;
