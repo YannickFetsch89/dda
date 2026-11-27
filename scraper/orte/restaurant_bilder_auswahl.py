@@ -74,6 +74,10 @@ REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse
 ARTEN = {"restaurant": "Restaurant", "cafe": "Café", "imbiss": "Imbiss", "baeckerei": "Bäckerei (nicht im Guide)"}
 # Eigenes Merkmal extras.kindercafe (27.11.2026): Eltern-Kind-/Kindercafé mit Spielbereich – nicht Googles „Kinderfreundlich“
 KINDERCAFE_ARTEN = ("cafe", "restaurant", "imbiss")
+# Regel 27.11.2026: Betriebe dieser Arten mit dies.das-Wertung unter 7,0 erscheinen nicht im Guide (aktiv = false,
+# extras.ausgeblendet.regel = "wertung"). Vorerst nur Cafés; Restaurants folgen nach ihrer Durchsicht. Kindercafés immer sichtbar.
+WERTUNG_GRENZE = 7.0
+WERTUNG_REGEL_ARTEN = ("cafe",)
 AMBIENTE_MOTIVE = ("innenraum", "aussen", "terrasse")
 ESSEN_MOTIVE = ("essen", "getraenk")
 
@@ -160,7 +164,7 @@ def vorschlag(e: dict) -> tuple[int | str, int | str]:
 # ── Schreiben ─────────────────────────────────────────────────────────────────
 
 def ort_lesen(client, ort_id: str) -> dict:
-    zeilen = client.table("orte").select("id, slug, name, typ, bild_url, bild_attribution, extras").eq("id", ort_id).execute().data
+    zeilen = client.table("orte").select("id, slug, name, typ, aktiv, bild_url, bild_attribution, extras").eq("id", ort_id).execute().data
     if not zeilen:
         raise RuntimeError("Ort nicht gefunden")
     return zeilen[0]
@@ -446,15 +450,28 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
         extras["ddd_wertung_hand"] = hand
     extras["ddd_wertung"] = hand if hand is not None else wertung(e.get("vorab_score"), e.get("ambiente"), e["typ"])["wert"]
 
+    # Sichtbarkeit nach dies.das-Wertung (nur Ausblendungen dieser Regel werden wieder aufgehoben)
+    art = aenderung.get("typ", ort["typ"])
+    regel = art in WERTUNG_REGEL_ARTEN and not extras.get("kindercafe")
+    durch_regel = (extras.get("ausgeblendet") or {}).get("regel") == "wertung"
+    if regel and extras["ddd_wertung"] < WERTUNG_GRENZE and ort.get("aktiv"):
+        aenderung["aktiv"] = False
+        extras["ausgeblendet"] = {"grund": "dies.das-Wertung unter 7,0", "regel": "wertung", "datum": date.today().isoformat()}
+        hinweise.append(f"{ort['name']}: nicht mehr im Guide (Wertung {komma(extras['ddd_wertung'])})")
+    elif durch_regel and not (regel and extras["ddd_wertung"] < WERTUNG_GRENZE):
+        aenderung["aktiv"] = True
+        extras.pop("ausgeblendet", None)
+        hinweise.append(f"{ort['name']}: wieder im Guide")
+
     aenderung["extras"] = extras
-    nachher = {**vorher, **{f: aenderung[f] for f in ("bild_url", "bild_attribution", "typ") if f in aenderung},
+    nachher = {**vorher, **{f: aenderung[f] for f in ("bild_url", "bild_attribution", "typ", "aktiv") if f in aenderung},
                **{f: extras.get(f) for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell", "bild_zweit", "ambiente",
                                             "ddd_wertung", "ddd_wertung_hand", "kindercafe")}}
     if TROCKEN:
         logger.info("TROCKEN %s: %s", ort["slug"], json.dumps({f: v for f, v in nachher.items() if v != vorher.get(f)}, ensure_ascii=False)[:600])
         return "Trockenlauf"
     client.table("orte").update(aenderung).eq("id", e["id"]).execute()
-    protokollieren({"ort_id": e["id"], "slug": ort["slug"], "aktion": "speichern", "wahl": wahl, "vorher": {**vorher, "typ": ort["typ"]},
+    protokollieren({"ort_id": e["id"], "slug": ort["slug"], "aktion": "speichern", "wahl": wahl, "vorher": {**vorher, "typ": ort["typ"], "aktiv": ort.get("aktiv")},
                     "nachher": nachher})
     if "typ" in aenderung:   # Reiter der Auswahlseite nachziehen
         with ALLE_SPERRE:
@@ -470,7 +487,7 @@ def speichern(daten: dict) -> dict:
     alle = {e["id"]: e for e in eintraege()}
     auswahl = json_lesen(AUSWAHL, {})
     client = db()
-    gespeichert, fehler = 0, []
+    gespeichert, fehler, sichtbarkeit = 0, [], []
     for ort_id, roh in daten.items():
         e = alle.get(ort_id)
         if not e or not isinstance(roh, dict):
@@ -486,7 +503,8 @@ def speichern(daten: dict) -> dict:
             for feld in ("t", "e"):
                 if isinstance(wahl[feld], int) and not (0 <= wahl[feld] < len(e["kandidaten"])):
                     raise ValueError("unbekanntes Bild")
-            ort_speichern(client, e, wahl, auswahl.get(ort_id))
+            hinweis = ort_speichern(client, e, wahl, auswahl.get(ort_id))
+            sichtbarkeit += [h for h in (hinweis or "").split("; ") if "im Guide" in h]
             gespeichert += 1
         except Exception as f:  # noqa: BLE001 – Fehler je Ort melden, Rest weiter speichern
             logger.warning("%s: %s", e["name"], f)
@@ -496,7 +514,7 @@ def speichern(daten: dict) -> dict:
             auswahl[ort_id] = {**wahl, "zeit": datetime.now().strftime("%d.%m. %H:%M")}
             json_schreiben(AUSWAHL, auswahl)
     meldung = f"{gespeichert} Betriebe gespeichert" + (" (Trockenlauf, nichts geschrieben)" if TROCKEN else "") + \
-              (f" · Fehler: {'; '.join(fehler)}" if fehler else "")
+              (f" · {'; '.join(sichtbarkeit)}" if sichtbarkeit else "") +               (f" · Fehler: {'; '.join(fehler)}" if fehler else "")
     logger.info(meldung)
     return {"meldung": meldung}
 
@@ -621,6 +639,9 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
     tl = (gespeichert or {}).get("tl") or ""
     el = (gespeichert or {}).get("el") or ""
     status = f'<span class="ok">gespeichert {html.escape(gespeichert.get("zeit", ""))}</span>' if gespeichert else ""
+    if ort_db and ort_db.get("aktiv") is False:
+        grund = (ort_db.get("ausgeblendet") or {}).get("grund") or "ausgeblendet"
+        status += f' <span class="rot aus">nicht im Guide: {html.escape(grund)}</span>'
     web = f'<a href="{html.escape(e["webseite"])}" target="_blank" rel="noopener">Website</a>' if e.get("webseite") else "keine Website"
     return f"""<section data-id="{e['id']}"><h2>{html.escape(e['name'])} <small>{html.escape(e.get('stadtteil') or '')} · {web}</small> {status}
 <button type="button" class="passt">Auswahl passt</button> {art_feld}</h2>
@@ -647,8 +668,9 @@ def seite(typ: str, nr: int) -> str:
     nr = max(1, min(nr, seiten))
     teil = liste[(nr - 1) * JE_SEITE: nr * JE_SEITE]
     try:   # eigener Wert, der schon in der Datenbank steht (nur diese Seite abfragen)
-        zeilen = db().table("orte").select("id, hand:extras->ddd_wertung_hand, kc:extras->kindercafe").in_("id", [e["id"] for e in teil]).execute().data
-        ort_db = {z["id"]: {"ddd_wertung_hand": z.get("hand"), "kindercafe": z.get("kc") is True} for z in zeilen}
+        zeilen = db().table("orte").select("id, aktiv, hand:extras->ddd_wertung_hand, kc:extras->kindercafe, ab:extras->ausgeblendet").in_("id", [e["id"] for e in teil]).execute().data
+        ort_db = {z["id"]: {"ddd_wertung_hand": z.get("hand"), "kindercafe": z.get("kc") is True,
+                      "aktiv": z.get("aktiv"), "ausgeblendet": z.get("ab")} for z in zeilen}
     except Exception as f:  # noqa: BLE001 – Seite auch ohne Datenbank anzeigen
         logger.warning("Datenbank nicht lesbar (%s)", type(f).__name__)
         ort_db = {}
@@ -681,7 +703,7 @@ body{{font-family:system-ui,sans-serif;margin:0 auto;max-width:1320px;padding:0 
 h1{{font-size:20px;margin:8px 0}} h2{{font-size:17px;margin:26px 0 4px}} small{{font-weight:400;color:#666}}
 .wertung{{font-size:14px;margin:4px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}} .wertung b{{font-size:18px}}
 .wertung input{{font-size:14px;padding:3px 6px;border:1px solid #bbb;border-radius:6px;width:5em}} .muted{{color:#555;font-size:13px}}
-.rot{{color:#b3261e}} .lauf{{background:#fff4d6;border:1px solid #e6c65c;border-radius:8px;padding:8px 12px;font-size:14px}} .amb{{font-size:13px;color:#555;margin:0 0 8px}}
+.rot{{color:#b3261e}} .aus{{font-size:12px;font-weight:600;margin-left:6px}} .lauf{{background:#fff4d6;border:1px solid #e6c65c;border-radius:8px;padding:8px 12px;font-size:14px}} .amb{{font-size:13px;color:#555;margin:0 0 8px}}
 .kacheln{{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}}
 .kachel{{border-radius:10px;padding:4px;border:3px solid transparent;background:#fff;position:relative}}
 .kachel.an-t{{border-color:#c9a227}} .kachel.an-e{{border-color:#2f6fd6}} .kachel.an-t.an-e{{border-color:#c9a227 #2f6fd6 #2f6fd6 #c9a227}}
