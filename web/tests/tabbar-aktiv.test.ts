@@ -22,12 +22,12 @@ describe("istAktivKonto", () => {
     expect(aktiv("/merkliste")).toEqual(["/merkliste"]);
   });
   it("„Events“ auf allen Event-Seiten", () => {
-    for (const p of ["/entdecken", "/heute", "/morgen", "/tag/2026-11-28", "/wochenende", "/ausblick", "/kostenlos", "/kategorie/musik", "/event/abc", "/stadtteil/bilk"]) {
+    for (const p of ["/entdecken", "/heute", "/morgen", "/tag/2026-11-28", "/wochenende", "/ausblick", "/kostenlos", "/kategorie/musik", "/event/abc", "/stadtteil/bilk", "/stadtteile", "/orte", "/orte/zakk"]) {
       expect(aktiv(p)).toEqual(["/entdecken"]);
     }
   });
-  it("„Guides“ auf Hubs, Guide-Seiten und Veranstaltungsorten", () => {
-    for (const p of ["/guides", "/guides/clubs", "/guides/restaurants-cafes/x", "/orte", "/orte/zakk"]) {
+  it("„Guides“ auf Hubs und Guide-Seiten", () => {
+    for (const p of ["/guides", "/guides/clubs", "/guides/restaurants-cafes/x"]) {
       expect(aktiv(p)).toEqual(["/guides"]);
     }
   });

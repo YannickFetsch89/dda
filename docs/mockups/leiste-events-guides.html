@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leiste Events und Guides – Mockup</title>
+<!-- Nur für das lokale Mockup: Schriften von Google Fonts (die Website liefert sie selbst aus) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block">
+<style>
+/* Symbolschrift lokal (wie auf der Website); erst neben der Datei, sonst aus dem Repo */
+@font-face { font-family:"DDD Icons"; font-style:normal; font-weight:400; font-display:block; src:url("material-symbols-rounded.woff2") format("woff2"), url("../../web/app/fonts/material-symbols-rounded.woff2") format("woff2"); }
+:root {
+  --navy:#1b2540; --gold:#c9a84c; --gold-tint:#f5eedb;
+  --bg:#f7f8fa; --surface:#fff; --subtle:#f5f0e8; --border:#e2e8f0;
+  --text:#1b2540; --muted:#718096; --free-bg:#e4f4e5; --free-fg:#2a6b2d;
+}
+[data-theme="dark"] {
+  --bg:#0d1117; --surface:#161b26; --subtle:#1f2533; --border:#2d3748;
+  --text:#f7f8fa; --muted:#a0aec0; --free-bg:#1d3320; --free-fg:#9fd8a2;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:Inter, system-ui, sans-serif; background:#e9ecf1; color:#1b2540; }
+[data-theme="dark"] body { background:#05070b; color:#f7f8fa; }
+.icon { font-family:"DDD Icons", "Material Symbols Rounded"; font-size:22px; line-height:1; font-weight:normal; font-style:normal; display:inline-block; -webkit-font-feature-settings:"liga"; }
+.d { font-family:"DM Serif Display", serif; font-style:italic; font-weight:400; }
+
+/* ---------- Seite mit den beiden Telefonen ---------- */
+.seite { max-width:1100px; margin:0 auto; padding:28px 16px 60px; }
+.seite > header { display:flex; flex-wrap:wrap; gap:12px; align-items:baseline; justify-content:space-between; margin-bottom:22px; }
+.seite h1 { margin:0; font-size:32px; }
+.seite p.lead { margin:6px 0 0; color:#718096; max-width:640px; line-height:1.5; font-size:15px; }
+.umschalter { display:flex; gap:6px; }
+.umschalter button { font:600 13px Inter, sans-serif; padding:8px 14px; border-radius:999px; border:1px solid #c7cfdb; background:transparent; color:inherit; cursor:pointer; }
+.umschalter button[aria-pressed="true"] { background:#c9a84c; border-color:#c9a84c; color:#1b2540; }
+.telefone { display:flex; flex-wrap:wrap; gap:40px; justify-content:center; }
+.variante { width:375px; max-width:100%; }
+.variante h2 { font-size:22px; margin:0 0 4px; }
+.variante .erkl { font-size:13.5px; line-height:1.5; color:#718096; margin:0 0 14px; min-height:60px; }
+.telefon { width:375px; max-width:100%; height:740px; border-radius:38px; border:10px solid #0b0e14; overflow:hidden; position:relative; background:var(--bg); color:var(--text); box-shadow:0 30px 60px -20px rgba(0,0,0,.45); }
+.scroller { position:absolute; inset:0; overflow-y:auto; scrollbar-width:none; }
+.scroller::-webkit-scrollbar { display:none; }
+
+/* ---------- Kopf (wie live) ---------- */
+.kopf { height:60px; display:flex; align-items:center; padding:0 16px; background:var(--surface); }
+.wortmarke { font-family:"DM Serif Display", serif; font-style:italic; font-size:21px; white-space:nowrap; }
+.wortmarke span { color:var(--gold); }
+.kopf .aktionen { margin-left:auto; display:flex; gap:2px; }
+.kopf .aktionen .icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:24px; }
+
+/* ---------- Gemeinsame Kreis-Einträge ---------- */
+.reihe { display:flex; align-items:flex-start; overflow-x:auto; scrollbar-width:none; gap:2px; padding:6px 12px 12px; }
+.reihe::-webkit-scrollbar { display:none; }
+.eintrag { flex:0 0 64px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--text); text-decoration:none; }
+.kreis { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--t); color:var(--dp); }
+.kreis .icon { font-size:22px; }
+/* Name immer zwei Zeilen hoch, oben bündig: so stehen Zahlen und Kreise auf einer Linie, egal wie lang der Name ist */
+.name { font-size:11px; font-weight:600; line-height:1.2; text-align:center; height:2.4em; display:flex; align-items:flex-start; justify-content:center; hyphens:manual; }
+.zahl { font-size:10px; color:var(--muted); line-height:1; margin-top:-2px; }
+.eintrag--gratis .kreis { background:var(--free-bg); color:var(--free-fg); }
+.eintrag--guide .kreis { background:var(--surface); color:var(--text); box-shadow:inset 0 0 0 2px var(--gold); }
+
+/* Senkrechte Beschriftung, von unten nach oben gelesen */
+.senkrecht { flex:0 0 22px; align-self:stretch; display:flex; align-items:center; justify-content:center; margin:0 4px 0 0; }
+.senkrecht span { writing-mode:vertical-rl; transform:rotate(180deg); font-size:10px; font-weight:800; letter-spacing:.22em; color:var(--gold); white-space:nowrap; }
+.trenner { flex:0 0 1px; align-self:stretch; margin:4px 8px 14px; background:var(--border); }
+
+/* ---------- Variante 1: eine Leiste ---------- */
+.v1-leiste { position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--border); }
+
+/* ---------- Variante 2: zwei Reihen, beim Scrollen eingeklappt ---------- */
+.v2-leiste { position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--border); }
+.v2-reihe { display:grid; grid-template-rows:1fr; transition:grid-template-rows .28s ease, opacity .2s ease; }
+.v2-reihe > .innen { overflow:hidden; min-height:0; }
+.v2-reihe.zu { grid-template-rows:0fr; opacity:0; }
+.v2-reihe .reihe { padding:4px 12px 8px; align-items:center; gap:6px; }
+.v2-reihe + .v2-reihe .reihe { border-top:1px dashed var(--border); padding-top:8px; }
+.chip { flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:5px 12px 5px 5px; border-radius:999px; background:var(--bg); border:1px solid var(--border); font-size:13px; font-weight:600; white-space:nowrap; color:var(--text); text-decoration:none; }
+.chip .kreis { width:28px; height:28px; }
+.chip .kreis .icon { font-size:16px; }
+.chip small { font-size:11px; font-weight:500; color:var(--muted); }
+.chip--gratis { background:var(--free-bg); color:var(--free-fg); border-color:transparent; padding-left:12px; }
+.chip--guide .kreis { background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--gold); color:var(--text); }
+.v2-reihe .senkrecht { flex-basis:16px; margin-right:2px; }
+.v2-reihe .senkrecht span { font-size:9px; letter-spacing:.18em; }
+.v2-kompakt { display:flex; gap:8px; padding:0 12px; max-height:0; overflow:hidden; transition:max-height .28s ease, padding .28s ease; }
+.v2-leiste.eingeklappt .v2-kompakt { max-height:56px; padding:8px 12px; }
+.knopf { display:flex; align-items:center; gap:4px; font:700 13px Inter, sans-serif; letter-spacing:.06em; text-transform:uppercase; padding:8px 12px 8px 14px; border-radius:999px; border:1px solid var(--border); background:var(--bg); color:var(--text); cursor:pointer; }
+.knopf .icon { font-size:18px; transition:transform .2s; }
+.knopf[aria-expanded="true"] { border-color:var(--gold); color:var(--gold); }
+.knopf[aria-expanded="true"] .icon { transform:rotate(180deg); }
+
+/* ---------- Beispielinhalt ---------- */
+.hero { background:var(--navy); color:#fff; padding:22px 16px 20px; }
+[data-theme="dark"] .hero { background:#1b2540; }
+.hero h3 { margin:0; font-size:34px; line-height:1.05; }
+.hero h3 em { color:var(--gold); }
+.hero .zahlen { display:flex; gap:26px; margin-top:14px; font-size:12px; color:#a0aec0; }
+.hero .zahlen b { display:block; font-family:"DM Serif Display", serif; font-style:italic; font-size:26px; color:var(--gold); font-weight:400; }
+.inhalt { padding:16px; display:flex; flex-direction:column; gap:14px; }
+.inhalt h4 { margin:8px 0 0; font-size:22px; }
+.karte { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.karte .bild { height:120px; background:repeating-linear-gradient(135deg, var(--subtle) 0 10px, var(--surface) 10px 20px); }
+.karte .txt { padding:12px 14px; font-size:14px; font-weight:600; }
+.karte .txt span { display:block; font-weight:400; font-size:12px; color:var(--muted); margin-top:3px; }
+.tabbar { position:absolute; left:0; right:0; bottom:0; height:64px; background:var(--surface); border-top:1px solid var(--border); display:grid; grid-template-columns:repeat(5,1fr); z-index:6; }
+.tabbar div { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:10.5px; color:var(--muted); }
+.tabbar div.an { color:var(--text); font-weight:700; }
+.tabbar .icon { font-size:22px; }
+.hinweis { margin-top:10px; font-size:12.5px; color:#718096; text-align:center; }
+</style>
+</head>
+<body>
+<div class="seite">
+  <header>
+    <div>
+      <h1 class="d">Leiste unter dem Kopf: Events und Guides</h1>
+      <p class="lead">Zwei Varianten für mobil. In beiden haben alle Namen dieselbe Höhe (zwei Zeilen, oben bündig), dadurch stehen Kreise und Zahlen sauber in einer Linie. Einfach in den Telefonen scrollen.</p>
+    </div>
+    <div class="umschalter" role="group" aria-label="Darstellung">
+      <button type="button" data-thema="dark" aria-pressed="true">Dunkel</button>
+      <button type="button" data-thema="light" aria-pressed="false">Hell</button>
+    </div>
+  </header>
+
+  <div class="telefone">
+    <section class="variante">
+      <h2 class="d">Variante 1 · eine Leiste</h2>
+      <p class="erkl">Eine waagerechte Leiste. Vorne steht senkrecht „EVENTS“ (von unten nach oben gelesen), dann alle Kategorien und „Kostenlos“. Nach einem Trennstrich folgen senkrecht „GUIDES“ und die Guides. Die Leiste bleibt beim Scrollen oben stehen.</p>
+      <div class="telefon">
+        <div class="scroller">
+          <div class="kopf"><span class="wortmarke">dies<span>.</span>das<span>.</span>düsseldorf</span><span class="aktionen"><span class="icon">search</span><span class="icon">person</span><span class="icon">menu</span></span></div>
+          <nav class="v1-leiste"><div class="reihe" id="v1-reihe"></div></nav>
+          <div class="hero"><h3 class="d">Was geht <em>heute</em><br>in Düsseldorf?</h3><div class="zahlen"><span><b>137</b>Events heute</span><span><b>28</b>kostenlos</span><span><b>1</b>neu</span></div></div>
+          <div class="inhalt" data-inhalt></div>
+          <div style="height:70px"></div>
+        </div>
+        <div class="tabbar" data-tabbar></div>
+      </div>
+      <p class="hinweis">Leiste nach rechts wischen, um zu den Guides zu kommen.</p>
+    </section>
+
+    <section class="variante">
+      <h2 class="d">Variante 2 · zwei Reihen, klappen ein</h2>
+      <p class="erkl">Events und Guides stehen übereinander, als kompakte Chips. Beim Runterscrollen klappen beide Reihen ein, oben bleiben nur „EVENTS“ und „GUIDES“. Ein Tipp darauf klappt die jeweilige Reihe wieder auf. Ganz oben ist wieder alles offen.</p>
+      <div class="telefon">
+        <div class="scroller" id="v2-scroller">
+          <div class="kopf"><span class="wortmarke">dies<span>.</span>das<span>.</span>düsseldorf</span><span class="aktionen"><span class="icon">search</span><span class="icon">person</span><span class="icon">menu</span></span></div>
+          <nav class="v2-leiste" id="v2-leiste">
+            <div class="v2-kompakt">
+              <button type="button" class="knopf" data-reihe="events" aria-expanded="false">Events <span class="icon">expand_more</span></button>
+              <button type="button" class="knopf" data-reihe="guides" aria-expanded="false">Guides <span class="icon">expand_more</span></button>
+            </div>
+            <div class="v2-reihe" id="v2-events"><div class="innen"><div class="reihe" id="v2-events-reihe"></div></div></div>
+            <div class="v2-reihe" id="v2-guides"><div class="innen"><div class="reihe" id="v2-guides-reihe"></div></div></div>
+          </nav>
+          <div class="hero"><h3 class="d">Was geht <em>heute</em><br>in Düsseldorf?</h3><div class="zahlen"><span><b>137</b>Events heute</span><span><b>28</b>kostenlos</span><span><b>1</b>neu</span></div></div>
+          <div class="inhalt" data-inhalt></div>
+          <div style="height:70px"></div>
+        </div>
+        <div class="tabbar" data-tabbar></div>
+      </div>
+      <p class="hinweis">Runterscrollen, dann oben auf „Events“ oder „Guides“ tippen.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+// Kategorien und Guides wie auf der Website (lib/kategorien.ts, lib/guide-hubs.ts); Zahlen sind Beispielwerte
+const KAT = [
+  ["Kultur","theater_comedy","#EFE9F5","#4E3369",279],["Musik","music_note","#FDE6E8","#A3202B",92],
+  ["Food","ramen_dining","#FDEEE2","#8A4A17",22],["Sport","sports_soccer","#DFF2EF","#17655C",23],
+  ["Outdoor","park","#E4F4E5","#2A6B2D",1],["Stadt&shy;führung","tour","#F5E8E2","#6B3A28",31],
+  ["Commu&shy;nity","groups","#E3EDF3","#2D5670",48],["Nightlife","nightlife","#E4E7EF","#1B2540",64],
+  ["Familie","family_restroom","#FFF1DC","#8A5A00",57],["Dating","favorite","#FCE3F1","#A3125F",6],
+];
+const GUIDES = [
+  ["Weihnachts&shy;märkte","storefront"],["Essen gehen","restaurant"],["Kneipen &amp; Bars","sports_bar"],
+  ["Clubs","nightlife"],["Spiel&shy;plätze","toys"],
+];
+const ohneTrenn = (s) => s.replace(/&shy;/g, "");
+
+function kreisEintrag(name, icon, t, dp, zahl, klasse = "") {
+  return `<a class="eintrag ${klasse}" href="#" style="--t:${t};--dp:${dp}"><span class="kreis"><span class="icon">${icon}</span></span>` +
+    `<span class="name">${name}</span>${zahl != null ? `<span class="zahl">${zahl}</span>` : ""}</a>`;
+}
+const senkrecht = (wort) => `<span class="senkrecht" aria-hidden="true"><span>${wort}</span></span>`;
+
+// Variante 1
+document.getElementById("v1-reihe").innerHTML =
+  senkrecht("EVENTS") +
+  KAT.map(([n, i, t, dp, z]) => kreisEintrag(n, i, t, dp, z)).join("") +
+  kreisEintrag("Kostenlos", "savings", "", "", 28, "eintrag--gratis") +
+  `<span class="trenner" aria-hidden="true"></span>` +
+  senkrecht("GUIDES") +
+  GUIDES.map(([n, i]) => kreisEintrag(n, i, "", "", null, "eintrag--guide")).join("");
+
+// Variante 2
+document.getElementById("v2-events-reihe").innerHTML =
+  senkrecht("EVENTS") +
+  KAT.map(([n, i, t, dp, z]) => `<a class="chip" href="#" style="--t:${t};--dp:${dp}"><span class="kreis"><span class="icon">${i}</span></span>${ohneTrenn(n)} <small>${z}</small></a>`).join("") +
+  `<a class="chip chip--gratis" href="#"><span class="icon" style="font-size:16px">savings</span>Kostenlos</a>`;
+document.getElementById("v2-guides-reihe").innerHTML =
+  senkrecht("GUIDES") +
+  GUIDES.map(([n, i]) => `<a class="chip chip--guide" href="#"><span class="kreis"><span class="icon">${i}</span></span>${ohneTrenn(n)}</a>`).join("");
+
+// Beispielinhalt und Tabbar in beiden Telefonen
+const karten = ["Tipp des Tages", "Picks des Tages", "Wohin in Düsseldorf?", "Diese Woche beliebt", "Am Wochenende", "Kostenlos"]
+  .map((t, k) => `<h4 class="d">${t}</h4><div class="karte"><div class="bild"></div><div class="txt">Beispiel-Eintrag ${k + 1}<span>Ort · 19:30 Uhr</span></div></div>`).join("");
+document.querySelectorAll("[data-inhalt]").forEach((el) => (el.innerHTML = karten));
+const tabs = [["home","Start",1],["event","Events"],["explore","Guides"],["favorite","Merkliste"],["person","Profil"]];
+document.querySelectorAll("[data-tabbar]").forEach((el) => (el.innerHTML = tabs.map(([i, l, an]) => `<div class="${an ? "an" : ""}"><span class="icon">${i}</span>${l}</div>`).join("")));
+
+// Variante 2: beim Runterscrollen einklappen, ganz oben wieder alles offen; Knöpfe klappen einzeln auf
+const scroller = document.getElementById("v2-scroller");
+const leiste = document.getElementById("v2-leiste");
+const reihen = { events: document.getElementById("v2-events"), guides: document.getElementById("v2-guides") };
+const offen = { events: false, guides: false };
+let eingeklappt = false;
+function zeichnen() {
+  leiste.classList.toggle("eingeklappt", eingeklappt);
+  for (const k of Object.keys(reihen)) {
+    reihen[k].classList.toggle("zu", eingeklappt && !offen[k]);
+    leiste.querySelector(`[data-reihe="${k}"]`).setAttribute("aria-expanded", String(eingeklappt && offen[k]));
+  }
+}
+scroller.addEventListener("scroll", () => {
+  const y = scroller.scrollTop;
+  if (!eingeklappt && y > 140) { eingeklappt = true; offen.events = offen.guides = false; zeichnen(); }
+  else if (eingeklappt && y < 20) { eingeklappt = false; zeichnen(); }
+}, { passive: true });
+leiste.querySelectorAll(".knopf").forEach((b) => b.addEventListener("click", () => {
+  const k = b.dataset.reihe; offen[k] = !offen[k]; zeichnen();
+}));
+
+// Hell/Dunkel
+document.querySelectorAll("[data-thema]").forEach((b) => b.addEventListener("click", () => {
+  document.documentElement.dataset.theme = b.dataset.thema;
+  document.querySelectorAll("[data-thema]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+}));
+</script>
+</body>
+</html>

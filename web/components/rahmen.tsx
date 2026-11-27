@@ -89,8 +89,11 @@ export function Kopf() {
               <Link href="/heute">Heute</Link>
               <Link href="/wochenende">Wochenende</Link>
               <Link href="/ausblick">Ausblick</Link>
-              {MAGAZIN_VERLINKT && <Link href="/magazin">Magazin</Link>}
+              <Link href="/kostenlos">Kostenlos</Link>
+              <Link href="/orte">Veranstaltungsorte</Link>
               <Link href="/stadtteile">Stadtteile &amp; Karte</Link>
+              {MAGAZIN_VERLINKT && <span className="popover__titel">Magazin</span>}
+              {MAGAZIN_VERLINKT && <Link href="/magazin">Alle Beiträge</Link>}
               <span className="popover__titel">Guides</span>
               <Link href="/guides">Alle Guides</Link>
               {WEIHNACHTSMAERKTE_VERLINKT && <Link href="/guides/weihnachtsmaerkte">Weihnachtsmärkte</Link>}

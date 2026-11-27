@@ -2,7 +2,7 @@
 // Kleine interaktive Bausteine (Client Components)
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Fragment, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { MAGAZIN_VERLINKT, SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import {
   KONTO_EVENT, angemeldetOhneAlter, kontomodus, merkAbonnieren, merkenUmschalten, merkSnapshot, SCHLUESSEL, type KontoZustand,
@@ -285,9 +285,9 @@ const TABS = [
 const TABS_KONTO = TABS;
 
 /** Alle Seiten, die zur Welt „Events“ gehören (Listen, Tage, Kategorien, Event-Seiten, Stadtteile) */
-const EVENT_PRAEFIXE = ["/entdecken", "/heute", "/morgen", "/tag", "/wochenende", "/ausblick", "/kostenlos", "/kategorie", "/event", "/reihe", "/stadtteil", "/stadtteile"];
-/** Alle Seiten, die zur Welt „Guides“ gehören (Hubs, Detailseiten, Veranstaltungsorte) */
-const GUIDE_PRAEFIXE = ["/guides", "/orte"];
+const EVENT_PRAEFIXE = ["/entdecken", "/heute", "/morgen", "/tag", "/wochenende", "/ausblick", "/kostenlos", "/kategorie", "/event", "/reihe", "/stadtteil", "/stadtteile", "/orte"];
+/** Alle Seiten, die zur Welt „Guides“ gehören (Hubs und Guide-Detailseiten) */
+const GUIDE_PRAEFIXE = ["/guides"];
 
 /** Pfad ist genau ein Präfix oder liegt darunter („/tag/2026-11-27“), aber nicht „/tagung“ */
 function beginntMit(pfad: string, praefixe: string[]) {
@@ -393,22 +393,26 @@ function TabBarListen({ pfad }: { pfad: string | null }) {
 }
 
 // Kopf am Desktop (Auftraggeber 27.11.2026): „Events ▾“ und „Guides ▾“ als gleich gebaute Aufklappmenüs,
-// daneben Magazin und Karte als einfache Punkte
+// daneben das Magazin. Veranstaltungsorte und „Stadtteile & Karte“ zeigen bisher nur Events und stehen deshalb
+// unter einem Trennstrich am Ende des Events-Menüs (später mit den Guide-Orten nach Stadtteilen verschmelzen).
 const NAV = [
   // Magazin (Plan Redaktion 5.9, E10)
   ...(MAGAZIN_VERLINKT ? [{ href: "/magazin", label: "Magazin" }] : []),
-  { href: "/stadtteile", label: "Karte" },
 ];
 
-export const EVENT_LINKS = [
+type MenueLink = { href: string; label: string; icon: string; trenner?: boolean };
+
+export const EVENT_LINKS: MenueLink[] = [
   { href: "/entdecken", label: "Alle Events", icon: "event" },
   { href: "/heute", label: "Heute", icon: "today" },
   { href: "/wochenende", label: "Wochenende", icon: "weekend" },
   { href: "/ausblick", label: "Ausblick", icon: "date_range" },
   { href: "/kostenlos", label: "Kostenlos", icon: "savings" },
+  { href: "/orte", label: "Veranstaltungsorte", icon: "location_city", trenner: true },
+  { href: "/stadtteile", label: "Stadtteile & Karte", icon: "map" },
 ];
 
-export const GUIDE_LINKS = [
+export const GUIDE_LINKS: MenueLink[] = [
   { href: "/guides", label: "Alle Guides", icon: "explore" },
   // Saison-Guide zuerst, solange der Schalter an ist (Plan Weihnachtsmärkte 5.6)
   ...(WEIHNACHTSMAERKTE_VERLINKT ? [{ href: "/guides/weihnachtsmaerkte", label: "Weihnachtsmärkte", icon: "wm:markt" }] : []),
@@ -420,7 +424,7 @@ export const GUIDE_LINKS = [
 
 /** Aufklappmenü im Kopf (Events, Guides): gleiche Form, damit beide Welten gleich viel Gewicht haben */
 function KopfMenue({ titel, aktiv, links, pfad, links_buendig = false }: {
-  titel: string; aktiv: boolean; links: { href: string; label: string; icon: string }[]; pfad: string | null; links_buendig?: boolean;
+  titel: string; aktiv: boolean; links: MenueLink[]; pfad: string | null; links_buendig?: boolean;
 }) {
   return (
     <details className={links_buendig ? "kopf__guides kopf__guides--links" : "kopf__guides"}>
@@ -429,9 +433,12 @@ function KopfMenue({ titel, aktiv, links, pfad, links_buendig = false }: {
       </summary>
       <div className="kopf__guides-menue">
         {links.map((g) => (
-          <Link key={g.href} href={g.href} aria-current={pfad === g.href ? "page" : undefined}>
-            <span className="icon" aria-hidden data-icon={g.icon} />{g.label}
-          </Link>
+          <Fragment key={g.href}>
+            {g.trenner && <span className="kopf__menue-trenner" aria-hidden />}
+            <Link href={g.href} aria-current={pfad === g.href ? "page" : undefined}>
+              <span className="icon" aria-hidden data-icon={g.icon} />{g.label}
+            </Link>
+          </Fragment>
         ))}
       </div>
     </details>
@@ -453,15 +460,10 @@ export function KopfNav() {
 function KopfNavListe({ pfad }: { pfad: string | null }) {
   return (
     <nav className="kopf__nav" aria-label="Bereiche">
-      <KopfMenue titel="Events" aktiv={istEventSeite(pfad) && pfad !== "/stadtteile"} links={EVENT_LINKS} pfad={pfad} links_buendig />
-      <KopfMenue
-        titel="Guides"
-        aktiv={istGuideSeite(pfad)}
-        links={[...GUIDE_LINKS, { href: "/orte", label: "Veranstaltungsorte", icon: "location_city" }]}
-        pfad={pfad}
-      />
+      <KopfMenue titel="Events" aktiv={istEventSeite(pfad)} links={EVENT_LINKS} pfad={pfad} links_buendig />
+      <KopfMenue titel="Guides" aktiv={istGuideSeite(pfad)} links={GUIDE_LINKS} pfad={pfad} />
       {NAV.map((n) => (
-        <Link key={n.href} href={n.href} aria-current={pfad === n.href || (n.href !== "/stadtteile" && istAktiv(pfad, n.href)) ? "page" : undefined}>
+        <Link key={n.href} href={n.href} aria-current={istAktiv(pfad, n.href) ? "page" : undefined}>
           {n.label}
         </Link>
       ))}

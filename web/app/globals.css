@@ -2682,6 +2682,7 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
 /* ---------- Events und Guides gleichwertig (Auftraggeber 27.11.2026) ---------- */
 /* Kopf am Desktop: „Events ▾“ steht ganz links, sein Menü klappt nach rechts auf */
 .kopf__guides--links .kopf__guides-menue { left: 0; right: auto; }
+.kopf__menue-trenner { display: block; height: 1px; margin: 6px 8px; background: var(--ddd-border); }
 /* Umschalter oben auf den Event-Seiten (unter 1200 px, siehe components/events-umschalter.tsx) */
 .ev-umschalter { padding: 12px 0; }
 .ev-umschalter--innen { padding-top: 0; margin: 12px 0 4px; }
