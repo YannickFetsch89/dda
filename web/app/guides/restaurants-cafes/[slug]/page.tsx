@@ -102,6 +102,7 @@ export default async function OrtDetail(props: Props) {
   // Zweites Bild (Essen & Getränke) nur zusammen mit einem Titelbild – sonst bleibt die Seite wie bisher
   const zweitBild = bild ? ortZweitBildUrl(ort) : null;
   const zweitNachweis = zweitBild ? ortZweitNachweis(ort) : null;
+  const beideGleich = !!zweitNachweis && zweitNachweis.text === ort.bild_attribution?.trim() && zweitNachweis.link === autorUrl;
   const kuecheName = kueche(ort)?.name ?? (typeof ort.extras.kueche === "string" ? ort.extras.kueche : null);
   const highlightGericht = typeof ort.extras.highlight_gericht === "string" ? ort.extras.highlight_gericht : null;
   // Links aus der Datenbank nur als http(s) nach außen geben
@@ -137,6 +138,13 @@ export default async function OrtDetail(props: Props) {
             <BildImg src={bild} alt={ort.name} icon={ortTypIcon(ort)} eager />
             {(ort.bild_attribution || zweitNachweis) && (
               <span className="gd-detail__credit gd-detail__credit--zwei">
+                {beideGleich ? (
+                  // Gleiche Quelle und gleicher Link für beide Bilder → eine Zeile (Auftraggeber 27.11.2026)
+                  <span>
+                    Beide Bilder:{" "}
+                    {autorUrl ? <a href={autorUrl} target="_blank" rel="noopener noreferrer">{ort.bild_attribution}</a> : ort.bild_attribution}
+                  </span>
+                ) : <>
                 {ort.bild_attribution && (
                   <span>
                     Hauptfoto:{" "}
@@ -151,6 +159,7 @@ export default async function OrtDetail(props: Props) {
                       : zweitNachweis.text}
                   </span>
                 )}
+                </>}
               </span>
             )}
           </div>

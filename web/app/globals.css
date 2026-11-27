@@ -1198,10 +1198,12 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
   .gd-detail__credit--zwei { max-width: calc(100% - 150px); overflow-wrap: anywhere; }
 }
 @media (min-width: 768px) {
-  .gd-detail__essen { width: 200px; height: 200px; right: 70px; bottom: -100px; border-width: 4px; box-shadow: 0 0 0 6px var(--ddd-bg), 0 18px 30px -12px rgba(0, 0, 0, 0.45); }
+  /* 250 px (25 % größer als im Entwurf, Auftraggeber 27.11.2026), waagerecht mittig über der Infokarte darunter:
+     rechte Spalte = (Breite − 56 px Abstand) × 2/5, ihre Mitte liegt (Breite − 56 px) / 5 vom rechten Rand */
+  .gd-detail__essen { width: 250px; height: 250px; right: calc((100% - 56px) / 5 - 125px); bottom: -125px; border-width: 4px; box-shadow: 0 0 0 6px var(--ddd-bg), 0 18px 30px -12px rgba(0, 0, 0, 0.45); }
   .gd-detail__credit--zwei { left: 12px; bottom: 10px; font-size: 11px; padding: 4px 9px; }
   /* Infokarte rückt unter den Kreis */
-  .gd-detail:has(.gd-detail__essen) .gd-detail__seite { margin-top: 96px; }
+  .gd-detail:has(.gd-detail__essen) .gd-detail__seite { margin-top: 121px; }
 }
 .gd-detail__spalten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 24px; align-items: start; }
 .gd-detail__haupt { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
