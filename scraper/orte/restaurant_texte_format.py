@@ -165,36 +165,44 @@ def orte_laden() -> list[dict]:
 
 
 def sql_wert(text: str) -> str:
-    return "'" + text.replace("'", "''") + "'"
+    # replace(…, chr(13), ''): falls die Datei unter Windows mit CRLF gespeichert wird, landen sonst „\r\n“ im Text
+    return "replace('" + text.replace("'", "''") + "', chr(13), '')"
 
 
 def ausgabe_bauen(ergebnisse: dict, orte: dict, heute: str) -> tuple[Path, Path, int]:
     ok = {i: e for i, e in ergebnisse.items() if e.get("neu")}
-    stempel = heute.replace("-", "_")
+    # Eigener Tabellenname: orte_texte_sicherung_<datum> kann schon von anderen Textrunden belegt sein (dann würde
+    # „create … if not exists“ still übersprungen und nichts gesichert)
+    tabelle = f"orte_texte_format_sicherung_{heute.replace('-', '_')}"
     sql = [
         f"-- Restaurant-Guide: Texte mit Absätzen und Fett (Wortlaut unverändert), erzeugt {heute}",
         "-- Erst NACH dem Deploy der Detailseite ausführen (sonst stehen live Sternchen im Text).",
         "-- Aktualisiert nur Zeilen, deren Text noch genau dem alten entspricht. Zurück: siehe Ende der Datei.",
         "begin;",
-        f"create table if not exists orte_texte_sicherung_{stempel} as",
+        f"create table if not exists {tabelle} as",
         f"  select id, beschreibung, now() as gesichert_am from orte where id in (",
         ",\n".join(f"    '{i}'" for i in ok) + ");",
+        f"alter table {tabelle} enable row level security;",
     ]
     for i, e in ok.items():
         # Nur ändern, wenn der Text seit dem Lauf gleich geblieben ist (md5 statt des ganzen alten Textes → halbe Dateigröße)
         alt_md5 = hashlib.md5(e["alt"].encode("utf-8")).hexdigest()
         sql.append(f"update orte set beschreibung = {sql_wert(e['neu'])} where id = '{i}' and md5(beschreibung) = '{alt_md5}';")
     sql += [
+        "",
+        "-- Windows-Zeilenumbrüche (\\r) aus früheren Text-SQLs entfernen – Absätze bleiben, nur das unsichtbare \\r fällt weg",
+        "update orte set beschreibung = replace(beschreibung, chr(13), '')",
+        "where typ in ('restaurant', 'cafe', 'imbiss') and position(chr(13) in beschreibung) > 0;",
         "commit;",
         "",
         "-- Prüfung: so viele Texte haben jetzt Fett",
-        f"select count(*) as mit_fett from orte where id in (select id from orte_texte_sicherung_{stempel}) and beschreibung like '%**%';",
+        f"select count(*) as mit_fett from orte where id in (select id from {tabelle}) and beschreibung like '%**%';",
         "",
         "-- Zurück (nur bei Bedarf):",
-        f"-- update orte o set beschreibung = s.beschreibung from orte_texte_sicherung_{stempel} s where o.id = s.id;",
+        f"-- update orte o set beschreibung = s.beschreibung from {tabelle} s where o.id = s.id;",
     ]
     sql_pfad = Path(f"database/orte_texte_restaurants_{heute}.sql")
-    sql_pfad.write_text("\n".join(sql) + "\n", encoding="utf-8")
+    sql_pfad.write_text("\n".join(sql) + "\n", encoding="utf-8", newline="\n")
     md = [f"# Restaurant-Texte: Vorschau ({heute})", "",
           f"{len(ok)} Texte neu gesetzt, {len(ergebnisse) - len(ok)} ausgelassen.", ""]
     raus = [(i, e) for i, e in ergebnisse.items() if not e.get("neu")]
