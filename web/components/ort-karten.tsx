@@ -64,6 +64,7 @@ export function typLabel(typ: string): string {
     case "ausflug": return "Ausflug";
     case "wochenendtipp": return "Wochenend-Trip";
     case "weihnachtsmarkt": return "Weihnachtsmarkt";
+    case "baeckerei": return "Bäckerei";
     default: return typ;
   }
 }

@@ -68,7 +68,10 @@ ALLE_SPERRE = threading.Lock()   # alle.json wird beim Nachladen von Google-Foto
 # Google-Bildserver: Fotos von dort nie per Link übernehmen (Urheber unbekannt, nicht dauerhaft speichern) – Kacheln nutzen
 GOOGLE_HOSTS = ("googleusercontent.com", "ggpht.com", "gstatic.com", "google.com", "googleapis.com")
 QUELLE_TEXT = {"website": "Website", "google_inhaber": "Google · Inhaber", "google_nutzer": "Google · Gast"}
-REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse"), ("kneipe", "Kneipen & Bars")]
+REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse"), ("kneipe", "Kneipen & Bars"),
+          ("baeckerei", "Bäckereien (nicht im Guide)")]
+# Art direkt umstellen (27.11.2026); Bäckereien bleiben im Datenbestand, erscheinen aber nicht auf der Website
+ARTEN = {"restaurant": "Restaurant", "cafe": "Café", "imbiss": "Imbiss", "baeckerei": "Bäckerei (nicht im Guide)"}
 AMBIENTE_MOTIVE = ("innenraum", "aussen", "terrasse")
 ESSEN_MOTIVE = ("essen", "getraenk")
 
@@ -414,6 +417,16 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
         else:
             vormerkung_loeschen(e["id"], "zweit")
 
+    # Art umstellen (von Hand → typ_fest, damit imbiss_einteilen.py sie nicht zurücksetzt)
+    neue_art = wahl.get("a")
+    if neue_art and neue_art in ARTEN and neue_art != ort["typ"] and ort["typ"] in ARTEN:
+        aenderung["typ"] = neue_art
+        extras["typ_fest"] = True
+        if neue_art == "imbiss":
+            extras["imbiss_grund"] = f"von Hand ({date.today().strftime('%d.%m.%Y')})"
+        else:
+            extras.pop("imbiss_grund", None)
+
     # Ambiente (KI) und dies.das-Wertung
     if e.get("ambiente"):
         extras["ambiente"] = {**e["ambiente"], "quelle": "ki", "stand": date.today().isoformat()}
@@ -425,14 +438,22 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
     extras["ddd_wertung"] = hand if hand is not None else wertung(e.get("vorab_score"), e.get("ambiente"), e["typ"])["wert"]
 
     aenderung["extras"] = extras
-    nachher = {**vorher, **{f: aenderung[f] for f in ("bild_url", "bild_attribution") if f in aenderung},
+    nachher = {**vorher, **{f: aenderung[f] for f in ("bild_url", "bild_attribution", "typ") if f in aenderung},
                **{f: extras.get(f) for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell", "bild_zweit", "ambiente",
                                             "ddd_wertung", "ddd_wertung_hand")}}
     if TROCKEN:
         logger.info("TROCKEN %s: %s", ort["slug"], json.dumps({f: v for f, v in nachher.items() if v != vorher.get(f)}, ensure_ascii=False)[:600])
         return "Trockenlauf"
     client.table("orte").update(aenderung).eq("id", e["id"]).execute()
-    protokollieren({"ort_id": e["id"], "slug": ort["slug"], "aktion": "speichern", "wahl": wahl, "vorher": vorher, "nachher": nachher})
+    protokollieren({"ort_id": e["id"], "slug": ort["slug"], "aktion": "speichern", "wahl": wahl, "vorher": {**vorher, "typ": ort["typ"]},
+                    "nachher": nachher})
+    if "typ" in aenderung:   # Reiter der Auswahlseite nachziehen
+        with ALLE_SPERRE:
+            roh = json_lesen(ALLE, [])
+            for x in roh:
+                if x["id"] == e["id"]:
+                    x["typ"] = aenderung["typ"]
+            json_schreiben(ALLE, roh)
     return "; ".join(h for h in hinweise if h)
 
 
@@ -449,6 +470,7 @@ def speichern(daten: dict) -> dict:
             wahl = {"t": "heute" if roh.get("t") in (None, "heute") else int(roh["t"]),
                     "e": "keins" if roh.get("e") in (None, "keins") else int(roh["e"]),
                     "w": hand_lesen(str(roh.get("w") or "")),
+                    "a": roh.get("a") if roh.get("a") in ARTEN else None,
                     "tl": str(roh.get("tl") or "").strip() or None,
                     "el": str(roh.get("el") or "").strip() or None}
             for feld in ("t", "e"):
@@ -578,12 +600,16 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
         zuschlag = f"{'+' if w['zuschlag'] >= 0 else '−'}{komma(abs(w['zuschlag']))}"
         erklaerung = (f"Grund {komma(w['grund'])} (bisheriger Score) · Ambiente {zuschlag} (KI {amb.get('note', '–')}/10, "
                       f"{'sicher' if amb.get('sicher') else '<span class=rot>unsicher – bitte prüfen</span>'})")
+    art_feld = ""
+    if e["typ"] in ARTEN:
+        optionen = "".join(f'<option value="{w}" {"selected" if w == e["typ"] else ""}>{t}</option>' for w, t in ARTEN.items())
+        art_feld = f'<label class="art">Art <select class="art-wahl" data-alt="{e["typ"]}">{optionen}</select></label>'
     tl = (gespeichert or {}).get("tl") or ""
     el = (gespeichert or {}).get("el") or ""
     status = f'<span class="ok">gespeichert {html.escape(gespeichert.get("zeit", ""))}</span>' if gespeichert else ""
     web = f'<a href="{html.escape(e["webseite"])}" target="_blank" rel="noopener">Website</a>' if e.get("webseite") else "keine Website"
     return f"""<section data-id="{e['id']}"><h2>{html.escape(e['name'])} <small>{html.escape(e.get('stadtteil') or '')} · {web}</small> {status}
-<button type="button" class="passt">Auswahl passt</button></h2>
+<button type="button" class="passt">Auswahl passt</button> {art_feld}</h2>
 <div class="wertung">dies.das-Wertung <b>{komma(w['wert'])}</b> <span class="muted">{erklaerung}</span>
 <label>eigener Wert <input class="hand" type="text" inputmode="decimal" placeholder="leer = {komma(w['wert'])}" value="{'' if hand is None else komma(float(hand))}" size="5"></label></div>
 <p class="amb">{html.escape(amb.get('begruendung', ''))}</p>
@@ -651,6 +677,8 @@ h1{{font-size:20px;margin:8px 0}} h2{{font-size:17px;margin:26px 0 4px}} small{{
 .w input,.kein input{{position:absolute;opacity:0;pointer-events:none}}
 .w.t:has(input:checked){{background:#c9a227;border-color:#c9a227;font-weight:700}} .w.e:has(input:checked){{background:#2f6fd6;border-color:#2f6fd6;color:#fff;font-weight:700}}
 .google{{font-size:12px;border:1px solid #888;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;margin-left:8px}}
+.art{{font-size:12px;font-weight:400;margin-left:8px}} .art select{{font-size:12px;padding:2px 4px}}
+.art select.geaendert{{background:#fff4d6;border-color:#e6c65c;font-weight:700}}
 .kein:has(input:checked){{background:#2f6fd6;color:#fff;border-color:#2f6fd6}} .zeile2{{margin-top:8px}}
 .links{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}} .link{{font-size:13px;display:flex;flex-direction:column;gap:4px}}
 .link input{{font-size:13px;padding:5px 8px;border:1px solid #bbb;border-radius:6px}} .link .vor{{max-width:220px;max-height:140px;object-fit:cover;border-radius:6px}}
@@ -686,6 +714,8 @@ document.querySelectorAll('.google').forEach(function(b){{b.addEventListener('cl
   catch(e){{info.textContent='Fehler: '+e;b.disabled=false}}
 }})}});
 document.querySelectorAll('.hand').forEach(function(i){{i.addEventListener('input',function(){{markieren(i)}})}});
+document.querySelectorAll('.art-wahl').forEach(function(a){{a.addEventListener('change',function(){{
+  a.classList.toggle('geaendert',a.value!==a.dataset.alt);markieren(a)}})}});
 document.querySelectorAll('.link input').forEach(function(i){{i.addEventListener('input',function(){{
   var v=i.value.trim(),img=i.parentNode.querySelector('.vor');img.src=(v.indexOf('https://')===0||v.indexOf('http://')===0)?v:'';markieren(i)}})}});
 document.querySelectorAll('.passt').forEach(function(b){{b.addEventListener('click',function(){{b.closest('section').classList.toggle('geprueft');zaehlen()}})}});
@@ -696,7 +726,8 @@ document.getElementById('speichern').addEventListener('click',async function(){{
   document.querySelectorAll('section.geprueft').forEach(function(s){{var id=s.dataset.id;
     var t=s.querySelector('input[name="t-'+id+'"]:checked'),e=s.querySelector('input[name="e-'+id+'"]:checked');
     daten[id]={{t:t?t.value:'heute',e:e?e.value:'keins',w:s.querySelector('.hand').value,
-      tl:s.querySelector('.link-t').value,el:s.querySelector('.link-e').value}}}});
+      tl:s.querySelector('.link-t').value,el:s.querySelector('.link-e').value,
+      a:s.querySelector('.art-wahl')?s.querySelector('.art-wahl').value:null}}}});
   b.disabled=true;info.textContent='Speichere … (Website-Bilder werden dabei geladen, das dauert etwas)';
   try{{var a=await fetch('/speichern',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(daten)}});var d=await a.json();
     info.textContent=d.meldung;document.querySelectorAll('section.geprueft').forEach(function(s){{s.classList.remove('geprueft')}});
@@ -723,7 +754,7 @@ class Handler(BaseHTTPRequestHandler):
         if pfad == "/":
             q = parse_qs(teile.query)
             typ = (q.get("typ") or ["restaurant"])[0]
-            typ = typ if typ in TYPEN else "restaurant"
+            typ = typ if typ in dict(REITER) else "restaurant"
             try:
                 nr = int((q.get("seite") or ["1"])[0])
             except ValueError:

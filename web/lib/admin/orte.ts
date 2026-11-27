@@ -12,6 +12,7 @@ export const ORT_TYPEN: { wert: OrtTyp; text: string }[] = [
   { wert: "restaurant", text: "Restaurant" },
   { wert: "cafe", text: "Café" },
   { wert: "imbiss", text: "Imbiss" },
+  { wert: "baeckerei", text: "Bäckerei (nicht auf der Website)" },
   { wert: "spielplatz", text: "Spielplatz" },
   { wert: "weihnachtsmarkt", text: "Weihnachtsmarkt" },
   { wert: "ausflug", text: "Ausflug" },
