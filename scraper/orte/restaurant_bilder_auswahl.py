@@ -72,6 +72,8 @@ REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse
           ("baeckerei", "Bäckereien (nicht im Guide)")]
 # Art direkt umstellen (27.11.2026); Bäckereien bleiben im Datenbestand, erscheinen aber nicht auf der Website
 ARTEN = {"restaurant": "Restaurant", "cafe": "Café", "imbiss": "Imbiss", "baeckerei": "Bäckerei (nicht im Guide)"}
+# Eigenes Merkmal extras.kindercafe (27.11.2026): Eltern-Kind-/Kindercafé mit Spielbereich – nicht Googles „Kinderfreundlich“
+KINDERCAFE_ARTEN = ("cafe", "restaurant", "imbiss")
 AMBIENTE_MOTIVE = ("innenraum", "aussen", "terrasse")
 ESSEN_MOTIVE = ("essen", "getraenk")
 
@@ -427,6 +429,13 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
         else:
             extras.pop("imbiss_grund", None)
 
+    # Kindercafé (nur gesendet, wenn der Haken geändert wurde)
+    if wahl.get("k") is not None:
+        if wahl["k"]:
+            extras["kindercafe"] = True
+        else:
+            extras.pop("kindercafe", None)
+
     # Ambiente (KI) und dies.das-Wertung
     if e.get("ambiente"):
         extras["ambiente"] = {**e["ambiente"], "quelle": "ki", "stand": date.today().isoformat()}
@@ -440,7 +449,7 @@ def ort_speichern(client, e: dict, wahl: dict, bisher: dict | None) -> str:
     aenderung["extras"] = extras
     nachher = {**vorher, **{f: aenderung[f] for f in ("bild_url", "bild_attribution", "typ") if f in aenderung},
                **{f: extras.get(f) for f in ("google_foto", "bild_link", "bild_fokus", "foto_manuell", "bild_zweit", "ambiente",
-                                            "ddd_wertung", "ddd_wertung_hand")}}
+                                            "ddd_wertung", "ddd_wertung_hand", "kindercafe")}}
     if TROCKEN:
         logger.info("TROCKEN %s: %s", ort["slug"], json.dumps({f: v for f, v in nachher.items() if v != vorher.get(f)}, ensure_ascii=False)[:600])
         return "Trockenlauf"
@@ -471,6 +480,7 @@ def speichern(daten: dict) -> dict:
                     "e": "keins" if roh.get("e") in (None, "keins") else int(roh["e"]),
                     "w": hand_lesen(str(roh.get("w") or "")),
                     "a": roh.get("a") if roh.get("a") in ARTEN else None,
+                    "k": roh.get("k") if isinstance(roh.get("k"), bool) else None,
                     "tl": str(roh.get("tl") or "").strip() or None,
                     "el": str(roh.get("el") or "").strip() or None}
             for feld in ("t", "e"):
@@ -604,6 +614,10 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
     if e["typ"] in ARTEN:
         optionen = "".join(f'<option value="{w}" {"selected" if w == e["typ"] else ""}>{t}</option>' for w, t in ARTEN.items())
         art_feld = f'<label class="art">Art <select class="art-wahl" data-alt="{e["typ"]}">{optionen}</select></label>'
+    if e["typ"] in KINDERCAFE_ARTEN:
+        kc = bool((ort_db or {}).get("kindercafe"))
+        art_feld += (f'<label class="art kc"><input type="checkbox" class="kc-wahl" data-alt="{"1" if kc else ""}" '
+                     f'{"checked" if kc else ""}> Kindercafé</label>')
     tl = (gespeichert or {}).get("tl") or ""
     el = (gespeichert or {}).get("el") or ""
     status = f'<span class="ok">gespeichert {html.escape(gespeichert.get("zeit", ""))}</span>' if gespeichert else ""
@@ -633,8 +647,8 @@ def seite(typ: str, nr: int) -> str:
     nr = max(1, min(nr, seiten))
     teil = liste[(nr - 1) * JE_SEITE: nr * JE_SEITE]
     try:   # eigener Wert, der schon in der Datenbank steht (nur diese Seite abfragen)
-        zeilen = db().table("orte").select("id, hand:extras->ddd_wertung_hand").in_("id", [e["id"] for e in teil]).execute().data
-        ort_db = {z["id"]: {"ddd_wertung_hand": z.get("hand")} for z in zeilen}
+        zeilen = db().table("orte").select("id, hand:extras->ddd_wertung_hand, kc:extras->kindercafe").in_("id", [e["id"] for e in teil]).execute().data
+        ort_db = {z["id"]: {"ddd_wertung_hand": z.get("hand"), "kindercafe": z.get("kc") is True} for z in zeilen}
     except Exception as f:  # noqa: BLE001 – Seite auch ohne Datenbank anzeigen
         logger.warning("Datenbank nicht lesbar (%s)", type(f).__name__)
         ort_db = {}
@@ -678,6 +692,7 @@ h1{{font-size:20px;margin:8px 0}} h2{{font-size:17px;margin:26px 0 4px}} small{{
 .w.t:has(input:checked){{background:#c9a227;border-color:#c9a227;font-weight:700}} .w.e:has(input:checked){{background:#2f6fd6;border-color:#2f6fd6;color:#fff;font-weight:700}}
 .google{{font-size:12px;border:1px solid #888;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;margin-left:8px}}
 .art{{font-size:12px;font-weight:400;margin-left:8px}} .art select{{font-size:12px;padding:2px 4px}}
+.kc:has(input:checked){{background:#e8f0fe;border-radius:6px;padding:2px 6px;font-weight:700}}
 .art select.geaendert{{background:#fff4d6;border-color:#e6c65c;font-weight:700}}
 .kein:has(input:checked){{background:#2f6fd6;color:#fff;border-color:#2f6fd6}} .zeile2{{margin-top:8px}}
 .links{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}} .link{{font-size:13px;display:flex;flex-direction:column;gap:4px}}
@@ -716,6 +731,7 @@ document.querySelectorAll('.google').forEach(function(b){{b.addEventListener('cl
 document.querySelectorAll('.hand').forEach(function(i){{i.addEventListener('input',function(){{markieren(i)}})}});
 document.querySelectorAll('.art-wahl').forEach(function(a){{a.addEventListener('change',function(){{
   a.classList.toggle('geaendert',a.value!==a.dataset.alt);markieren(a)}})}});
+document.querySelectorAll('.kc-wahl').forEach(function(c){{c.addEventListener('change',function(){{markieren(c)}})}});
 document.querySelectorAll('.link input').forEach(function(i){{i.addEventListener('input',function(){{
   var v=i.value.trim(),img=i.parentNode.querySelector('.vor');img.src=(v.indexOf('https://')===0||v.indexOf('http://')===0)?v:'';markieren(i)}})}});
 document.querySelectorAll('.passt').forEach(function(b){{b.addEventListener('click',function(){{b.closest('section').classList.toggle('geprueft');zaehlen()}})}});
@@ -727,7 +743,8 @@ document.getElementById('speichern').addEventListener('click',async function(){{
     var t=s.querySelector('input[name="t-'+id+'"]:checked'),e=s.querySelector('input[name="e-'+id+'"]:checked');
     daten[id]={{t:t?t.value:'heute',e:e?e.value:'keins',w:s.querySelector('.hand').value,
       tl:s.querySelector('.link-t').value,el:s.querySelector('.link-e').value,
-      a:s.querySelector('.art-wahl')?s.querySelector('.art-wahl').value:null}}}});
+      a:s.querySelector('.art-wahl')?s.querySelector('.art-wahl').value:null}};
+    var kc=s.querySelector('.kc-wahl');if(kc&&kc.checked!==(kc.dataset.alt==='1'))daten[id].k=kc.checked}});
   b.disabled=true;info.textContent='Speichere … (Website-Bilder werden dabei geladen, das dauert etwas)';
   try{{var a=await fetch('/speichern',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(daten)}});var d=await a.json();
     info.textContent=d.meldung;document.querySelectorAll('section.geprueft').forEach(function(s){{s.classList.remove('geprueft')}});
