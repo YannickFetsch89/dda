@@ -1914,7 +1914,7 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 /* Spielplatz-Piktogramm (Federwippe Pferd, Vorlage des Auftraggebers) statt Material „toys“ (zeigt ein Auto) */
 .icon[data-icon="sp:spielplatz"] { --sp-icon: url("/guides/icons/sp-spielplatz.svg"); }
 /* Kindercafé: Schaukelpferd auf Kufen (27.11.2026) */
-.icon[data-icon="sp:schaukelpferd"] { --sp-icon: url("/guides/icons/sp-schaukelpferd.svg"); }
+.icon[data-icon="sp:schaukelpferd"] { --sp-icon: url("/guides/icons/sp-schaukelpferd.svg?v=2"); }
 
 /* Heller Hero: Bild rechts auf 46 %, läuft nach links in den Grund aus; mobil Bild oben, Überschrift unten */
 .sp-hero { height: 240px; background: var(--sp-hero-bg); }

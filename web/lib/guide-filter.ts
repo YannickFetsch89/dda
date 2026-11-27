@@ -25,7 +25,8 @@ export const FILTER_TAGS = [
  * extras.kindercafe = true (Wunsch 27.11.2026) – im Filter aber eine eigene Kategorie, die nicht unter „Cafés“ zählt.
  */
 export type OrtTyp = "restaurant" | "imbiss" | "cafe" | "kindercafe";
-export const ALLE_TYPEN: OrtTyp[] = ["restaurant", "cafe", "imbiss", "kindercafe"];
+// Reihenfolge = Reiter im Hub: Kindercafés direkt hinter Cafés (Wunsch 27.11.2026)
+export const ALLE_TYPEN: OrtTyp[] = ["restaurant", "cafe", "kindercafe", "imbiss"];
 /** Standard ohne Parameter: Restaurants und Cafés, Schnellimbisse und Kindercafés nur auf Wunsch. */
 export const STANDARD_TYPEN: OrtTyp[] = ["restaurant", "cafe"];
 

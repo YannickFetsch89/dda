@@ -49,7 +49,11 @@ const CAFE_ARTEN: { typ: OrtTyp; label: string; text: string; icon: string }[] =
 /** Nur Café-Arten gewählt → Frage „Was ist dir wichtig?“ statt Küche */
 const nurCafeArten = (typen: OrtTyp[]) => typen.length > 0 && typen.every((t) => t === "cafe" || t === "kindercafe");
 
+/** Nur Kindercafés: es gibt so wenige, dass Stadtteil, Wünsche und Preis nichts mehr eingrenzen → direkt zu den Treffern. */
+const nurKindercafes = (typen: OrtTyp[]) => typen.length === 1 && typen[0] === "kindercafe";
+
 function schrittListe(typen: OrtTyp[], cafeWahl: boolean): Schritt[] {
+  if (cafeWahl && nurKindercafes(typen)) return ["art", "cafeart"];
   return ["art", ...(cafeWahl ? (["cafeart"] as Schritt[]) : []), "ort", nurCafeArten(typen) ? "wichtig" : "lust", "preis"];
 }
 
@@ -193,7 +197,13 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
               })}
             </div>
             <div className="fb__fuss">
-              <button type="button" className="fb__weiter" onClick={() => weiter(a)}>Weiter<Icon name="arrow_forward" /></button>
+              {nurKindercafes(a.typen) ? (
+                <button type="button" className="fb__weiter fb__weiter--ziel" onClick={anzeigen} disabled={!treffer}>
+                  {treffer.toLocaleString("de-DE")} {treffer === 1 ? "Kindercafé" : "Kindercafés"} anzeigen<Icon name="arrow_forward" />
+                </button>
+              ) : (
+                <button type="button" className="fb__weiter" onClick={() => weiter(a)}>Weiter<Icon name="arrow_forward" /></button>
+              )}
             </div>
           </div>
         )}
@@ -304,7 +314,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
           </div>
         )}
 
-        {schritt !== "art" && schritt !== "preis" && (
+        {schritt !== "art" && schritt !== "preis" && !(schritt === "cafeart" && nurKindercafes(a.typen)) && (
           <p className="fb__stand" aria-live="polite">{treffer.toLocaleString("de-DE")} passende Orte</p>
         )}
       </>
