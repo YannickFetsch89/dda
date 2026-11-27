@@ -90,6 +90,23 @@ body { margin:0; font-family:Inter, system-ui, sans-serif; background:#e9ecf1; c
 .knopf[aria-expanded="true"] { border-color:var(--gold); color:var(--gold); }
 .knopf[aria-expanded="true"] .icon { transform:rotate(180deg); }
 
+/* ---------- Variante 3: Leiste aus V1, eingeklappt nur zwei goldene Wörter ---------- */
+.variante--neu h2::after { content:"neu"; margin-left:8px; font:700 10px Inter, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#1b2540; background:#c9a84c; padding:3px 7px; border-radius:999px; vertical-align:middle; font-style:normal; }
+.v3-leiste { position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--border); }
+.v3-kompakt { display:flex; align-items:center; justify-content:center; gap:18px; max-height:0; overflow:hidden; transition:max-height .28s ease; }
+.v3-leiste.eingeklappt .v3-kompakt { max-height:44px; }
+.wort { display:flex; align-items:center; gap:2px; height:44px; padding:0 6px; border:0; background:none; cursor:pointer;
+  font:800 12px Inter, sans-serif; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); position:relative; }
+.wort .icon { font-size:18px; transition:transform .2s; }
+.wort[aria-expanded="true"] .icon { transform:rotate(180deg); }
+/* Unterstrich zeigt, welcher Teil der Leiste gerade im Blick ist */
+.wort.im-blick::after { content:""; position:absolute; left:6px; right:24px; bottom:8px; height:2px; border-radius:2px; background:var(--gold); }
+.v3-punkt { width:4px; height:4px; border-radius:50%; background:var(--border); }
+.v3-klappe { display:grid; grid-template-rows:1fr; transition:grid-template-rows .28s ease, opacity .2s ease; }
+.v3-klappe > .innen { overflow:hidden; min-height:0; }
+.v3-klappe.zu { grid-template-rows:0fr; opacity:0; }
+.v3-leiste.eingeklappt .v3-klappe .reihe { border-top:1px solid var(--border); padding-top:8px; }
+
 /* ---------- Beispielinhalt ---------- */
 .hero { background:var(--navy); color:#fff; padding:22px 16px 20px; }
 [data-theme="dark"] .hero { background:#1b2540; }
@@ -115,7 +132,7 @@ body { margin:0; font-family:Inter, system-ui, sans-serif; background:#e9ecf1; c
   <header>
     <div>
       <h1 class="d">Leiste unter dem Kopf: Events und Guides</h1>
-      <p class="lead">Zwei Varianten für mobil. In beiden haben alle Namen dieselbe Höhe (zwei Zeilen, oben bündig), dadurch stehen Kreise und Zahlen sauber in einer Linie. Einfach in den Telefonen scrollen.</p>
+      <p class="lead">Neu ist Variante 3 (links): das Aussehen von Variante 1, beim Scrollen eingeklappt wie Variante 2. Zum Vergleich stehen Variante 1 und 2 daneben. Alle Namen haben dieselbe Höhe (zwei Zeilen, oben bündig), dadurch stehen Kreise und Zahlen in einer Linie. Einfach in den Telefonen scrollen.</p>
     </div>
     <div class="umschalter" role="group" aria-label="Darstellung">
       <button type="button" data-thema="dark" aria-pressed="true">Dunkel</button>
@@ -124,6 +141,29 @@ body { margin:0; font-family:Inter, system-ui, sans-serif; background:#e9ecf1; c
   </header>
 
   <div class="telefone">
+    <section class="variante variante--neu">
+      <h2 class="d">Variante 3 · Kombination</h2>
+      <p class="erkl">Die Leiste aus Variante 1. Beim Runterscrollen klappt sie ein, oben bleiben nur die goldenen Wörter „EVENTS“ und „GUIDES“. „Events“ klappt die Leiste am Anfang auf. „Guides“ klappt sie auf und schiebt sie nach rechts zu den Guides. Ein zweiter Tipp oder weiteres Scrollen klappt sie wieder ein.</p>
+      <div class="telefon">
+        <div class="scroller" id="v3-scroller">
+          <div class="kopf"><span class="wortmarke">dies<span>.</span>das<span>.</span>düsseldorf</span><span class="aktionen"><span class="icon">search</span><span class="icon">person</span><span class="icon">menu</span></span></div>
+          <nav class="v3-leiste" id="v3-leiste">
+            <div class="v3-kompakt">
+              <button type="button" class="wort" data-ziel="events" aria-expanded="false">Events<span class="icon">expand_more</span></button>
+              <span class="v3-punkt" aria-hidden="true"></span>
+              <button type="button" class="wort" data-ziel="guides" aria-expanded="false">Guides<span class="icon">expand_more</span></button>
+            </div>
+            <div class="v3-klappe" id="v3-klappe"><div class="innen"><div class="reihe" id="v3-reihe"></div></div></div>
+          </nav>
+          <div class="hero"><h3 class="d">Was geht <em>heute</em><br>in Düsseldorf?</h3><div class="zahlen"><span><b>137</b>Events heute</span><span><b>28</b>kostenlos</span><span><b>1</b>neu</span></div></div>
+          <div class="inhalt" data-inhalt></div>
+          <div style="height:70px"></div>
+        </div>
+        <div class="tabbar" data-tabbar></div>
+      </div>
+      <p class="hinweis">Runterscrollen, dann oben auf „Events“ oder „Guides“ tippen.</p>
+    </section>
+
     <section class="variante">
       <h2 class="d">Variante 1 · eine Leiste</h2>
       <p class="erkl">Eine waagerechte Leiste. Vorne steht senkrecht „EVENTS“ (von unten nach oben gelesen), dann alle Kategorien und „Kostenlos“. Nach einem Trennstrich folgen senkrecht „GUIDES“ und die Guides. Die Leiste bleibt beim Scrollen oben stehen.</p>
@@ -232,6 +272,47 @@ scroller.addEventListener("scroll", () => {
 leiste.querySelectorAll(".knopf").forEach((b) => b.addEventListener("click", () => {
   const k = b.dataset.reihe; offen[k] = !offen[k]; zeichnen();
 }));
+
+// Variante 3: Leiste wie Variante 1; beim Runterscrollen eingeklappt auf die zwei goldenen Wörter
+{
+  const scroller3 = document.getElementById("v3-scroller");
+  const leiste3 = document.getElementById("v3-leiste");
+  const klappe = document.getElementById("v3-klappe");
+  const reihe3 = document.getElementById("v3-reihe");
+  reihe3.innerHTML = document.getElementById("v1-reihe").innerHTML;
+  const guidesStart = () => reihe3.querySelectorAll(".senkrecht")[1].offsetLeft - 12;
+  const knopf = (z) => leiste3.querySelector(`[data-ziel="${z}"]`);
+  let zu = false;        // Seite ist weit genug gescrollt: nur die zwei Wörter
+  let offen = false;     // im eingeklappten Zustand per Tipp aufgeklappt
+  let offenBeiY = 0;     // Scrollstand beim Aufklappen: wer danach weiter scrollt, klappt wieder ein
+  function zeichnen() {
+    leiste3.classList.toggle("eingeklappt", zu);
+    klappe.classList.toggle("zu", zu && !offen);
+    const imGuides = reihe3.scrollLeft >= guidesStart() - 40;
+    for (const z of ["events", "guides"]) {
+      knopf(z).setAttribute("aria-expanded", String(zu && offen));
+      knopf(z).classList.toggle("im-blick", zu && offen && (z === "guides") === imGuides);
+    }
+  }
+  scroller3.addEventListener("scroll", () => {
+    const y = scroller3.scrollTop;
+    if (!zu && y > 140) { zu = true; offen = false; zeichnen(); }
+    else if (zu && y < 20) { zu = false; offen = false; zeichnen(); }
+    else if (zu && offen && Math.abs(y - offenBeiY) > 120) { offen = false; zeichnen(); }
+  }, { passive: true });
+  reihe3.addEventListener("scroll", zeichnen, { passive: true });
+  for (const z of ["events", "guides"]) {
+    knopf(z).addEventListener("click", () => {
+      const ziel = z === "guides" ? guidesStart() : 0;
+      const schonDa = Math.abs(reihe3.scrollLeft - ziel) < 30;
+      if (offen && schonDa) { offen = false; zeichnen(); return; }   // zweiter Tipp: wieder einklappen
+      const warZu = !offen;
+      offen = true; offenBeiY = scroller3.scrollTop; zeichnen();
+      // Beim Aufklappen direkt springen, sonst sanft rüberschieben
+      reihe3.scrollTo({ left: ziel, behavior: warZu ? "instant" : "smooth" });
+    });
+  }
+}
 
 // Hell/Dunkel
 document.querySelectorAll("[data-thema]").forEach((b) => b.addEventListener("click", () => {
