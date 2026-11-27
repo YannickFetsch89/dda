@@ -4,12 +4,12 @@ import { bremsAdresse, bremseZuruecksetzen, gebremst, istGuideUebersicht, parame
 import { config as proxyConfig } from "@/proxy";
 
 describe("Bremse je Adresse", () => {
-  it("ab dem 41. Aufruf je Minute und Adresse, danach neues Fenster", () => {
+  it("ab dem 121. Aufruf je Minute und Adresse, danach neues Fenster", () => {
     bremseZuruecksetzen();
     const t0 = 1_000_000;
-    for (let i = 0; i < 40; i++) expect(gebremst("1.2.3.4", t0 + i)).toBe(false);
-    expect(gebremst("1.2.3.4", t0 + 50)).toBe(true);
-    expect(gebremst("5.6.7.8", t0 + 50)).toBe(false); // andere Adresse unberührt
+    for (let i = 0; i < 120; i++) expect(gebremst("1.2.3.4", t0 + i)).toBe(false);
+    expect(gebremst("1.2.3.4", t0 + 150)).toBe(true);
+    expect(gebremst("5.6.7.8", t0 + 150)).toBe(false); // andere Adresse unberührt
     expect(gebremst("1.2.3.4", t0 + 61_000)).toBe(false); // neues Fenster
   });
   it("Adresse aus X-Real-IP (nginx), sonst letzter X-Forwarded-For-Eintrag", () => {
@@ -49,5 +49,15 @@ describe("Saubere Adressen der Guide-Übersichten", () => {
     expect(sammelGrenzePruefen("/guides/restaurants-cafes", p("_rsc=x"))).toBe(false);
     expect(sammelGrenzePruefen("/guides/restaurants-cafes", p("stadtteil=bilk"))).toBe(true);
     expect(sammelGrenzePruefen("/guides/kneipen-bars", p(""))).toBe(true);
+  });
+});
+
+describe("Statische Dateien (27.11.2026)", () => {
+  it("statische Dateien unter /guides zählen nicht, Seiten schon", async () => {
+    const { istDateiPfad } = await import("@/lib/bremse");
+    expect(istDateiPfad("/guides/icons/sp-spielplatz.svg")).toBe(true);
+    expect(istDateiPfad("/guides/restaurants-cafes.webp")).toBe(true);
+    expect(istDateiPfad("/guides/restaurants-cafes")).toBe(false);
+    expect(istDateiPfad("/guides/restaurants-cafes/kochi-flingern-restaurant-flingern")).toBe(false);
   });
 });

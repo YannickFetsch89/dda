@@ -5,7 +5,12 @@
 // nginx selbst setzt (live geprüft, siehe absenderIp in lib/formulare.ts). Rein, getestet in web/tests/bremse.test.ts.
 
 export const BREMSE_FENSTER_MS = 60_000;
-export const BREMSE_MAX = 40;
+// 120 statt 40 (27.11.2026): Ein Seitenbesuch löst durch die Vorab-Abrufe von Next.js (Links im Sichtbereich, Kopf- und
+// Leistenmenüs) rund ein Dutzend Abrufe unter /guides aus; beim Durchklicken von Restaurants war 40 nach 2–3 Seiten
+// erreicht (weiße Seite „Zu viele Anfragen“). Vorab-Abrufe lassen sich im Proxy nicht erkennen: Next entfernt die
+// Köpfe rsc/next-router-prefetch und den Parameter _rsc vorher (lokal gemessen). Ein Massenabruf wie am 23.11.
+// (rund 3.000 in kurzer Zeit von einer Adresse) wird weiter gestoppt; teure Übersichten haben zusätzlich SAMMEL_MAX.
+export const BREMSE_MAX = 120;
 const MAX_SCHLUESSEL = 20_000;
 
 const zaehler = new Map<string, { start: number; anzahl: number }>();
@@ -32,6 +37,13 @@ export function gebremst(adresse: string, jetzt: number = Date.now(), max: numbe
   z.anzahl += 1;
   return z.anzahl > max;
 }
+
+/**
+ * Statische Dateien unter /guides (Icons wie /guides/icons/sp-spielplatz.svg, Guide-Bilder wie /guides/clubs.webp):
+ * kosten keine Rechnung und zählen nicht. Vorher zählten sie mit (27.11.2026). Die Guide-
+ * Bilder (/guides/<hub>.webp) fielen außerdem unter die gemeinsame Grenze aller Besucher (istGuideUebersicht).
+ */
+export const istDateiPfad = (pfad: string) => /\.(svg|webp|png|jpe?g|gif|avif|ico|txt|xml|json|woff2?)$/i.test(pfad);
 
 /** Nur für Tests */
 export function bremseZuruecksetzen(): void {

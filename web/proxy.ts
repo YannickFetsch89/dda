@@ -14,7 +14,7 @@ import { seoAktionFuer, seoTabelle, zielAufloesen } from "@/lib/seo-entscheidung
 import { ADMIN_OFFENE_SEITEN, hatAdminKopf, istAdminBereich, istAdminPfad } from "@/lib/admin/bereich";
 import { ADMIN_COOKIE } from "@/lib/admin/konfig";
 import { cookieLesen } from "@/lib/konto/cookies";
-import { bremsAdresse, BREMSE_FENSTER_MS, gebremst, istGuideUebersicht, parameterBereinigen, sammelGebremst, sammelGrenzePruefen } from "@/lib/bremse";
+import { bremsAdresse, BREMSE_FENSTER_MS, gebremst, istDateiPfad, istGuideUebersicht, parameterBereinigen, sammelGebremst, sammelGrenzePruefen } from "@/lib/bremse";
 
 const GONE_HTML = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Event nicht mehr verfügbar · dies.das.düsseldorf</title></head><body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;line-height:1.5;color:#1b2540"><h1>Dieses Event ist nicht mehr verfügbar.</h1><p>Die Seite wurde entfernt, weil das Event schon lange vorbei ist.</p><p><a href="/entdecken" style="color:#457b9d">Aktuelle Events in Düsseldorf entdecken</a></p></body></html>`;
 
@@ -66,6 +66,8 @@ export async function proxy(request: NextRequest) {
   // einzelnen Client, Speicherüberlauf alle ~40 s). Vor jeder Rechnung: zu viele Aufrufe derselben Adresse → 429.
   // /ausblick rechnet mit dem Fernpool (Tag 61–365) – dieselbe Bremse (Plan Quellen-Ausbau 6.1, W2)
   if (pfad === "/guides" || pfad.startsWith("/guides/") || pfad === "/ausblick") {
+    // Statische Dateien (Icons, Guide-Bilder) laufen ohne Bremse und Prüfung durch (27.11.2026)
+    if (istDateiPfad(pfad)) return NextResponse.next();
     if (gebremst(bremsAdresse(request.headers))) {
       return new NextResponse("Zu viele Anfragen. Bitte in einer Minute noch einmal versuchen.", {
         status: 429,
