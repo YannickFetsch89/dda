@@ -42,6 +42,8 @@ const EXTRAS_FELDER = [
   "weihnachtsmarkt",
   // Kindercafé-Merkmal und dies.das-Wertung (Bild-Auswahlseite, 27.11.2026; lib/guide-filter.ts)
   "kindercafe", "ddd_wertung",
+  // Zweites Bild (Essen & Getränke) aus der Bild-Auswahlseite – Kreis auf der Detailseite (27.11.2026)
+  "bild_zweit",
 ];
 export const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 
@@ -168,6 +170,63 @@ export function slugDekodieren(roh: string): string | null {
   } catch {
     return null;
   }
+}
+
+// ── Zweites Bild (Essen & Getränke, extras.bild_zweit) ──────────────────────────────────────────────
+// Gesetzt von scraper/orte/restaurant_bilder_auswahl.py (bild_daten/ort_speichern):
+//   { art: "eigen", bild_url, nachweis, link }  – Website-Bild; nach --nach-deploy lokal unter /ort-bilder/restaurants/…
+//   { art: "google", google_foto: { name, autor, autor_url, … }, nachweis }
+interface ZweitBild {
+  art?: unknown;
+  bild_url?: unknown;
+  nachweis?: unknown;
+  link?: unknown;
+  google_foto?: { name?: unknown; autor_url?: unknown } | null;
+}
+
+/** Nur echte Google-Ressourcennamen („places/<id>/photos/<id>“) – wie in der Route /ort-foto. */
+export const GOOGLE_FOTO_NAME = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
+
+function zweitBild(o: DddOrt): ZweitBild | null {
+  const z = o.extras?.bild_zweit;
+  return z && typeof z === "object" ? (z as ZweitBild) : null;
+}
+
+/**
+ * Bildquelle des zweiten Bildes für die Route /ort-foto/[slug]?bild=zweit: eigene Adresse oder Google-Fotoname.
+ * Eigene Adressen mit „key=“ und ungültige Google-Namen zählen nicht.
+ */
+export function zweitBildQuelle(o: DddOrt): { eigenes: string | null; google: string | null } {
+  const z = zweitBild(o);
+  if (typeof z?.bild_url === "string" && z.bild_url && !z.bild_url.includes("key=")) return { eigenes: z.bild_url, google: null };
+  const name = z?.google_foto?.name;
+  return { eigenes: null, google: typeof name === "string" && GOOGLE_FOTO_NAME.test(name) ? name : null };
+}
+
+/**
+ * Adresse des zweiten Bildes, gebaut wie ortBildUrl: lokale Datei direkt (mit ?v= aus foto_version), alles andere
+ * über den eigenen Server (/ort-foto/<slug>?bild=zweit) – fremde Bilder und Google-Fotos nie direkt im Browser.
+ */
+export function ortZweitBildUrl(o: DddOrt): string | null {
+  const z = zweitBild(o);
+  if (!z) return null;
+  const version = o.extras.foto_version;
+  const v = typeof version === "number" && version >= 1 ? `v=${version}` : "";
+  const lokal = lokalesBild(typeof z.bild_url === "string" ? z.bild_url : null);
+  if (lokal) return v ? `${lokal}?${v}` : lokal;
+  const quelle = zweitBildQuelle(o);
+  if (!(quelle.eigenes || quelle.google) || !o.slug) return null;
+  return `/ort-foto/${encodeURIComponent(o.slug)}?bild=zweit${v ? `&${v}` : ""}`;
+}
+
+/** Bildnachweis des zweiten Bildes: Text und Link (eigen: link, Google: Urheber-Seite), Link nur https. */
+export function ortZweitNachweis(o: DddOrt): { text: string; link: string | null } | null {
+  const z = zweitBild(o);
+  const text = typeof z?.nachweis === "string" ? z.nachweis.trim() : "";
+  if (!z || !text) return null;
+  const roh = z.art === "google" ? z.google_foto?.autor_url : z.link;
+  const link = sichereUrl(roh);
+  return { text, link: link && link.startsWith("https://") ? link : null };
 }
 
 /** Nur http(s)-Links aus der Datenbank nach außen geben (keine data:-, javascript:- oder //-Adressen). */

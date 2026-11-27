@@ -28,7 +28,7 @@ describe("Restaurant-Hub: Standard und Mehrfachauswahl", () => {
   });
   it("„alle“, Grid und mehrere Küchen in der URL", () => {
     const f = filterLesen({ typ: "alle", ansicht: "grid", kueche: "italienisch,japanisch" });
-    expect(f.typen).toHaveLength(3);
+    expect(f.typen).toHaveLength(4); // Restaurants, Cafés, Kindercafés, Schnellimbisse (27.11.2026)
     expect(filterHref(B, f, {})).toBe(`${B}?typ=alle&kueche=italienisch,japanisch&ansicht=grid`);
   });
   it("Art umschalten lässt nie eine leere Auswahl", () => {

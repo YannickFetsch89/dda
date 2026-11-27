@@ -8,12 +8,13 @@
 //   gespeichert (Nutzungsbedingungen); nur die Bildadresse wird gecached, weil jeder Abruf kostet:
 //     Treffer 30 Tage · dauerhaft kein Foto 1 Tag · vorübergehender Fehler 5 Minuten
 //   Lehnt Google eine gecachte Bildadresse ab (abgelaufen), wird sie verworfen (max. 1×/Stunde je Ort).
+// - ?bild=zweit: zweites Bild (Essen & Getränke, extras.bild_zweit) nach denselben Regeln (Restaurants & Cafés, 27.11.2026).
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { bildAntwort, bildHolen } from "@/lib/bild-proxy";
 import { clubLaden } from "@/lib/clubs-daten";
 import { istSichtbarerClub } from "@/lib/clubs";
-import { lokalesBild, ortLaden, slugDekodieren } from "@/lib/orte";
+import { lokalesBild, ortLaden, slugDekodieren, zweitBildQuelle } from "@/lib/orte";
 import { spielplatzLaden } from "@/lib/spielplaetze-daten";
 import { weihnachtsmarktLaden } from "@/lib/weihnachtsmaerkte-daten";
 
@@ -111,13 +112,15 @@ async function bildQuelle(slug: string, eigenes: string | null, google: string |
   return { adresse: ergebnis.adresse, google: true };
 }
 
-export async function GET(_req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
+export async function GET(req: NextRequest, ctx: RouteContext<"/ort-foto/[slug]">) {
   const slug = slugDekodieren((await ctx.params).slug);
   const ort = slug ? await fotoOrt(slug) : null;
+  const zweit = req.nextUrl.searchParams.get("bild") === "zweit";
+  const zweitQuelle = zweit && ort ? zweitBildQuelle(ort) : null;
   // Bild aus web/public (z. B. vom Veranstalter): direkt dorthin verweisen, nicht durch den Proxy holen
-  const lokal = lokalesBild(ort?.bild_url);
+  const lokal = lokalesBild(zweit ? zweitQuelle?.eigenes : ort?.bild_url);
   if (lokal) return new Response(null, { status: 308, headers: { Location: lokal, "Cache-Control": `public, max-age=${TAG}` } });
-  const kennung = slug ? fotoKennung(ort) : null;
+  const kennung = !slug ? null : zweit ? zweitQuelle : fotoKennung(ort);
   // Ohne Foto gar nicht erst in den Cache bzw. zu Google
   const quelle = slug && kennung && (kennung.eigenes || kennung.google)
     ? await bildQuelle(slug, kennung.eigenes, kennung.google, ort?.typ === "weihnachtsmarkt")

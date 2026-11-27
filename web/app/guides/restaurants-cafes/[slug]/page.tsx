@@ -17,7 +17,8 @@ import { BeschreibungText } from "@/components/beschreibung-text";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { eventPoolLaden } from "@/lib/daten";
 import { dddWertung, istEmpfehlung, kueche, preisDetail, preisKurz, sortieren, wertungText } from "@/lib/guide-filter";
-import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
+import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, ortZweitBildUrl, ortZweitNachweis, sichereUrl, slugDekodieren } from "@/lib/orte";
+import { EssensKreis } from "@/components/essens-kreis";
 import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
@@ -98,6 +99,9 @@ export default async function OrtDetail(props: Props) {
 
   const bild = ortBildUrl(ort);
   const autorUrl = ortBildAutorUrl(ort);
+  // Zweites Bild (Essen & Getränke) nur zusammen mit einem Titelbild – sonst bleibt die Seite wie bisher
+  const zweitBild = bild ? ortZweitBildUrl(ort) : null;
+  const zweitNachweis = zweitBild ? ortZweitNachweis(ort) : null;
   const kuecheName = kueche(ort)?.name ?? (typeof ort.extras.kueche === "string" ? ort.extras.kueche : null);
   const highlightGericht = typeof ort.extras.highlight_gericht === "string" ? ort.extras.highlight_gericht : null;
   // Links aus der Datenbank nur als http(s) nach außen geben
@@ -125,7 +129,34 @@ export default async function OrtDetail(props: Props) {
         <span aria-current="page">{ort.name}</span>
       </nav>
 
-      {bild && (
+      {bild && zweitBild ? (
+        // Mit zweitem Bild (Essen & Getränke): Foto in eigener Hülle (overflow: hidden, wandert langsamer), daneben der
+        // Kreis halb über dem Foto; beide Nachweise unten links untereinander (Entwurf cafe-essensbild-final.html)
+        <div className="gd-detail__hero gd-detail__hero--zweit" data-parallax-hero>
+          <div className="gd-detail__foto">
+            <BildImg src={bild} alt={ort.name} icon={ortTypIcon(ort)} eager />
+            {(ort.bild_attribution || zweitNachweis) && (
+              <span className="gd-detail__credit gd-detail__credit--zwei">
+                {ort.bild_attribution && (
+                  <span>
+                    Hauptfoto:{" "}
+                    {autorUrl ? <a href={autorUrl} target="_blank" rel="noopener noreferrer">{ort.bild_attribution}</a> : ort.bild_attribution}
+                  </span>
+                )}
+                {zweitNachweis && (
+                  <span>
+                    Foto rechts:{" "}
+                    {zweitNachweis.link
+                      ? <a href={zweitNachweis.link} target="_blank" rel="noopener noreferrer">{zweitNachweis.text}</a>
+                      : zweitNachweis.text}
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+          <EssensKreis src={zweitBild} alt={`${ort.name}: Essen und Getränke`} />
+        </div>
+      ) : bild && (
         <div className="gd-detail__hero">
           <BildImg src={bild} alt={ort.name} icon={ortTypIcon(ort)} eager />
           {ort.bild_attribution && (
