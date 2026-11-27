@@ -11,6 +11,7 @@ import { jsonLdText } from "@/lib/json-ld";
 import { kategorie as kategorieInfo } from "@/lib/kategorien";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { hatParameter, seitenMetadaten } from "@/lib/seo";
+import { EventsUmschalter } from "@/components/events-umschalter";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 const PFAD = "/ausblick";
@@ -59,6 +60,7 @@ function AusblickAnsicht({ heute, eintraege, letzter, filter }: Daten & { filter
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
+      <EventsUmschalter aktiv="ausblick" />
       <section className="wk-hero">
         <div className="container">
           <span className="overline overline--gold">Zum Vormerken</span>

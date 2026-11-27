@@ -272,39 +272,56 @@ export function ThemeToggle() {
 
 // ---------- Navigation mit aktivem Zustand ----------
 
+// Events und Guides gleichwertig (Auftraggeber 27.11.2026): „Heute“, „Wochenende“ und „Ausblick“ stehen als
+// Umschalter oben auf den Event-Seiten (EventsUmschalter), „Für dich“ auf der Startseite und im Profil.
+// Gast und Konto haben dieselben fünf Tabs; „Profil“ führt Gäste zur Anmeldung.
 const TABS = [
   { href: "/", icon: "home", label: "Start" },
-  { href: "/entdecken", icon: "explore", label: "Entdecken" },
-  { href: "/heute", icon: "today", label: "Heute" },
-  { href: "/wochenende", icon: "weekend", label: "Wochenende" },
-  { href: "/merkliste", icon: "favorite", label: "Merkliste" },
-];
-
-// Angemeldet (data-konto="1", Plan Mein Bereich 3.9 / S5): „Heute“ und „Wochenende“ bleiben über Chips und Menü erreichbar
-const TABS_KONTO = [
-  { href: "/", icon: "home", label: "Start" },
-  { href: "/entdecken", icon: "explore", label: "Entdecken" },
-  { href: "/konto/fuer-dich", icon: "auto_awesome", label: "Für dich" },
+  { href: "/entdecken", icon: "event", label: "Events" },
+  { href: "/guides", icon: "explore", label: "Guides" },
   { href: "/merkliste", icon: "favorite", label: "Merkliste" },
   { href: "/konto", icon: "person", label: "Profil" },
 ];
+const TABS_KONTO = TABS;
+
+/** Alle Seiten, die zur Welt „Events“ gehören (Listen, Tage, Kategorien, Event-Seiten, Stadtteile) */
+const EVENT_PRAEFIXE = ["/entdecken", "/heute", "/morgen", "/tag", "/wochenende", "/ausblick", "/kostenlos", "/kategorie", "/event", "/reihe", "/stadtteil", "/stadtteile"];
+/** Alle Seiten, die zur Welt „Guides“ gehören (Hubs, Detailseiten, Veranstaltungsorte) */
+const GUIDE_PRAEFIXE = ["/guides", "/orte"];
+
+/** Pfad ist genau ein Präfix oder liegt darunter („/tag/2026-11-27“), aber nicht „/tagung“ */
+function beginntMit(pfad: string, praefixe: string[]) {
+  return praefixe.some((p) => pfad === p || pfad.startsWith(`${p}/`));
+}
+
+export function istEventSeite(pfad: string | null) {
+  return pfad !== null && beginntMit(pfad, EVENT_PRAEFIXE);
+}
+export function istGuideSeite(pfad: string | null) {
+  return pfad !== null && beginntMit(pfad, GUIDE_PRAEFIXE);
+}
 
 function istAktiv(pfad: string | null, href: string) {
   if (pfad === null) return false;
   if (href === "/") return pfad === "/";
+  if (href === "/entdecken") return istEventSeite(pfad);
+  if (href === "/guides") return istGuideSeite(pfad);
   if (href === "/heute") return pfad === "/heute" || pfad.startsWith("/tag/");
   return pfad.startsWith(href);
 }
 
-// Profil-Tab: Übersicht und Unterseiten von Mein dies.das, nicht „Für dich“ und nicht die öffentlichen Konto-Seiten
-// (Anmelden, Bestätigen, Passwort, Abgemeldet)
-const PROFIL_PFADE = new Set(["/konto", "/konto/einstellungen", "/konto/datenschutz", "/konto/interessen", "/konto/erlebt", "/konto/willkommen"]);
+// Profil-Tab: Übersicht und Unterseiten von Mein dies.das samt „Für dich“; für Gäste auch Anmelden & Co.
+const PROFIL_PFADE = new Set(["/konto", "/konto/einstellungen", "/konto/datenschutz", "/konto/interessen", "/konto/erlebt", "/konto/willkommen", "/konto/fuer-dich"]);
 export function istAktivKonto(pfad: string | null, href: string) {
   if (pfad === null) return false;
   if (href === "/konto") return PROFIL_PFADE.has(pfad);
-  if (href === "/entdecken") return pfad.startsWith("/entdecken");
-  // Start, Für dich, Merkliste: nur genau dieser Pfad
-  return pfad === href;
+  if (href === "/merkliste") return pfad === href;
+  return istAktiv(pfad, href);
+}
+function istAktivGast(pfad: string | null, href: string) {
+  if (pfad === null) return false;
+  if (href === "/konto") return pfad === "/konto" || pfad.startsWith("/konto/");
+  return istAktiv(pfad, href);
 }
 
 const zustandAbo = (cb: () => void) => {
@@ -357,7 +374,7 @@ function TabBarListen({ pfad }: { pfad: string | null }) {
     <>
       <nav className="tabbar tabbar--gast" aria-label="Hauptnavigation" hidden={hydriert && konto}>
         {TABS.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={istAktiv(pfad, t.href) ? "page" : undefined}>
+          <Link key={t.href} href={t.href} aria-current={istAktivGast(pfad, t.href) ? "page" : undefined}>
             <span className="icon" aria-hidden data-icon={t.icon} />
             {t.label}
           </Link>
@@ -375,13 +392,20 @@ function TabBarListen({ pfad }: { pfad: string | null }) {
   );
 }
 
+// Kopf am Desktop (Auftraggeber 27.11.2026): „Events ▾“ und „Guides ▾“ als gleich gebaute Aufklappmenüs,
+// daneben Magazin und Karte als einfache Punkte
 const NAV = [
-  { href: "/entdecken", label: "Entdecken" },
-  { href: "/heute", label: "Heute" },
-  { href: "/wochenende", label: "Wochenende" },
-  // Magazin (Plan Redaktion 5.9, E10): eigener Punkt hinter „Wochenende“
+  // Magazin (Plan Redaktion 5.9, E10)
   ...(MAGAZIN_VERLINKT ? [{ href: "/magazin", label: "Magazin" }] : []),
-  // „Karte“ steht seit 25.11.2026 im Guides-Menü („Stadtteile & Karte“), damit der Kopf auf 13-Zoll-Laptops passt
+  { href: "/stadtteile", label: "Karte" },
+];
+
+export const EVENT_LINKS = [
+  { href: "/entdecken", label: "Alle Events", icon: "event" },
+  { href: "/heute", label: "Heute", icon: "today" },
+  { href: "/wochenende", label: "Wochenende", icon: "weekend" },
+  { href: "/ausblick", label: "Ausblick", icon: "date_range" },
+  { href: "/kostenlos", label: "Kostenlos", icon: "savings" },
 ];
 
 export const GUIDE_LINKS = [
@@ -393,6 +417,26 @@ export const GUIDE_LINKS = [
   { href: "/guides/clubs", label: "Clubs", icon: "nightlife" },
   ...(SPIELPLAETZE_VERLINKT ? [{ href: "/guides/spielplaetze", label: "Spielplätze", icon: "sp:spielplatz" }] : []),
 ];
+
+/** Aufklappmenü im Kopf (Events, Guides): gleiche Form, damit beide Welten gleich viel Gewicht haben */
+function KopfMenue({ titel, aktiv, links, pfad, links_buendig = false }: {
+  titel: string; aktiv: boolean; links: { href: string; label: string; icon: string }[]; pfad: string | null; links_buendig?: boolean;
+}) {
+  return (
+    <details className={links_buendig ? "kopf__guides kopf__guides--links" : "kopf__guides"}>
+      <summary className={aktiv ? "is-aktiv" : ""}>
+        {titel}<span className="icon" aria-hidden data-icon="expand_more" />
+      </summary>
+      <div className="kopf__guides-menue">
+        {links.map((g) => (
+          <Link key={g.href} href={g.href} aria-current={pfad === g.href ? "page" : undefined}>
+            <span className="icon" aria-hidden data-icon={g.icon} />{g.label}
+          </Link>
+        ))}
+      </div>
+    </details>
+  );
+}
 
 function KopfNavMitPfad() {
   return <KopfNavListe pfad={usePathname()} />;
@@ -409,27 +453,18 @@ export function KopfNav() {
 function KopfNavListe({ pfad }: { pfad: string | null }) {
   return (
     <nav className="kopf__nav" aria-label="Bereiche">
+      <KopfMenue titel="Events" aktiv={istEventSeite(pfad) && pfad !== "/stadtteile"} links={EVENT_LINKS} pfad={pfad} links_buendig />
+      <KopfMenue
+        titel="Guides"
+        aktiv={istGuideSeite(pfad)}
+        links={[...GUIDE_LINKS, { href: "/orte", label: "Veranstaltungsorte", icon: "location_city" }]}
+        pfad={pfad}
+      />
       {NAV.map((n) => (
-        <Link key={n.href} href={n.href} aria-current={istAktiv(pfad, n.href) ? "page" : undefined}>
+        <Link key={n.href} href={n.href} aria-current={pfad === n.href || (n.href !== "/stadtteile" && istAktiv(pfad, n.href)) ? "page" : undefined}>
           {n.label}
         </Link>
       ))}
-      {/* Guides: Übersicht und die fertigen Hubs als Aufklappmenü */}
-      <details className="kopf__guides">
-        <summary className={istAktiv(pfad, "/guides") || istAktiv(pfad, "/stadtteile") ? "is-aktiv" : ""}>
-          Guides<span className="icon" aria-hidden data-icon="expand_more" />
-        </summary>
-        <div className="kopf__guides-menue">
-          {GUIDE_LINKS.map((g) => (
-            <Link key={g.href} href={g.href} aria-current={pfad === g.href ? "page" : undefined}>
-              <span className="icon" aria-hidden data-icon={g.icon} />{g.label}
-            </Link>
-          ))}
-          <Link href="/stadtteile" aria-current={pfad === "/stadtteile" ? "page" : undefined}>
-            <span className="icon" aria-hidden data-icon="map" />Stadtteile &amp; Karte
-          </Link>
-        </div>
-      </details>
     </nav>
   );
 }

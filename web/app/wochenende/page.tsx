@@ -16,6 +16,7 @@ import { kurzDatum, tagMonat, zeitraumAuflösen } from "@/lib/datum";
 import { anzeigeTitel, zeitKurz } from "@/lib/termine";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { WochenvorschauKasten } from "@/components/magazin-verweise";
+import { EventsUmschalter } from "@/components/events-umschalter";
 
 export async function generateMetadata(props: PageProps<"/wochenende">): Promise<Metadata> {
   return seitenMetadaten({
@@ -64,6 +65,7 @@ function WochenendeAnsicht({ pool, tagWahl }: { pool: EventPool; tagWahl?: strin
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
+      <EventsUmschalter aktiv="wochenende" />
       <section className="wk-hero">
         <div className="container">
           <span className="overline overline--gold">

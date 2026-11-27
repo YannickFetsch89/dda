@@ -14,6 +14,7 @@ import { kostenlosEvents, kostenlosIndexierbar } from "@/lib/landing-listen";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { seitenMetadaten } from "@/lib/seo";
 import { aufzaehlung, topKategorien } from "@/lib/tagestext";
+import { EventsUmschalter } from "@/components/events-umschalter";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 const PFAD = "/kostenlos";
@@ -55,6 +56,7 @@ export default async function Kostenlos() {
   return (
     <div className="container sektion landing">
       <JsonLd daten={jsonLd} />
+      <EventsUmschalter aktiv="kostenlos" innen />
       <Krumen teile={krumen} />
       <h1 className="d">Kostenlose Events in Düsseldorf</h1>
       {KOSTENLOS_TEXTE.map((t) => (

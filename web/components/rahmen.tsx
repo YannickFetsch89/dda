@@ -10,6 +10,7 @@ import { stadtteilName } from "@/lib/stadtteile";
 import { stadtteilPfad } from "@/lib/landing";
 import { MAGAZIN_VERLINKT, SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import { kontenAktiv } from "@/lib/konto/konfig";
+import { HUBS, HUB_KURZ } from "@/lib/guide-hubs";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
 export const KONTAKT_MAIL = "hallo@diesdas.events";
@@ -138,6 +139,18 @@ export async function KategorieLeiste() {
           <span className="katitem__name">Kostenlos</span>
           <span className="katitem__anzahl">{gratis}</span>
         </Link>
+        {/* Guides in derselben Leiste (Auftraggeber 27.11.2026), abgesetzt durch Trennstrich und goldenen Rand;
+            nur unter 1200 px – am Desktop steht das Menü „Guides ▾“ im Kopf */}
+        <span className="katleiste__trenner nur-mobil" aria-hidden />
+        {HUBS.filter((h) => h.fertig).map((h) => (
+          <Link key={h.slug} href={`/guides/${h.slug}`} className="katitem katitem--guide nur-mobil">
+            <span className="katitem__kreis">
+              <Icon name={h.icon} />
+            </span>
+            <span className="katitem__name">{HUB_KURZ[h.slug] ?? h.label}</span>
+            <span className="katitem__anzahl">Guide</span>
+          </Link>
+        ))}
       </div>
     </nav>
   );

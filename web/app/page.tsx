@@ -10,6 +10,7 @@ import { Datumsleiste } from "@/components/datumsleiste";
 import { WochenendTag } from "@/components/wochenend-tag";
 import { WmStartBox } from "@/components/wm-startbox";
 import { MagazinStartBox } from "@/components/magazin-verweise";
+import { StartGuides } from "@/components/start-guides";
 import { AusblickStartBox } from "@/components/ausblick-box";
 import { StartPersoenlich, VorschauLinks, VorschauLinksMit } from "@/components/start-persoenlich";
 import { kontenAktiv } from "@/lib/konto/konfig";
@@ -176,6 +177,9 @@ async function StartInhalt({ searchParams }: Pick<PageProps<"/">, "searchParams"
             </div>
           </section>
         )}
+
+        {/* Guides gleichwertig zu Events (Auftraggeber 27.11.2026): direkt nach Tipp und Picks */}
+        <StartGuides />
 
         {/* Mein Bereich (Plan 4.1, 4.3, S1): Vorschau B18 für Abgemeldete im statischen HTML, Insel für Angemeldete.
             Welche sichtbar ist, entscheidet CSS über html[data-konto]; der Server liest keine Sitzung. */}

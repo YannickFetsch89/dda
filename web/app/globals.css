@@ -2678,3 +2678,42 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
 /* Ortsseiten: eingeklappter Ausblick hinter Tag 60 (Plan Quellen-Ausbau 6.1) */
 .os-ausblick { margin-top: 20px; }
 .os-ausblick > summary { cursor: pointer; list-style: revert; }
+
+/* ---------- Events und Guides gleichwertig (Auftraggeber 27.11.2026) ---------- */
+/* Kopf am Desktop: „Events ▾“ steht ganz links, sein Menü klappt nach rechts auf */
+.kopf__guides--links .kopf__guides-menue { left: 0; right: auto; }
+/* Umschalter oben auf den Event-Seiten (unter 1200 px, siehe components/events-umschalter.tsx) */
+.ev-umschalter { padding: 12px 0; }
+.ev-umschalter--innen { padding-top: 0; margin: 12px 0 4px; }
+.ev-umschalter__leiste {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 calc(-1 * var(--rand)); padding: 0 var(--rand) 2px;
+}
+.ev-umschalter__leiste::-webkit-scrollbar { display: none; }
+.ev-umschalter__leiste .chip { flex: 0 0 auto; white-space: nowrap; }
+/* Guide-Kreise in der Kategorie-Leiste (unter 1200 px): Trennstrich, goldener Rand, „Guide“ statt Anzahl */
+.katleiste__trenner { flex: 0 0 1px; align-self: center; height: 40px; margin: 0 6px; background: var(--ddd-border); }
+.katitem--guide .katitem__kreis { background: var(--ddd-surface); color: var(--ddd-text); box-shadow: inset 0 0 0 2px var(--ddd-gold); }
+.katitem--guide .katitem__anzahl { color: color-mix(in srgb, var(--ddd-gold) 55%, var(--ddd-text)); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 9px; }
+/* Guide-Reihe auf der Startseite */
+.st-guide-li { display: flex; min-width: 0; }
+.st-guide {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--ddd-surface); color: inherit;
+  border-radius: var(--r-card-s); overflow: hidden; box-shadow: var(--sh-s); border: 1px solid var(--ddd-border);
+  transition: box-shadow 0.2s ease;
+}
+.st-guide:hover { color: inherit; box-shadow: var(--sh-m); }
+.st-guide__bild { position: relative; display: block; aspect-ratio: 16 / 10; background: var(--ddd-bg); overflow: hidden; }
+.st-guide__bild img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
+.st-guide:hover .st-guide__bild img { transform: scale(1.04); }
+.st-guide__icon {
+  position: absolute; left: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; background: var(--ddd-gold); color: #fff;
+}
+.st-guide__icon .icon { font-size: 19px; }
+.st-guide__text { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 14px; }
+.st-guide__text b { font-size: 15px; line-height: 1.25; color: var(--ddd-text); }
+.st-guide__text span {
+  font-size: 13px; line-height: 1.4; color: var(--ddd-text-muted);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}

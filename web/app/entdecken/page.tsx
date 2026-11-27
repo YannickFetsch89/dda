@@ -14,6 +14,7 @@ import { DatumWaehler, EigenerZeitraumKnopf } from "@/components/datum-waehler";
 import { KATEGORIEN, kategorie } from "@/lib/kategorien";
 import { BEZIRKE, OHNE_ZUORDNUNG, stadtteilName } from "@/lib/stadtteile";
 import { kurzBeschreibung } from "@/lib/beschreibung";
+import { EventsUmschalter } from "@/components/events-umschalter";
 
 export async function generateMetadata(props: PageProps<"/entdecken">): Promise<Metadata> {
   return seitenMetadaten({
@@ -138,6 +139,7 @@ async function EntdeckenInhalt({ searchParams }: Pick<PageProps<"/entdecken">, "
 
   return (
     <>
+      <EventsUmschalter aktiv="alle" innen />
       <div className="seitentitel">
         <h1 className="d">Entdecken</h1>
         <span>{ortTreffer.length > 0 && `${ortTreffer.length} ${ortTreffer.length === 1 ? "Ort" : "Orte"} · `}{treffer.length} Events</span>

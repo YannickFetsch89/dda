@@ -12,8 +12,7 @@ import { orteLaden } from "@/lib/orte";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { clubsLaden } from "@/lib/clubs-daten";
 import { spielplaetzeLaden } from "@/lib/spielplaetze-daten";
-import { SPIELPLAETZE_VERLINKT } from "@/lib/landing";
-import { WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
+import { HUBS, type Hub } from "@/lib/guide-hubs";
 import { heroZahlen } from "@/lib/weihnachtsmaerkte";
 import { weihnachtsmaerkteLaden } from "@/lib/weihnachtsmaerkte-daten";
 
@@ -24,28 +23,7 @@ export const metadata: Metadata = {
   alternates: seitenAlternates("/guides"),
 };
 
-interface Hub {
-  slug: string;
-  label: string;
-  icon: string;
-  teaser: string;
-  einheit: string;
-  fertig: boolean;
-}
-
-// Reihenfolge und Texte laut data/guides.json im Design-Handoff; der Saison-Guide steht während der Saison vorne
-// (Plan Weihnachtsmärkte 5.6, Schalter in lib/schalter.ts)
-const HUBS: Hub[] = [
-  ...(WEIHNACHTSMAERKTE_VERLINKT
-    ? [{ slug: "weihnachtsmaerkte", label: "Weihnachtsmärkte", icon: "wm:markt", teaser: "Wer heute geöffnet hat – mit Sonderzeiten an den Feiertagen", einheit: "Märkte", fertig: true }]
-    : []),
-  { slug: "restaurants-cafes", label: "Restaurants & Cafés", icon: "restaurant", teaser: "Die besten Adressen zum Essen und Kaffeetrinken", einheit: "Tipps", fertig: true },
-  { slug: "kneipen-bars", label: "Kneipen & Bars", icon: "sports_bar", teaser: "Altbier, Cocktails und gemütliche Ecken", einheit: "Tipps", fertig: true },
-  { slug: "clubs", label: "Clubs", icon: "nightlife", teaser: "Düsseldorfs Nachtleben von Techno bis Hip-Hop", einheit: "Tipps", fertig: true },
-  { slug: "spielplaetze", label: "Spielplätze", icon: "sp:spielplatz", teaser: "Der perfekte Spielplatz für jedes Alter", einheit: "Plätze", fertig: SPIELPLAETZE_VERLINKT },
-  { slug: "ausfluege", label: "Ausflüge", icon: "hiking", teaser: "Raus aus der Stadt – unter einer Stunde erreichbar", einheit: "Ziele", fertig: false },
-  { slug: "wochenend-trips", label: "Wochenend-Trips", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
-];
+// Hubs (Reihenfolge, Texte, Saison-Guide vorne): lib/guide-hubs.ts, gemeinsam mit der Startseite
 
 function HubKachel({ hub, anzahl, oben }: { hub: Hub; anzahl: number | null; oben: boolean }) {
   const inhalt = (

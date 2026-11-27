@@ -8,6 +8,7 @@ import { WT_LANG, plusTage, tagMonat, wochentag } from "@/lib/datum";
 import { jsonLdText } from "@/lib/json-ld";
 import { eventListeJsonLd } from "@/lib/listen-json-ld";
 import { datumText, standText, tagesSatz } from "@/lib/tagestext";
+import { EventsUmschalter } from "@/components/events-umschalter";
 
 const SITE_URL = process.env.SITE_URL ?? "https://diesdas.events";
 
@@ -76,6 +77,7 @@ export async function Tagesplaner({ tag: tagProp, tageVoraus, pfad }: { tag?: st
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
+      <EventsUmschalter aktiv={pfad === "/heute" ? "heute" : pfad === "/morgen" ? "morgen" : null} />
       <div className="tagleiste">
         <div className="container tagleiste__inner">
           <Link href={tagHref(plusTage(d, -1), heute)} className="icon-btn" aria-label="Vorheriger Tag" aria-disabled={istHeute ? "true" : undefined} tabIndex={istHeute ? -1 : undefined}>
@@ -140,6 +142,7 @@ function VergangenerTag({ tag, heute, pfad }: { tag: string; heute: string; pfad
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(jsonLd) }} />
+      <EventsUmschalter aktiv={pfad === "/heute" ? "heute" : pfad === "/morgen" ? "morgen" : null} />
       <div className="tagleiste">
         <div className="container tagleiste__inner">
           <span className="icon-btn" aria-hidden />
@@ -168,6 +171,7 @@ function VergangenerTag({ tag, heute, pfad }: { tag: string; heute: string; pfad
 export function TagesplanerSkeleton() {
   return (
     <>
+      <EventsUmschalter aktiv={null} />
       <div className="tagleiste">
         <div className="container tagleiste__inner" style={{ height: 82 }} />
       </div>
