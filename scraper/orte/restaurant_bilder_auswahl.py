@@ -36,6 +36,7 @@ import logging
 import math
 import os
 import sys
+import threading
 from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -48,7 +49,7 @@ load_dotenv(Path("web/.env.local"))
 load_dotenv()
 
 from scraper.orte.ortsbilder import abrufen, umwandeln  # noqa: E402
-from scraper.orte.restaurant_bilder import ALLE, ERGEBNIS, TYPEN, VORSCHAU, auswaehlen  # noqa: E402
+from scraper.orte.restaurant_bilder import ALLE, ERGEBNIS, TYPEN, VORSCHAU, auswaehlen, ist_inhaber, vorschau_speichern  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -63,6 +64,9 @@ WEB_PFAD = "/ort-bilder/restaurants"
 PORT = 3650
 JE_SEITE = 50
 TROCKEN = False   # --trocken: nichts schreiben, nur protokollieren, was gesetzt würde
+ALLE_SPERRE = threading.Lock()   # alle.json wird beim Nachladen von Google-Fotos geschrieben
+# Google-Bildserver: Fotos von dort nie per Link übernehmen (Urheber unbekannt, nicht dauerhaft speichern) – Kacheln nutzen
+GOOGLE_HOSTS = ("googleusercontent.com", "ggpht.com", "gstatic.com", "google.com", "googleapis.com")
 QUELLE_TEXT = {"website": "Website", "google_inhaber": "Google · Inhaber", "google_nutzer": "Google · Gast"}
 REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse"), ("kneipe", "Kneipen & Bars")]
 AMBIENTE_MOTIVE = ("innenraum", "aussen", "terrasse")
@@ -193,8 +197,12 @@ def vormerkung_loeschen(ort_id: str, rolle: str) -> None:
     if TROCKEN:
         return
     liste = json_lesen(UMSTELLEN, {})
-    if liste.pop(f"{ort_id}:{rolle}", None):
+    alt = liste.pop(f"{ort_id}:{rolle}", None)
+    if alt:
         json_schreiben(UMSTELLEN, liste)
+        datei = ZIEL / Path(alt["pfad"]).name
+        if datei.exists():
+            datei.unlink()
 
 
 def link_kandidat(url: str, e: dict) -> dict:
@@ -206,6 +214,9 @@ def link_kandidat(url: str, e: dict) -> dict:
     host = (teile.hostname or "").lower()
     if teile.scheme not in ("http", "https") or not host or host in ("localhost", "127.0.0.1") or host.endswith((".local", ".localhost")):
         raise ValueError("Link muss mit https:// beginnen")
+    if host.endswith(GOOGLE_HOSTS):
+        raise ValueError("Google-Fotos bitte nicht per Link, sondern über „Alle Google-Fotos laden“ wählen "
+                         "(nur so steht der richtige Urheber im Nachweis)")
     daten = abrufen(url)
     masse = bildmasse(daten) if daten else None
     if not masse:
@@ -215,6 +226,121 @@ def link_kandidat(url: str, e: dict) -> dict:
     web = e.get("webseite") or ""
     nachweis = (urlparse(web).hostname or host).removeprefix("www.")
     return {"quelle": "website", "url": url, "seite": web, "nachweis": nachweis, "breite": masse[0], "hoehe": masse[1], "ki": {}}
+
+
+def bild_signatur(daten: bytes) -> list[int]:
+    """Grober Fingerabdruck eines Bildes (16×16 Graustufen) – erkennt dasselbe Foto in anderer Größe/Komprimierung."""
+    import io
+    from PIL import Image, ImageOps
+    with Image.open(io.BytesIO(daten)) as b:
+        return list(ImageOps.exif_transpose(b).convert("L").resize((16, 16)).tobytes())
+
+
+def bild_abstand(a: list[int], b: list[int]) -> float:
+    return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
+
+
+def google_fotos_laden(ort_id: str) -> list[int]:
+    """Alle Google-Fotos eines Ortes (bis zu 10, mit Urheber) als zusätzliche Kandidaten in alle.json.
+    Schon vorhandene Fotos (gleicher Fingerabdruck) werden übersprungen. Gibt die neuen Kandidaten-Indizes zurück."""
+    key = os.environ["GOOGLE_PLACES_API_KEY"]
+    zeile = db().table("orte").select("name, slug, google_place_id").eq("id", ort_id).execute().data
+    if not zeile or not zeile[0].get("google_place_id"):
+        raise RuntimeError("kein Google-Eintrag für diesen Betrieb")
+    ort = zeile[0]
+    try:
+        r = httpx.get(f"https://places.googleapis.com/v1/places/{ort['google_place_id']}",
+                      headers={"X-Goog-Api-Key": key, "X-Goog-FieldMask": "photos"}, timeout=20)
+    except Exception as f:
+        raise RuntimeError(f"Google nicht erreichbar ({type(f).__name__})") from None
+    if r.status_code != 200:
+        raise RuntimeError(f"Google-Fotoliste: HTTP {r.status_code}")
+    fotos = r.json().get("photos") or []
+    with ALLE_SPERRE:
+        roh = json_lesen(ALLE, [])
+        e = next((x for x in roh if x["id"] == ort_id), None)
+        if e is None:
+            raise RuntimeError("Betrieb nicht in alle.json")
+        vorhanden = []
+        for k in e["kandidaten"]:
+            datei = VORSCHAU / k.get("vorschau", "")
+            if datei.is_file():
+                try:
+                    vorhanden.append(bild_signatur(datei.read_bytes()))
+                except Exception:
+                    pass
+        neu = []
+        for f in fotos:
+            try:
+                m = httpx.get(f"https://places.googleapis.com/v1/{f['name']}/media", params={"maxWidthPx": 1200, "key": key},
+                              timeout=30, follow_redirects=True)
+            except Exception as fehler:   # Fehlermeldung enthielte den Schlüssel – nur den Typ loggen
+                logger.warning("%s: Google-Foto nicht ladbar (%s)", ort["name"], type(fehler).__name__)
+                continue
+            if m.status_code != 200 or not m.headers.get("content-type", "").startswith("image/"):
+                continue
+            sig = bild_signatur(m.content)
+            if any(bild_abstand(sig, v) < 6 for v in vorhanden):
+                continue
+            vorhanden.append(sig)
+            autor = (f.get("authorAttributions") or [{}])[0]
+            datei = VORSCHAU / "bilder" / f"{ort['slug']}-g{len(e['kandidaten'])}.webp"
+            vorschau_speichern(m.content, datei)
+            e["kandidaten"].append({
+                "quelle": "google_inhaber" if ist_inhaber(autor.get("displayName") or "", ort["name"]) else "google_nutzer",
+                "google_foto": f["name"], "breite": f.get("widthPx"), "hoehe": f.get("heightPx"),
+                "autor": autor.get("displayName"), "autor_url": autor.get("uri"), "nachweis": autor.get("displayName"),
+                "ki": {}, "punkte": 0, "vorschau": f"bilder/{datei.name}", "nachgeladen": True})
+            neu.append(len(e["kandidaten"]) - 1)
+        if neu:
+            json_schreiben(ALLE, roh)
+    logger.info("%s: %d Google-Fotos nachgeladen", ort["name"], len(neu))
+    return neu
+
+
+def google_links_reparieren() -> int:
+    """Früher per Link übernommene Google-Fotos dem passenden Google-Foto (mit Urheber) zuordnen und richtig setzen."""
+    alle_ein = [json.loads(z) for z in PROTOKOLL.read_text(encoding="utf-8").splitlines() if z.strip()] if PROTOKOLL.exists() else []
+    letzte = {e["ort_id"]: e for e in alle_ein if e["aktion"] == "speichern"}
+    auswahl = json_lesen(AUSWAHL, {})
+    client = db()
+    for ort_id, p in letzte.items():
+        wahl = dict(auswahl.get(ort_id) or p["wahl"])
+        wahl.pop("zeit", None)
+        betroffen = [r for r in ("tl", "el") if wahl.get(r) and (urlparse(wahl[r]).hostname or "").endswith(GOOGLE_HOSTS)]
+        if not betroffen:
+            continue
+        google_fotos_laden(ort_id)
+        e = next(x for x in eintraege() if x["id"] == ort_id)
+        neue_wahl = dict(wahl)
+        for rolle in betroffen:
+            daten = abrufen(wahl[rolle])
+            if not daten:
+                logger.warning("%s: Link %s nicht mehr ladbar", e["name"], rolle)
+                continue
+            sig = bild_signatur(daten)
+            beste, abstand = None, 999.0
+            for i, k in enumerate(e["kandidaten"]):
+                if k["quelle"] == "website" or not (VORSCHAU / k.get("vorschau", "")).is_file():
+                    continue
+                d = bild_abstand(sig, bild_signatur((VORSCHAU / k["vorschau"]).read_bytes()))
+                if d < abstand:
+                    beste, abstand = i, d
+            if beste is None or abstand > 12:
+                logger.warning("%s: kein passendes Google-Foto für %s gefunden (bester Abstand %.1f)", e["name"], rolle, abstand)
+                continue
+            k = e["kandidaten"][beste]
+            logger.info("%s: %s → Google-Foto von %s (Abstand %.1f)", e["name"], rolle, k.get("autor"), abstand)
+            neue_wahl["t" if rolle == "tl" else "e"] = beste
+            neue_wahl[rolle] = None
+        if neue_wahl == wahl:
+            continue
+        ort_speichern(client, e, {"t": neue_wahl["t"], "e": neue_wahl["e"], "w": neue_wahl.get("w"),
+                                  "tl": neue_wahl.get("tl"), "el": neue_wahl.get("el")}, wahl)
+        if not TROCKEN:
+            auswahl[ort_id] = {**neue_wahl, "zeit": datetime.now().strftime("%d.%m. %H:%M")}
+            json_schreiben(AUSWAHL, auswahl)
+    return 0
 
 
 def bild_daten(k: dict) -> dict:
@@ -414,6 +540,15 @@ def zurueck(slug: str) -> int:
 
 # ── Seite ─────────────────────────────────────────────────────────────────────
 
+def kachel_text(k: dict, vt, ve, i: int | None = None) -> str:
+    ki = k.get("ki") or {}
+    fmt = "quer" if ist_quer(k) else ("hoch" if (k.get("hoehe") or 0) > (k.get("breite") or 0) * 1.1 else "quadrat")
+    hinweis = " · <b>Vorschlag Ambiente</b>" if i is not None and i == vt else (" · <b>Vorschlag Essen</b>" if i is not None and i == ve else "")
+    wer = f" · {html.escape(k.get('autor') or '')}" if k.get("nachgeladen") else ""
+    note = f" · Note {ki.get('note')}" if ki.get("note") is not None else " · nachgeladen"
+    return f"{QUELLE_TEXT[k['quelle']]}{wer} · {ki.get('motiv', '')} · {fmt}{note}{hinweis}"
+
+
 def kachel(e: dict, i: int | str, bild: str, unter: str, t_wahl, e_wahl, nur_titel: bool = False) -> str:
     oid = e["id"]
     an_t = "an-t" if t_wahl == i else ""
@@ -432,11 +567,7 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
     for i, k in enumerate(e["kandidaten"]):
         if k.get("heute"):
             continue
-        ki = k.get("ki") or {}
-        fmt = "quer" if ist_quer(k) else ("hoch" if (k.get("hoehe") or 0) > (k.get("breite") or 0) * 1.1 else "quadrat")
-        hinweis = " · <b>Vorschlag Ambiente</b>" if i == vt else (" · <b>Vorschlag Essen</b>" if i == ve else "")
-        kacheln.append(kachel(e, i, f"/{k['vorschau']}", f"{QUELLE_TEXT[k['quelle']]} · {ki.get('motiv', '')} · {fmt} · Note {ki.get('note', '–')}{hinweis}",
-                              t_wahl, e_wahl))
+        kacheln.append(kachel(e, i, f"/{k['vorschau']}", kachel_text(k, vt, ve, i), t_wahl, e_wahl))
     kein = f'<label class="kein {"an-e" if e_wahl == "keins" else ""}"><input type="radio" name="e-{e["id"]}" value="keins" {"checked" if e_wahl == "keins" else ""}>Kein Essensbild</label>'
     amb = e.get("ambiente") or {}
     w = wertung(e.get("vorab_score"), amb, e["typ"])
@@ -456,7 +587,7 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
 <div class="wertung">dies.das-Wertung <b>{komma(w['wert'])}</b> <span class="muted">{erklaerung}</span>
 <label>eigener Wert <input class="hand" type="text" inputmode="decimal" placeholder="leer = {komma(w['wert'])}" value="{'' if hand is None else komma(float(hand))}" size="5"></label></div>
 <p class="amb">{html.escape(amb.get('begruendung', ''))}</p>
-<div class="kacheln">{''.join(kacheln)}</div><div class="zeile2">{kein}</div>
+<div class="kacheln">{''.join(kacheln)}</div><div class="zeile2">{kein} <button type="button" class="google">Alle Google-Fotos laden</button> <span class="google-info muted"></span></div>
 <div class="links">
 <label class="link"><span>Eigenes <b>Ambientebild</b> per Link (geht vor):</span><input class="link-t" type="url" placeholder="https://… direkter Link zum Bild" value="{html.escape(tl)}"><img class="vor" src="{html.escape(tl)}" alt=""></label>
 <label class="link"><span>Eigenes <b>Essensbild</b> per Link (geht vor):</span><input class="link-e" type="url" placeholder="https://… direkter Link zum Bild" value="{html.escape(el)}"><img class="vor" src="{html.escape(el)}" alt=""></label>
@@ -519,6 +650,7 @@ h1{{font-size:20px;margin:8px 0}} h2{{font-size:17px;margin:26px 0 4px}} small{{
 .w,.kein{{font-size:12px;border:1px solid #bbb;border-radius:6px;padding:3px 8px;cursor:pointer;user-select:none}}
 .w input,.kein input{{position:absolute;opacity:0;pointer-events:none}}
 .w.t:has(input:checked){{background:#c9a227;border-color:#c9a227;font-weight:700}} .w.e:has(input:checked){{background:#2f6fd6;border-color:#2f6fd6;color:#fff;font-weight:700}}
+.google{{font-size:12px;border:1px solid #888;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;margin-left:8px}}
 .kein:has(input:checked){{background:#2f6fd6;color:#fff;border-color:#2f6fd6}} .zeile2{{margin-top:8px}}
 .links{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}} .link{{font-size:13px;display:flex;flex-direction:column;gap:4px}}
 .link input{{font-size:13px;padding:5px 8px;border:1px solid #bbb;border-radius:6px}} .link .vor{{max-width:220px;max-height:140px;object-fit:cover;border-radius:6px}}
@@ -544,7 +676,15 @@ function markieren(el){{el.closest('section').classList.add('geprueft');zaehlen(
 function rahmen(s){{s.querySelectorAll('.kachel').forEach(function(k){{
   var t=k.querySelector('.w.t input'),e=k.querySelector('.w.e input');
   k.classList.toggle('an-t',!!(t&&t.checked));k.classList.toggle('an-e',!!(e&&e.checked))}})}}
-document.querySelectorAll('section input[type=radio]').forEach(function(r){{r.addEventListener('click',function(){{rahmen(r.closest('section'));markieren(r)}})}});
+function radiosVerbinden(wurzel){{wurzel.querySelectorAll('input[type=radio]').forEach(function(r){{
+  if(r.dataset.v)return;r.dataset.v='1';r.addEventListener('click',function(){{rahmen(r.closest('section'));markieren(r)}})}})}}
+radiosVerbinden(document);
+document.querySelectorAll('.google').forEach(function(b){{b.addEventListener('click',async function(){{
+  var s=b.closest('section'),info=s.querySelector('.google-info');b.disabled=true;info.textContent='lädt … (bis zu 10 Fotos, etwa 10–20 Sekunden)';
+  try{{var a=await fetch('/google?id='+encodeURIComponent(s.dataset.id),{{method:'POST'}});var d=await a.json();
+    s.querySelector('.kacheln').insertAdjacentHTML('beforeend',d.html||'');radiosVerbinden(s);info.textContent=d.meldung;}}
+  catch(e){{info.textContent='Fehler: '+e;b.disabled=false}}
+}})}});
 document.querySelectorAll('.hand').forEach(function(i){{i.addEventListener('input',function(){{markieren(i)}})}});
 document.querySelectorAll('.link input').forEach(function(i){{i.addEventListener('input',function(){{
   var v=i.value.trim(),img=i.parentNode.querySelector('.vor');img.src=(v.indexOf('https://')===0||v.indexOf('http://')===0)?v:'';markieren(i)}})}});
@@ -604,6 +744,17 @@ class Handler(BaseHTTPRequestHandler):
         self.senden(404, b"nicht gefunden", "text/plain")
 
     def do_POST(self):  # noqa: N802
+        if self.path.startswith("/google?"):
+            ort_id = (parse_qs(urlparse(self.path).query).get("id") or [""])[0]
+            try:
+                neu = google_fotos_laden(ort_id)
+                e = next(x for x in eintraege() if x["id"] == ort_id)
+                kacheln = "".join(kachel(e, i, f"/{e['kandidaten'][i]['vorschau']}", kachel_text(e["kandidaten"][i], None, None), None, None)
+                                  for i in neu)
+                antwort = {"meldung": f"{len(neu)} weitere Google-Fotos" if neu else "keine weiteren Google-Fotos", "html": kacheln}
+                return self.senden(200, json.dumps(antwort, ensure_ascii=False).encode(), "application/json")
+            except Exception as f:  # noqa: BLE001
+                return self.senden(500, json.dumps({"meldung": f"Fehler: {f}", "html": ""}, ensure_ascii=False).encode(), "application/json")
         if self.path != "/speichern":
             return self.senden(404, b"", "text/plain")
         laenge = int(self.headers.get("Content-Length") or 0)
@@ -623,12 +774,15 @@ def main():
     p.add_argument("--zurueck", metavar="SLUG")
     p.add_argument("--port", type=int, default=PORT)
     p.add_argument("--trocken", action="store_true", help="nichts schreiben (Test)")
+    p.add_argument("--google-links-reparieren", action="store_true", help="per Link übernommene Google-Fotos richtig zuordnen")
     args = p.parse_args()
     TROCKEN = args.trocken
     if args.nach_deploy:
         return nach_deploy()
     if args.zurueck:
         return zurueck(args.zurueck)
+    if args.google_links_reparieren:
+        return google_links_reparieren()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     logger.info("Auswahlseite: http://127.0.0.1:%d%s (Strg+C beendet)", args.port, " – TROCKENLAUF" if TROCKEN else "")
     try:
