@@ -471,6 +471,76 @@ function KopfNavListe({ pfad }: { pfad: string | null }) {
   );
 }
 
+// ---------- Leiste unter dem Kopf: einklappen beim Scrollen (Mockup-Variante 3, Auftraggeber 27.11.2026) ----------
+
+/**
+ * Unter 1200 px klappt die Leiste (rahmen.tsx, #katleiste) beim Runterscrollen auf die goldenen Wörter
+ * „EVENTS · GUIDES“ ein. „Events“ klappt sie am Anfang auf, „Guides“ klappt sie auf und schiebt sie zu den Guides.
+ * Ein zweiter Tipp oder weiteres Scrollen klappt sie wieder ein; ganz oben ist sie immer offen.
+ * Nur wenn die Leiste klebt (nicht auf den Guide-Seiten, dort hat sie position: relative) – sonst würde das
+ * Einklappen außerhalb des Blickfelds nur den Inhalt verschieben.
+ */
+export function LeisteVerhalten() {
+  useEffect(() => {
+    const nav = document.getElementById("katleiste");
+    const reihe = nav?.querySelector<HTMLElement>(".katleiste__inner");
+    const anker = nav?.querySelector<HTMLElement>('[data-anker="guides"]');
+    if (!nav || !reihe || !anker) return;
+    const schmal = window.matchMedia("(max-width: 1199px)");
+    const knopf = (z: string) => nav.querySelector<HTMLButtonElement>(`.katleiste__wort[data-ziel="${z}"]`);
+    let zu = false; // weit genug gescrollt: nur die zwei Wörter
+    let offen = false; // eingeklappt, aber per Tipp aufgeklappt
+    let offenBeiY = 0; // Scrollstand beim Aufklappen
+
+    const aktiv = () => schmal.matches && getComputedStyle(nav).position === "sticky";
+    const guidesStart = () => Math.max(0, anker.getBoundingClientRect().left - reihe.getBoundingClientRect().left + reihe.scrollLeft - 12);
+    const zeichnen = () => {
+      nav.classList.toggle("is-zu", zu);
+      nav.classList.toggle("is-offen", zu && offen);
+      const imGuides = reihe.scrollLeft >= guidesStart() - 40;
+      for (const z of ["events", "guides"]) {
+        const b = knopf(z);
+        if (!b) continue;
+        b.setAttribute("aria-expanded", String(!zu || offen));
+        b.classList.toggle("is-im-blick", zu && offen && (z === "guides") === imGuides);
+      }
+    };
+    const scrollen = () => {
+      if (!aktiv()) {
+        if (zu) { zu = offen = false; zeichnen(); }
+        return;
+      }
+      const y = window.scrollY;
+      if (!zu && y > 140) { zu = true; offen = false; zeichnen(); }
+      else if (zu && y < 20) { zu = offen = false; zeichnen(); }
+      else if (zu && offen && Math.abs(y - offenBeiY) > 120) { offen = false; zeichnen(); }
+    };
+    const tippen = (z: string) => () => {
+      const ziel = z === "guides" ? guidesStart() : 0;
+      const schonDa = Math.abs(reihe.scrollLeft - ziel) < 30;
+      if (offen && schonDa) { offen = false; zeichnen(); return; } // zweiter Tipp: wieder einklappen
+      const warZu = !offen;
+      offen = true;
+      offenBeiY = window.scrollY;
+      zeichnen();
+      reihe.scrollTo({ left: ziel, behavior: warZu ? "instant" : "smooth" });
+    };
+    const klicks = (["events", "guides"] as const).map((z) => [knopf(z), tippen(z)] as const);
+    klicks.forEach(([b, f]) => b?.addEventListener("click", f));
+    window.addEventListener("scroll", scrollen, { passive: true });
+    reihe.addEventListener("scroll", zeichnen, { passive: true });
+    schmal.addEventListener("change", scrollen);
+    scrollen();
+    return () => {
+      klicks.forEach(([b, f]) => b?.removeEventListener("click", f));
+      window.removeEventListener("scroll", scrollen);
+      reihe.removeEventListener("scroll", zeichnen);
+      schmal.removeEventListener("change", scrollen);
+    };
+  }, []);
+  return null;
+}
+
 // ---------- Dropdowns (<details>) schließen nach Auswahl oder Klick daneben ----------
 
 export function DetailsVerhalten() {

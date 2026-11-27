@@ -2695,7 +2695,6 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
 /* Guide-Kreise in der Kategorie-Leiste (unter 1200 px): Trennstrich, goldener Rand, „Guide“ statt Anzahl */
 .katleiste__trenner { flex: 0 0 1px; align-self: center; height: 40px; margin: 0 6px; background: var(--ddd-border); }
 .katitem--guide .katitem__kreis { background: var(--ddd-surface); color: var(--ddd-text); box-shadow: inset 0 0 0 2px var(--ddd-gold); }
-.katitem--guide .katitem__anzahl { color: color-mix(in srgb, var(--ddd-gold) 55%, var(--ddd-text)); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 9px; }
 /* Guide-Reihe auf der Startseite */
 .st-guide-li { display: flex; min-width: 0; }
 .st-guide {
@@ -2717,4 +2716,39 @@ html[data-konto="1"] .start-platzhalter { display: block; min-height: 400px; mar
 .st-guide__text span {
   font-size: 13px; line-height: 1.4; color: var(--ddd-text-muted);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Leiste unter dem Kopf nach Mockup-Variante 3 (Auftraggeber 27.11.2026): senkrechtes EVENTS/GUIDES, Namen immer
+   zwei Zeilen hoch (Kreise und Zahlen stehen auf einer Linie), beim Scrollen eingeklappt auf zwei goldene Wörter */
+.katleiste__kompakt { display: none; }
+.katleiste__klappe { display: grid; grid-template-rows: 1fr; }
+.katleiste__innen { min-width: 0; min-height: 0; }
+@media (max-width: 1199px) {
+  .katleiste__kompakt {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    max-height: 0; overflow: hidden; transition: max-height 0.28s ease;
+  }
+  .katleiste.is-zu .katleiste__kompakt { max-height: 44px; }
+  .katleiste__klappe { transition: grid-template-rows 0.28s ease, opacity 0.2s ease; }
+  .katleiste__innen { overflow: hidden; }
+  .katleiste.is-zu:not(.is-offen) .katleiste__klappe { grid-template-rows: 0fr; opacity: 0; visibility: hidden; }
+  .katleiste.is-zu .katleiste__inner { border-top: 1px solid var(--ddd-border); padding-top: 8px; }
+  .katleiste__wort {
+    position: relative; display: flex; align-items: center; gap: 2px; height: 44px; padding: 0 6px;
+    border: 0; background: none; cursor: pointer; color: var(--ddd-gold);
+    font: 800 12px/1 var(--font-sans); letter-spacing: 0.22em; text-transform: uppercase;
+  }
+  .katleiste__wort .icon { font-size: 18px; transition: transform 0.2s; }
+  .katleiste__wort[aria-expanded="true"] .icon { transform: rotate(180deg); }
+  .katleiste__wort.is-im-blick::after { content: ""; position: absolute; left: 6px; right: 24px; bottom: 8px; height: 2px; border-radius: 2px; background: var(--ddd-gold); }
+  .katleiste__punkt { width: 4px; height: 4px; border-radius: 50%; background: var(--ddd-border); }
+  .katleiste__senkrecht { flex: 0 0 22px; align-self: stretch; display: flex; align-items: center; justify-content: center; margin-right: 2px; }
+  .katleiste__senkrecht span {
+    writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ddd-gold);
+  }
+  .katleiste__trenner { align-self: stretch; height: auto; margin: 4px 8px 14px; }
+  .katleiste__inner { align-items: flex-start; }
+  .katitem__name { height: 2.4em; display: flex; align-items: flex-start; justify-content: center; text-align: center; }
+  .katitem__anzahl { margin-top: -2px; }
 }

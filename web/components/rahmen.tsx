@@ -1,6 +1,6 @@
 // Seitenrahmen: Header, Kategorie-Leiste, Footer
 import Link from "next/link";
-import { KopfNav, ThemeToggle } from "./client";
+import { KopfNav, LeisteVerhalten, ThemeToggle } from "./client";
 import { Icon } from "./karten";
 import { KATEGORIEN, katStil } from "@/lib/kategorien";
 import { eventPoolLaden } from "@/lib/daten";
@@ -10,7 +10,8 @@ import { stadtteilName } from "@/lib/stadtteile";
 import { stadtteilPfad } from "@/lib/landing";
 import { MAGAZIN_VERLINKT, SPIELPLAETZE_VERLINKT, WEIHNACHTSMAERKTE_VERLINKT } from "@/lib/schalter";
 import { kontenAktiv } from "@/lib/konto/konfig";
-import { HUBS, HUB_KURZ } from "@/lib/guide-hubs";
+import { LEISTEN_GUIDES } from "@/lib/guide-hubs";
+import { guideZahlenLaden } from "@/lib/guide-zahlen";
 
 // Adresse für "Event melden" – vor dem Livegang prüfen
 export const KONTAKT_MAIL = "hallo@diesdas.events";
@@ -123,9 +124,25 @@ export async function KategorieLeiste() {
   const woche = filtern(pool.events, { von: pool.heute, bis: plusTage(pool.heute, 6) });
   const zaehler = kategorieZaehlen(woche);
   const gratis = woche.filter(istKostenlos).length;
+  const guideZahlen = await guideZahlenLaden();
+  // Leiste nach Mockup-Variante 3 (Auftraggeber 27.11.2026, docs/mockups/leiste-events-guides.html): unter 1200 px
+  // senkrecht „EVENTS“ und „GUIDES“; beim Runterscrollen klappt sie auf die zwei goldenen Wörter ein
+  // (LeisteVerhalten in client.tsx). Am Desktop bleibt die Chip-Reihe der Kategorien wie bisher.
   return (
-    <nav className="katleiste" aria-label="Kategorien">
+    <nav className="katleiste" id="katleiste" aria-label="Kategorien und Guides">
+      <div className="katleiste__kompakt nur-mobil">
+        <button type="button" className="katleiste__wort" data-ziel="events" aria-expanded="false" aria-controls="katleiste-klappe">
+          Events<Icon name="expand_more" />
+        </button>
+        <span className="katleiste__punkt" aria-hidden />
+        <button type="button" className="katleiste__wort" data-ziel="guides" aria-expanded="false" aria-controls="katleiste-klappe">
+          Guides<Icon name="expand_more" />
+        </button>
+      </div>
+      <div className="katleiste__klappe" id="katleiste-klappe">
+      <div className="katleiste__innen">
       <div className="katleiste__inner">
+        <span className="katleiste__senkrecht nur-mobil" aria-hidden><span>Events</span></span>
         {KATEGORIEN.map((k) => (
           <Link key={k.slug} href={`/kategorie/${k.slug}`} className="katitem" style={katStil(k.slug)}>
             <span className="katitem__kreis">
@@ -142,19 +159,23 @@ export async function KategorieLeiste() {
           <span className="katitem__name">Kostenlos</span>
           <span className="katitem__anzahl">{gratis}</span>
         </Link>
-        {/* Guides in derselben Leiste (Auftraggeber 27.11.2026), abgesetzt durch Trennstrich und goldenen Rand;
+        {/* Guides in derselben Leiste, abgesetzt durch Trennstrich, senkrechtes „GUIDES“ und goldenen Rand;
             nur unter 1200 px – am Desktop steht das Menü „Guides ▾“ im Kopf */}
         <span className="katleiste__trenner nur-mobil" aria-hidden />
-        {HUBS.filter((h) => h.fertig).map((h) => (
-          <Link key={h.slug} href={`/guides/${h.slug}`} className="katitem katitem--guide nur-mobil">
+        <span className="katleiste__senkrecht nur-mobil" data-anker="guides" aria-hidden><span>Guides</span></span>
+        {LEISTEN_GUIDES.map((g) => (
+          <Link key={g.zahl} href={g.href} className="katitem katitem--guide nur-mobil">
             <span className="katitem__kreis">
-              <Icon name={h.icon} />
+              <Icon name={g.icon} />
             </span>
-            <span className="katitem__name">{HUB_KURZ[h.slug] ?? h.label}</span>
-            <span className="katitem__anzahl">Guide</span>
+            <span className="katitem__name">{g.name}</span>
+            <span className="katitem__anzahl">{guideZahlen[g.zahl] ?? ""}</span>
           </Link>
         ))}
       </div>
+      </div>
+      </div>
+      <LeisteVerhalten />
     </nav>
   );
 }

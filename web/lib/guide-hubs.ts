@@ -24,11 +24,21 @@ export const HUBS: Hub[] = [
   { slug: "wochenend-trips", label: "Wochenend-Trips", icon: "local_activity", teaser: "Ein Wochenende weg – unter 4 Stunden Anfahrt", einheit: "Trips", fertig: false },
 ];
 
-/** Kurznamen für die Kreisleiste unter dem Kopf (mobil): passen in einen 66 px breiten Kreis-Eintrag */
-export const HUB_KURZ: Record<string, string> = {
-  weihnachtsmaerkte: "Weihnachts­märkte",
-  "restaurants-cafes": "Essen gehen",
-  "kneipen-bars": "Kneipen & Bars",
-  clubs: "Clubs",
-  spielplaetze: "Spielplätze",
-};
+/** Guide-Einträge der Leiste unter dem Kopf (mobil, Auftraggeber 27.11.2026): Restaurants und Cafés getrennt,
+ * beide führen in den Restaurant-Guide mit vorgewähltem Filter. `zahl` ist der Schlüssel in guideZahlenLaden. */
+export interface LeistenGuide {
+  zahl: GuideZahlSchluessel;
+  name: string;
+  icon: string;
+  href: string;
+}
+export type GuideZahlSchluessel = "weihnachtsmaerkte" | "restaurants" | "cafes" | "kneipen" | "clubs" | "spielplaetze";
+
+export const LEISTEN_GUIDES: LeistenGuide[] = [
+  ...(WEIHNACHTSMAERKTE_VERLINKT ? [{ zahl: "weihnachtsmaerkte" as const, name: "Weihnachts­märkte", icon: "wm:markt", href: "/guides/weihnachtsmaerkte" }] : []),
+  { zahl: "restaurants", name: "Restaurants", icon: "restaurant", href: "/guides/restaurants-cafes?typ=restaurant" },
+  { zahl: "cafes", name: "Cafés", icon: "local_cafe", href: "/guides/restaurants-cafes?typ=cafe" },
+  { zahl: "kneipen", name: "Kneipen & Bars", icon: "sports_bar", href: "/guides/kneipen-bars" },
+  { zahl: "clubs", name: "Clubs", icon: "nightlife", href: "/guides/clubs" },
+  ...(SPIELPLAETZE_VERLINKT ? [{ zahl: "spielplaetze" as const, name: "Spielplätze", icon: "sp:spielplatz", href: "/guides/spielplaetze" }] : []),
+];
