@@ -1135,7 +1135,15 @@ Lichterkinder, KneipenKultTour …). Der eigene Schritt 2b ist wieder raus; die 
 - verschiedene Hauptadressen beim selben Anbieter = verschiedene Events (zakk-Workshops „Wort“/„Körper“).
 `dubletten_sql.py` lädt dafür `quellen` mit und behält bei gleichem Rang den Eintrag mit mehr Quellen.
 Aufräumen des Bestands: `database/dubletten_2026-11-26.sql` (18 Paare: ausblenden + 301 auf das behaltene Event,
-fehlende Felder ergänzt) – führt der Auftraggeber im SQL-Editor aus. Python 933 ok.
+fehlende Felder ergänzt) – ausgeführt 26.11., 18 ausgeblendet + 18 Umleitungen geprüft. Python 933 ok. LIVE 02403fb.
+
+**Nachtrag 27.11.2026 – zwei Häuser an einer Adresse:** „Max Dax & Max Frintrop – Artist Talk & Musik“ stand
+zweimal auf der Startseite: Rausgegangen listet den Talk unter „Bilker Bunker“ und unter „Schleuse Zwei“ (beide
+Aachener Str. 39, zwei Häuser in `orte`). `_ort_haus_regel` sagte bei verschiedenen Häusern immer „anderer Ort“.
+Jetzt: verschiedene Häuser mit gleicher Straße + Hausnummer (`adresse_passt`) **und** gleicher Uhrzeit = gleicher
+Ort; andere Uhrzeit bleibt getrennt (Talk 19:00 im Bunker, Barabend 20:00 in der S2). Findet zusätzlich
+„Rudelsingen“ (Kunstpalast) = „Das Düsseldorfer Rudelsingen“ (VisitDüsseldorf, Robert-Schumann-Saal, Ehrenhof 4-5).
+Aufräumen: `database/dubletten_2026-11-27.sql` (2 Paare). Tests `GleicheAdresseVerschiedeneHaeuser`; Python 941 ok.
 
 ## Prüfhistorie
 

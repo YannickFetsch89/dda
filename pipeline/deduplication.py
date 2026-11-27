@@ -144,6 +144,9 @@ def _ort_haus_regel(a: dict, b: dict) -> Optional[bool]:
     - gleiche ort_id → gleicher Ort
     - beide zugeordnet, verschiedene Häuser → verschiedener Ort
     - gleiches Haus, verschiedene Säle → Namensvergleich („zakk – Studio“ ~ „zakk - Zentrum für …“)
+    - verschiedene Häuser an derselben Adresse (Straße + Hausnummer) zur selben Uhrzeit → gleicher Ort
+      (27.11.2026: Bilker Bunker und Schleuse Zwei, beide Aachener Str. 39; Rausgegangen listet denselben Talk
+      unter beiden Namen). Andere Uhrzeit bleibt getrennt (Talk 19:00 im Bunker, Barabend 20:00 in der S2).
     - Kette auf einer Seite, andere ohne ort_id → nur bei passender Adresse
     """
     id_a, id_b = a.get("ort_id"), b.get("ort_id")
@@ -151,7 +154,10 @@ def _ort_haus_regel(a: dict, b: dict) -> Optional[bool]:
     if id_a and id_b and id_a == id_b:
         return True
     if haus_a and haus_b:
-        return None if haus_a == haus_b else False
+        if haus_a == haus_b:
+            return None
+        from pipeline.ort_zuordnung import adresse_passt
+        return bool(_uhrzeit(a) and _uhrzeit(a) == _uhrzeit(b) and adresse_passt(a.get("adresse"), b.get("adresse")))
     if (a.get("_kette") and not id_b) or (b.get("_kette") and not id_a):
         from pipeline.ort_zuordnung import adresse_passt
         return adresse_passt(a.get("adresse"), b.get("adresse"))

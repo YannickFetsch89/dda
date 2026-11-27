@@ -113,6 +113,36 @@ class AbgleichQuellAdresse(unittest.TestCase):
         self.assertFalse(url_ist_eigen("https://haus.de/events/duesseldorf-live", "Live in Düsseldorf"))
 
 
+class GleicheAdresseVerschiedeneHaeuser(unittest.TestCase):
+    """27.11.2026: Bilker Bunker und Schleuse Zwei (Aachener Str. 39) – zwei Häuser, eine Adresse."""
+    ADRESSE = "Aachener Str. 39, 40223 Düsseldorf"
+
+    def ev(self, ort, haus, uhrzeit, titel="Max Dax & Max Frintrop – Artist Talk & Musik", adresse=ADRESSE):
+        return {"titel": titel, "datum": "2026-11-27", "uhrzeit": uhrzeit, "ort": ort, "adresse": adresse,
+                "ort_id": haus, "_haus_id": haus, "quelle_name": "Rausgegangen",
+                "quelle_url": f"https://rausgegangen.de/events/{ort.lower().replace(' ', '-')}"}
+
+    def test_gleicher_talk_unter_zwei_namen(self):
+        bunker = self.ev("Bilker Bunker", "bunker", "19:00:00")
+        s2 = self.ev("Schleuse Zwei", "s2", "19:00:00")
+        self.assertIs(bester_treffer([bunker], s2), bunker)
+
+    def test_andere_uhrzeit_bleibt_getrennt(self):
+        talk = self.ev("Bilker Bunker", "bunker", "19:00:00")
+        bar = self.ev("Schleuse Zwei", "s2", "20:00:00", titel="Max Dax & Max Frintrop – Artist Talk & Musik")
+        self.assertIsNone(bester_treffer([talk], bar))
+
+    def test_andere_adresse_bleibt_getrennt(self):
+        a = self.ev("Bilker Bunker", "bunker", "19:00:00")
+        b = self.ev("zakk", "zakk", "19:00:00", adresse="Fichtenstraße 40, 40233 Düsseldorf")
+        self.assertIsNone(bester_treffer([a], b))
+
+    def test_ohne_adresse_bleibt_getrennt(self):
+        a = self.ev("Bilker Bunker", "bunker", "19:00:00", adresse=None)
+        b = self.ev("Schleuse Zwei", "s2", "19:00:00")
+        self.assertIsNone(bester_treffer([a], b))
+
+
 class FakeAbfrage:
     """Supabase-Abfrage-Kette; liefert `gesamt` Zeilen seitenweise und merkt sich die angefragten Bereiche."""
 
