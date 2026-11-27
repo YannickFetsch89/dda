@@ -69,7 +69,9 @@ ALLE_SPERRE = threading.Lock()   # alle.json wird beim Nachladen von Google-Foto
 GOOGLE_HOSTS = ("googleusercontent.com", "ggpht.com", "gstatic.com", "google.com", "googleapis.com")
 QUELLE_TEXT = {"website": "Website", "google_inhaber": "Google · Inhaber", "google_nutzer": "Google · Gast"}
 REITER = [("restaurant", "Restaurants"), ("cafe", "Cafés"), ("imbiss", "Imbisse"), ("kneipe", "Kneipen & Bars"),
-          ("baeckerei", "Bäckereien (nicht im Guide)")]
+          ("baeckerei", "Bäckereien (nicht im Guide)"), ("offen", "Noch offen")]
+# Reiter „Noch offen“ (28.11.2026): sichtbare Restaurants und Cafés ohne Speicherung, zum Abarbeiten (Imbisse folgen)
+OFFEN_ARTEN = ("restaurant", "cafe")
 # Art direkt umstellen (27.11.2026); Bäckereien bleiben im Datenbestand, erscheinen aber nicht auf der Website
 ARTEN = {"restaurant": "Restaurant", "cafe": "Café", "imbiss": "Imbiss", "baeckerei": "Bäckerei (nicht im Guide)"}
 # Eigenes Merkmal extras.kindercafe (27.11.2026): Eltern-Kind-/Kindercafé mit Spielbereich – nicht Googles „Kinderfreundlich“
@@ -658,12 +660,23 @@ def abschnitt(e: dict, gespeichert: dict | None, ort_db: dict | None) -> str:
 def seite(typ: str, nr: int) -> str:
     alle = eintraege()
     auswahl = json_lesen(AUSWAHL, {})
+    # Noch offen: ohne Speicherung und auf der Website sichtbar (ausgeblendete Eisdielen usw. nicht)
+    kandidaten = [e for e in alle if e["typ"] in OFFEN_ARTEN and e["id"] not in auswahl]
+    try:
+        sichtbar = {z["id"] for z in db().table("orte").select("id").eq("aktiv", True).in_("id", [e["id"] for e in kandidaten]).execute().data} if kandidaten else set()
+    except Exception as f:  # noqa: BLE001 – ohne Datenbank alle zeigen
+        logger.warning("Sichtbarkeit nicht lesbar (%s)", type(f).__name__)
+        sichtbar = {e["id"] for e in kandidaten}
+    offen = sorted([e for e in kandidaten if e["id"] in sichtbar], key=lambda e: (OFFEN_ARTEN.index(e["typ"]), e["name"].lower()))
     reiter = []
     for wert, name in REITER:
+        if wert == "offen":
+            reiter.append(f'<a class="{"aktiv" if wert == typ else ""}" href="/?{urlencode({"typ": wert})}">{name} <span>{len(offen)}</span></a>')
+            continue
         liste = [e for e in alle if e["typ"] == wert]
         fertig = sum(1 for e in liste if e["id"] in auswahl)
         reiter.append(f'<a class="{"aktiv" if wert == typ else ""}" href="/?{urlencode({"typ": wert})}">{name} <span>{fertig}/{len(liste)}</span></a>')
-    liste = [e for e in alle if e["typ"] == typ]
+    liste = offen if typ == "offen" else [e for e in alle if e["typ"] == typ]
     seiten = max(1, math.ceil(len(liste) / JE_SEITE))
     nr = max(1, min(nr, seiten))
     teil = liste[(nr - 1) * JE_SEITE: nr * JE_SEITE]
@@ -690,7 +703,8 @@ def seite(typ: str, nr: int) -> str:
         gesamt = 0
     lauf = (f'<p class="lauf">Der Bilderlauf ist noch nicht fertig: {len(alle)} von {gesamt} Betrieben bearbeitet. Bis zum Ende '
             f'kommen laufend Betriebe dazu, und die Seiten verschieben sich. Am besten erst danach loslegen.</p>') if gesamt and len(alle) < gesamt - 5 else ""
-    inhalt = "".join(abschnitt(e, auswahl.get(e["id"]), ort_db.get(e["id"])) for e in teil) or "<p>Für diese Art liegen noch keine Ergebnisse vor (Bilderlauf läuft noch?).</p>"
+    leer = "<p>Alles gespeichert – hier ist nichts mehr offen.</p>" if typ == "offen" else "<p>Für diese Art liegen noch keine Ergebnisse vor (Bilderlauf läuft noch?).</p>"
+    inhalt = "".join(abschnitt(e, auswahl.get(e["id"]), ort_db.get(e["id"])) for e in teil) or leer
     return f"""<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bilder · {name_typ} · Seite {nr}</title><style>
 body{{font-family:system-ui,sans-serif;margin:0 auto;max-width:1320px;padding:0 16px 90px;background:#fafaf7;color:#1d1d1b}}
