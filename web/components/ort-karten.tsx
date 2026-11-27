@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { BildImg } from "./client";
 import { Icon } from "./karten";
-import { kueche, preisKurz, zahl } from "@/lib/guide-filter";
+import { dddWertung, istEmpfehlung, istKindercafe, kueche, preisKurz, wertungText, zahl } from "@/lib/guide-filter";
 import { artInfo } from "@/lib/kneipen";
 import { ortBildUrl } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
@@ -69,13 +69,29 @@ export function typLabel(typ: string): string {
   }
 }
 
-/** Typ-Label eines Ortes: Kneipen zeigen ihre Unterart (Brauhaus, Bar, Kneipe) – auch im Restaurant-Hub. */
+/** Typ-Label eines Ortes: Kneipen zeigen ihre Unterart (Brauhaus, Bar, Kneipe) – auch im Restaurant-Hub; Kindercafés eigenes Label. */
 export function ortTypLabel(o: DddOrt): string {
+  if (istKindercafe(o)) return "Kindercafé";
   return o.typ === "kneipe" ? artInfo(o).label : typLabel(o.typ);
 }
 
+/** Schaukelpferd für Kindercafés (eigenes Piktogramm, public/guides/icons/sp-schaukelpferd.svg) */
+export const KINDERCAFE_ICON = "sp:schaukelpferd";
+
 export function ortTypIcon(o: DddOrt): string {
+  if (istKindercafe(o)) return KINDERCAFE_ICON;
   return o.typ === "kneipe" ? artInfo(o).icon : typIcon(o.typ);
+}
+
+/** dies.das-Wertung als kleine Plakette („dies.das 8,9“), nur wenn die Website sie zeigt (siehe dddWertung). */
+export function WertungPlakette({ o }: { o: DddOrt }) {
+  const w = dddWertung(o);
+  if (w == null) return null;
+  return (
+    <span className="gd-wertung" aria-label={`dies.das-Wertung ${wertungText(w)} von 10`}>
+      <span className="gd-wertung__marke">dies.das</span><b>{wertungText(w)}</b>
+    </span>
+  );
 }
 
 /** Untertitel der Card: "Japanisch · Flingern · €€" (fehlende Teile entfallen). */
@@ -86,13 +102,15 @@ export function ortUntertitel(o: DddOrt): string {
 /** `hinweis`: kleine Pill oben links auf dem Bild, z. B. „Empfehlung“ bei Cafés neben Spielplätzen */
 export function OrtKarte({ o, hinweis }: { o: DddOrt; hinweis?: string }) {
   const bild = ortBildUrl(o);
+  // Label „dies.das Empfehlung“ ab Wertung 8,0 (nur wo die Wertung gezeigt wird)
+  const pill = hinweis ?? (istEmpfehlung(o) ? "dies.das Empfehlung" : undefined);
   return (
     <article className="gd-karte" role="listitem">
       <Link href={ortPfad(o)} className="gd-karte__link">
         <div className="gd-karte__bild">
           {/* Name steht im selben Link – Bild ist dekorativ */}
           <BildImg src={bild} alt="" icon={ortTypIcon(o)} />
-          {hinweis && <span className="badge badge--tipp gd-karte__hinweis">{hinweis}</span>}
+          {pill && <span className="badge badge--tipp gd-karte__hinweis">{pill}</span>}
           {preisKurz(o) && <span className="gd-karte__preis">{preisKurz(o)}</span>}
           {bild && o.bild_attribution && <span className="gd-karte__credit">Foto: {o.bild_attribution}</span>}
         </div>
@@ -101,6 +119,7 @@ export function OrtKarte({ o, hinweis }: { o: DddOrt; hinweis?: string }) {
           <h3 className="gd-karte__name d">{o.name}</h3>
           <span className="gd-karte__sub">{ortUntertitel(o)}</span>
           <span className="gd-karte__meta">
+            <WertungPlakette o={o} />
             {o.stadtteil && <span className="gd-karte__ort"><Icon name="location_on" />{o.stadtteil}</span>}
           </span>
           {o.tags.length > 0 && (
@@ -133,9 +152,11 @@ export function kartenOrte(orte: DddOrt[]): KartenOrt[] {
       icon: ortTypIcon(o),
       stadtteil: o.stadtteil,
       preis: preisKurz(o),
-      // Keine Google-Sterne/-Bewertungszahlen mehr (Wunsch 26.11.2026, eigenes dies.das-System folgt)
+      // Keine Google-Sterne/-Bewertungszahlen mehr (Wunsch 26.11.2026); eigene dies.das-Wertung, wo die Website sie zeigt
       rating: null,
       anzahl: null,
+      wertung: dddWertung(o) != null ? wertungText(dddWertung(o)!) : null,
+      empfehlung: istEmpfehlung(o) || undefined,
       bild: ortBildUrl(o),
       href: ortPfad(o),
       lat: o.latitude!,

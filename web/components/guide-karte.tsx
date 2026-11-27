@@ -20,6 +20,9 @@ export interface KartenOrt {
   preis: string | null;
   rating: string | null;
   anzahl: string | null;
+  /** Eigene dies.das-Wertung („8,9“), nur wo die Website sie zeigt (vorerst Kindercafés); empfehlung = ab 8,0 */
+  wertung?: string | null;
+  empfehlung?: boolean;
   bild: string | null;
   href: string;
   lat: number;
@@ -32,8 +35,8 @@ export interface KartenOrt {
   alterLabel?: string;
   /** Bildausschnitt (CSS object-position), z. B. "center 22%" – nur wenn gepflegt (extras.bild_fokus) */
   fokus?: string;
-  /** Nur Restaurant-Hub: Art → Pin-Farbe (Restaurant/Imbiss, Café, Brauhaus) */
-  art?: "restaurant" | "imbiss" | "cafe" | "brauhaus";
+  /** Nur Restaurant-Hub: Art → Pin-Farbe (Restaurant/Imbiss, Café, Kindercafé, Brauhaus) */
+  art?: "restaurant" | "imbiss" | "cafe" | "kindercafe" | "brauhaus";
   /** Nur Weihnachtsmärkte: kompakte Saisons (Zeitraum, Zeiten) – der Zustand „heute offen“ wird im Browser gerechnet (Plan E5) */
   wmSaisons?: Saisons;
 }
@@ -124,7 +127,7 @@ function popupInhalt(o: KartenOrt): HTMLElement {
   name.textContent = o.name;
   const fuss = document.createElement("span");
   fuss.className = "ddd-pop__fuss";
-  fuss.textContent = `${o.rating ? `★ ${o.rating}` : ""}`;
+  fuss.textContent = o.wertung ? `dies.das ${o.wertung}${o.empfehlung ? " · Empfehlung" : ""}` : `${o.rating ? `★ ${o.rating}` : ""}`;
   const mehr = document.createElement("span");
   mehr.className = "ddd-pop__mehr";
   mehr.textContent = "Details →";
@@ -384,6 +387,10 @@ export default function GuideKarte({ orte: geladen, ladefehler = false, naehe = 
                 </span>
                 <span className="gd-kompakt__name d">{o.name}</span>
                 <span className="gd-kompakt__meta">
+                  {o.wertung && (
+                    <span className="gd-wertung"><span className="gd-wertung__marke">dies.das</span><b>{o.wertung}</b></span>
+                  )}
+                  {o.empfehlung && <span className="badge badge--tipp">Empfehlung</span>}
                   {o.rating && <span className="gd-bewertung"><span className="icon is-active" aria-hidden data-icon="star" /><b>{o.rating}</b>{o.anzahl && <span className="muted">({o.anzahl})</span>}</span>}
                   <span className="muted">{[o.stadtteil, standort ? abstandText(abstand(standort, o)) : null, o.preis].filter(Boolean).join(" · ")}</span>
                 </span>

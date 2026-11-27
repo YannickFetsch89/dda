@@ -40,6 +40,8 @@ const EXTRAS_FELDER = [
   "spielplatz",
   // Weihnachtsmärkte (lib/weihnachtsmaerkte.ts): Saisons, Merkmale, Rollen, Score (ohne Google-Rohwerte)
   "weihnachtsmarkt",
+  // Kindercafé-Merkmal und dies.das-Wertung (Bild-Auswahlseite, 27.11.2026; lib/guide-filter.ts)
+  "kindercafe", "ddd_wertung",
 ];
 export const SPALTEN_MIT_EXTRAS = `${SPALTEN}, ${EXTRAS_FELDER.map((k) => `x_${k}:extras->${k}`).join(", ")}`;
 

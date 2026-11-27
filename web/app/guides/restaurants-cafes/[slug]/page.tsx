@@ -10,13 +10,13 @@ import { Suspense } from "react";
 import { BildImg, GoogleKarte, Reihe } from "@/components/client";
 import { ClubProfilLink } from "@/components/club-karte";
 import { EventKarte, Icon } from "@/components/karten";
-import { OrtKartenGrid, typIcon, typLabel } from "@/components/ort-karten";
+import { OrtKartenGrid, ortTypIcon, ortTypLabel } from "@/components/ort-karten";
 import { InfoZeile, Oeffnungszeiten, domain } from "@/components/ort-detail";
 import { OrtProgramm } from "@/components/ort-programm";
 import { BeschreibungText } from "@/components/beschreibung-text";
 import { kurzBeschreibung } from "@/lib/beschreibung";
 import { eventPoolLaden } from "@/lib/daten";
-import { kueche, preisDetail, preisKurz, sortieren } from "@/lib/guide-filter";
+import { dddWertung, istEmpfehlung, kueche, preisDetail, preisKurz, sortieren, wertungText } from "@/lib/guide-filter";
 import { ortBildAutorUrl, ortBildUrl, ortLaden, orteLaden, sichereUrl, slugDekodieren } from "@/lib/orte";
 import type { DddOrt } from "@/lib/typen";
 
@@ -29,10 +29,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!ort) return { title: "Nicht gefunden" };
   const bild = ortBildUrl(ort);
   return {
-    title: `${ort.name} – ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}`,
+    title: `${ort.name} – ${ortTypLabel(ort)} in ${ort.stadtteil ?? "Düsseldorf"}`,
     description:
       kurzBeschreibung(ort.beschreibung, 160) ??
-      `${ort.name}: ${typLabel(ort.typ)} in ${ort.stadtteil ?? "Düsseldorf"}. Empfohlen von dies.das.düsseldorf.`,
+      `${ort.name}: ${ortTypLabel(ort)} in ${ort.stadtteil ?? "Düsseldorf"}. Empfohlen von dies.das.düsseldorf.`,
     alternates: seitenAlternates(`${BASIS}/${encodeURIComponent(ort.slug)}`),
     openGraph: bild ? { images: [{ url: bild }] } : undefined,
   };
@@ -109,8 +109,9 @@ export default async function OrtDetail(props: Props) {
     ort.latitude != null && ort.longitude != null ? `${ort.latitude},${ort.longitude}` : kartenAdresse,
   )}`;
   const [strasse, ...ortTeil] = (ort.adresse ?? "").split(", ");
-  const typZeile = [typLabel(ort.typ), preisKurz(ort), ort.stadtteil].filter(Boolean).join(" · ");
+  const typZeile = [ortTypLabel(ort), preisKurz(ort), ort.stadtteil].filter(Boolean).join(" · ");
   const preis = preisDetail(ort);
+  const wertung = dddWertung(ort);
   const details = [
     kuecheName && { label: "Küche", wert: kuecheName },
     highlightGericht && { label: "Highlight-Gericht", wert: highlightGericht },
@@ -126,7 +127,7 @@ export default async function OrtDetail(props: Props) {
 
       {bild && (
         <div className="gd-detail__hero">
-          <BildImg src={bild} alt={ort.name} icon={typIcon(ort.typ)} eager />
+          <BildImg src={bild} alt={ort.name} icon={ortTypIcon(ort)} eager />
           {ort.bild_attribution && (
             <span className="gd-detail__credit">
               Foto:{" "}
@@ -138,7 +139,7 @@ export default async function OrtDetail(props: Props) {
 
       <div className="gd-detail__spalten">
         <div className="gd-detail__haupt">
-          <span className="gd-typ gd-typ--gross"><Icon name={typIcon(ort.typ)} />{typZeile}</span>
+          <span className="gd-typ gd-typ--gross"><Icon name={ortTypIcon(ort)} />{typZeile}</span>
           <h1 className="d">{ort.name}</h1>
           {ort.highlight && <blockquote className="gd-zitat">{ort.highlight}</blockquote>}
           {/* Eigene redaktionelle Texte: Absätze und „**fett**“ (Textrunde 26.11.2026, wie /orte) */}
@@ -167,6 +168,11 @@ export default async function OrtDetail(props: Props) {
             )}
             {ort.telefon && <InfoZeile icon="phone" l1={<a href={`tel:${ort.telefon.replace(/[^\d+]/g, "")}`}>{ort.telefon}</a>} />}
             {preis && <InfoZeile icon="payments" l1={preis.zeile} l2={preis.herkunft} />}
+            {/* Eigene dies.das-Wertung (vorerst nur Kindercafés), ab 8,0 mit Label */}
+            {wertung != null && (
+              <InfoZeile icon="verified" l1={<>dies.das-Wertung <b>{wertungText(wertung)}</b> / 10</>}
+                l2={istEmpfehlung(ort) ? "dies.das Empfehlung" : undefined} />
+            )}
           </div>
           {webseite && (
             <a href={webseite} target="_blank" rel="noopener" className="gd-knopf gd-knopf--navy">

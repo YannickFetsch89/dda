@@ -11,10 +11,10 @@ import { GuideSticky, type StickyLink } from "@/components/guide-sticky";
 import { ScrollReihe } from "@/components/scroll-reihe";
 import { Icon, SkeletonKarten } from "@/components/karten";
 import { GuideKarteLazy } from "@/components/guide-karte-lazy";
-import { OrtKartenGrid, OrtLinkListe } from "@/components/ort-karten";
+import { KINDERCAFE_ICON, OrtKartenGrid, OrtLinkListe } from "@/components/ort-karten";
 import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
-  ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filtern, kueche,
+  ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filterTyp, filtern, kueche,
   PREIS_STUFEN, preisStufeOrt, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
@@ -25,7 +25,8 @@ import type { DddOrt } from "@/lib/typen";
 
 const BASIS = "/guides/restaurants-cafes";
 const TYPEN = ["restaurant", "imbiss", "cafe"] as const;
-const TYP_NAME: Record<OrtTyp, string> = { restaurant: "Restaurants", imbiss: "Schnellimbiss", cafe: "Cafés" };
+const TYP_NAME: Record<OrtTyp, string> = { restaurant: "Restaurants", imbiss: "Schnellimbiss", cafe: "Cafés", kindercafe: "Kindercafés" };
+const TYP_ICON: Record<OrtTyp, string> = { restaurant: "restaurant", cafe: "local_cafe", imbiss: "lunch_dining", kindercafe: KINDERCAFE_ICON };
 
 /** Kompakte Daten für die Live-Zählwerte im Fragebogen (Nachschlagetabellen + Tupel je Ort). */
 function fragebogenDaten(orte: DddOrt[]): FragebogenDaten {
@@ -40,7 +41,7 @@ function fragebogenDaten(orte: DddOrt[]): FragebogenDaten {
     kuechen,
     tags,
     orte: orte.map((o) => {
-      const typ: OrtTyp = o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp);
+      const typ: OrtTyp = filterTyp(o);
       const maske = tags.reduce((m, t, i) => (o.tags.includes(t.name) ? m | (1 << i) : m), 0);
       return [ALLE_TYPEN.indexOf(typ), stIndex.get(o.stadtteil ?? "") ?? -1, kIndex.get(kueche(o)?.slug ?? "") ?? -1, preisStufeOrt(o), maske];
     }),
@@ -134,15 +135,15 @@ async function InhaltGecacht({ schluessel }: { schluessel: string }) {
   const stadtteilName = (slug: string) => stadtteile.find((s) => s.slug === slug)?.name ?? slug;
   const kuecheName = (slug: string) => kuechen.find((k) => k.slug === slug)?.name ?? slug;
   const tagName = new Map(FILTER_TAGS.map((t) => [slugify(t), t]));
-  const anzahlTyp = (t: OrtTyp) => fuerTyp.filter((o) => (o.typ === "kneipe" ? "restaurant" : o.typ) === t).length;
+  const anzahlTyp = (t: OrtTyp) => fuerTyp.filter((o) => filterTyp(o) === t).length;
 
-  // Art: Mehrfachauswahl (Standard Restaurants + Cafés), „Alle“ wählt alle drei
+  // Art: Mehrfachauswahl (Standard Restaurants + Cafés), „Alle“ wählt alle Arten; Imbisse und Kindercafés nur auf Wunsch
   const alleGewaehlt = f.typen.length === ALLE_TYPEN.length;
   const typTabs = [
     { label: "Alle", icon: undefined, anzahl: fuerTyp.length, href: href({ typen: [...ALLE_TYPEN] }), aktiv: alleGewaehlt },
-    ...(["restaurant", "cafe", "imbiss"] as OrtTyp[]).map((t) => ({
+    ...ALLE_TYPEN.map((t) => ({
       label: TYP_NAME[t],
-      icon: { restaurant: "restaurant", cafe: "local_cafe", imbiss: "lunch_dining" }[t],
+      icon: TYP_ICON[t],
       anzahl: anzahlTyp(t),
       // Aus „Alle“ heraus wählt ein Klick genau diese Art; sonst schaltet er sie zu oder ab
       href: href({ typen: alleGewaehlt ? [t] : typUmschalten(f.typen, t) }),
@@ -278,6 +279,7 @@ async function InhaltGecacht({ schluessel }: { schluessel: string }) {
             <ul className="gd-legende" aria-label="Farben auf der Karte">
               <li><span className="gd-punkt gd-punkt--restaurant" aria-hidden />Restaurant &amp; Imbiss</li>
               <li><span className="gd-punkt gd-punkt--cafe" aria-hidden />Café</li>
+              {f.typen.includes("kindercafe") && <li><span className="gd-punkt gd-punkt--kindercafe" aria-hidden />Kindercafé</li>}
               <li><span className="gd-punkt gd-punkt--brauhaus" aria-hidden />Brauhaus</li>
             </ul>
             {/* Kartenpunkte lädt die Karte selbst nach (/api/guide-karte) – hält die erste Antwort klein */}

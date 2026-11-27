@@ -20,10 +20,23 @@ export const FILTER_TAGS = [
   "Terrasse", "Brunch", "Frühstück", "Vegetarisch", "Hunde willkommen", "Kinderfreundlich", "Cocktails", "Reservierbar",
 ];
 
-export type OrtTyp = "restaurant" | "imbiss" | "cafe";
-export const ALLE_TYPEN: OrtTyp[] = ["restaurant", "cafe", "imbiss"];
-/** Standard ohne Parameter: Restaurants und Cafés, Schnellimbisse nur auf Wunsch. */
+/**
+ * Filter-Arten des Hubs. „kindercafe“ ist keine eigene Datenbank-Art, sondern ein Café (oder anderer Ort) mit
+ * extras.kindercafe = true (Wunsch 27.11.2026) – im Filter aber eine eigene Kategorie, die nicht unter „Cafés“ zählt.
+ */
+export type OrtTyp = "restaurant" | "imbiss" | "cafe" | "kindercafe";
+export const ALLE_TYPEN: OrtTyp[] = ["restaurant", "cafe", "imbiss", "kindercafe"];
+/** Standard ohne Parameter: Restaurants und Cafés, Schnellimbisse und Kindercafés nur auf Wunsch. */
 export const STANDARD_TYPEN: OrtTyp[] = ["restaurant", "cafe"];
+
+/** Kindercafé (Eltern-Kind-Café mit Spielbereich) – redaktionelles Merkmal, nicht Googles „Kinderfreundlich“. */
+export const istKindercafe = (o: DddOrt) => o.extras?.kindercafe === true;
+
+/** Filter-Art eines Ortes: Brauhäuser aus dem Kneipen-Hub zählen als Restaurant, Kindercafés als eigene Art. */
+export function filterTyp(o: DddOrt): OrtTyp {
+  if (istKindercafe(o)) return "kindercafe";
+  return o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp);
+}
 
 export interface GuideFilter {
   typen: OrtTyp[]; // nie leer
@@ -48,7 +61,7 @@ function liste(v: string | string[] | undefined): string[] {
   return (eins(v) ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-/** typ-Parameter: fehlt → Standard (Restaurants + Cafés), „alle“ → alle drei, sonst Kommaliste. */
+/** typ-Parameter: fehlt → Standard (Restaurants + Cafés), „alle“ → alle Arten, sonst Kommaliste. */
 function typenLesen(v: string | string[] | undefined): OrtTyp[] {
   const roh = liste(v);
   if (!roh.length) return [...STANDARD_TYPEN];
@@ -97,7 +110,7 @@ export function filterHref(basis: string, f: GuideFilter, aenderung: Partial<Gui
   return qs ? `${basis}?${qs}` : basis;
 }
 
-/** Art umschalten: mindestens eine bleibt gewählt; „Alle“ ist die Auswahl aller drei. */
+/** Art umschalten: mindestens eine bleibt gewählt; „Alle“ ist die Auswahl aller Arten. */
 export function typUmschalten(typen: OrtTyp[], typ: OrtTyp): OrtTyp[] {
   const neu = umschalten(typen, typ);
   return neu.length ? neu : typen;
@@ -179,8 +192,8 @@ function vorabScore(o: DddOrt): number {
 export function filtern(orte: DddOrt[], f: GuideFilter, ohne: (keyof GuideFilter)[] = []): DddOrt[] {
   const tagNamen = new Map(FILTER_TAGS.map((t) => [slugify(t), t]));
   return orte.filter((o) => {
-    // Brauhäuser aus dem Kneipen-Hub (typ „kneipe“) zählen als Restaurant
-    if (!ohne.includes("typen") && !f.typen.includes(o.typ === "kneipe" ? "restaurant" : (o.typ as OrtTyp))) return false;
+    // Brauhäuser aus dem Kneipen-Hub (typ „kneipe“) zählen als Restaurant, Kindercafés als eigene Art
+    if (!ohne.includes("typen") && !f.typen.includes(filterTyp(o))) return false;
     if (!ohne.includes("stadtteile") && f.stadtteile.length && !f.stadtteile.includes(slugify(o.stadtteil ?? ""))) return false;
     if (!ohne.includes("kuechen") && f.kuechen.length && !f.kuechen.includes(kueche(o)?.slug ?? "")) return false;
     if (!ohne.includes("preise") && f.preise.length && !f.preise.includes(preisStufeOrt(o))) return false;
@@ -227,3 +240,20 @@ export function stadtteileText(slugs: string[], name: (slug: string) => string):
   if (slugs.length <= 2) return ` in ${slugs.map(name).join(" & ")}`;
   return ` in ${slugs.length} Stadtteilen`;
 }
+
+// ── dies.das-Wertung (extras.ddd_wertung, 1–10, aus der Bild-Auswahlseite) ─────────────────────────
+/** Ab dieser Wertung trägt ein Ort das Label „dies.das Empfehlung“. */
+export const EMPFEHLUNG_AB = 8;
+
+/**
+ * Wertung, die die Website zeigt – vorerst nur bei Kindercafés (Wunsch 27.11.2026); Cafés und Restaurants folgen
+ * nach ihrer Durchsicht. Ohne Wertung oder bei anderen Orten null.
+ */
+export function dddWertung(o: DddOrt): number | null {
+  if (!istKindercafe(o)) return null;
+  const w = o.extras?.ddd_wertung;
+  return typeof w === "number" && Number.isFinite(w) ? w : null;
+}
+
+export const wertungText = (w: number) => w.toFixed(1).replace(".", ",");
+export const istEmpfehlung = (o: DddOrt) => (dddWertung(o) ?? 0) >= EMPFEHLUNG_AB;

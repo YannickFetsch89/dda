@@ -1132,6 +1132,11 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .gd-karte__ort, .gd-bewertung { display: inline-flex; align-items: center; gap: 4px; }
 .gd-karte__ort .icon { font-size: 17px; color: var(--ddd-text-muted); }
 .gd-bewertung .icon { font-size: 17px; color: var(--ddd-gold); }
+/* Eigene dies.das-Wertung (1–10) als kleine Plakette – bewusst ohne Sterne (keine Verwechslung mit Google) */
+.gd-wertung { display: inline-flex; align-items: baseline; gap: 5px; padding: 1px 8px; border: 1px solid var(--ddd-gold); border-radius: 999px; font-size: 13px; line-height: 1.5; }
+.gd-wertung__marke { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
+.gd-wertung b { font-weight: 800; }
+.gd-kompakt__meta .badge--tipp { padding: 2px 7px; font-size: 10px; }
 .gd-karte__tags, .gd-detail__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
 .gd-tag { padding: 4px 10px; border-radius: var(--r-pill); background: var(--ddd-bg); border: 1px solid var(--ddd-border); font-size: 12px; font-weight: 500; color: var(--ddd-text-body); }
 .gd-tag--gross { padding: 6px 12px; font-size: 13px; }
@@ -1844,10 +1849,13 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .gd-pin.gd-pin--art-restaurant, .gd-pin.gd-pin--art-imbiss { --pin-bg: var(--ddd-navy); --pin-fg: var(--ddd-gold); }
 .gd-pin.gd-pin--art-cafe { --pin-bg: #457b9d; --pin-fg: #ffffff; }
 .gd-pin.gd-pin--art-brauhaus { --pin-bg: #c08532; --pin-fg: #1b2540; }
+/* Kindercafé (27.11.2026): Beerenrot, weißes Schaukelpferd */
+.gd-pin.gd-pin--art-kindercafe { --pin-bg: #b84a6f; --pin-fg: #ffffff; }
 .gd-punkt { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(27, 37, 64, 0.2); vertical-align: middle; }
 .gd-punkt--restaurant { background: var(--ddd-navy); }
 .gd-punkt--cafe { background: #457b9d; }
 .gd-punkt--brauhaus { background: #c08532; }
+.gd-punkt--kindercafe { background: #b84a6f; }
 :root[data-theme="dark"] .gd-punkt { border-color: var(--ddd-surface); }
 /* Dunkel: Restaurant-Punkt bleibt Navy wie der Pin, heller Ring wie der weiße Pin-Rand (sonst unsichtbar) */
 :root[data-theme="dark"] .gd-punkt--restaurant { background: var(--ddd-navy); border-color: #f7f8fa; }
@@ -1905,6 +1913,8 @@ html:has(.fb--dialog[open]) { overflow: hidden; }
 .icon[data-icon="sp:sandkasten"] { --sp-icon: url("/guides/icons/sp-sandkasten.svg"); }
 /* Spielplatz-Piktogramm (Federwippe Pferd, Vorlage des Auftraggebers) statt Material „toys“ (zeigt ein Auto) */
 .icon[data-icon="sp:spielplatz"] { --sp-icon: url("/guides/icons/sp-spielplatz.svg"); }
+/* Kindercafé: Schaukelpferd auf Kufen (27.11.2026) */
+.icon[data-icon="sp:schaukelpferd"] { --sp-icon: url("/guides/icons/sp-schaukelpferd.svg"); }
 
 /* Heller Hero: Bild rechts auf 46 %, läuft nach links in den Grund aus; mobil Bild oben, Überschrift unten */
 .sp-hero { height: 240px; background: var(--sp-hero-bg); }

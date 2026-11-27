@@ -10,7 +10,7 @@ import { kartenOrte } from "@/components/ort-karten";
 import { clubFilterLesen, clubsFiltern, clubsSortieren, clubStufe } from "@/lib/clubs";
 import { clubKartenOrte } from "@/lib/clubs-karte";
 import { clubsLaden } from "@/lib/clubs-daten";
-import { filterLesen, filtern, sortieren } from "@/lib/guide-filter";
+import { filterLesen, filtern, istKindercafe, sortieren } from "@/lib/guide-filter";
 import { brauhaeuserFuerRestaurants, kneipenLaden } from "@/lib/kneipen-daten";
 import { filterLesen as kneipenFilterLesen, filtern as kneipenFiltern } from "@/lib/kneipen";
 import { lokalesBild, orteLaden } from "@/lib/orte";
@@ -76,8 +76,8 @@ export async function GET(request: Request) {
       const f = filterLesen(sp);
       const [eigene, brauhaeuser] = await Promise.all([orteLaden(["restaurant", "imbiss", "cafe"]), brauhaeuserFuerRestaurants()]);
       const orte = sortieren(filtern([...eigene, ...brauhaeuser], f), f.sort);
-      // Pin-Farbe nach Art: Restaurant/Imbiss, Café, Brauhaus (Brauhäuser kommen als Kneipen mit Unterart)
-      const art = new Map(orte.map((o) => [o.id, o.typ === "kneipe" ? "brauhaus" : o.typ] as const));
+      // Pin-Farbe nach Art: Restaurant/Imbiss, Café, Kindercafé, Brauhaus (Brauhäuser kommen als Kneipen mit Unterart)
+      const art = new Map(orte.map((o) => [o.id, istKindercafe(o) ? "kindercafe" : o.typ === "kneipe" ? "brauhaus" : o.typ] as const));
       return antwort(kartenOrte(orte).map((k) => ({ ...k, art: art.get(k.id) as KartenOrt["art"] })));
     }
     if (sp.hub === "orte") {

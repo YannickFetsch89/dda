@@ -19,7 +19,8 @@ export interface FragebogenDaten {
   orte: [number, number, number, number, number][];
 }
 
-type Schritt = "art" | "ort" | "lust" | "wichtig" | "preis";
+// „cafeart“ = Zusatzschritt 1A nach „Cafés“: normale Cafés und/oder Kindercafés (27.11.2026)
+type Schritt = "art" | "cafeart" | "ort" | "lust" | "wichtig" | "preis";
 
 interface Antworten {
   typen: OrtTyp[];
@@ -33,10 +34,24 @@ const LEER: Antworten = { typen: [], stadtteile: [], kuechen: [], tags: [], prei
 
 const ARTEN: { label: string; text: string; icon: string; typen: OrtTyp[] }[] = [
   { label: "Restaurants", text: "Richtig essen gehen", icon: "restaurant", typen: ["restaurant"] },
-  { label: "Cafés", text: "Kaffee, Kuchen, Frühstück", icon: "local_cafe", typen: ["cafe"] },
+  // Zählt Kindercafés mit; welche Art genau, fragt Schritt 1A
+  { label: "Cafés", text: "Kaffee, Kuchen, Frühstück", icon: "local_cafe", typen: ["cafe", "kindercafe"] },
   { label: "Schnellimbiss", text: "Schnell und unkompliziert", icon: "lunch_dining", typen: ["imbiss"] },
   { label: "Alles", text: "Überrascht mich", icon: "auto_awesome", typen: [...ALLE_TYPEN] },
 ];
+
+/** Schritt 1A: Café-Arten (Mehrfachauswahl) */
+const CAFE_ARTEN: { typ: OrtTyp; label: string; text: string; icon: string }[] = [
+  { typ: "cafe", label: "Cafés", text: "Kaffee, Kuchen, Frühstück", icon: "local_cafe" },
+  { typ: "kindercafe", label: "Kindercafés", text: "Mit Spielbereich für die Kleinen", icon: "sp:schaukelpferd" },
+];
+
+/** Nur Café-Arten gewählt → Frage „Was ist dir wichtig?“ statt Küche */
+const nurCafeArten = (typen: OrtTyp[]) => typen.length > 0 && typen.every((t) => t === "cafe" || t === "kindercafe");
+
+function schrittListe(typen: OrtTyp[], cafeWahl: boolean): Schritt[] {
+  return ["art", ...(cafeWahl ? (["cafeart"] as Schritt[]) : []), "ort", nurCafeArten(typen) ? "wichtig" : "lust", "preis"];
+}
 
 export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenDaten }) {
   const router = useRouter();
@@ -44,16 +59,17 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
   const [offen, setOffen] = useState(false);
   const [schritt, setSchritt] = useState<Schritt>("art");
   const [a, setA] = useState<Antworten>(LEER);
+  const [cafeWahl, setCafeWahl] = useState(false); // über „Cafés“ gekommen → Schritt 1A
 
   function oeffnen() {
     setA(LEER);
+    setCafeWahl(false);
     setSchritt("art");
     setOffen(true);
     dialog.current?.showModal();
   }
 
-  const nurCafes = a.typen.length === 1 && a.typen[0] === "cafe";
-  const schritte: Schritt[] = ["art", "ort", nurCafes ? "wichtig" : "lust", "preis"];
+  const schritte = schrittListe(a.typen, cafeWahl);
   const nummer = schritte.indexOf(schritt) + 1;
 
   /** Orte, die zu den Antworten passen (rund 700 Tupel – ohne eigenes Memo schnell genug). */
@@ -74,9 +90,10 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
     setOffen(false);
   }
 
-  function weiter(neu: Antworten) {
+  function weiter(neu: Antworten, cafe = cafeWahl) {
     setA(neu);
-    const liste: Schritt[] = ["art", "ort", neu.typen.length === 1 && neu.typen[0] === "cafe" ? "wichtig" : "lust", "preis"];
+    setCafeWahl(cafe);
+    const liste = schrittListe(neu.typen, cafe);
     const naechster = liste[liste.indexOf(schritt) + 1];
     if (naechster) setSchritt(naechster);
   }
@@ -136,7 +153,11 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
                 const n = passend({ ...LEER, typen: art.typen }).length;
                 return (
                   <button key={art.label} type="button" className="fb__karte" autoFocus={i === 0} disabled={!n}
-                    onClick={() => weiter({ ...LEER, typen: art.typen })}>
+                    onClick={() => {
+                      // „Cafés“: in Schritt 1A sind normale Cafés vorgewählt, Kindercafés kommen auf Wunsch dazu
+                      const cafe = art.typen.includes("kindercafe") && art.typen.length === 2;
+                      weiter({ ...LEER, typen: cafe ? ["cafe"] : art.typen }, cafe);
+                    }}>
                     <Icon name={art.icon} />
                     <b>{art.label}</b>
                     <span>{art.text}</span>
@@ -144,6 +165,35 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
                   </button>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {schritt === "cafeart" && (
+          <div className="fb__inhalt">
+            {titel("Was für ein Café darf es sein?")}
+            <p className="fb__hinweis">Eins oder beides.</p>
+            <div className="fb__karten">
+              {CAFE_ARTEN.map((c, i) => {
+                const an = a.typen.includes(c.typ);
+                const n = passend({ ...LEER, typen: [c.typ] }).length;
+                return (
+                  <button key={c.typ} type="button" className={`fb__karte ${an ? "is-an" : ""}`} aria-pressed={an} autoFocus={i === 0}
+                    disabled={!n}
+                    onClick={() => {
+                      const neu = an ? a.typen.filter((t) => t !== c.typ) : [...a.typen, c.typ];
+                      if (neu.length) setA({ ...a, typen: neu });
+                    }}>
+                    <Icon name={c.icon} />
+                    <b>{c.label}</b>
+                    <span>{c.text}</span>
+                    <span className="fb__zahl">{n.toLocaleString("de-DE")} Orte</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="fb__fuss">
+              <button type="button" className="fb__weiter" onClick={() => weiter(a)}>Weiter<Icon name="arrow_forward" /></button>
             </div>
           </div>
         )}
