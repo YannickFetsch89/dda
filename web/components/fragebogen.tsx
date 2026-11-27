@@ -114,7 +114,7 @@ export function Fragebogen({ basis, daten }: { basis: string; daten: FragebogenD
       kuechen: a.kuechen.map((i) => daten.kuechen[i].slug),
       preise: a.preise,
       tags: a.tags.map((i) => daten.tags[i].slug),
-      sort: "empfohlen",
+      sort: "wertung",
       anzahl: SEITE,
       ansicht: "karte",
     }, {});

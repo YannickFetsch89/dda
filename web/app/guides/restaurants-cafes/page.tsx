@@ -14,7 +14,7 @@ import { GuideKarteLazy } from "@/components/guide-karte-lazy";
 import { KINDERCAFE_ICON, OrtKartenGrid, OrtLinkListe } from "@/components/ort-karten";
 import { Fragebogen, type FragebogenDaten } from "@/components/fragebogen";
 import {
-  ALLE_TYPEN, FILTER_TAGS, SEITE, SORTIERUNGEN, STANDARD_TYPEN, filterHref, filterLesen, filterTyp, filtern, kueche,
+  ALLE_TYPEN, FILTER_TAGS, RC_SORTIERUNGEN, RC_STANDARD_SORT, SEITE, STANDARD_TYPEN, filterHref, filterLesen, filterTyp, filtern, kueche,
   PREIS_STUFEN, preisStufeOrt, sortieren, stadtteileText, typUmschalten, typenStandard, umschalten, zaehlen, zahl, type GuideFilter, type OrtTyp,
 } from "@/lib/guide-filter";
 import { slugify } from "@/lib/kueche";
@@ -158,21 +158,22 @@ async function InhaltGecacht({ schluessel }: { schluessel: string }) {
     ...f.preise.map((p) => ({ label: PREIS_STUFEN.find((s) => s.wert === p)?.label ?? String(p), href: href({ preise: f.preise.filter((x) => x !== p) }) })),
     ...f.tags.map((t) => ({ label: tagName.get(t) ?? t, href: href({ tags: f.tags.filter((x) => x !== t) }) })),
   ];
-  const hatFilter = !typenStandard(f.typen) || aktiv.length > 0;
+  const hatFilter = !typenStandard(f.typen) || aktiv.length > 0 || f.sort === "empfehlungen";
   const typText = alleGewaehlt ? "Alle Arten" : ALLE_TYPEN.filter((t) => f.typen.includes(t)).map((t) => TYP_NAME[t]).join(" & ");
   const status = [
     `${zahl(ergebnis.length)} ${ergebnis.length === 1 ? "Ergebnis" : "Ergebnisse"}${stadtteileText(f.stadtteile, stadtteilName)}`,
     typText,
+    ...(f.sort === "empfehlungen" ? ["Nur Empfehlungen"] : []),
     ...aktiv.slice(f.stadtteile.length).map((a) => a.label),
   ].join(" · ");
   const kuecheLabel = !f.kuechen.length ? "Küche" : f.kuechen.length === 1 ? kuecheName(f.kuechen[0]) : `${kuecheName(f.kuechen[0])} +${f.kuechen.length - 1}`;
-  const sortLabel = SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Empfohlen";
-  const sortOptionen = SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
+  const sortLabel = RC_SORTIERUNGEN.find((s) => s.wert === f.sort)?.label ?? "Bewertung";
+  const sortOptionen = RC_SORTIERUNGEN.map((s) => ({ label: s.label, href: href({ sort: s.wert }), aktiv: s.wert === f.sort }));
   const ansichten = [
     { label: "Karte", icon: "map", href: href({ ansicht: "karte" }), aktiv: f.ansicht === "karte" },
     { label: "Grid", icon: "grid_view", href: href({ ansicht: "grid" }), aktiv: f.ansicht === "grid" },
   ];
-  const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteile: [], kuechen: [], preise: [], tags: [] });
+  const zuruecksetzen = href({ typen: [...STANDARD_TYPEN], stadtteile: [], kuechen: [], preise: [], tags: [], sort: RC_STANDARD_SORT });
   // Aktuelle Filter als Query (ohne Basis) für die Kartenpunkte
   const abfrage = href({}).split("?")[1] ?? "";
   return (

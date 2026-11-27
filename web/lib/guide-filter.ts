@@ -6,12 +6,23 @@ import type { DddOrt, PreisNiveau } from "./typen";
 
 export const SEITE = 9; // Karten pro "Seite" (Design: 9 pro Seite, dann "Weitere … laden")
 
-export type SortWert = "empfohlen" | "bewertung" | "neu";
+// „wertung“/„empfehlungen“: nur Restaurant-&-Café-Hub (RC_SORTIERUNGEN), die übrigen nutzt der Kneipen-Hub
+export type SortWert = "empfohlen" | "bewertung" | "neu" | "wertung" | "empfehlungen";
 export const SORTIERUNGEN: { wert: SortWert; label: string }[] = [
   { wert: "empfohlen", label: "Empfohlen" },
   { wert: "bewertung", label: "Bewertung" },
   { wert: "neu", label: "Neu" },
 ];
+
+/**
+ * Restaurant-&-Café-Hub (Wunsch 27.11.2026): Standard = nach dies.das-Wertung, „Nur Empfehlungen anzeigen“ zeigt nur
+ * Orte mit Label (ab 8,0) und sortiert ebenfalls nach Wertung; „Neu“ entfällt. Alte Links (?sort=neu …) → Standard.
+ */
+export const RC_SORTIERUNGEN: { wert: SortWert; label: string }[] = [
+  { wert: "wertung", label: "Bewertung" },
+  { wert: "empfehlungen", label: "Nur Empfehlungen anzeigen" },
+];
+export const RC_STANDARD_SORT: SortWert = "wertung";
 
 const PREISE: PreisNiveau[] = ["€", "€€", "€€€"];
 
@@ -80,7 +91,7 @@ export function filterLesen(sp: SP): GuideFilter {
     kuechen: [...new Set(liste(sp.kueche))],
     preise: [...new Set(liste(sp.preis).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 4))],
     tags: liste(sp.tags),
-    sort: SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : "empfohlen",
+    sort: RC_SORTIERUNGEN.some((s) => s.wert === sort) ? (sort as SortWert) : RC_STANDARD_SORT,
     anzahl: Number.isFinite(anzahl) && anzahl >= SEITE ? Math.min(anzahl, 2000) : SEITE,
     ansicht: eins(sp.ansicht) === "grid" ? "grid" : "karte",
   };
@@ -104,7 +115,7 @@ export function filterHref(basis: string, f: GuideFilter, aenderung: Partial<Gui
   if (n.kuechen.length) p.set("kueche", n.kuechen.join(","));
   if (n.preise.length) p.set("preis", [...n.preise].sort().join(","));
   if (n.tags.length) p.set("tags", n.tags.join(","));
-  if (n.sort !== "empfohlen") p.set("sort", n.sort);
+  if (n.sort !== RC_STANDARD_SORT) p.set("sort", n.sort);
   if (n.anzahl > SEITE) p.set("anzahl", String(n.anzahl));
   if (n.ansicht === "grid") p.set("ansicht", "grid");
   const qs = p.toString().replace(/%2C/g, ",");
@@ -201,13 +212,18 @@ export function filtern(orte: DddOrt[], f: GuideFilter, ohne: (keyof GuideFilter
     if (!ohne.includes("tags") && f.tags.length) {
       for (const t of f.tags) if (!o.tags.includes(tagNamen.get(t) ?? "")) return false;
     }
+    // „Nur Empfehlungen anzeigen“: nur Orte mit Label (ab 8,0, nur wo die Wertung gezeigt wird)
+    if (!ohne.includes("sort") && f.sort === "empfehlungen" && !istEmpfehlung(o)) return false;
     return true;
   });
 }
 
 export function sortieren(orte: DddOrt[], sort: SortWert): DddOrt[] {
   const kopie = [...orte];
-  if (sort === "bewertung") {
+  if (sort === "wertung" || sort === "empfehlungen") {
+    // dies.das-Wertung absteigend (ohne Vorrang für „sortierung“, damit die Liste sauber von oben nach unten läuft)
+    kopie.sort((a, b) => bewertungsWert(b) - bewertungsWert(a) || vorabScore(b) - vorabScore(a) || a.name.localeCompare(b.name, "de"));
+  } else if (sort === "bewertung") {
     kopie.sort((a, b) => (b.google_rating ?? 0) - (a.google_rating ?? 0) || (b.google_bewertungen_anzahl ?? 0) - (a.google_bewertungen_anzahl ?? 0));
   } else if (sort === "neu") {
     kopie.sort((a, b) => (b.erstellt_am ?? "").localeCompare(a.erstellt_am ?? ""));
@@ -246,14 +262,30 @@ export function stadtteileText(slugs: string[], name: (slug: string) => string):
 /** Ab dieser Wertung trägt ein Ort das Label „dies.das Empfehlung“. */
 export const EMPFEHLUNG_AB = 8;
 
-/**
- * Wertung, die die Website zeigt – vorerst nur bei Kindercafés (Wunsch 27.11.2026); Cafés und Restaurants folgen
- * nach ihrer Durchsicht. Ohne Wertung oder bei anderen Orten null.
- */
-export function dddWertung(o: DddOrt): number | null {
-  if (!istKindercafe(o)) return null;
+function gespeicherteWertung(o: DddOrt): number | null {
   const w = o.extras?.ddd_wertung;
   return typeof w === "number" && Number.isFinite(w) ? w : null;
+}
+
+/**
+ * Wertung, die die Website zeigt – bei Kindercafés und Cafés (alle vom Auftraggeber durchgesehen, 27.11.2026);
+ * Restaurants und Imbisse folgen nach ihrer Durchsicht. Ohne Wertung oder bei anderen Orten null.
+ */
+export function dddWertung(o: DddOrt): number | null {
+  if (!istKindercafe(o) && o.typ !== "cafe") return null;
+  return gespeicherteWertung(o);
+}
+
+/**
+ * Sortierwert auf der dies.das-Skala (1–10): gespeicherte Wertung, sonst der Grundwert aus dem bisherigen Score wie in
+ * der Bild-Auswahlseite (6 + (vorab − 4,3) / 0,6 × 3, begrenzt auf 6–9) – so lassen sich bewertete Cafés und noch
+ * nicht durchgesehene Restaurants gemeinsam sortieren. Nur intern, die Website zeigt ihn nicht.
+ */
+export function bewertungsWert(o: DddOrt): number {
+  const w = gespeicherteWertung(o);
+  if (w != null) return w;
+  const v = vorabScore(o);
+  return v ? Math.min(9, Math.max(6, 6 + ((v - 4.3) / 0.6) * 3)) : 0;
 }
 
 export const wertungText = (w: number) => w.toFixed(1).replace(".", ",");

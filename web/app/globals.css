@@ -1137,6 +1137,7 @@ main { min-height: 60vh; padding-bottom: calc(76px + 24px); }
 .gd-wertung__marke { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
 .gd-wertung b { font-weight: 800; }
 .gd-kompakt__meta .badge--tipp { padding: 2px 7px; font-size: 10px; }
+.gd-gold { color: var(--ddd-gold); font-weight: 700; }
 .gd-karte__tags, .gd-detail__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
 .gd-tag { padding: 4px 10px; border-radius: var(--r-pill); background: var(--ddd-bg); border: 1px solid var(--ddd-border); font-size: 12px; font-weight: 500; color: var(--ddd-text-body); }
 .gd-tag--gross { padding: 6px 12px; font-size: 13px; }
