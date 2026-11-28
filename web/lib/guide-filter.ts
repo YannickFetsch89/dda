@@ -16,7 +16,7 @@ export const SORTIERUNGEN: { wert: SortWert; label: string }[] = [
 
 /**
  * Restaurant-&-Café-Hub (Wunsch 27.11.2026): Standard = nach dies.das-Wertung, „Nur Empfehlungen anzeigen“ zeigt nur
- * Orte mit Label (ab 8,0) und sortiert ebenfalls nach Wertung; „Neu“ entfällt. Alte Links (?sort=neu …) → Standard.
+ * Orte mit Label (ab 8,5, EMPFEHLUNG_AB) und sortiert ebenfalls nach Wertung; „Neu“ entfällt. Alte Links (?sort=neu …) → Standard.
  */
 export const RC_SORTIERUNGEN: { wert: SortWert; label: string }[] = [
   { wert: "wertung", label: "Bewertung" },
@@ -212,7 +212,7 @@ export function filtern(orte: DddOrt[], f: GuideFilter, ohne: (keyof GuideFilter
     if (!ohne.includes("tags") && f.tags.length) {
       for (const t of f.tags) if (!o.tags.includes(tagNamen.get(t) ?? "")) return false;
     }
-    // „Nur Empfehlungen anzeigen“: nur Orte mit Label (ab 8,0, nur wo die Wertung gezeigt wird)
+    // „Nur Empfehlungen anzeigen“: nur Orte mit Label (ab 8,5, nur wo die Wertung gezeigt wird)
     if (!ohne.includes("sort") && f.sort === "empfehlungen" && !istEmpfehlung(o)) return false;
     return true;
   });
@@ -259,8 +259,8 @@ export function stadtteileText(slugs: string[], name: (slug: string) => string):
 }
 
 // ── dies.das-Wertung (extras.ddd_wertung, 1–10, aus der Bild-Auswahlseite) ─────────────────────────
-/** Ab dieser Wertung trägt ein Ort das Label „dies.das Empfehlung“. */
-export const EMPFEHLUNG_AB = 8;
+/** Ab dieser Wertung trägt ein Ort das Label „dies.das Empfehlung“ (8,5 statt 8,0, Auftraggeber 28.11.2026 – sonst zu viele). */
+export const EMPFEHLUNG_AB = 8.5;
 
 function gespeicherteWertung(o: DddOrt): number | null {
   const w = o.extras?.ddd_wertung;

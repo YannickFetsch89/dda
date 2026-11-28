@@ -20,7 +20,7 @@ export interface KartenOrt {
   preis: string | null;
   rating: string | null;
   anzahl: string | null;
-  /** Eigene dies.das-Wertung („8,9“), nur wo die Website sie zeigt (vorerst Kindercafés); empfehlung = ab 8,0 */
+  /** Eigene dies.das-Wertung („8,9“), nur wo die Website sie zeigt (Cafés, Kindercafés, Restaurants); empfehlung = ab 8,5 */
   wertung?: string | null;
   empfehlung?: boolean;
   bild: string | null;

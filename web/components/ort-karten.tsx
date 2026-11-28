@@ -102,7 +102,7 @@ export function ortUntertitel(o: DddOrt): string {
 /** `hinweis`: kleine Pill oben links auf dem Bild, z. B. „Empfehlung“ bei Cafés neben Spielplätzen */
 export function OrtKarte({ o, hinweis }: { o: DddOrt; hinweis?: string }) {
   const bild = ortBildUrl(o);
-  // Label „dies.das Empfehlung“ ab Wertung 8,0 (nur wo die Wertung gezeigt wird)
+  // Label „dies.das Empfehlung“ ab Wertung 8,5 (EMPFEHLUNG_AB, nur wo die Wertung gezeigt wird)
   const pill = hinweis ?? (istEmpfehlung(o) ? "dies.das Empfehlung" : undefined);
   return (
     <article className="gd-karte" role="listitem">

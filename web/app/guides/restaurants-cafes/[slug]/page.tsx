@@ -208,7 +208,7 @@ export default async function OrtDetail(props: Props) {
             )}
             {ort.telefon && <InfoZeile icon="phone" l1={<a href={`tel:${ort.telefon.replace(/[^\d+]/g, "")}`}>{ort.telefon}</a>} />}
             {preis && <InfoZeile icon="payments" l1={preis.zeile} l2={preis.herkunft} />}
-            {/* Eigene dies.das-Wertung (Cafés und Kindercafés); ab 8,0 steht „dies.das Empfehlung“ in Gold darüber */}
+            {/* Eigene dies.das-Wertung (Cafés, Kindercafés, Restaurants); ab 8,5 steht „dies.das Empfehlung“ in Gold darüber */}
             {wertung != null && (istEmpfehlung(ort) ? (
               <InfoZeile icon="verified" l1={<span className="gd-gold">dies.das Empfehlung</span>}
                 l2={<>dies.das-Wertung {wertungText(wertung)} / 10</>} />
