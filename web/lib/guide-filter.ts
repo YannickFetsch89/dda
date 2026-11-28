@@ -267,12 +267,15 @@ function gespeicherteWertung(o: DddOrt): number | null {
   return typeof w === "number" && Number.isFinite(w) ? w : null;
 }
 
+/** Arten, deren Wertung die Website zeigt (vom Auftraggeber durchgesehen): Cafés 27.11., Restaurants 28.11.2026 */
+const WERTUNG_SICHTBAR = ["cafe", "restaurant"];
+
 /**
- * Wertung, die die Website zeigt – bei Kindercafés und Cafés (alle vom Auftraggeber durchgesehen, 27.11.2026);
- * Restaurants und Imbisse folgen nach ihrer Durchsicht. Ohne Wertung oder bei anderen Orten null.
+ * Wertung, die die Website zeigt – bei Kindercafés, Cafés und Restaurants; Imbisse folgen nach ihrer Durchsicht.
+ * Ohne Wertung oder bei anderen Orten null.
  */
 export function dddWertung(o: DddOrt): number | null {
-  if (!istKindercafe(o) && o.typ !== "cafe") return null;
+  if (!istKindercafe(o) && !WERTUNG_SICHTBAR.includes(o.typ)) return null;
   return gespeicherteWertung(o);
 }
 

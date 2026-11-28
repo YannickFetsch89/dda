@@ -77,9 +77,9 @@ ARTEN = {"restaurant": "Restaurant", "cafe": "Café", "imbiss": "Imbiss", "baeck
 # Eigenes Merkmal extras.kindercafe (27.11.2026): Eltern-Kind-/Kindercafé mit Spielbereich – nicht Googles „Kinderfreundlich“
 KINDERCAFE_ARTEN = ("cafe", "restaurant", "imbiss")
 # Regel 27.11.2026: Betriebe dieser Arten mit dies.das-Wertung unter 7,0 erscheinen nicht im Guide (aktiv = false,
-# extras.ausgeblendet.regel = "wertung"). Vorerst nur Cafés; Restaurants folgen nach ihrer Durchsicht. Kindercafés immer sichtbar.
+# extras.ausgeblendet.regel = "wertung"). Cafés seit 27.11., Restaurants seit 28.11.2026; Imbisse folgen. Kindercafés immer sichtbar.
 WERTUNG_GRENZE = 7.0
-WERTUNG_REGEL_ARTEN = ("cafe",)
+WERTUNG_REGEL_ARTEN = ("cafe", "restaurant")
 AMBIENTE_MOTIVE = ("innenraum", "aussen", "terrasse")
 ESSEN_MOTIVE = ("essen", "getraenk")
 
